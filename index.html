@@ -502,6 +502,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
       <div class="nav-item" onclick="switchPage('content',this)"><i class="ti ti-calendar-event"></i> Content Planning</div>
       <div class="nav-item" onclick="switchPage('eval',this)"><i class="ti ti-chart-line"></i> Content Evaluation</div>
       <div class="nav-item" onclick="switchPage('ads',this)"><i class="ti ti-ad-2"></i> Meta Ads</div>
+      <div class="nav-item" onclick="switchPage('igperf',this)"><i class="ti ti-brand-instagram"></i> Instagram</div>
     </div>
     <div class="nav-section">
       <div class="nav-label">Operations</div>
@@ -793,7 +794,7 @@ window.lokerHTML = function lokerHTML() {
       <div class="cards-grid" id="industryCards"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px">
         <div class="section-label" style="margin-bottom:0">Tren Bulanan</div>
-        <select id="dashYearFilter" class="filter-select" onchange="renderDashboard()" style="min-width:90px;height:28px;font-size:11px"></select>
+        <select id="dashYearFilter" class="filter-select" onchange="renderDashboard()" style="min-width:90px;height:28px;font-size:11px;color:var(--text);background:var(--white);border:0.5px solid var(--border-md);border-radius:8px;padding:0 8px"></select>
       </div>
       <div class="charts-row">
         <div class="chart-card">
@@ -1771,7 +1772,7 @@ function talentPill(v){
   return v?`<span class="talent-flag flag-yes"><i class="ti ti-check" style="font-size:10px"></i> Sudah</span>`:`<span class="talent-flag flag-no"><i class="ti ti-x" style="font-size:10px"></i> Belum</span>`;
 }
 
-const pageTitles={dashboard:"Dashboard",crm:"CRM",pipeline:"Sales Pipeline",content:"Content Planning",eval:"Content Evaluation",ads:"Meta Ads",project:"Program",loker:"Job Vacancy MT",tickets:"Ticket System",product:"Product Management",partner:"Partnership",design:"Design Assets",master:"Master Produk",masterTicket:"Master Ticket","p-overview":"Partnership — Overview","p-master":"Partnership — Master Data","p-pipeline":"Partnership — Pipeline","p-deals":"Partnership — Deals & Scope","p-outreach":"Partnership — Outreach Log"};
+const pageTitles={dashboard:"Dashboard",crm:"CRM",pipeline:"Sales Pipeline",content:"Content Planning",eval:"Content Evaluation",ads:"Meta Ads",igperf:"Instagram Performance",project:"Program",loker:"Job Vacancy MT",tickets:"Ticket System",product:"Product Management",partner:"Partnership",design:"Design Assets",master:"Master Produk",masterTicket:"Master Ticket","p-overview":"Partnership — Overview","p-master":"Partnership — Master Data","p-pipeline":"Partnership — Pipeline","p-deals":"Partnership — Deals & Scope","p-outreach":"Partnership — Outreach Log"};
 
 
 // === PARTNERSHIP MODULE ===
@@ -1826,10 +1827,12 @@ function switchPage(page,el){
   else if(page==="settings"){c.innerHTML=settingsHTML();initSettingsTab("master-produk");}
   else if(page==="product"){c.innerHTML=productHTML();initProdTab("catalog");}
   else if(page==="project"){c.innerHTML=projectHTML();initProjectTab("overview");}
+  else if(page==="competitor"){c.innerHTML=competitorHTML();initCompetitor();}
   else if(page==="painpoint"){c.innerHTML=painPointHTML();initPainPointTab("dashboard");}
   else if(page==="content"){c.innerHTML=contentHTML();}
   else if(page==="design"){c.innerHTML=designHTML();}
   else if(page==="eval"){c.innerHTML=evalHTML();initEval();}
+  else if(page==="igperf"){c.innerHTML=igPerfHTML();initIgPerf();}
   else if(page==="ads"){initAds();}
   else c.innerHTML=placeholderHTML(pageTitles[page]);
 }
@@ -6028,26 +6031,30 @@ var menuSections = [
   { label: "Marketing",   items: [
     { page: "content",   label: "Content Planning" },
     { page: "eval",      label: "Content Evaluation" },
-    { page: "ads",       label: "Meta Ads" }
+    { page: "ads",       label: "Meta Ads" },
+    { page: "igperf",    label: "Instagram" }
   ]},
   { label: "Operations",  items: [
     { page: "project",   label: "Program" },
     { page: "crm",       label: "CRM" },
     { page: "loker",     label: "Job Vacancy MT" }
   ]},
+  { label: "Intelligence", items: [
+    { page: "competitor", label: "Competitor Intel" },
+    { page: "painpoint",  label: "Pain Point Mining" }
+  ]},
   { label: "Internal",    items: [
     { page: "tickets",   label: "Tickets" },
     { page: "product",   label: "Products" },
     { page: "partner",   label: "Partnership" },
-    { page: "design",    label: "Design Assets" },
-    { page: "painpoint", label: "Pain Point Mining" }
+    { page: "design",    label: "Design Assets" }
   ]},
   { label: "Settings",    items: [ { page: "settings", label: "Settings" } ] }
 ];
 
 function loadMenuSections(){
   // Version key: bump this string whenever default menuSections changes
-  var MENU_VERSION = 'v4_program_rename';
+  var MENU_VERSION = 'v6_competitor';
   var savedVersion = localStorage.getItem('ccc_menuVersion');
   if(savedVersion !== MENU_VERSION){
     // Config outdated or first run - clear and use default
@@ -6067,6 +6074,8 @@ var pageIconMap = {
   content:   'ti-calendar-event',
   eval:      'ti-chart-line',
   ads:       'ti-ad-2',
+  igperf:    'ti-brand-instagram',
+  competitor: 'ti-binoculars',
   painpoint: 'ti-message-search',
   project:   'ti-checklist',
   crm:       'ti-users',
@@ -7222,6 +7231,13 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
       const programsHTML = programs.map(([prog, rows]) => {
         // Sort rows by year asc, then months
         rows.sort((a,b)=>a.year-b.year);
+
+        // Deteksi flag ⚠ pola berubah: cek apakah bulan buka beda antar tahun
+        const polaBerubah = rows.length > 1 && (() => {
+          const monthSets = rows.map(r => (r.months||[]).slice().sort((a,b)=>a-b).join(','));
+          return monthSets.some(s => s !== monthSets[0]);
+        })();
+
         const historyHTML = rows.map(r => {
           const monthNames = (r.months||[]).sort((a,b)=>a-b).map(m=>MONTHS[m-1]).join(', ');
           const statusPill = r.status==='open'
@@ -7236,9 +7252,13 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
           </div>`;
         }).join('');
 
+        const flagHTML = polaBerubah
+          ? `<span style="font-size:10px;font-weight:600;color:var(--amber);background:var(--amber-bg);padding:2px 7px;border-radius:6px;display:inline-flex;align-items:center;gap:3px"><i class="ti ti-alert-triangle" style="font-size:10px"></i>Pola berubah</span>`
+          : '';
+
         return `<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg);border-radius:8px">
-          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px">
-            <i class="ti ti-briefcase" style="font-size:12px;color:var(--purple-accent)"></i>${prog}
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <i class="ti ti-briefcase" style="font-size:12px;color:var(--purple-accent)"></i>${prog}${flagHTML ? '&nbsp;'+flagHTML : ''}
           </div>
           <div style="font-size:10px;color:var(--text-hint);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.5px">${rows.length} entri · Pola buka:</div>
           ${historyHTML}
@@ -8120,6 +8140,1409 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
     </div>
   </div>
 </div>
+
+
+<script>
+// ============================================================
+// INSTAGRAM PERFORMANCE MODULE
+// ============================================================
+
+// --- Supabase helpers ---
+async function sb_loadIgSnapshots() {
+  const rows = await sb_load('ig_snapshots', { order: 'week_start', ascending: true });
+  return rows.map(r => ({
+    id: r.id,
+    weekStart: r.week_start,
+    followersTotal: r.followers_total,
+    followsGained: r.follows_gained,
+    reach: r.reach,
+    views: r.views,
+    interactions: r.interactions,
+    linkClicks: r.link_clicks,
+    profileVisits: r.profile_visits,
+    notes: r.notes || ''
+  }));
+}
+async function sb_upsertIgSnapshot(row) {
+  const existing = await sb_load('ig_snapshots', { eq: { week_start: row.week_start } });
+  if (existing && existing.length > 0) {
+    return await sb_update('ig_snapshots', existing[0].id, row);
+  }
+  return await sb_insert('ig_snapshots', row);
+}
+async function sb_deleteIgSnapshot(id) { return await sb_delete('ig_snapshots', id); }
+
+async function sb_loadIgTargets() {
+  const rows = await sb_load('ig_targets', { order: 'year', ascending: true });
+  return rows.map(r => ({ id: r.id, year: r.year, targetFollowers: r.target_followers }));
+}
+async function sb_upsertIgTarget(year, targetFollowers) {
+  const existing = await sb_load('ig_targets', { eq: { year: year } });
+  if (existing && existing.length > 0) {
+    return await sb_update('ig_targets', existing[0].id, { year, target_followers: targetFollowers });
+  }
+  return await sb_insert('ig_targets', { year, target_followers: targetFollowers });
+}
+async function sb_deleteIgTarget(id) { return await sb_delete('ig_targets', id); }
+
+// --- State ---
+var igSnapshots = [];
+var igTargets = [];
+var igEvalData = [];
+var igChartFollowers = null;
+var igChartMetrics = null;
+var igCurrentTab = 'dashboard';
+
+// --- Init ---
+async function initIgPerf() {
+  igCurrentTab = 'dashboard';
+  igSnapshots = [];
+  igTargets = [];
+  igEvalData = [];
+  const [snaps, targets, evals] = await Promise.all([
+    sb_loadIgSnapshots(),
+    sb_loadIgTargets(),
+    sb_loadEvalContents()
+  ]);
+  igSnapshots = snaps;
+  igTargets = targets;
+  igEvalData = evals;
+  // Load baseline dari localStorage kalau ada
+  const savedBaseline = localStorage.getItem('ig_baseline');
+  if (savedBaseline) igBaseline = parseInt(savedBaseline) || 12016;
+  const savedBaselineDate = localStorage.getItem('ig_baseline_date');
+  if (savedBaselineDate) igBaselineDate = savedBaselineDate;
+  igComputeFollowers();
+  renderIgTab('dashboard');
+}
+
+function showIgTab(tab) {
+  igCurrentTab = tab;
+  document.querySelectorAll('.ig-tab').forEach(t => t.classList.remove('active'));
+  const el = document.getElementById('ig-tab-' + tab);
+  if (el) el.classList.add('active');
+  renderIgTab(tab);
+}
+
+function renderIgTab(tab) {
+  const c = document.getElementById('ig-content');
+  if (!c) return;
+  if (tab === 'dashboard') c.innerHTML = igDashboardHTML();
+  else if (tab === 'upload') c.innerHTML = igUploadHTML();
+  else if (tab === 'target') c.innerHTML = igTargetHTML();
+  if (tab === 'dashboard') renderIgCharts();
+}
+
+// Hitung followers_total otomatis dari baseline ± follows_gained
+function igComputeFollowers() {
+  if (!igSnapshots.length) return;
+  const sorted = [...igSnapshots].sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
+
+  // Cari snapshot anchor — yang weekStart paling dekat dengan igBaselineDate (atau terakhir kalau ga ada)
+  const anchorDate = igBaselineDate || new Date().toISOString().slice(0,10);
+  let anchorIdx = sorted.length - 1;
+  let minDiff = Infinity;
+  sorted.forEach((s, i) => {
+    const diff = Math.abs(new Date(s.weekStart) - new Date(anchorDate));
+    if (diff < minDiff) { minDiff = diff; anchorIdx = i; }
+  });
+
+  sorted[anchorIdx].followersTotal = igBaseline;
+  // Hitung maju dari anchor
+  for (let i = anchorIdx + 1; i < sorted.length; i++) {
+    const gained = sorted[i].followsGained || 0;
+    sorted[i].followersTotal = (sorted[i-1].followersTotal || igBaseline) + gained;
+  }
+  // Hitung mundur dari anchor
+  for (let i = anchorIdx - 1; i >= 0; i--) {
+    const gained = sorted[i+1].followsGained || 0;
+    sorted[i].followersTotal = (sorted[i+1].followersTotal || igBaseline) - gained;
+  }
+  igSnapshots = sorted;
+}
+
+// --- Linear Regression ---
+function igLinearRegression(points) {
+  // points = [{x: number (epoch ms), y: number}]
+  const n = points.length;
+  if (n < 2) return null;
+  const xs = points.map(p => p.x);
+  const ys = points.map(p => p.y);
+  const mx = xs.reduce((a,b)=>a+b,0)/n;
+  const my = ys.reduce((a,b)=>a+b,0)/n;
+  const num = xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+  const den = xs.reduce((s,x)=>s+(x-mx)**2,0);
+  if (den === 0) return null;
+  const slope = num/den;
+  const intercept = my - slope*mx;
+  return { slope, intercept, predict: x => slope*x + intercept };
+}
+
+function igGetPrediction() {
+  // Gunakan snapshot aktual sebagai basis
+  const pts = igSnapshots
+    .filter(s => s.followersTotal && s.weekStart)
+    .map(s => ({ x: new Date(s.weekStart).getTime(), y: s.followersTotal }));
+  if (pts.length < 2) return null;
+  return igLinearRegression(pts);
+}
+
+// --- Charts ---
+function renderIgCharts() {
+  setTimeout(() => {
+    renderIgFollowersChart();
+    renderIgMetricsChart();
+    igCurrentPage = 0;
+    igRenderSnapTable();
+  }, 50);
+}
+
+function renderIgFollowersChart() {
+  const canvas = document.getElementById('ig-chart-followers');
+  if (!canvas) return;
+  if (igChartFollowers) { igChartFollowers.destroy(); igChartFollowers = null; }
+
+  const snaps = igSnapshots.filter(s => s.followersTotal && s.weekStart).sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
+
+  // Aggregate per bulan — ambil nilai followers terakhir di bulan itu
+  const monthMap = {};
+  snaps.forEach(s => {
+    const m = s.weekStart.slice(0,7); // YYYY-MM
+    monthMap[m] = s.followersTotal;
+  });
+  const actualLabels = Object.keys(monthMap).sort();
+  const actualData = actualLabels.map(m => monthMap[m]);
+
+  // Prediksi per bulan sampai akhir tahun
+  const reg = igGetPrediction();
+  const predLabels = [];
+  const predData = [];
+  if (reg && snaps.length >= 2) {
+    const lastSnap = snaps[snaps.length-1];
+    const lastMonth = lastSnap.weekStart.slice(0,7);
+    const endYear = new Date(lastSnap.weekStart).getFullYear();
+    let cur = new Date(lastSnap.weekStart);
+    cur.setDate(1);
+    cur.setMonth(cur.getMonth() + 1);
+    while (cur.getFullYear() <= endYear) {
+      const label = cur.toISOString().slice(0,7);
+      predLabels.push(label);
+      predData.push(Math.round(reg.predict(cur.getTime())));
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  }
+
+  const allLabels = [...new Set([...actualLabels, ...predLabels])].sort();
+  const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  const fmtMonth = m => { const [y,mo] = m.split('-'); return `${BULAN[parseInt(mo)-1]} '${y.slice(2)}`; };
+
+  const actualDs = allLabels.map(l => actualLabels.includes(l) ? monthMap[l] : null);
+  const lastActualIdx = allLabels.indexOf(actualLabels[actualLabels.length-1]);
+  const predDs = allLabels.map((l, i) => {
+    if (i === lastActualIdx) return actualData[actualData.length-1];
+    const idx = predLabels.indexOf(l);
+    return idx >= 0 ? predData[idx] : null;
+  });
+
+  const targetDatasets = igTargets.map(t => ({
+    label: `Target ${t.year}`,
+    data: allLabels.map(l => l.startsWith(String(t.year)) ? t.targetFollowers : null),
+    borderColor: '#e24b4a', borderDash: [6,3], borderWidth: 1.5,
+    pointRadius: 0, fill: false, tension: 0, type: 'line'
+  }));
+
+  igChartFollowers = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: allLabels.map(fmtMonth),
+      datasets: [
+        { label: 'Followers Aktual', data: actualDs, backgroundColor: 'rgba(124,111,247,0.7)', borderRadius: 5, order: 2 },
+        { label: 'Prediksi', data: predDs, type: 'line', borderColor: '#7c6ff7', borderDash: [5,4], borderWidth: 1.5, pointRadius: 2, fill: false, tension: 0.3, spanGaps: false, order: 1 },
+        ...targetDatasets
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        y: { beginAtZero: false, ticks: { font: { size: 11 } }, grid: { color: '#f0f2ff' } },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderIgMetricsChart() {
+  const canvas = document.getElementById('ig-chart-metrics');
+  if (!canvas) return;
+  if (igChartMetrics) { igChartMetrics.destroy(); igChartMetrics = null; }
+
+  const snaps = igSnapshots.filter(s => s.weekStart).sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
+  if (!snaps.length) return;
+
+  // Aggregate per bulan
+  const monthMap = {};
+  snaps.forEach(s => {
+    const m = s.weekStart.slice(0,7);
+    if (!monthMap[m]) monthMap[m] = { reach: 0, interactions: 0 };
+    monthMap[m].reach += s.reach || 0;
+    monthMap[m].interactions += s.interactions || 0;
+  });
+  const months = Object.keys(monthMap).sort();
+  const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  const fmtMonth = m => { const [y,mo] = m.split('-'); return `${BULAN[parseInt(mo)-1]} '${y.slice(2)}`; };
+
+  igChartMetrics = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: months.map(fmtMonth),
+      datasets: [
+        { label: 'Reach', data: months.map(m=>monthMap[m].reach), backgroundColor: '#7c6ff7', borderRadius: 4 },
+        { label: 'Interactions', data: months.map(m=>monthMap[m].interactions), backgroundColor: '#34d399', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { font: { size: 11 } }, grid: { color: '#f0f2ff' } },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// --- Stat helpers ---
+function igLatestSnap() {
+  if (!igSnapshots.length) return null;
+  return [...igSnapshots].sort((a,b)=>b.weekStart.localeCompare(a.weekStart))[0];
+}
+function igSnap30DaysAgo() {
+  // Cari snapshot paling dekat dengan 30 hari lalu
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+  const older = igSnapshots.filter(s => s.weekStart <= cutoffStr).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  return older.length ? older[0] : null;
+}
+function igDelta(curr, prev, field) {
+  if (!curr || !prev || curr[field] == null || prev[field] == null) return '';
+  const d = curr[field] - prev[field];
+  const pct = prev[field] ? ((d/prev[field])*100).toFixed(1) : '';
+  const color = d >= 0 ? 'var(--green)' : 'var(--red)';
+  const arrow = d >= 0 ? '▲' : '▼';
+  return `<span style="font-size:11px;color:${color};font-weight:600">${arrow} ${Math.abs(d).toLocaleString()}${pct ? ' ('+Math.abs(pct)+'%)' : ''}</span>`;
+}
+function igDelta30(curr, field) {
+  // Sum field selama 30 hari terakhir untuk follows/reach/interactions
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+  const recent = igSnapshots.filter(s => s.weekStart >= cutoffStr);
+  if (!recent.length || !curr) return '';
+  const total = recent.reduce((s,r) => s + (r[field]||0), 0);
+  const color = total >= 0 ? 'var(--green)' : 'var(--red)';
+  return `<span style="font-size:11px;color:${color};font-weight:600">▲ ${total.toLocaleString()} (30 hari)</span>`;
+}
+function igER(snap) {
+  if (!snap || !snap.interactions || !snap.reach) return '—';
+  return ((snap.interactions / snap.reach) * 100).toFixed(2) + '%';
+}
+function igPredictedEOY() {
+  const reg = igGetPrediction();
+  if (!reg) return null;
+  const now = new Date();
+  const eoy = new Date(now.getFullYear(), 11, 31);
+  return Math.round(reg.predict(eoy.getTime()));
+}
+
+// --- Content Eval kontribusi ---
+function igEvalContribHTML() {
+  const latest = igLatestSnap();
+  if (!latest) return '<div style="color:var(--text-muted);font-size:12px">Belum ada snapshot.</div>';
+  // Ambil konten dalam 7 hari setelah weekStart snapshot terakhir
+  const weekStart = latest.weekStart; // YYYY-MM-DD
+  const weekEndDate = new Date(weekStart);
+  weekEndDate.setDate(weekEndDate.getDate() + 7);
+  const weekEnd = weekEndDate.toISOString().slice(0,10);
+
+  const relevant = igEvalData.filter(e => {
+    if (!e.tanggal || !e.follows) return false;
+    const t = e.tanggal.slice(0,10);
+    return t >= weekStart && t < weekEnd;
+  }).sort((a,b)=>(b.follows||0)-(a.follows||0)).slice(0,5);
+
+  if (!relevant.length) {
+    // Fallback: 5 konten terbaru yang punya follows, regardless periode
+    const fallback = [...igEvalData]
+      .filter(e => e.follows && e.tanggal)
+      .sort((a,b) => b.tanggal.localeCompare(a.tanggal) || (b.follows - a.follows))
+      .slice(0,5);
+    if (!fallback.length) return '<div style="color:var(--text-muted);font-size:12px">Tidak ada data konten dengan follows.</div>';
+    return `<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">Konten terbaru (all time)</div>` + fallback.map(e => `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+        <span style="font-size:10px;color:var(--text-muted);min-width:52px">${igFmtDate(e.tanggal)}</span>
+        <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.judul||'—'}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--purple-accent)">+${e.follows}</span>
+      </div>`).join('');
+  }
+
+  return relevant.map(e => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+      <span style="font-size:10px;color:var(--text-muted);min-width:52px">${igFmtDate(e.tanggal)}</span>
+      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.judul||'—'}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--purple-accent)">+${e.follows}</span>
+    </div>`).join('');
+}
+
+// --- HTML ---
+var igBaseline = 12016;
+var igBaselineDate = ''; // tanggal baseline
+
+function igFmtDate(iso) {
+  if (!iso) return '—';
+  const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  const d = new Date(iso);
+  return `${d.getDate()} ${BULAN[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+}
+
+function igPerfHTML() {
+  return `
+  <div class="tab-row" style="margin-bottom:14px">
+    <div class="tab active ig-tab" id="ig-tab-dashboard" onclick="showIgTab('dashboard')"><i class="ti ti-layout-dashboard" style="font-size:12px"></i> Dashboard</div>
+    <div class="tab ig-tab" id="ig-tab-upload" onclick="showIgTab('upload')"><i class="ti ti-upload" style="font-size:12px"></i> Upload CSV</div>
+    <div class="tab ig-tab" id="ig-tab-target" onclick="showIgTab('target')"><i class="ti ti-target" style="font-size:12px"></i> Target & Baseline</div>
+  </div>
+  <div id="ig-content"></div>`;
+}
+
+function igDashboardHTML() {
+  const latest = igLatestSnap();
+  const predicted = igPredictedEOY();
+  const curYear = new Date().getFullYear();
+  const yearTarget = igTargets.find(t => t.year === curYear);
+  const progressPct = (igBaseline && yearTarget) ? Math.min(100, ((igBaseline / yearTarget.targetFollowers)*100).toFixed(1)) : null;
+
+  // Last 30 days aggregates
+  const cutoff30 = new Date(); cutoff30.setDate(cutoff30.getDate()-30);
+  const cutoff30Str = cutoff30.toISOString().slice(0,10);
+  const snaps30 = igSnapshots.filter(s => s.weekStart >= cutoff30Str);
+  const totalReach30 = snaps30.reduce((s,r)=>s+(r.reach||0),0);
+  const totalInteractions30 = snaps30.reduce((s,r)=>s+(r.interactions||0),0);
+  const totalFollows30 = snaps30.reduce((s,r)=>s+(r.followsGained||0),0);
+  const avgER30 = totalReach30 > 0 ? ((totalInteractions30 / totalReach30) * 100).toFixed(2) + '%' : '—';
+
+  const statCard = (icon, label, val, sub='', color='var(--purple-accent)') => `
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <i class="ti ${icon}" style="font-size:14px;color:${color}"></i>
+        <div class="stat-label" style="margin:0">${label}</div>
+      </div>
+      <div class="stat-val" style="font-size:18px">${val}</div>
+      ${sub ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted)">${sub}</div>` : ''}
+    </div>`;
+
+  return `
+  <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
+    ${statCard('ti-users', 'Followers', igBaseline.toLocaleString(), igBaselineDate ? `per ${igFmtDate(igBaselineDate)}` : (latest ? `per ${igFmtDate(latest.weekStart)}` : ''))}
+    ${statCard('ti-eye', 'Reach', totalReach30.toLocaleString(), '30 hari terakhir', '#3b82f6')}
+    ${statCard('ti-heart', 'Interactions', totalInteractions30.toLocaleString(), '30 hari terakhir', '#ec4899')}
+    ${statCard('ti-percentage', 'Avg ER', avgER30, '30 hari terakhir', '#0f6e56')}
+    ${statCard('ti-user-plus', 'Follows Gained', '+'+totalFollows30.toLocaleString(), '30 hari terakhir', '#f59e0b')}
+  </div>
+
+  ${yearTarget ? `
+  <div class="card" style="margin-bottom:14px;padding:12px 16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:600">Target Followers ${curYear}</div>
+      <div style="display:flex;gap:12px;font-size:12px;color:var(--text-muted)">
+        <span>Aktual: <b style="color:var(--text)">${igBaseline.toLocaleString()}</b></span>
+        <span>Target: <b style="color:var(--text)">${yearTarget.targetFollowers.toLocaleString()}</b></span>
+        ${predicted ? `<span>Prediksi EOY: <b style="color:var(--purple-accent)">${predicted.toLocaleString()}</b></span>` : ''}
+      </div>
+    </div>
+    <div style="background:var(--bg);border-radius:999px;height:10px;overflow:hidden">
+      <div style="height:100%;width:${progressPct}%;background:linear-gradient(90deg,var(--purple-accent),#a78bfa);border-radius:999px;transition:width .4s"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:5px">${progressPct}% tercapai</div>
+  </div>` : `
+  <div class="card" style="margin-bottom:14px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+    <i class="ti ti-target" style="color:var(--text-hint);font-size:18px"></i>
+    <span style="font-size:12px;color:var(--text-muted)">Belum ada target followers ${curYear}. </span>
+    <button class="btn btn-sm" onclick="showIgTab('target')">Set Target</button>
+  </div>`}
+
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">📈 Tren Followers — Aktual vs Prediksi</div>
+      <div style="height:240px"><canvas id="ig-chart-followers"></canvas></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">🎯 Kontribusi Konten (minggu terakhir)</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">From Content Evaluation</div>
+      ${igEvalContribHTML()}
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px">📊 Metrik Mingguan</div>
+    <div style="height:200px"><canvas id="ig-chart-metrics"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:600">📋 History Snapshot</div>
+      <div style="font-size:12px;color:var(--text-muted)" id="ig-page-info"></div>
+    </div>
+    ${igSnapshots.length === 0 ? '<div style="color:var(--text-muted);font-size:12px;padding:10px 0">Belum ada data.</div>' : `
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:500">Week</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500">Followers</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500">+Follows</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500">Reach</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500">Interactions</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--text-muted);font-weight:500">ER</th>
+          <th style="padding:6px 8px"></th>
+        </tr></thead>
+        <tbody id="ig-snap-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px">
+      <button class="btn btn-sm" id="ig-prev-btn" onclick="igSnapPage(-1)"><i class="ti ti-chevron-left"></i></button>
+      <span id="ig-page-label" style="font-size:12px;color:var(--text-muted)"></span>
+      <button class="btn btn-sm" id="ig-next-btn" onclick="igSnapPage(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>`}
+  </div>`;
+}
+
+function igUploadHTML() {
+  return `
+  <div class="card" style="max-width:600px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">Upload CSV dari Meta Insights</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">
+      Upload satu atau beberapa file CSV dari Meta Insights sekaligus. Data akan di-<b>aggregate per minggu</b> dan di-upsert (replace kalau sudah ada).
+      <br>File yang didukung: <b>Views, Reach, Interactions, Link_clicks, Visits, Follows</b>
+    </div>
+    <div style="border:2px dashed var(--border-md);border-radius:10px;padding:28px;text-align:center;margin-bottom:14px;cursor:pointer;background:var(--bg)" onclick="document.getElementById('ig-csv-input').click()">
+      <i class="ti ti-upload" style="font-size:28px;color:var(--purple-accent);display:block;margin-bottom:8px"></i>
+      <div style="font-size:13px;font-weight:500">Klik atau drag CSV di sini</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Multiple files OK</div>
+    </div>
+    <input type="file" id="ig-csv-input" accept=".csv" multiple style="display:none" onchange="igHandleCSVUpload(this.files)">
+    <div id="ig-upload-preview"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-primary" id="ig-upload-btn" onclick="igConfirmUpload()" style="display:none"><i class="ti ti-check"></i> Import ke Supabase</button>
+    </div>
+  </div>`;
+}
+
+function igTargetHTML() {
+  const curYear = new Date().getFullYear();
+  return `
+  <div class="card" style="max-width:500px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px">📍 Baseline Followers Sekarang</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Angka total followers akun Instagram saat ini. Dipakai sebagai anchor hitung otomatis.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Total Followers</label>
+        <input type="number" class="form-input" id="ig-baseline-val" value="${igBaseline}" placeholder="misal: 12016">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Per Tanggal</label>
+        <input type="date" class="form-input" id="ig-baseline-date" value="${igBaselineDate || new Date().toISOString().slice(0,10)}">
+      </div>
+      <button class="btn btn-primary" onclick="igSaveBaseline()"><i class="ti ti-check"></i> Update</button>
+    </div>
+    ${igBaselineDate ? `<div style="font-size:11px;color:var(--text-muted);margin-top:8px">Terakhir diupdate: <b>${igFmtDate(igBaselineDate)}</b> — ${igBaseline.toLocaleString()} followers</div>` : ''}
+  </div>
+  <div class="card" style="max-width:500px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:14px">🎯 Target Followers per Tahun</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:14px">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Tahun</label>
+        <input type="number" class="form-input" id="ig-target-year" value="${curYear}" min="2024" max="2030">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Target Followers</label>
+        <input type="number" class="form-input" id="ig-target-val" placeholder="misal: 20000">
+      </div>
+      <button class="btn btn-primary" onclick="igSaveTarget()" style="white-space:nowrap"><i class="ti ti-plus"></i> Simpan</button>
+    </div>
+    <div id="ig-target-list">
+      ${igTargets.length === 0 ? '<div style="color:var(--text-muted);font-size:12px">Belum ada target.</div>' :
+        igTargets.sort((a,b)=>a.year-b.year).map(t=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border)">
+          <div>
+            <span style="font-size:13px;font-weight:600">${t.year}</span>
+            <span style="font-size:12px;color:var(--text-muted);margin-left:8px">→ ${t.targetFollowers.toLocaleString()} followers</span>
+          </div>
+          <button class="btn btn-sm" onclick="igDeleteTarget('${t.id}')" style="font-size:10px;background:var(--red-bg);color:var(--red);border-color:var(--red-bg)"><i class="ti ti-trash"></i></button>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// --- Pagination ---
+var igCurrentPage = 0;
+var IG_PAGE_SIZE = 5;
+
+function igSnapPage(dir) {
+  const sorted = [...igSnapshots].sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  const total = sorted.length;
+  const pages = Math.ceil(total / IG_PAGE_SIZE);
+  igCurrentPage = Math.max(0, Math.min(pages-1, igCurrentPage + dir));
+  igRenderSnapTable(sorted);
+}
+
+function igRenderSnapTable(sorted) {
+  if (!sorted) sorted = [...igSnapshots].sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  const total = sorted.length;
+  const pages = Math.ceil(total / IG_PAGE_SIZE);
+  const start = igCurrentPage * IG_PAGE_SIZE;
+  const page = sorted.slice(start, start + IG_PAGE_SIZE);
+
+  const tbody = document.getElementById('ig-snap-tbody');
+  const label = document.getElementById('ig-page-label');
+  const prev = document.getElementById('ig-prev-btn');
+  const next = document.getElementById('ig-next-btn');
+  if (!tbody) return;
+
+  tbody.innerHTML = page.map(s => `
+    <tr style="border-bottom:0.5px solid var(--border)">
+      <td style="padding:6px 8px;font-weight:500">${igFmtDate(s.weekStart)}</td>
+      <td style="padding:6px 8px;text-align:right">${s.followersTotal?.toLocaleString()||'—'}</td>
+      <td style="padding:6px 8px;text-align:right;color:var(--green)">${s.followsGained!=null?'+'+s.followsGained:'—'}</td>
+      <td style="padding:6px 8px;text-align:right">${s.reach?.toLocaleString()||'—'}</td>
+      <td style="padding:6px 8px;text-align:right">${s.interactions?.toLocaleString()||'—'}</td>
+      <td style="padding:6px 8px;text-align:right;font-weight:600;color:var(--teal)">${s.reach&&s.interactions?((s.interactions/s.reach)*100).toFixed(2)+'%':'—'}</td>
+      <td style="padding:6px 8px;text-align:right">
+        <button class="btn btn-sm" onclick="igDeleteSnap('${s.id}')" style="font-size:10px;padding:2px 8px;background:var(--red-bg);color:var(--red);border-color:var(--red-bg)"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`).join('');
+
+  if (label) label.textContent = `Hal ${igCurrentPage+1} / ${pages}`;
+  if (prev) prev.disabled = igCurrentPage === 0;
+  if (next) next.disabled = igCurrentPage >= pages-1;
+}
+async function igDeleteSnap(id) {
+  if (!confirm('Hapus snapshot ini?')) return;
+  await sb_deleteIgSnapshot(id);
+  igSnapshots = igSnapshots.filter(s=>s.id!==id);
+  igComputeFollowers();
+  showToast('Snapshot dihapus');
+  igRenderSnapTable();
+}
+
+async function igSaveBaseline() {
+  const val = parseInt(document.getElementById('ig-baseline-val')?.value);
+  const date = document.getElementById('ig-baseline-date')?.value;
+  if (isNaN(val) || val <= 0) { showToast('Angka baseline tidak valid!'); return; }
+  igBaseline = val;
+  igBaselineDate = date || new Date().toISOString().slice(0,10);
+  localStorage.setItem('ig_baseline', val);
+  localStorage.setItem('ig_baseline_date', igBaselineDate);
+  igComputeFollowers();
+  showToast('Baseline tersimpan: ' + val.toLocaleString() + ' followers per ' + igFmtDate(igBaselineDate));
+  showIgTab('target');
+}
+
+async function igSaveTarget() {
+  const year = parseInt(document.getElementById('ig-target-year')?.value);
+  const val = parseInt(document.getElementById('ig-target-val')?.value);
+  if (!year || isNaN(val)) { showToast('Tahun & target wajib diisi!'); return; }
+  await sb_upsertIgTarget(year, val);
+  showToast('Target tersimpan!');
+  igTargets = await sb_loadIgTargets();
+  showIgTab('target');
+}
+
+async function igDeleteTarget(id) {
+  if (!confirm('Hapus target ini?')) return;
+  await sb_deleteIgTarget(id);
+  igTargets = igTargets.filter(t=>t.id!==id);
+  showToast('Target dihapus');
+  showIgTab('target');
+}
+
+// --- CSV Upload ---
+var igParsedCSV = {};
+
+function igHandleCSVUpload(files) {
+  igParsedCSV = {};
+  const preview = document.getElementById('ig-upload-preview');
+  const btn = document.getElementById('ig-upload-btn');
+  if (!files.length) return;
+
+  // Metric name map dari judul CSV
+  const metricMap = {
+    'views': 'views',
+    'reach': 'reach',
+    'content interactions': 'interactions',
+    'instagram link clicks': 'link_clicks',
+    'instagram profile visits': 'profile_visits',
+    'instagram follows': 'follows_gained'
+  };
+
+  igParsedCSV = {}; // reset state setiap kali upload baru
+  let filesDone = 0;
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const text = e.target.result;
+        // Split lines, strip quotes, trim, buang baris kosong
+        const allLines = text.split('\n').map(l=>l.replace(/^"|"$/g,'').trim());
+        // Buang baris sep=, dan baris kosong, ambil yang meaningful
+        const lines = allLines.filter(l => l && l.toLowerCase() !== 'sep=,');
+        // lines[0] = nama metric, lines[1] = header Date,Primary, lines[2+] = data
+        const metricName = (lines[0]||'').toLowerCase().replace(/^"|"$/g,'').trim();
+        const metricKey = metricMap[metricName];
+        if (!metricKey) { filesDone++; checkDone(); return; }
+
+        lines.slice(1).forEach(line => {
+          if (line.toLowerCase().startsWith('date') || line.toLowerCase().startsWith('"date')) return;
+          const parts = line.split(',').map(p=>p.replace(/"/g,'').trim());
+          if (parts.length < 2) return;
+          const dateStr = parts[0].slice(0,10); // ambil YYYY-MM-DD
+          const val = parseInt(parts[1]);
+          if (!dateStr || isNaN(val)) return;
+          if (!igParsedCSV[dateStr]) igParsedCSV[dateStr] = {};
+          igParsedCSV[dateStr][metricKey] = (igParsedCSV[dateStr][metricKey]||0) + val;
+        });
+      } catch(err) { console.warn('Parse error', file.name, err); }
+      filesDone++;
+      checkDone();
+    };
+    reader.readAsText(file, 'utf-16');
+  });
+
+  function checkDone() {
+    if (filesDone < files.length) return;
+    // Aggregate ke minggu (Senin)
+    const weekly = {};
+    Object.entries(igParsedCSV).forEach(([date, metrics]) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+      const key = monday.toISOString().slice(0,10);
+      if (!weekly[key]) weekly[key] = {};
+      Object.entries(metrics).forEach(([k,v]) => {
+        weekly[key][k] = (weekly[key][k]||0) + v;
+      });
+    });
+    igParsedCSV = weekly;
+
+    const rows = Object.entries(weekly).sort(([a],[b])=>a.localeCompare(b));
+    if (!rows.length) {
+      preview.innerHTML = '<div style="color:var(--red);font-size:12px">Tidak ada data valid ditemukan.</div>';
+      btn.style.display = 'none';
+      return;
+    }
+    preview.innerHTML = `
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--green)">✅ ${rows.length} minggu terdeteksi:</div>
+      <div style="overflow-x:auto;max-height:200px;overflow-y:auto">
+        <table style="width:100%;font-size:11px;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:4px 8px">Week</th>
+            <th style="text-align:right;padding:4px 8px">Reach</th>
+            <th style="text-align:right;padding:4px 8px">Views</th>
+            <th style="text-align:right;padding:4px 8px">Interactions</th>
+            <th style="text-align:right;padding:4px 8px">Follows</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map(([week, m])=>`
+            <tr style="border-bottom:0.5px solid var(--border)">
+              <td style="padding:4px 8px">${week}</td>
+              <td style="padding:4px 8px;text-align:right">${(m.reach||0).toLocaleString()}</td>
+              <td style="padding:4px 8px;text-align:right">${(m.views||0).toLocaleString()}</td>
+              <td style="padding:4px 8px;text-align:right">${(m.interactions||0).toLocaleString()}</td>
+              <td style="padding:4px 8px;text-align:right">${(m.follows_gained||0).toLocaleString()}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    btn.style.display = 'inline-flex';
+  }
+}
+
+async function igConfirmUpload() {
+  const rows = Object.entries(igParsedCSV);
+  if (!rows.length) { showToast('Tidak ada data!'); return; }
+  const btn = document.getElementById('ig-upload-btn');
+  if (btn) btn.disabled = true;
+  let ok = 0, fail = 0;
+  for (const [weekStart, metrics] of rows) {
+    try {
+      const row = { week_start: weekStart, ...metrics };
+      await sb_upsertIgSnapshot(row);
+      ok++;
+    } catch(e) { fail++; }
+  }
+  igSnapshots = await sb_loadIgSnapshots();
+  showToast(`Import selesai: ${ok} berhasil${fail?' · '+fail+' gagal':''}`);
+  if (btn) btn.disabled = false;
+  showIgTab('dashboard');
+}
+</script>
+
+<script>
+// ============================================================
+// COMPETITOR INTEL MODULE
+// ============================================================
+
+// --- State ---
+var ciProfiles = [];
+var ciSnapshots = [];
+var ciFlags = [];
+var ciActiveTab = 'overview';
+var ciSelectedId = null;
+
+// --- Supabase helpers ---
+async function sb_loadCompetitorProfiles() {
+  const rows = await sb_load('competitor_profiles', { order: 'name', ascending: true });
+  return rows || [];
+}
+async function sb_loadCompetitorSnapshots() {
+  const rows = await sb_load('competitor_snapshots', { order: 'snapshot_date', ascending: false });
+  return rows || [];
+}
+async function sb_loadCompetitorFlags() {
+  const rows = await sb_load('competitor_flags', { order: 'flag_date', ascending: false });
+  return rows || [];
+}
+async function sb_saveProfile(row) {
+  if (row.id) {
+    const { id, created_at, ...data } = row;
+    data.updated_at = new Date().toISOString();
+    return await sb_update('competitor_profiles', row.id, data);
+  }
+  return await sb_insert('competitor_profiles', row);
+}
+async function sb_saveSnapshot(row) {
+  if (row.id) {
+    const { id, created_at, ...data } = row;
+    return await sb_update('competitor_snapshots', row.id, data);
+  }
+  return await sb_insert('competitor_snapshots', row);
+}
+async function sb_saveFlag(row) {
+  return await sb_insert('competitor_flags', row);
+}
+async function sb_deleteCompetitor(id) {
+  return await sb_delete('competitor_profiles', id);
+}
+async function sb_deleteSnapshot(id) {
+  return await sb_delete('competitor_snapshots', id);
+}
+async function sb_deleteFlag(id) {
+  return await sb_delete('competitor_flags', id);
+}
+
+// --- HTML ---
+function competitorHTML() {
+  return `
+  <div class="tab-row" style="overflow-x:auto">
+    <div class="tab active" id="citab-overview" onclick="switchCiTab('overview',this)"><i class="ti ti-layout-dashboard" style="font-size:11px"></i> Overview</div>
+    <div class="tab" id="citab-profiles" onclick="switchCiTab('profiles',this)"><i class="ti ti-users" style="font-size:11px"></i> Kompetitor</div>
+    <div class="tab" id="citab-snapshots" onclick="switchCiTab('snapshots',this)"><i class="ti ti-camera" style="font-size:11px"></i> Snapshots</div>
+    <div class="tab" id="citab-flags" onclick="switchCiTab('flags',this)"><i class="ti ti-flag" style="font-size:11px"></i> Intel Flags</div>
+  </div>
+  <div id="ci-tab-body" style="margin-top:14px"></div>`;
+}
+
+function switchCiTab(tab, el) {
+  ciActiveTab = tab;
+  document.querySelectorAll('#citab-overview,#citab-profiles,#citab-snapshots,#citab-flags').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderCiTab();
+}
+
+function renderCiTab() {
+  const c = document.getElementById('ci-tab-body');
+  if (!c) return;
+  if (ciActiveTab === 'overview') c.innerHTML = ciOverviewHTML();
+  else if (ciActiveTab === 'profiles') { c.innerHTML = ciProfilesHTML(); }
+  else if (ciActiveTab === 'snapshots') { c.innerHTML = ciSnapshotsHTML(); }
+  else if (ciActiveTab === 'flags') { c.innerHTML = ciFlagsHTML(); }
+}
+
+// --- OVERVIEW ---
+function ciOverviewHTML() {
+  const total = ciProfiles.length;
+  const direct = ciProfiles.filter(p => p.category === 'direct').length;
+  const indirect = ciProfiles.filter(p => p.category === 'indirect').length;
+  const subs = ciProfiles.filter(p => p.category === 'substitusi').length;
+
+  // Threat summary dari snapshot terbaru tiap kompetitor
+  const threatMap = {};
+  ciSnapshots.forEach(s => {
+    if (!threatMap[s.competitor_id]) threatMap[s.competitor_id] = s.threat_level;
+  });
+  const highThreat = Object.values(threatMap).filter(t => t === 'high').length;
+  const medThreat = Object.values(threatMap).filter(t => t === 'medium').length;
+
+  // Recent flags (5 terbaru)
+  const recentFlags = [...ciFlags].sort((a,b) => new Date(b.flag_date) - new Date(a.flag_date)).slice(0, 5);
+
+  const flagTypeLabel = { new_product: '🆕 Produk Baru', price_change: '💰 Harga Berubah', new_campaign: '📢 Campaign Baru', other: '📌 Lainnya' };
+  const catColor = { direct: 'var(--red)', indirect: 'var(--amber)', substitusi: 'var(--blue)' };
+  const threatColor = { high: 'var(--red-bg);color:var(--red)', medium: 'var(--amber-bg);color:var(--amber)', low: 'var(--green-bg);color:var(--green)' };
+
+  return `
+  <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card"><div class="stat-label">Total Kompetitor</div><div class="stat-val">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Direct</div><div class="stat-val" style="color:var(--red)">${direct}</div></div>
+    <div class="stat-card"><div class="stat-label">Indirect</div><div class="stat-val" style="color:var(--amber)">${indirect}</div></div>
+    <div class="stat-card"><div class="stat-label">High Threat</div><div class="stat-val" style="color:var(--red)">${highThreat}</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+    <!-- Kompetitor List -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-weight:600;font-size:13px">Daftar Kompetitor</div>
+        <button class="btn-primary" style="font-size:11px;padding:5px 10px" onclick="openCiProfileModal()"><i class="ti ti-plus"></i> Tambah</button>
+      </div>
+      ${total === 0 ? `<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px 0">Belum ada kompetitor. Tambah dulu!</div>` :
+        ciProfiles.map(p => {
+          const latestSnap = ciSnapshots.filter(s => _idEq(s.competitor_id, p.id)).sort((a,b) => new Date(b.snapshot_date) - new Date(a.snapshot_date))[0];
+          const threat = latestSnap ? latestSnap.threat_level : null;
+          const flagCount = ciFlags.filter(f => _idEq(f.competitor_id, p.id)).length;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--border);cursor:pointer" onclick="ciSelectCompetitor('${p.id}')">
+            <div style="width:34px;height:34px;border-radius:8px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--purple-mid);flex-shrink:0">${(p.name||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${p.niche || '—'}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+              ${threat ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${threatColor[threat]||''};font-weight:600">${threat.toUpperCase()}</span>` : ''}
+              <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">${p.category||'—'}</span>
+              ${flagCount > 0 ? `<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:var(--amber-bg);color:var(--amber);font-weight:600">🚩${flagCount}</span>` : ''}
+            </div>
+          </div>`;
+        }).join('')
+      }
+    </div>
+
+    <!-- Recent Intel Flags -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-weight:600;font-size:13px">Intel Flags Terbaru</div>
+        <button class="btn-primary" style="font-size:11px;padding:5px 10px" onclick="openCiFlagModal()"><i class="ti ti-flag-plus"></i> Tambah</button>
+      </div>
+      ${recentFlags.length === 0 ? `<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px 0">Belum ada intel flags.</div>` :
+        recentFlags.map(f => {
+          const prof = ciProfiles.find(p => _idEq(p.id, f.competitor_id));
+          return `<div style="padding:8px 0;border-bottom:0.5px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:11px;font-weight:600">${flagTypeLabel[f.flag_type]||f.flag_type}</span>
+              <span style="font-size:10px;color:var(--text-muted)">${igFmtDate(f.flag_date)}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text)">${f.description}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">📌 ${prof ? prof.name : '—'}</div>
+          </div>`;
+        }).join('')
+      }
+    </div>
+  </div>`;
+}
+
+// --- PROFILES ---
+function ciProfilesHTML() {
+  const catColor = { direct: 'var(--red-bg);color:var(--red)', indirect: 'var(--amber-bg);color:var(--amber)', substitusi: 'var(--blue-bg);color:var(--blue)' };
+  return `
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="btn-primary" onclick="openCiProfileModal()"><i class="ti ti-plus"></i> Tambah Kompetitor</button>
+  </div>
+  ${ciProfiles.length === 0 ? `<div class="card" style="text-align:center;color:var(--text-muted);padding:40px">Belum ada kompetitor ditambahkan.</div>` :
+    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
+    ${ciProfiles.map(p => {
+      const latestSnap = ciSnapshots.filter(s => _idEq(s.competitor_id, p.id)).sort((a,b) => new Date(b.snapshot_date) - new Date(a.snapshot_date))[0];
+      const snapCount = ciSnapshots.filter(s => _idEq(s.competitor_id, p.id)).length;
+      const flagCount = ciFlags.filter(f => _idEq(f.competitor_id, p.id)).length;
+      const threat = latestSnap ? latestSnap.threat_level : null;
+      const threatColor = { high: 'var(--red-bg);color:var(--red)', medium: 'var(--amber-bg);color:var(--amber)', low: 'var(--green-bg);color:var(--green)' };
+      const platforms = Array.isArray(p.platforms) ? p.platforms : (p.platforms ? JSON.parse(p.platforms) : []);
+      return `<div class="card" style="position:relative">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div style="width:38px;height:38px;border-radius:9px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--purple-mid);flex-shrink:0">${(p.name||'?')[0].toUpperCase()}</div>
+            <div>
+              <div style="font-weight:700;font-size:13px">${p.name}</div>
+              <div style="font-size:10px;color:var(--text-muted)">${p.primary_url||'—'}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:5px">
+            <button onclick="openCiProfileModal('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px"><i class="ti ti-pencil"></i></button>
+            <button onclick="deleteCiProfile('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:2px"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">
+          <span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${catColor[p.category]||'var(--bg);color:var(--text-muted)'};font-weight:600">${p.category||'—'}</span>
+          ${threat ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${threatColor[threat]||''};font-weight:600">Threat: ${threat.toUpperCase()}</span>` : ''}
+          ${platforms.map(pl => `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid)">${pl}</span>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px"><b>Niche:</b> ${p.niche||'—'}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px"><b>Target:</b> ${p.target_audience||'—'}</div>
+        ${p.notes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;padding:6px 8px;background:var(--bg);border-radius:6px">${p.notes}</div>` : ''}
+        <div style="display:flex;gap:10px;margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border)">
+          <span style="font-size:10px;color:var(--text-muted)">📸 ${snapCount} snapshot</span>
+          <span style="font-size:10px;color:var(--text-muted)">🚩 ${flagCount} flag</span>
+          ${latestSnap ? `<span style="font-size:10px;color:var(--text-muted)">Update: ${igFmtDate(latestSnap.snapshot_date)}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button onclick="openCiSnapshotModal('${p.id}')" style="font-size:10px;padding:4px 9px;background:var(--purple-light);color:var(--purple-mid);border:none;border-radius:6px;cursor:pointer;font-weight:600"><i class="ti ti-camera"></i> Snapshot</button>
+          <button onclick="openCiFlagModal('${p.id}')" style="font-size:10px;padding:4px 9px;background:var(--amber-bg);color:var(--amber);border:none;border-radius:6px;cursor:pointer;font-weight:600"><i class="ti ti-flag"></i> Flag</button>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`
+  }`;
+}
+
+// --- SNAPSHOTS ---
+function ciSnapshotsHTML() {
+  const sorted = [...ciSnapshots].sort((a,b) => new Date(b.snapshot_date) - new Date(a.snapshot_date));
+  const threatColor = { high: 'var(--red-bg);color:var(--red)', medium: 'var(--amber-bg);color:var(--amber)', low: 'var(--green-bg);color:var(--green)' };
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:12px;color:var(--text-muted)">${sorted.length} snapshot tersimpan</div>
+    <button class="btn-primary" onclick="openCiSnapshotModal()"><i class="ti ti-plus"></i> Tambah Snapshot</button>
+  </div>
+  ${sorted.length === 0 ? `<div class="card" style="text-align:center;color:var(--text-muted);padding:40px">Belum ada snapshot.</div>` :
+    `<div style="display:flex;flex-direction:column;gap:8px">
+    ${sorted.map(s => {
+      const prof = ciProfiles.find(p => _idEq(p.id, s.competitor_id));
+      const followers = s.followers ? (typeof s.followers === 'string' ? JSON.parse(s.followers) : s.followers) : {};
+      const products = s.products ? (typeof s.products === 'string' ? JSON.parse(s.products) : s.products) : [];
+      const follStr = Object.entries(followers).map(([k,v]) => `${k}: ${fmtN(v)}`).join(' · ');
+      const prodStr = products.map(p => `${p.name} (${p.price_min ? 'Rp'+fmtN(p.price_min) : '?'}${p.price_max ? '–Rp'+fmtN(p.price_max) : ''})`).join(', ');
+      return `<div class="card" style="padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-weight:700;font-size:13px">${prof ? prof.name : '—'}</div>
+            <span style="font-size:10px;color:var(--text-muted)">${igFmtDate(s.snapshot_date)}</span>
+            ${s.threat_level ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${threatColor[s.threat_level]||''};font-weight:600">${s.threat_level.toUpperCase()}</span>` : ''}
+          </div>
+          <div style="display:flex;gap:5px">
+            <button onclick="openCiSnapshotModal(null,'${s.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px"><i class="ti ti-pencil"></i></button>
+            <button onclick="deleteCiSnapshot('${s.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px">
+          ${follStr ? `<div><span style="color:var(--text-muted)">Followers:</span> ${follStr}</div>` : ''}
+          ${prodStr ? `<div><span style="color:var(--text-muted)">Produk:</span> ${prodStr}</div>` : ''}
+          ${s.funnel_type ? `<div><span style="color:var(--text-muted)">Funnel:</span> ${s.funnel_type}</div>` : ''}
+          ${s.ads_active !== null && s.ads_active !== undefined ? `<div><span style="color:var(--text-muted)">Ads:</span> ${s.ads_active ? '✅ Aktif' : '❌ Tidak'}</div>` : ''}
+          ${s.lead_magnets ? `<div><span style="color:var(--text-muted)">Lead Magnet:</span> ${s.lead_magnets}</div>` : ''}
+          ${s.credibility_signals ? `<div><span style="color:var(--text-muted)">Credibility:</span> ${s.credibility_signals}</div>` : ''}
+        </div>
+        ${s.notes ? `<div style="margin-top:7px;font-size:11px;color:var(--text-muted);padding:5px 8px;background:var(--bg);border-radius:6px">${s.notes}</div>` : ''}
+      </div>`;
+    }).join('')}
+    </div>`
+  }`;
+}
+
+// --- FLAGS ---
+function ciFlagsHTML() {
+  const sorted = [...ciFlags].sort((a,b) => new Date(b.flag_date) - new Date(a.flag_date));
+  const flagTypeLabel = { new_product: '🆕 Produk Baru', price_change: '💰 Harga Berubah', new_campaign: '📢 Campaign Baru', other: '📌 Lainnya' };
+  const flagBg = { new_product: 'var(--teal-bg);color:var(--teal)', price_change: 'var(--amber-bg);color:var(--amber)', new_campaign: 'var(--blue-bg);color:var(--blue)', other: 'var(--bg);color:var(--text-muted)' };
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:12px;color:var(--text-muted)">${sorted.length} intel flags</div>
+    <button class="btn-primary" onclick="openCiFlagModal()"><i class="ti ti-flag-plus"></i> Tambah Flag</button>
+  </div>
+  ${sorted.length === 0 ? `<div class="card" style="text-align:center;color:var(--text-muted);padding:40px">Belum ada intel flags.</div>` :
+    `<div style="display:flex;flex-direction:column;gap:6px">
+    ${sorted.map(f => {
+      const prof = ciProfiles.find(p => _idEq(p.id, f.competitor_id));
+      return `<div class="card" style="padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:10px;padding:3px 8px;border-radius:10px;background:${flagBg[f.flag_type]||''};font-weight:600;white-space:nowrap;flex-shrink:0">${flagTypeLabel[f.flag_type]||f.flag_type}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;color:var(--text)">${f.description}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">📌 ${prof ? prof.name : '—'} · ${igFmtDate(f.flag_date)}</div>
+        </div>
+        <button onclick="deleteCiFlag('${f.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;flex-shrink:0"><i class="ti ti-trash"></i></button>
+      </div>`;
+    }).join('')}
+    </div>`
+  }`;
+}
+
+// --- MODALS ---
+function openCiProfileModal(profileId) {
+  const p = profileId ? ciProfiles.find(x => _idEq(x.id, profileId)) : null;
+  const platforms = p && p.platforms ? (Array.isArray(p.platforms) ? p.platforms : JSON.parse(p.platforms)) : [];
+  const platOptions = ['Instagram','TikTok','YouTube','X','LinkedIn','Website','Tokopedia','Shopee'];
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'ci-profile-modal';
+  overlay.innerHTML = `
+  <div class="modal" style="max-width:500px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title">${p ? 'Edit' : 'Tambah'} Kompetitor</div>
+      <button class="modal-close" onclick="document.getElementById('ci-profile-modal').remove()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label class="form-label">Nama Kompetitor *</label>
+        <input class="form-input" id="ci-p-name" value="${p ? p.name : ''}" placeholder="Nama akun / brand">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="form-label">Kategori</label>
+          <select class="form-input" id="ci-p-category">
+            <option value="">Pilih...</option>
+            <option value="direct" ${p && p.category==='direct' ? 'selected' : ''}>Direct</option>
+            <option value="indirect" ${p && p.category==='indirect' ? 'selected' : ''}>Indirect</option>
+            <option value="substitusi" ${p && p.category==='substitusi' ? 'selected' : ''}>Substitusi</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">URL / Link Utama</label>
+          <input class="form-input" id="ci-p-url" value="${p ? (p.primary_url||'') : ''}" placeholder="https://...">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Platform</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          ${platOptions.map(pl => `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+            <input type="checkbox" value="${pl}" ${platforms.includes(pl) ? 'checked' : ''}> ${pl}
+          </label>`).join('')}
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Niche / Positioning</label>
+        <input class="form-input" id="ci-p-niche" value="${p ? (p.niche||'') : ''}" placeholder="Misal: career coaching general, tes BUMN, dll">
+      </div>
+      <div>
+        <label class="form-label">Target Audience</label>
+        <input class="form-input" id="ci-p-target" value="${p ? (p.target_audience||'') : ''}" placeholder="Misal: freshgrad umum, mahasiswa akhir, dll">
+      </div>
+      <div>
+        <label class="form-label">Catatan</label>
+        <textarea class="form-input" id="ci-p-notes" rows="2" placeholder="Observasi umum...">${p ? (p.notes||'') : ''}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="document.getElementById('ci-profile-modal').remove()">Batal</button>
+      <button class="btn-primary" onclick="saveCiProfile('${profileId||''}')">Simpan</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function saveCiProfile(profileId) {
+  const name = document.getElementById('ci-p-name').value.trim();
+  if (!name) { showToast('Nama wajib diisi!'); return; }
+  const platforms = [...document.querySelectorAll('#ci-profile-modal input[type=checkbox]:checked')].map(c => c.value);
+  const row = {
+    name,
+    category: document.getElementById('ci-p-category').value,
+    platforms,
+    primary_url: document.getElementById('ci-p-url').value.trim(),
+    niche: document.getElementById('ci-p-niche').value.trim(),
+    target_audience: document.getElementById('ci-p-target').value.trim(),
+    notes: document.getElementById('ci-p-notes').value.trim(),
+  };
+  if (profileId) row.id = profileId;
+  try {
+    await sb_saveProfile(row);
+    document.getElementById('ci-profile-modal').remove();
+    await reloadCiData();
+    renderCiTab();
+    showToast('Kompetitor tersimpan ✓');
+  } catch(e) { showToast('Gagal simpan: ' + _sbErrInfo(e)); }
+}
+
+function openCiSnapshotModal(competitorId, snapshotId) {
+  const s = snapshotId ? ciSnapshots.find(x => _idEq(x.id, snapshotId)) : null;
+  const followers = s && s.followers ? (typeof s.followers === 'string' ? JSON.parse(s.followers) : s.followers) : {};
+  const products = s && s.products ? (typeof s.products === 'string' ? JSON.parse(s.products) : s.products) : [{ name:'', price_min:'', price_max:'' }];
+  const today = new Date().toISOString().split('T')[0];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'ci-snapshot-modal';
+  overlay.innerHTML = `
+  <div class="modal" style="max-width:540px;width:100%;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title">${s ? 'Edit' : 'Tambah'} Snapshot</div>
+      <button class="modal-close" onclick="document.getElementById('ci-snapshot-modal').remove()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="form-label">Kompetitor *</label>
+          <select class="form-input" id="ci-s-competitor">
+            <option value="">Pilih...</option>
+            ${ciProfiles.map(p => `<option value="${p.id}" ${(competitorId && _idEq(p.id, competitorId)) || (s && _idEq(p.id, s.competitor_id)) ? 'selected' : ''}>${p.name}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Tanggal Snapshot</label>
+          <input class="form-input" type="date" id="ci-s-date" value="${s ? s.snapshot_date : today}">
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Followers (per platform)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:4px">
+          ${['Instagram','TikTok','YouTube','X','LinkedIn'].map(pl => `
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">${pl}</div>
+            <input class="form-input" style="padding:5px 8px" id="ci-s-foll-${pl.toLowerCase()}" type="number" placeholder="0" value="${followers[pl.toLowerCase()]||followers[pl]||''}">
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Produk yang Dijual</label>
+        <div id="ci-s-products-wrap" style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+          ${products.map((pr, i) => ciProductRowHTML(pr, i)).join('')}
+        </div>
+        <button onclick="addCiProductRow()" style="margin-top:6px;font-size:11px;padding:4px 10px;background:var(--purple-light);color:var(--purple-mid);border:none;border-radius:6px;cursor:pointer">+ Produk</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="form-label">Funnel Type</label>
+          <select class="form-input" id="ci-s-funnel">
+            <option value="">—</option>
+            <option value="dm" ${s && s.funnel_type==='dm' ? 'selected' : ''}>DM</option>
+            <option value="landing_page" ${s && s.funnel_type==='landing_page' ? 'selected' : ''}>Landing Page</option>
+            <option value="marketplace" ${s && s.funnel_type==='marketplace' ? 'selected' : ''}>Marketplace</option>
+            <option value="mixed" ${s && s.funnel_type==='mixed' ? 'selected' : ''}>Mixed</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Ads Aktif?</label>
+          <select class="form-input" id="ci-s-ads">
+            <option value="">—</option>
+            <option value="true" ${s && s.ads_active === true ? 'selected' : ''}>Ya</option>
+            <option value="false" ${s && s.ads_active === false ? 'selected' : ''}>Tidak</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Lead Magnet / Free Content Unggulan</label>
+        <input class="form-input" id="ci-s-leadmagnets" value="${s ? (s.lead_magnets||'') : ''}" placeholder="Misal: ebook gratis, webinar gratis, dll">
+      </div>
+
+      <div>
+        <label class="form-label">Credibility Signals</label>
+        <input class="form-input" id="ci-s-cred" value="${s ? (s.credibility_signals||'') : ''}" placeholder="Misal: 10rb alumni, featured di media, dll">
+      </div>
+
+      <div>
+        <label class="form-label">Threat Level</label>
+        <select class="form-input" id="ci-s-threat">
+          <option value="">—</option>
+          <option value="low" ${s && s.threat_level==='low' ? 'selected' : ''}>Low</option>
+          <option value="medium" ${s && s.threat_level==='medium' ? 'selected' : ''}>Medium</option>
+          <option value="high" ${s && s.threat_level==='high' ? 'selected' : ''}>High</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label">Catatan / Observasi</label>
+        <textarea class="form-input" id="ci-s-notes" rows="2" placeholder="Catatan tambahan...">${s ? (s.notes||'') : ''}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="document.getElementById('ci-snapshot-modal').remove()">Batal</button>
+      <button class="btn-primary" onclick="saveCiSnapshot('${snapshotId||''}')">Simpan</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function ciProductRowHTML(pr, i) {
+  return `<div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:5px;align-items:center" id="ci-prod-row-${i}">
+    <input class="form-input" style="padding:5px 8px" placeholder="Nama produk" value="${pr.name||''}">
+    <input class="form-input" style="padding:5px 8px" type="number" placeholder="Harga min" value="${pr.price_min||''}">
+    <input class="form-input" style="padding:5px 8px" type="number" placeholder="Harga max" value="${pr.price_max||''}">
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:0 4px"><i class="ti ti-x"></i></button>
+  </div>`;
+}
+
+var _ciProductCount = 1;
+function addCiProductRow() {
+  const wrap = document.getElementById('ci-s-products-wrap');
+  if (!wrap) return;
+  const i = _ciProductCount++;
+  const div = document.createElement('div');
+  div.innerHTML = ciProductRowHTML({ name:'', price_min:'', price_max:'' }, i);
+  wrap.appendChild(div.firstElementChild);
+}
+
+async function saveCiSnapshot(snapshotId) {
+  const competitorId = document.getElementById('ci-s-competitor').value;
+  if (!competitorId) { showToast('Pilih kompetitor dulu!'); return; }
+
+  // Collect followers
+  const followers = {};
+  ['instagram','tiktok','youtube','x','linkedin'].forEach(pl => {
+    const val = document.getElementById('ci-s-foll-' + pl);
+    if (val && val.value) followers[pl] = parseInt(val.value);
+  });
+
+  // Collect products
+  const products = [];
+  document.querySelectorAll('#ci-s-products-wrap > div').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    if (inputs[0] && inputs[0].value.trim()) {
+      products.push({ name: inputs[0].value.trim(), price_min: inputs[1]?inputs[1].value:'', price_max: inputs[2]?inputs[2].value:'' });
+    }
+  });
+
+  const adsVal = document.getElementById('ci-s-ads').value;
+  const row = {
+    competitor_id: competitorId,
+    snapshot_date: document.getElementById('ci-s-date').value,
+    followers: Object.keys(followers).length ? followers : null,
+    products: products.length ? products : null,
+    funnel_type: document.getElementById('ci-s-funnel').value || null,
+    ads_active: adsVal === 'true' ? true : adsVal === 'false' ? false : null,
+    lead_magnets: document.getElementById('ci-s-leadmagnets').value.trim() || null,
+    credibility_signals: document.getElementById('ci-s-cred').value.trim() || null,
+    threat_level: document.getElementById('ci-s-threat').value || null,
+    notes: document.getElementById('ci-s-notes').value.trim() || null,
+  };
+  if (snapshotId) row.id = snapshotId;
+  try {
+    await sb_saveSnapshot(row);
+    document.getElementById('ci-snapshot-modal').remove();
+    await reloadCiData();
+    renderCiTab();
+    showToast('Snapshot tersimpan ✓');
+  } catch(e) { showToast('Gagal simpan: ' + _sbErrInfo(e)); }
+}
+
+function openCiFlagModal(competitorId) {
+  const today = new Date().toISOString().split('T')[0];
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'ci-flag-modal';
+  overlay.innerHTML = `
+  <div class="modal" style="max-width:440px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title">Tambah Intel Flag</div>
+      <button class="modal-close" onclick="document.getElementById('ci-flag-modal').remove()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="form-label">Kompetitor *</label>
+          <select class="form-input" id="ci-f-competitor">
+            <option value="">Pilih...</option>
+            ${ciProfiles.map(p => `<option value="${p.id}" ${competitorId && _idEq(p.id, competitorId) ? 'selected' : ''}>${p.name}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Tanggal</label>
+          <input class="form-input" type="date" id="ci-f-date" value="${today}">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Tipe Flag</label>
+        <select class="form-input" id="ci-f-type">
+          <option value="new_product">🆕 Produk Baru</option>
+          <option value="price_change">💰 Harga Berubah</option>
+          <option value="new_campaign">📢 Campaign Baru</option>
+          <option value="other">📌 Lainnya</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Deskripsi *</label>
+        <textarea class="form-input" id="ci-f-desc" rows="3" placeholder="Ceritain intel-nya..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="document.getElementById('ci-flag-modal').remove()">Batal</button>
+      <button class="btn-primary" onclick="saveCiFlag()">Simpan</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function saveCiFlag() {
+  const competitorId = document.getElementById('ci-f-competitor').value;
+  const desc = document.getElementById('ci-f-desc').value.trim();
+  if (!competitorId) { showToast('Pilih kompetitor!'); return; }
+  if (!desc) { showToast('Deskripsi wajib diisi!'); return; }
+  const row = {
+    competitor_id: competitorId,
+    flag_date: document.getElementById('ci-f-date').value,
+    flag_type: document.getElementById('ci-f-type').value,
+    description: desc,
+  };
+  try {
+    await sb_saveFlag(row);
+    document.getElementById('ci-flag-modal').remove();
+    await reloadCiData();
+    renderCiTab();
+    showToast('Intel flag tersimpan ✓');
+  } catch(e) { showToast('Gagal simpan: ' + _sbErrInfo(e)); }
+}
+
+async function deleteCiProfile(id) {
+  if (!confirm('Hapus kompetitor ini? Semua snapshot & flag-nya ikut terhapus.')) return;
+  try {
+    await sb_deleteCompetitor(id);
+    await reloadCiData();
+    renderCiTab();
+    showToast('Kompetitor dihapus ✓');
+  } catch(e) { showToast('Gagal hapus: ' + _sbErrInfo(e)); }
+}
+
+async function deleteCiSnapshot(id) {
+  if (!confirm('Hapus snapshot ini?')) return;
+  try {
+    await sb_deleteSnapshot(id);
+    await reloadCiData();
+    renderCiTab();
+    showToast('Snapshot dihapus ✓');
+  } catch(e) { showToast('Gagal hapus: ' + _sbErrInfo(e)); }
+}
+
+async function deleteCiFlag(id) {
+  if (!confirm('Hapus flag ini?')) return;
+  try {
+    await sb_deleteFlag(id);
+    await reloadCiData();
+    renderCiTab();
+    showToast('Flag dihapus ✓');
+  } catch(e) { showToast('Gagal hapus: ' + _sbErrInfo(e)); }
+}
+
+function ciSelectCompetitor(id) {
+  // Shortcut: klik kompetitor di overview → langsung ke profiles tab
+  ciActiveTab = 'profiles';
+  document.querySelectorAll('#citab-overview,#citab-profiles,#citab-snapshots,#citab-flags').forEach(t => t.classList.remove('active'));
+  const tab = document.getElementById('citab-profiles');
+  if (tab) tab.classList.add('active');
+  renderCiTab();
+}
+
+async function reloadCiData() {
+  ciProfiles = await sb_loadCompetitorProfiles();
+  ciSnapshots = await sb_loadCompetitorSnapshots();
+  ciFlags = await sb_loadCompetitorFlags();
+}
+
+async function initCompetitor() {
+  ciActiveTab = 'overview';
+  await reloadCiData();
+  renderCiTab();
+}
+</script>
 
 </body>
 </html>
