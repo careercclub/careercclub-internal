@@ -1619,6 +1619,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       id: e.id, nama: e.nama, tanggal: e.tanggal, waktu: e.waktu || '',
       status: e.status || 'Planning', speaker: e.speaker || '', platform: e.platform || '',
       linkZoom: e.link_zoom || '', target: e.target || 0, deskripsi: e.deskripsi || '',
+      jenis_program: e.jenis_program || '',
       capaian_peserta: e.capaian_peserta ?? null, notes_post: e.notes_post || ''
     }));
     partnerDeals = await sb_load('partner_deals', { order: 'created_at', ascending: false });
@@ -4229,49 +4230,44 @@ function projectHTML(){
 }
 
 async function confirmDuplicate(){
-  const src = projects.find(p=>_idEq(p.id,_dupSourceId));
-  if(!src){showToast("Source event tidak ditemukan","error");return;}
-
   const nama = document.getElementById("dup-nama").value.trim();
   const tanggal = document.getElementById("dup-tanggal").value;
-  const waktu = document.getElementById("dup-waktu").value;
-  const speaker = document.getElementById("dup-speaker").value.trim();
-
   if(!nama){showToast("Nama event wajib diisi","error");return;}
   if(!tanggal){showToast("Tanggal wajib diisi","error");return;}
 
-  // Calc day diff
-  const srcDate = new Date(src.tanggal);
-  const newDate = new Date(tanggal);
-  const dayDiff = Math.round((newDate - srcDate)/86400000);
+  // Ambil task yang dicentang
+  const checkedTaskIds = [...document.querySelectorAll('#dup-task-list input[type=checkbox]:checked')].map(c=>c.value);
 
-  // Persist event duplikat ke Supabase dulu (biar ga ilang pas refresh)
   const dbRow={
-    nama, tanggal, waktu,
-    platform: src.platform||"", speaker: speaker||"TBD",
-    status:"Planning", target: src.target||0,
-    link_zoom: src.linkZoom||"", deskripsi: src.deskripsi||"",
+    nama,
+    jenis_program: document.getElementById("dup-jenis").value||null,
+    tanggal,
+    waktu: document.getElementById("dup-waktu").value||"19:00",
+    platform: document.getElementById("dup-platform").value||"Zoom",
+    status: document.getElementById("dup-status").value||"Planning",
+    speaker: document.getElementById("dup-speaker").value.trim()||null,
+    target: parseInt(document.getElementById("dup-target").value)||0,
+    link_zoom: document.getElementById("dup-zoom").value.trim()||null,
+    deskripsi: document.getElementById("dup-desc").value.trim()||null,
   };
   const row = await sb_saveEvent(dbRow);
   if(!row || !row.id){ showToast("Gagal duplicate event","error"); return; }
 
   const newProj = {
-    id: row.id, actualPeserta:0,
+    id: row.id,
     nama:row.nama, tanggal:row.tanggal, waktu:row.waktu||"",
+    jenis_program:row.jenis_program||"",
     status:row.status||"Planning", speaker:row.speaker||"",
     platform:row.platform||"", linkZoom:row.link_zoom||"",
-    target:row.target||0, deskripsi:row.deskripsi||""
+    target:row.target||0, deskripsi:row.deskripsi||"",
+    capaian_peserta:null, notes_post:""
   };
   projects.unshift(newProj);
 
-  // Duplicate tasks → persist ke Supabase + sync ticket
-  const tasks = projectTasks.filter(t=>_idEq(t.projectId,_dupSourceId));
+  // Duplicate hanya task yang dicentang, reset status ke Todo
+  const tasks = projectTasks.filter(t=>_idEq(t.projectId,_dupSourceId) && checkedTaskIds.includes(String(t.id)));
   let dupOk=0;
   for(const t of tasks){
-    const oldDate = new Date(t.deadline);
-    oldDate.setDate(oldDate.getDate()+dayDiff);
-    const newAssigneeId = _dupTaskAssignees[t.id] !== undefined ? _dupTaskAssignees[t.id] : t.assigneeId;
-    const person = getPersonById(newAssigneeId);
     const payload = {
       projectId: newProj.id,
       title: t.title,
@@ -4279,23 +4275,18 @@ async function confirmDuplicate(){
       phase: t.phase,
       status: "Todo",
       priority: t.priority || 'Med',
-      deadline: oldDate.toISOString().split("T")[0],
-      assigneeId: newAssigneeId,
+      deadline: null,
+      assigneeId: null,
     };
-    const row = await sb_saveTask(payload);
-    if(!row || !row.id){ continue; }
-    const newTask = { ..._taskRowToJS(row), divisiId: person.divisiId, attachments: t.attachments ? t.attachments.map(a=>({...a})) : [] };
+    const saved = await sb_saveTask(payload);
+    if(!saved || !saved.id){ continue; }
+    const newTask = { ..._taskRowToJS(saved), attachments: [] };
     projectTasks.push(newTask);
-    const tkt = await syncTaskToTicket(newTask, newProj.nama);
-    if(tkt && tkt.id){
-      newTask.ticketId = tkt.id;
-      await sb_updateTask(newTask.id, newTask);
-    }
     dupOk++;
   }
 
   closeDuplicateModal();
-  showToast(`✓ Event di-duplicate dengan ${dupOk}/${tasks.length} task`);
+  showToast(`✓ Event di-duplicate dengan ${dupOk} task`);
   activeProjectId = newProj.id;
   initProjectTab("overview");
 }
@@ -4492,19 +4483,19 @@ function openDuplicateModal(sourceId){
   const src = projects.find(p=>p.id===sourceId);
   if(!src) return;
   _dupSourceId = sourceId;
-  _dupTaskAssignees = {};
 
-  // Default new date: +7 days from source
-  const srcDate = new Date(src.tanggal);
-  srcDate.setDate(srcDate.getDate()+7);
-  const newDateISO = srcDate.toISOString().split("T")[0];
-
+  // Reset semua field kosong
   document.getElementById("dup-source-name").textContent = src.nama;
-  document.getElementById("dup-source-date").textContent = fmtDateID(src.tanggal);
-  document.getElementById("dup-nama").value = src.nama.replace(/(\d+)/, m=>parseInt(m)+1) || src.nama + " (copy)";
-  document.getElementById("dup-tanggal").value = newDateISO;
-  document.getElementById("dup-waktu").value = src.waktu || "19:00";
+  document.getElementById("dup-nama").value = "";
+  document.getElementById("dup-jenis").value = "";
+  document.getElementById("dup-tanggal").value = "";
+  document.getElementById("dup-waktu").value = "19:00";
+  document.getElementById("dup-platform").value = "Zoom";
+  document.getElementById("dup-status").value = "Planning";
   document.getElementById("dup-speaker").value = "";
+  document.getElementById("dup-target").value = "";
+  document.getElementById("dup-zoom").value = "";
+  document.getElementById("dup-desc").value = "";
 
   renderDuplicateTaskList();
   document.getElementById("duplicate-modal").style.display = "flex";
@@ -4874,49 +4865,32 @@ function ppRenderList(items){
 }
 
 function renderDuplicateTaskList(){
-  const src = projects.find(p=>p.id===_dupSourceId);
-  if(!src) return;
   const tasks = projectTasks.filter(t=>_idEq(t.projectId,_dupSourceId));
-  const srcDate = new Date(src.tanggal);
-  const newDate = new Date(document.getElementById("dup-tanggal").value);
-  const dayDiff = Math.round((newDate - srcDate)/86400000);
-
-  // Group tasks by phase
   const grouped = {"Pre Event":[],"Hari H":[],"Post Event":[]};
-  tasks.forEach(t=>{if(grouped[t.phase]) grouped[t.phase].push(t)});
+  tasks.forEach(t=>{ if(grouped[t.phase]) grouped[t.phase].push(t); });
 
   const container = document.getElementById("dup-task-list");
-  container.innerHTML = `
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;padding:8px 10px;background:var(--purple-light);border-radius:6px;display:flex;align-items:center;gap:6px">
-      <i class="ti ti-info-circle" style="color:var(--purple-mid)"></i>
-      <span>Deadline tiap task akan otomatis di-shift <b>${dayDiff>=0?"+":""}${dayDiff} hari</b> mengikuti tanggal event baru. Atur ulang assignee di bawah.</span>
-    </div>
-    ${Object.entries(grouped).map(([phase,tlist])=>{
-      if(tlist.length===0) return "";
-      return `
-      <div style="margin-bottom:10px">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px">${phase} (${tlist.length})</div>
-        ${tlist.map(t=>{
-          const oldDate = new Date(t.deadline);
-          oldDate.setDate(oldDate.getDate()+dayDiff);
-          const newDeadline = oldDate.toISOString().split("T")[0];
-          const currentAssignee = _dupTaskAssignees[t.id] !== undefined ? _dupTaskAssignees[t.id] : t.assigneeId;
-          return `
-          <div style="background:var(--bg);border-radius:8px;padding:9px 11px;margin-bottom:5px;display:flex;align-items:center;gap:8px">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:500;margin-bottom:3px">${t.title}</div>
-              <div style="font-size:10px;color:var(--text-muted)">
-                <i class="ti ti-calendar" style="font-size:10px"></i> ${fmtDateShort(t.deadline)} → <span style="color:var(--purple-mid);font-weight:600">${fmtDateShort(newDeadline)}</span>
-              </div>
-            </div>
-            <select onchange="_dupTaskAssignees['${t.id}']=this.value||null" style="font-size:11px;padding:3px 6px;border-radius:6px;border:0.5px solid var(--border);background:var(--white);min-width:140px">
-              ${tktPeople.map(p=>`<option value="${p.id}" ${p.id===currentAssignee?"selected":""}>${p.nama} — ${getDivisiById(p.divisiId).nama}</option>`).join("")}
-            </select>
-          </div>`;
-        }).join("")}
-      </div>`;
-    }).join("")}
-  `;
+  if(!container) return;
+  if(tasks.length===0){
+    container.innerHTML=`<div style="font-size:12px;color:var(--text-muted);padding:10px 0">Event ini belum punya task.</div>`;
+    return;
+  }
+  container.innerHTML = Object.entries(grouped).map(([phase,tlist])=>{
+    if(tlist.length===0) return "";
+    return `
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:5px">${phase} (${tlist.length})</div>
+      ${tlist.map(t=>`
+      <label style="display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:7px;padding:8px 10px;margin-bottom:4px;cursor:pointer">
+        <input type="checkbox" id="dup-task-${t.id}" value="${t.id}" checked style="width:14px;height:14px;accent-color:var(--purple-accent);flex-shrink:0">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500">${t.title}</div>
+          ${t.deadline?`<div style="font-size:10px;color:var(--text-muted)">Deadline asal: ${fmtDateShort(t.deadline)}</div>`:''}
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">${phasePill(t.phase)}</span>
+      </label>`).join("")}
+    </div>`;
+  }).join("");
 }
 
 function openKBDetail(id){
@@ -4947,6 +4921,13 @@ function projectOverviewHTML(){
   const totalTasks=projectTasks.length;
   const doneTasks=projectTasks.filter(t=>t.status==="Done").length;
   const overdue=projectTasks.filter(t=>t.status!=="Done" && daysUntil(t.deadline)<0).length;
+  const activeJenisFilter = window._pjmJenisFilter || '';
+  const filtered = activeJenisFilter ? projects.filter(p=>p.jenis_program===activeJenisFilter) : projects;
+
+  const jenisBadge = {
+    "Career Chaser's Academy": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>`,
+    "Free Class Series": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>`,
+  };
 
   return `
   <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
@@ -4961,10 +4942,17 @@ function projectOverviewHTML(){
         <div style="font-size:13px;font-weight:600">Semua Event</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Klik card untuk lihat detail tasks & timeline</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="openProjectModal(null)"><i class="ti ti-plus"></i> Event Baru</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <select onchange="window._pjmJenisFilter=this.value;renderProgramPage()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text)">
+          <option value="">Semua Jenis</option>
+          <option value="Career Chaser's Academy" ${activeJenisFilter==="Career Chaser's Academy"?"selected":""}>Career Chaser's Academy</option>
+          <option value="Free Class Series" ${activeJenisFilter==="Free Class Series"?"selected":""}>Free Class Series</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openProjectModal(null)"><i class="ti ti-plus"></i> Event Baru</button>
+      </div>
     </div>
     <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
-      ${projects.map(p=>{
+      ${filtered.map(p=>{
         const tasks=projectTasks.filter(t=>_idEq(t.projectId,p.id));
         const done=tasks.filter(t=>t.status==="Done").length;
         const progress=tasks.length?Math.round(done/tasks.length*100):0;
@@ -4973,17 +4961,21 @@ function projectOverviewHTML(){
         const dayColor=days<0?"var(--text-muted)":days<=3?"var(--red)":days<=7?"var(--amber)":"var(--purple-mid)";
         return `
         <div onclick="openProjectDetail('${p.id}')" style="background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--purple-accent)'" onmouseleave="this.style.borderColor='var(--border)'">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:600;line-height:1.4;margin-bottom:5px">${p.nama}</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${projStatusPill(p.status)}<span style="font-size:11px;color:var(--text-muted)"><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} · ${p.waktu}</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                ${projStatusPill(p.status)}
+                ${p.jenis_program && jenisBadge[p.jenis_program] ? jenisBadge[p.jenis_program] : ''}
+                <span style="font-size:11px;color:var(--text-muted)"><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} · ${p.waktu}</span>
+              </div>
             </div>
             <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
               <div style="font-size:18px;font-weight:700;color:${dayColor}">${dayLabel}</div>
               <button class="btn btn-sm" onclick="event.stopPropagation();openDuplicateModal('${p.id}')" title="Duplicate event" style="padding:3px 8px;font-size:10px"><i class="ti ti-copy"></i> Duplicate</button>
             </div>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker||'—'}</div>
           <div style="margin-bottom:6px">
             <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
               <span style="color:var(--text-muted)">Progress task</span>
@@ -4995,6 +4987,7 @@ function projectOverviewHTML(){
           </div>
         </div>`;
       }).join("")}
+      ${filtered.length===0?`<div style="color:var(--text-muted);font-size:12px;padding:20px;grid-column:span 2;text-align:center">Tidak ada event untuk filter ini.</div>`:''}
     </div>
   </div>`;
 }
@@ -5136,6 +5129,7 @@ function openProjectModal(id){
   const p=id?projects.find(x=>x.id===id):null;
   document.getElementById("pjm-title-label").textContent=p?"Edit Event":"Event Baru";
   document.getElementById("pjm-nama").value=p?p.nama:"";
+  document.getElementById("pjm-jenis").value=p?(p.jenis_program||""):"";
   document.getElementById("pjm-tanggal").value=p?p.tanggal:"";
   document.getElementById("pjm-waktu").value=p?p.waktu:"19:00";
   document.getElementById("pjm-platform").value=p?p.platform:"Zoom";
@@ -5803,6 +5797,7 @@ async function saveProjectModal(){
   const id=document.getElementById("project-modal").dataset.projId || "";
   const data={
     nama:document.getElementById("pjm-nama").value.trim(),
+    jenis_program:document.getElementById("pjm-jenis").value||null,
     tanggal:document.getElementById("pjm-tanggal").value,
     waktu:document.getElementById("pjm-waktu").value,
     platform:document.getElementById("pjm-platform").value,
@@ -5819,6 +5814,7 @@ async function saveProjectModal(){
 
   const dbRow={
     nama:data.nama, tanggal:data.tanggal, waktu:data.waktu,
+    jenis_program:data.jenis_program,
     platform:data.platform, speaker:data.speaker, status:data.status,
     target:data.target, link_zoom:data.linkZoom, deskripsi:data.deskripsi,
     capaian_peserta:data.capaian_peserta, notes_post:data.notes_post,
@@ -5847,18 +5843,30 @@ async function saveProjectModal(){
 }
 
 function projectTasksHTML(){
-  const p=projects.find(x=>_idEq(x.id,activeProjectId))||projects[0];
+  const jenisFilter = window._pjmTasksJenisFilter || '';
+  const filteredProjects = jenisFilter ? projects.filter(p=>p.jenis_program===jenisFilter) : projects;
+  const p = filteredProjects.find(x=>_idEq(x.id,activeProjectId)) || filteredProjects[0];
   if(!p) return `<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event. Tambah dulu di tab Overview.</div></div>`;
   activeProjectId = p.id;
 
+  const jenisBadge = {
+    "Career Chaser's Academy": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>`,
+    "Free Class Series": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>`,
+  };
+
   return `
-  <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
     <div style="font-size:11px;color:var(--text-muted);font-weight:500">Event:</div>
-    <select id="proj-select" onchange="activeProjectId=this.value;initProjectTab('tasks')" style="font-size:12px;min-width:280px">
-      ${projects.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?"selected":""}>${pr.nama} — ${fmtDateShort(pr.tanggal)}</option>`).join("")}
+    <select onchange="window._pjmTasksJenisFilter=this.value;initProjectTab('tasks')" style="font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
+      <option value="">Semua Jenis</option>
+      <option value="Career Chaser's Academy" ${jenisFilter==="Career Chaser's Academy"?"selected":""}>CCA</option>
+      <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
+    </select>
+    <select id="proj-select" onchange="activeProjectId=this.value;initProjectTab('tasks')" style="font-size:12px;min-width:240px;flex:1">
+      ${filteredProjects.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?"selected":""}>${pr.nama} — ${fmtDateShort(pr.tanggal)}</option>`).join("")}
     </select>
     <button class="btn btn-sm" onclick="openProjectModal('${p.id}')"><i class="ti ti-edit"></i> Edit Event</button>
-    <div style="margin-left:auto;display:flex;gap:5px;background:var(--bg);border-radius:8px;padding:3px">
+    <div style="display:flex;gap:5px;background:var(--bg);border-radius:8px;padding:3px">
       <button onclick="projectTaskView='list';initProjectTab('tasks')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:none;cursor:pointer;background:${projectTaskView==='list'?'var(--white)':'transparent'};color:${projectTaskView==='list'?'var(--text)':'var(--text-muted)'};font-weight:${projectTaskView==='list'?'600':'400'}"><i class="ti ti-list"></i> List</button>
       <button onclick="projectTaskView='kanban';initProjectTab('tasks')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:none;cursor:pointer;background:${projectTaskView==='kanban'?'var(--white)':'transparent'};color:${projectTaskView==='kanban'?'var(--text)':'var(--text-muted)'};font-weight:${projectTaskView==='kanban'?'600':'400'}"><i class="ti ti-layout-kanban"></i> Kanban</button>
     </div>
@@ -5868,7 +5876,10 @@ function projectTasksHTML(){
   <div class="card" style="margin-bottom:12px;padding:14px 16px">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700;margin-bottom:4px">${p.nama}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="font-size:14px;font-weight:700">${p.nama}</div>
+          ${p.jenis_program && jenisBadge[p.jenis_program] ? jenisBadge[p.jenis_program] : ''}
+        </div>
         <div style="font-size:11px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap">
           <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} ${p.waktu}</span>
           <span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>
@@ -8071,6 +8082,14 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
         <div class="cust-field-label">Nama Event *</div>
         <input class="cust-field-input" id="pjm-nama" placeholder="contoh: Free Class: Insider Tips Lolos MT Bank BUMN">
       </div>
+      <div class="cust-field editable" style="margin-bottom:10px">
+        <div class="cust-field-label">Jenis Program</div>
+        <select id="pjm-jenis" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
+          <option value="">— Pilih Jenis —</option>
+          <option value="Career Chaser's Academy">Career Chaser's Academy</option>
+          <option value="Free Class Series">Free Class Series</option>
+        </select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
           <div class="cust-field-label">Tanggal *</div>
@@ -8140,35 +8159,78 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
 </div>
 
 <div id="duplicate-modal" style="display:none" class="modal-overlay">
-  <div style="background:var(--white);border-radius:var(--radius-lg);width:92%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+  <div style="background:var(--white);border-radius:var(--radius-lg);width:92%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
     <div class="modal-header">
       <div class="modal-title"><i class="ti ti-copy" style="font-size:14px"></i> Duplicate Event</div>
       <button class="btn btn-sm" onclick="closeDuplicateModal()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-body" style="overflow-y:auto;max-height:65vh">
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--bg);border-radius:6px">
-        Duplicate dari: <b id="dup-source-name" style="color:var(--text)"></b> · <span id="dup-source-date"></span>
+    <div class="modal-body" style="overflow-y:auto;flex:1">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;padding:7px 10px;background:var(--bg);border-radius:6px">
+        Duplicate dari: <b id="dup-source-name" style="color:var(--text)"></b>
+      </div>
+
+      <!-- Form Event Baru (kosong) -->
+      <div class="cust-field editable" style="margin-bottom:10px">
+        <div class="cust-field-label">Nama Event *</div>
+        <input class="cust-field-input" id="dup-nama" placeholder="contoh: Free Class: Insider Tips Lolos MT Bank BUMN">
       </div>
       <div class="cust-field editable" style="margin-bottom:10px">
-        <div class="cust-field-label">Nama Event Baru *</div>
-        <input class="cust-field-input" id="dup-nama">
+        <div class="cust-field-label">Jenis Program</div>
+        <select id="dup-jenis" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
+          <option value="">— Pilih Jenis —</option>
+          <option value="Career Chaser's Academy">Career Chaser's Academy</option>
+          <option value="Free Class Series">Free Class Series</option>
+        </select>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
-          <div class="cust-field-label">Tanggal Baru *</div>
-          <input type="date" id="dup-tanggal" class="cust-field-input" onchange="renderDuplicateTaskList()">
+          <div class="cust-field-label">Tanggal *</div>
+          <input type="date" id="dup-tanggal" class="cust-field-input">
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Waktu</div>
-          <input type="time" id="dup-waktu" class="cust-field-input">
-        </div>
-        <div class="cust-field editable">
-          <div class="cust-field-label">Speaker</div>
-          <input class="cust-field-input" id="dup-speaker" placeholder="TBD">
+          <input type="time" id="dup-waktu" class="cust-field-input" value="19:00">
         </div>
       </div>
-      <div style="font-size:12px;font-weight:600;margin-bottom:8px">Tasks & Assignee</div>
-      <div id="dup-task-list"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="cust-field editable">
+          <div class="cust-field-label">Platform</div>
+          <select id="dup-platform" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
+            <option>Zoom</option><option>Google Meet</option><option>YouTube Live</option><option>IG Live</option><option>Offline</option>
+          </select>
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Status</div>
+          <select id="dup-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
+            <option>Planning</option><option>On Progress</option><option>Done</option><option>Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <div class="cust-field editable" style="margin-bottom:10px">
+        <div class="cust-field-label">Speaker</div>
+        <input class="cust-field-input" id="dup-speaker" placeholder="Nama speaker — Posisi/perusahaan">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="cust-field editable">
+          <div class="cust-field-label">Target Peserta</div>
+          <input type="number" id="dup-target" class="cust-field-input" placeholder="200">
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Link Platform</div>
+          <input class="cust-field-input" id="dup-zoom" placeholder="https://zoom.us/j/...">
+        </div>
+      </div>
+      <div class="cust-field editable" style="margin-bottom:14px">
+        <div class="cust-field-label">Deskripsi</div>
+        <textarea id="dup-desc" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Deskripsikan event ini..."></textarea>
+      </div>
+
+      <!-- Checklist Task -->
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;padding-top:10px;border-top:1px solid var(--border)">
+        <i class="ti ti-checklist" style="font-size:12px"></i> Tasks yang dibawa
+        <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:6px">Semua status direset ke Todo</span>
+      </div>
+      <div id="dup-task-list" style="display:flex;flex-direction:column;gap:6px"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-sm" onclick="closeDuplicateModal()">Batal</button>
