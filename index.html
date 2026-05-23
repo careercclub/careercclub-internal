@@ -8456,51 +8456,87 @@ function igER(snap) {
   if (!snap || !snap.interactions || !snap.reach) return '—';
   return ((snap.interactions / snap.reach) * 100).toFixed(2) + '%';
 }
-function igPredictedEOY() {
-  const reg = igGetPrediction();
-  if (!reg) return null;
-  const now = new Date();
-  const eoy = new Date(now.getFullYear(), 11, 31);
-  return Math.round(reg.predict(eoy.getTime()));
+function igAvgFollowsPerDay() {
+  // Ambil 4 minggu terakhir, avg follows/hari = total follows / (4*7)
+  const sorted = [...igSnapshots].sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  const recent = sorted.slice(0, 4);
+  if (!recent.length) return null;
+  const total = recent.reduce((s,r) => s + (r.followsGained||0), 0);
+  return total / (recent.length * 7);
 }
 
-// --- Content Eval kontribusi ---
-function igEvalContribHTML() {
-  const latest = igLatestSnap();
-  if (!latest) return '<div style="color:var(--text-muted);font-size:12px">Belum ada snapshot.</div>';
-  // Ambil konten dalam 7 hari setelah weekStart snapshot terakhir
-  const weekStart = latest.weekStart; // YYYY-MM-DD
-  const weekEndDate = new Date(weekStart);
-  weekEndDate.setDate(weekEndDate.getDate() + 7);
-  const weekEnd = weekEndDate.toISOString().slice(0,10);
+function igPredictedEOY() {
+  const avgPerDay = igAvgFollowsPerDay();
+  if (!avgPerDay) return null;
+  const now = new Date();
+  const eoy = new Date(now.getFullYear(), 11, 31);
+  const daysLeft = Math.round((eoy - now) / (1000*60*60*24));
+  return Math.round(igBaseline + avgPerDay * daysLeft);
+}
 
-  const relevant = igEvalData.filter(e => {
-    if (!e.tanggal || !e.follows) return false;
-    const t = e.tanggal.slice(0,10);
-    return t >= weekStart && t < weekEnd;
-  }).sort((a,b)=>(b.follows||0)-(a.follows||0)).slice(0,5);
+// --- Weekly Avg Follows/Hari Slider ---
+var igWeeklyAvgPage = 0; // 0 = minggu terbaru
 
-  if (!relevant.length) {
-    // Fallback: 5 konten terbaru yang punya follows, regardless periode
-    const fallback = [...igEvalData]
-      .filter(e => e.follows && e.tanggal)
-      .sort((a,b) => b.tanggal.localeCompare(a.tanggal) || (b.follows - a.follows))
-      .slice(0,5);
-    if (!fallback.length) return '<div style="color:var(--text-muted);font-size:12px">Tidak ada data konten dengan follows.</div>';
-    return `<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">Konten terbaru (all time)</div>` + fallback.map(e => `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
-        <span style="font-size:10px;color:var(--text-muted);min-width:52px">${igFmtDate(e.tanggal)}</span>
-        <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.judul||'—'}</span>
-        <span style="font-size:12px;font-weight:700;color:var(--purple-accent)">+${e.follows}</span>
-      </div>`).join('');
-  }
+function igWeeklyAvgHTML() {
+  const sorted = [...igSnapshots].sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  if (!sorted.length) return '<div style="color:var(--text-muted);font-size:12px">Belum ada data.</div>';
 
-  return relevant.map(e => `
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
-      <span style="font-size:10px;color:var(--text-muted);min-width:52px">${igFmtDate(e.tanggal)}</span>
-      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.judul||'—'}</span>
-      <span style="font-size:12px;font-weight:700;color:var(--purple-accent)">+${e.follows}</span>
-    </div>`).join('');
+  const totalPages = sorted.length;
+  const idx = Math.min(igWeeklyAvgPage, totalPages - 1);
+  const snap = sorted[idx];
+  const prevSnap = sorted[idx + 1] || null;
+
+  const avg = (snap.followsGained || 0) / 7;
+  const prevAvg = prevSnap ? (prevSnap.followsGained || 0) / 7 : null;
+  const delta = prevAvg !== null ? avg - prevAvg : null;
+  const deltaColor = delta === null ? '' : delta >= 0 ? 'var(--green)' : 'var(--red)';
+  const deltaStr = delta !== null ? `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)}/hari vs minggu sebelumnya` : '';
+
+  // Bar chart sederhana: 8 minggu terakhir dari posisi ini
+  const chartSnaps = sorted.slice(idx, idx + 8).reverse();
+
+  const maxAvg = Math.max(...chartSnaps.map(s => (s.followsGained||0)/7), 1);
+
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div>
+      <div style="font-size:22px;font-weight:700;color:var(--purple-accent)">${avg.toFixed(1)}<span style="font-size:13px;font-weight:400;color:var(--text-muted)"> follows/hari</span></div>
+      <div style="font-size:11px;color:var(--text-muted)">Minggu ${igFmtDate(snap.weekStart)} · ${(snap.followsGained||0)} total</div>
+      ${deltaStr ? `<div style="font-size:11px;color:${deltaColor};margin-top:2px">${deltaStr}</div>` : ''}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button onclick="igWeeklyAvgNav(1)" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center" ${idx >= totalPages-1 ? 'disabled' : ''}><i class="ti ti-chevron-left"></i></button>
+      <span style="font-size:11px;color:var(--text-muted)">${totalPages - idx}/${totalPages}</span>
+      <button onclick="igWeeklyAvgNav(-1)" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center" ${idx <= 0 ? 'disabled' : ''}><i class="ti ti-chevron-right"></i></button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:flex-end;gap:4px;height:80px;margin-top:6px">
+    ${chartSnaps.map((s, i) => {
+      const a = (s.followsGained||0)/7;
+      const h = Math.max(4, Math.round((a/maxAvg)*72));
+      const isActive = s.weekStart === snap.weekStart;
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer" onclick="igWeeklyAvgJump('${s.weekStart}')">
+        <div style="font-size:9px;color:${isActive?'var(--purple-accent)':'var(--text-muted)'}">${a.toFixed(1)}</div>
+        <div style="width:100%;height:${h}px;background:${isActive?'var(--purple-accent)':'var(--purple-light)'};border-radius:3px 3px 0 0"></div>
+        <div style="font-size:9px;color:var(--text-muted);white-space:nowrap">${igFmtDate(s.weekStart).split(' ').slice(0,2).join(' ')}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function igWeeklyAvgNav(dir) {
+  const sorted = [...igSnapshots].sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  igWeeklyAvgPage = Math.max(0, Math.min(sorted.length - 1, igWeeklyAvgPage + dir));
+  const c = document.getElementById('ig-weekly-avg-wrap');
+  if (c) c.innerHTML = igWeeklyAvgHTML();
+}
+
+function igWeeklyAvgJump(weekStart) {
+  const sorted = [...igSnapshots].sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  const idx = sorted.findIndex(s => s.weekStart === weekStart);
+  if (idx >= 0) { igWeeklyAvgPage = idx; }
+  const c = document.getElementById('ig-weekly-avg-wrap');
+  if (c) c.innerHTML = igWeeklyAvgHTML();
 }
 
 // --- HTML ---
@@ -8586,9 +8622,8 @@ function igDashboardHTML() {
       <div style="height:240px"><canvas id="ig-chart-followers"></canvas></div>
     </div>
     <div class="card">
-      <div style="font-size:13px;font-weight:600;margin-bottom:10px">🎯 Kontribusi Konten (minggu terakhir)</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">From Content Evaluation</div>
-      ${igEvalContribHTML()}
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📈 Avg Follows per Hari</div>
+      <div id="ig-weekly-avg-wrap">${igWeeklyAvgHTML()}</div>
     </div>
   </div>
 
