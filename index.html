@@ -8341,11 +8341,15 @@ function renderIgFollowersChart() {
   const fmtMonth = m => { const [y,mo] = m.split('-'); return `${BULAN[parseInt(mo)-1]} '${y.slice(2)}`; };
 
   const actualDs = allLabels.map(l => actualLabels.includes(l) ? monthMap[l] : null);
-  const lastActualIdx = allLabels.indexOf(actualLabels[actualLabels.length-1]);
   const predDs = allLabels.map((l, i) => {
-    if (i === lastActualIdx) return actualData[actualData.length-1];
     const idx = predLabels.indexOf(l);
-    return idx >= 0 ? predData[idx] : null;
+    if (idx >= 0) return predData[idx];
+    // Untuk bulan aktual terakhir, hitung prediksi regression juga
+    if (l === actualLabels[actualLabels.length-1] && reg) {
+      const d = new Date(l + '-28'); // akhir bulan
+      return Math.round(reg.predict(d.getTime()));
+    }
+    return null;
   });
 
   const targetDatasets = igTargets.map(t => ({
