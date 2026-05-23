@@ -1618,7 +1618,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     projects = (await sb_loadEvents()).map(e => ({
       id: e.id, nama: e.nama, tanggal: e.tanggal, waktu: e.waktu || '',
       status: e.status || 'Planning', speaker: e.speaker || '', platform: e.platform || '',
-      linkZoom: e.link_zoom || '', target: e.target || 0, deskripsi: e.deskripsi || ''
+      linkZoom: e.link_zoom || '', target: e.target || 0, deskripsi: e.deskripsi || '',
+      capaian_peserta: e.capaian_peserta ?? null, notes_post: e.notes_post || ''
     }));
     partnerDeals = await sb_load('partner_deals', { order: 'created_at', ascending: false });
     partners = await sb_load('partners', { order: 'name', ascending: true });
@@ -5143,7 +5144,19 @@ function openProjectModal(id){
   document.getElementById("pjm-target").value=p?(p.target||p.targetPeserta||200):200;
   document.getElementById("pjm-zoom").value=p?(p.linkZoom||p.zoomLink||""):"";
   document.getElementById("pjm-desc").value=p?(p.deskripsi||p.desc||""):"";
-  const delBtn=document.getElementById("pjm-delete-btn");
+  document.getElementById("pjm-capaian").value=p?(p.capaian_peserta||""):"";
+  document.getElementById("pjm-notes-post").value=p?(p.notes_post||""):"";
+  // Toggle post-event section
+  const isDone = p && p.status === 'Done';
+  document.getElementById("pjm-post-section").style.display = isDone ? 'block' : 'none';
+  if (isDone) document.getElementById("pjm-target-display").textContent = (p.target||p.targetPeserta||'—') + ' peserta';
+  // Toggle status change listener
+  document.getElementById("pjm-status").onchange = function() {
+    const done = this.value === 'Done';
+    document.getElementById("pjm-post-section").style.display = done ? 'block' : 'none';
+    const tgt = document.getElementById("pjm-target").value;
+    if (done) document.getElementById("pjm-target-display").textContent = (tgt||'—') + ' peserta';
+  };  const delBtn=document.getElementById("pjm-delete-btn");
   delBtn.style.display=p?"inline-flex":"none";
   delBtn.onclick=()=>deleteProjectEvent(id);
   document.getElementById("project-modal").dataset.projId=id||"";
@@ -5798,15 +5811,17 @@ async function saveProjectModal(){
     target:parseInt(document.getElementById("pjm-target").value)||0,
     linkZoom:document.getElementById("pjm-zoom").value,
     deskripsi:document.getElementById("pjm-desc").value,
+    capaian_peserta:parseInt(document.getElementById("pjm-capaian").value)||null,
+    notes_post:document.getElementById("pjm-notes-post").value.trim()||null,
   };
   if(!data.nama){showToast("Nama event wajib diisi","error");return;}
   if(!data.tanggal){showToast("Tanggal event wajib diisi","error");return;}
 
-  // Payload utk DB (nama kolom di tabel events: ...link_zoom, target, deskripsi)
   const dbRow={
     nama:data.nama, tanggal:data.tanggal, waktu:data.waktu,
     platform:data.platform, speaker:data.speaker, status:data.status,
     target:data.target, link_zoom:data.linkZoom, deskripsi:data.deskripsi,
+    capaian_peserta:data.capaian_peserta, notes_post:data.notes_post,
   };
 
   if(id){
@@ -5858,7 +5873,11 @@ function projectTasksHTML(){
           <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} ${p.waktu}</span>
           <span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>
           <span><i class="ti ti-device-laptop" style="font-size:11px"></i> ${p.platform}</span>
-          <span><i class="ti ti-users" style="font-size:11px"></i> Target ${p.targetPeserta} peserta</span>
+          <span><i class="ti ti-users" style="font-size:11px"></i> ${
+            p.capaian_peserta != null
+              ? `${p.capaian_peserta} / ${p.target||'—'} peserta (${p.target ? Math.round(p.capaian_peserta/p.target*100) : '?'}%)`
+              : `Target ${p.target || p.targetPeserta || '—'} peserta`
+          }</span>
         </div>
       </div>
       ${projStatusPill(p.status)}
@@ -8093,6 +8112,23 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
       <div class="cust-field editable">
         <div class="cust-field-label">Deskripsi</div>
         <textarea id="pjm-desc" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Deskripsikan event ini..."></textarea>
+      </div>
+      <div id="pjm-post-section" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+        <div style="font-size:11px;font-weight:600;color:var(--purple-mid);margin-bottom:8px">📋 Post-Event</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="cust-field editable">
+            <div class="cust-field-label">Target Peserta</div>
+            <div style="font-size:12px;color:var(--text-muted);padding:6px 0" id="pjm-target-display">—</div>
+          </div>
+          <div class="cust-field editable">
+            <div class="cust-field-label">Capaian Peserta (aktual)</div>
+            <input type="number" id="pjm-capaian" class="cust-field-input" placeholder="0">
+          </div>
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Catatan Post-Event</div>
+          <textarea id="pjm-notes-post" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Insight, evaluasi, atau hal yang perlu diperbaiki..."></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
