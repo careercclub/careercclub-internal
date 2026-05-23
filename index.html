@@ -8317,21 +8317,24 @@ function renderIgFollowersChart() {
   const actualLabels = Object.keys(monthMap).sort();
   const actualData = actualLabels.map(m => monthMap[m]);
 
-  // Prediksi per bulan sampai akhir tahun
-  const reg = igGetPrediction();
+  // Prediksi per bulan pakai avg/hari dari 4 minggu terakhir
+  const avgPerDay = igAvgFollowsPerDay();
   const predLabels = [];
   const predData = [];
-  if (reg && snaps.length >= 2) {
+  if (avgPerDay && snaps.length >= 1) {
     const lastSnap = snaps[snaps.length-1];
-    const lastMonth = lastSnap.weekStart.slice(0,7);
     const endYear = new Date(lastSnap.weekStart).getFullYear();
+    // Mulai dari bulan setelah snapshot terakhir
     let cur = new Date(lastSnap.weekStart);
     cur.setDate(1);
     cur.setMonth(cur.getMonth() + 1);
+    // Titik awal prediksi = igBaseline (followers sekarang)
+    const baseDate = new Date(igBaselineDate || lastSnap.weekStart);
     while (cur.getFullYear() <= endYear) {
       const label = cur.toISOString().slice(0,7);
+      const daysFromBase = Math.round((cur - baseDate) / (1000*60*60*24));
       predLabels.push(label);
-      predData.push(Math.round(reg.predict(cur.getTime())));
+      predData.push(Math.round(igBaseline + avgPerDay * daysFromBase));
       cur.setMonth(cur.getMonth() + 1);
     }
   }
@@ -8341,13 +8344,15 @@ function renderIgFollowersChart() {
   const fmtMonth = m => { const [y,mo] = m.split('-'); return `${BULAN[parseInt(mo)-1]} '${y.slice(2)}`; };
 
   const actualDs = allLabels.map(l => actualLabels.includes(l) ? monthMap[l] : null);
-  const predDs = allLabels.map((l, i) => {
+  const predDs = allLabels.map(l => {
     const idx = predLabels.indexOf(l);
     if (idx >= 0) return predData[idx];
-    // Untuk bulan aktual terakhir, hitung prediksi regression juga
-    if (l === actualLabels[actualLabels.length-1] && reg) {
-      const d = new Date(l + '-28'); // akhir bulan
-      return Math.round(reg.predict(d.getTime()));
+    // Bulan aktual terakhir: hitung prediksi avg/hari juga
+    if (l === actualLabels[actualLabels.length-1] && avgPerDay) {
+      const baseDate = new Date(igBaselineDate);
+      const d = new Date(l + '-28');
+      const daysFromBase = Math.round((d - baseDate) / (1000*60*60*24));
+      return Math.round(igBaseline + avgPerDay * daysFromBase);
     }
     return null;
   });
@@ -8510,10 +8515,10 @@ function igWeeklyAvgHTML() {
       <button onclick="igWeeklyAvgNav(-1)" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center" ${idx <= 0 ? 'disabled' : ''}><i class="ti ti-chevron-right"></i></button>
     </div>
   </div>
-  <div style="display:flex;align-items:flex-end;gap:4px;height:80px;margin-top:6px">
+  <div style="display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:6px">
     ${chartSnaps.map((s, i) => {
       const a = (s.followsGained||0)/7;
-      const h = Math.max(4, Math.round((a/maxAvg)*72));
+      const h = Math.max(3, Math.round((a/maxAvg)*44));
       const isActive = s.weekStart === snap.weekStart;
       return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer" onclick="igWeeklyAvgJump('${s.weekStart}')">
         <div style="font-size:9px;color:${isActive?'var(--purple-accent)':'var(--text-muted)'}">${a.toFixed(1)}</div>
