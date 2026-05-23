@@ -8473,9 +8473,9 @@ function igAvgFollowsPerDay() {
 function igPredictedEOY() {
   const avgPerDay = igAvgFollowsPerDay();
   if (!avgPerDay) return null;
-  const now = new Date();
-  const eoy = new Date(now.getFullYear(), 11, 31);
-  const daysLeft = Math.round((eoy - now) / (1000*60*60*24));
+  const baseDate = new Date(igBaselineDate || new Date().toISOString().slice(0,10));
+  const eoy = new Date(baseDate.getFullYear(), 11, 31);
+  const daysLeft = Math.round((eoy - baseDate) / (1000*60*60*24));
   return Math.round(igBaseline + avgPerDay * daysLeft);
 }
 
@@ -8515,10 +8515,10 @@ function igWeeklyAvgHTML() {
       <button onclick="igWeeklyAvgNav(-1)" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center" ${idx <= 0 ? 'disabled' : ''}><i class="ti ti-chevron-right"></i></button>
     </div>
   </div>
-  <div style="display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:6px">
+  <div style="display:flex;align-items:flex-end;gap:4px;height:46px;margin-top:6px">
     ${chartSnaps.map((s, i) => {
       const a = (s.followsGained||0)/7;
-      const h = Math.max(3, Math.round((a/maxAvg)*44));
+      const h = Math.max(2, Math.round((a/maxAvg)*32));
       const isActive = s.weekStart === snap.weekStart;
       return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer" onclick="igWeeklyAvgJump('${s.weekStart}')">
         <div style="font-size:9px;color:${isActive?'var(--purple-accent)':'var(--text-muted)'}">${a.toFixed(1)}</div>
