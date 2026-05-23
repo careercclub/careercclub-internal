@@ -8556,7 +8556,7 @@ function igWeeklyAvgHTML() {
 
   <div style="display:flex;gap:4px;margin-top:8px">
     <!-- Y-axis -->
-    <div style="display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding-bottom:18px;min-width:24px">
+    <div style="display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;min-width:24px;padding-top:16px;padding-bottom:0">
       <span style="font-size:9px;color:var(--text-muted)">${Math.round(maxAvg)}</span>
       <span style="font-size:9px;color:var(--text-muted)">${Math.round(maxAvg/2)}</span>
       <span style="font-size:9px;color:var(--text-muted)">0</span>
@@ -8577,6 +8577,7 @@ function igWeeklyAvgHTML() {
         }).join('')}
         </div>
       </div>
+      <!-- X labels — di luar border, bawah axis -->
       <div style="display:flex;gap:3px;padding:3px 2px 0 4px">
         ${chartSnaps.map(s => `<div style="flex:1;text-align:center;font-size:9px;color:var(--text-muted);overflow:hidden;white-space:nowrap">${igFmtDate(s.weekStart).split(' ').slice(0,2).join(' ')}</div>`).join('')}
       </div>
@@ -8681,9 +8682,9 @@ function igDashboardHTML() {
       <div style="font-size:13px;font-weight:600;margin-bottom:12px">📈 Tren Followers — Aktual vs Prediksi</div>
       <div style="height:240px"><canvas id="ig-chart-followers"></canvas></div>
     </div>
-    <div class="card">
+    <div class="card" style="display:flex;flex-direction:column">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px">📈 Avg Follows per Hari</div>
-      <div id="ig-weekly-avg-wrap">${igWeeklyAvgHTML()}</div>
+      <div id="ig-weekly-avg-wrap" style="flex:1">${igWeeklyAvgHTML()}</div>
     </div>
   </div>
 
