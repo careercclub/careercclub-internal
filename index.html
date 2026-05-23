@@ -8281,7 +8281,7 @@ function igLinearRegression(points) {
 function igGetPrediction() {
   // Gunakan snapshot aktual sebagai basis
   const pts = igSnapshots
-    .filter(s => s.followersTotal && s.weekStart)
+    .filter(s => s.followersTotal != null && s.weekStart)
     .map(s => ({ x: new Date(s.weekStart).getTime(), y: s.followersTotal }));
   if (pts.length < 2) return null;
   return igLinearRegression(pts);
@@ -8302,7 +8302,7 @@ function renderIgFollowersChart() {
   if (!canvas) return;
   if (igChartFollowers) { igChartFollowers.destroy(); igChartFollowers = null; }
 
-  const snaps = igSnapshots.filter(s => s.followersTotal && s.weekStart).sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
+  const snaps = igSnapshots.filter(s => s.followersTotal != null && s.weekStart).sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
 
   // Aggregate per bulan — ambil nilai followers terakhir di bulan itu
   const monthMap = {};
@@ -8496,8 +8496,8 @@ function igEvalContribHTML() {
 }
 
 // --- HTML ---
-var igBaseline = 12016;
-var igBaselineDate = ''; // tanggal baseline
+var igBaseline = 12042;
+var igBaselineDate = '2026-05-21'; // tanggal baseline
 
 function igFmtDate(iso) {
   if (!iso) return '—';
