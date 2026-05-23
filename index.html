@@ -4943,7 +4943,7 @@ function projectOverviewHTML(){
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Klik card untuk lihat detail tasks & timeline</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <select onchange="window._pjmJenisFilter=this.value;renderProgramPage()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text)">
+        <select onchange="window._pjmJenisFilter=this.value;initProjectTab('overview')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text)">
           <option value="">Semua Jenis</option>
           <option value="Career Chaser's Academy" ${activeJenisFilter==="Career Chaser's Academy"?"selected":""}>Career Chaser's Academy</option>
           <option value="Free Class Series" ${activeJenisFilter==="Free Class Series"?"selected":""}>Free Class Series</option>
@@ -5846,7 +5846,16 @@ function projectTasksHTML(){
   const jenisFilter = window._pjmTasksJenisFilter || '';
   const filteredProjects = jenisFilter ? projects.filter(p=>p.jenis_program===jenisFilter) : projects;
   const p = filteredProjects.find(x=>_idEq(x.id,activeProjectId)) || filteredProjects[0];
-  if(!p) return `<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event. Tambah dulu di tab Overview.</div></div>`;
+  if(!p) return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+    <div style="font-size:11px;color:var(--text-muted);font-weight:500">Event:</div>
+    <select onchange="window._pjmTasksJenisFilter=this.value;initProjectTab('tasks')" style="font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
+      <option value="">Semua Jenis</option>
+      <option value="Career Chaser's Academy" ${jenisFilter==="Career Chaser's Academy"?"selected":""}>CCA</option>
+      <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
+    </select>
+    <button class="btn btn-primary btn-sm" onclick="openProjectModal(null)"><i class="ti ti-plus"></i> Event Baru</button>
+  </div>
+  <div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event untuk jenis ini.</div></div>`;
   activeProjectId = p.id;
 
   const jenisBadge = {
