@@ -3943,7 +3943,7 @@ function ppGroupedHTML(){
 }
 
 function taskStatusPill(s){
-  const m={Todo:"pill-gray","On Progress":"pill-amber",Done:"pill-green",Blocked:"pill-red"};
+  const m={Todo:"pill-gray","On Progress":"pill-amber",Done:"pill-green"};
   return `<span class="pill ${m[s]||'pill-gray'}">${s}</span>`;
 }
 
@@ -4223,7 +4223,8 @@ function projectHTML(){
   return `
   <div class="tab-row">
     <div class="tab active" id="projtab-overview" onclick="initProjectTab('overview')"><i class="ti ti-layout-dashboard" style="font-size:12px"></i> Overview</div>
-    <div class="tab" id="projtab-tasks" onclick="initProjectTab('tasks')"><i class="ti ti-checklist" style="font-size:12px"></i> Tasks</div>
+    <div class="tab" id="projtab-tasks" onclick="initProjectTab('tasks')"><i class="ti ti-checklist" style="font-size:12px"></i> Events</div>
+    <div class="tab" id="projtab-history" onclick="initProjectTab('history')"><i class="ti ti-clock" style="font-size:12px"></i> History</div>
     <div class="tab" id="projtab-calendar" onclick="initProjectTab('calendar')"><i class="ti ti-calendar" style="font-size:12px"></i> Calendar</div>
   </div>
   <div id="project-tab-content"></div>`;
@@ -4247,8 +4248,8 @@ async function confirmDuplicate(){
     status: document.getElementById("dup-status").value||"Planning",
     speaker: document.getElementById("dup-speaker").value.trim()||null,
     target: parseInt(document.getElementById("dup-target").value)||0,
-    link_zoom: document.getElementById("dup-zoom").value.trim()||null,
-    deskripsi: document.getElementById("dup-desc").value.trim()||null,
+    link_zoom: null,
+    deskripsi: null,
   };
   const row = await sb_saveEvent(dbRow);
   if(!row || !row.id){ showToast("Gagal duplicate event","error"); return; }
@@ -4350,6 +4351,7 @@ function initProjectTab(tab){
   const c=document.getElementById("project-tab-content");
   if(tab==="overview") c.innerHTML=projectOverviewHTML();
   else if(tab==="tasks") c.innerHTML=projectTasksHTML();
+  else if(tab==="history") c.innerHTML=projectHistoryHTML();
   else if(tab==="calendar") c.innerHTML=projectCalendarHTML();
 }
 
@@ -4402,7 +4404,7 @@ let projectTaskIdCounter = 999;
 let projectIdCounter = 99;
 
 const PROJ_STATUS = ["Planning","On Progress","Done","Cancelled"];
-const TASK_STATUS = ["Todo","On Progress","Done","Blocked"];
+const TASK_STATUS = ["Todo","On Progress","Done"];
 const TASK_PRIORITY = ["High","Med","Low"];
 const TASK_PHASE = ["Pre Event","Hari H","Post Event"];
 
@@ -4494,8 +4496,6 @@ function openDuplicateModal(sourceId){
   document.getElementById("dup-status").value = "Planning";
   document.getElementById("dup-speaker").value = "";
   document.getElementById("dup-target").value = "";
-  document.getElementById("dup-zoom").value = "";
-  document.getElementById("dup-desc").value = "";
 
   renderDuplicateTaskList();
   document.getElementById("duplicate-modal").style.display = "flex";
@@ -4614,10 +4614,10 @@ async function saveProdModal(){
 
 function renderTaskKanban(projId){
   const tasks=getFilteredTasks(projId);
-  const cols={"Todo":[],"On Progress":[],"Done":[],"Blocked":[]};
+  const cols={"Todo":[],"On Progress":[],"Done":[]};
   tasks.forEach(t=>{if(cols[t.status]) cols[t.status].push(t)});
 
-  const headerColor={Todo:"var(--text-muted)","On Progress":"var(--amber)",Done:"var(--green)",Blocked:"var(--red)"};
+  const headerColor={Todo:"var(--text-muted)","On Progress":"var(--amber)",Done:"var(--green)"};
 
   return `
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
@@ -4767,7 +4767,24 @@ async function toggleTaskDone(taskId){
   const ok = await sb_updateTask(t.id, t);
   if(!ok){ t.status=old; showToast("Gagal update task","error"); return; }
   await syncTaskToTicket(t, getTaskEventName(t.id));
+  // Auto-update event status (skip Cancelled)
+  await autoUpdateEventStatus(t.projectId);
   initProjectTab(projectTab);
+}
+
+async function autoUpdateEventStatus(projectId) {
+  const proj = projects.find(p=>_idEq(p.id, projectId));
+  if(!proj || proj.status === 'Cancelled') return;
+  const tasks = projectTasks.filter(t=>_idEq(t.projectId, projectId));
+  if(!tasks.length) return;
+  const doneCount = tasks.filter(t=>t.status==='Done').length;
+  let newStatus;
+  if(doneCount === 0) newStatus = 'Planning';
+  else if(doneCount === tasks.length) newStatus = 'Done';
+  else newStatus = 'On Progress';
+  if(newStatus === proj.status) return;
+  proj.status = newStatus;
+  await sb_updateEvent(proj.id, { status: newStatus });
 }
 
 function openProdModal(id){
@@ -4849,14 +4866,14 @@ const TASK_TO_TKT_STATUS = {
   "Todo":"Open",
   "On Progress":"In Progress",
   "Done":"Done",
-  "Blocked":"In Review"
+  "Blocked":"Done"
 };
 const TKT_TO_TASK_STATUS = {
   "Open":"Todo",
-  "In Review":"Blocked",
+  "In Review":"On Progress",
   "In Progress":"On Progress",
   "Done":"Done",
-  "Rejected":"Blocked"
+  "Rejected":"Todo"
 };
 
 function ppRenderList(items){
@@ -5136,8 +5153,6 @@ function openProjectModal(id){
   document.getElementById("pjm-speaker").value=p?p.speaker:"";
   document.getElementById("pjm-status").value=p?p.status:"Planning";
   document.getElementById("pjm-target").value=p?(p.target||p.targetPeserta||200):200;
-  document.getElementById("pjm-zoom").value=p?(p.linkZoom||p.zoomLink||""):"";
-  document.getElementById("pjm-desc").value=p?(p.deskripsi||p.desc||""):"";
   document.getElementById("pjm-capaian").value=p?(p.capaian_peserta||""):"";
   document.getElementById("pjm-notes-post").value=p?(p.notes_post||""):"";
   // Toggle post-event section
@@ -5204,7 +5219,12 @@ function goToToday(){
 
 function openProjectDetail(id){
   activeProjectId = id;
-  initProjectTab("tasks");
+  const proj = projects.find(p=>_idEq(p.id,id));
+  if(proj && ['Done','Cancelled'].includes(proj.status)){
+    initProjectTab("history");
+  } else {
+    initProjectTab("tasks");
+  }
 }
 
 // ── TAB 2: TASKS ─────────────────────────────────────────────
@@ -5804,8 +5824,8 @@ async function saveProjectModal(){
     speaker:document.getElementById("pjm-speaker").value,
     status:document.getElementById("pjm-status").value,
     target:parseInt(document.getElementById("pjm-target").value)||0,
-    linkZoom:document.getElementById("pjm-zoom").value,
-    deskripsi:document.getElementById("pjm-desc").value,
+    linkZoom: null,
+    deskripsi: null,
     capaian_peserta:parseInt(document.getElementById("pjm-capaian").value)||null,
     notes_post:document.getElementById("pjm-notes-post").value.trim()||null,
   };
@@ -5832,9 +5852,11 @@ async function saveProjectModal(){
     projects.unshift({
       id:row.id, actualPeserta:0,
       nama:row.nama, tanggal:row.tanggal, waktu:row.waktu||"",
+      jenis_program:row.jenis_program||"",
       status:row.status||"Planning", speaker:row.speaker||"",
       platform:row.platform||"", linkZoom:row.link_zoom||"",
-      target:row.target||0, deskripsi:row.deskripsi||""
+      target:row.target||0, deskripsi:row.deskripsi||"",
+      capaian_peserta:null, notes_post:""
     });
     showToast("Event baru ditambahkan ✓");
   }
@@ -5845,7 +5867,9 @@ async function saveProjectModal(){
 function projectTasksHTML(){
   const jenisFilter = window._pjmTasksJenisFilter || '';
   const filteredProjects = jenisFilter ? projects.filter(p=>p.jenis_program===jenisFilter) : projects;
-  const p = filteredProjects.find(x=>_idEq(x.id,activeProjectId)) || filteredProjects[0];
+  const activeProjects = filteredProjects.filter(p=>!['Done','Cancelled'].includes(p.status));
+  const displayProjects = activeProjects.length > 0 ? activeProjects : filteredProjects.filter(p=>!['Cancelled'].includes(p.status));
+  const p = displayProjects.find(x=>_idEq(x.id,activeProjectId)) || displayProjects[0];
   if(!p) return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
     <div style="font-size:11px;color:var(--text-muted);font-weight:500">Event:</div>
     <select onchange="window._pjmTasksJenisFilter=this.value;initProjectTab('tasks')" style="font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
@@ -5855,7 +5879,7 @@ function projectTasksHTML(){
     </select>
     <button class="btn btn-primary btn-sm" onclick="openProjectModal(null)"><i class="ti ti-plus"></i> Event Baru</button>
   </div>
-  <div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event untuk jenis ini.</div></div>`;
+  <div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event aktif. Cek tab History untuk event yang sudah selesai.</div></div>`;
   activeProjectId = p.id;
 
   const jenisBadge = {
@@ -5872,7 +5896,7 @@ function projectTasksHTML(){
       <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
     </select>
     <select id="proj-select" onchange="activeProjectId=this.value;initProjectTab('tasks')" style="font-size:12px;min-width:240px;flex:1">
-      ${filteredProjects.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?"selected":""}>${pr.nama} — ${fmtDateShort(pr.tanggal)}</option>`).join("")}
+      ${displayProjects.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?"selected":""}>${pr.nama} — ${fmtDateShort(pr.tanggal)}</option>`).join("")}
     </select>
     <button class="btn btn-sm" onclick="openProjectModal('${p.id}')"><i class="ti ti-edit"></i> Edit Event</button>
     <div style="display:flex;gap:5px;background:var(--bg);border-radius:8px;padding:3px">
@@ -5914,6 +5938,134 @@ function projectTasksHTML(){
 
   ${projectTaskView==="list" ? renderTaskList(p.id) : renderTaskKanban(p.id)}
   `;
+}
+
+function projectHistoryHTML(){
+  const jenisFilter = window._pjmHistoryJenisFilter || '';
+  const expandedId = window._pjmHistoryExpanded || null;
+  const jenisBadge = {
+    "Career Chaser's Academy": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>`,
+    "Free Class Series": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>`,
+  };
+  const historyProjects = projects
+    .filter(p => ['Done','Cancelled'].includes(p.status))
+    .filter(p => jenisFilter ? p.jenis_program === jenisFilter : true)
+    .sort((a,b) => b.tanggal.localeCompare(a.tanggal));
+
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:12px;color:var(--text-muted)">${historyProjects.length} event selesai/dibatalkan</div>
+    <select onchange="window._pjmHistoryJenisFilter=this.value;initProjectTab('history')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
+      <option value="">Semua Jenis</option>
+      <option value="Career Chaser's Academy" ${jenisFilter==="Career Chaser's Academy"?"selected":""}>CCA</option>
+      <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
+    </select>
+  </div>
+  ${historyProjects.length === 0 ? `<div class="card"><div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="ti ti-history" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event selesai.</div></div>` :
+    `<div style="display:flex;flex-direction:column;gap:8px">
+    ${historyProjects.map(p => {
+      const tasks = projectTasks.filter(t => _idEq(t.projectId, p.id));
+      const done = tasks.filter(t => t.status === 'Done').length;
+      const pct = tasks.length ? Math.round(done/tasks.length*100) : 0;
+      const isDone = p.status === 'Done';
+      const isExpanded = _idEq(expandedId, p.id);
+
+      // Task list grouped by phase
+      const grouped = {"Pre Event":[],"Hari H":[],"Post Event":[]};
+      tasks.forEach(t=>{ if(grouped[t.phase]) grouped[t.phase].push(t); });
+      const taskHTML = Object.entries(grouped).map(([phase, tlist]) => {
+        if(!tlist.length) return '';
+        return `<div style="margin-bottom:10px">
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:5px">${phase}</div>
+          ${tlist.map(t => {
+            const atts = Array.isArray(t.attachments) ? t.attachments : [];
+            const expandKey = 'hist_task_'+String(t.id);
+            const taskExpanded = window[expandKey] || false;
+            return `<div style="border-bottom:0.5px solid var(--border)">
+              <div onclick="window['${expandKey}']=!window['${expandKey}'];initProjectTab('history')" style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer">
+                <div style="width:14px;height:14px;border-radius:4px;background:${t.status==='Done'?'var(--purple-accent)':'var(--bg)'};border:1.5px solid ${t.status==='Done'?'var(--purple-accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  ${t.status==='Done'?'<i class="ti ti-check" style="font-size:9px;color:white"></i>':''}
+                </div>
+                <div style="flex:1;font-size:12px;${t.status==='Done'?'text-decoration:line-through;color:var(--text-muted)':''}">${t.title}</div>
+                ${atts.length ? `<span style="font-size:10px;color:var(--text-muted)"><i class="ti ti-paperclip" style="font-size:10px"></i> ${atts.length}</span>` : ''}
+                <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${t.status==='Done'?'var(--green-bg)':'var(--bg)'};color:${t.status==='Done'?'var(--green)':'var(--text-muted)'}">${t.status}</span>
+                <i class="ti ti-chevron-${taskExpanded?'up':'down'}" style="font-size:11px;color:var(--text-muted)"></i>
+              </div>
+              ${taskExpanded ? `<div style="padding:6px 0 10px 22px">
+                ${t.desc ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${t.desc}</div>` : ''}
+                <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text-muted);margin-bottom:8px">
+                  ${t.deadline ? `<span><i class="ti ti-calendar" style="font-size:10px"></i> ${fmtDateShort(t.deadline)}</span>` : ''}
+                  ${t.priority ? `<span><i class="ti ti-flag" style="font-size:10px"></i> ${t.priority}</span>` : ''}
+                </div>
+                ${atts.length ? `<div style="display:flex;flex-direction:column;gap:5px">
+                  ${atts.map(a => {
+                    if(a.tipe==='link') return `<a href="${a.url}" target="_blank" style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:7px;text-decoration:none;color:var(--text)">
+                      <div style="width:28px;height:28px;border-radius:6px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-link" style="font-size:13px;color:var(--purple-mid)"></i></div>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nama}</div>
+                        <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.url}</div>
+                      </div>
+                      <i class="ti ti-external-link" style="font-size:11px;color:var(--text-muted)"></i>
+                    </a>`;
+                    if(a.tipe==='image') return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:7px">
+                      <img src="${a.data}" style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0">
+                      <div style="font-size:11px;font-weight:500">${a.nama}</div>
+                    </div>`;
+                    return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:7px">
+                      <div style="width:28px;height:28px;border-radius:6px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file" style="font-size:13px;color:var(--text-muted)"></i></div>
+                      <div style="font-size:11px;font-weight:500">${a.nama}</div>
+                    </div>`;
+                  }).join('')}
+                </div>` : `<div style="font-size:11px;color:var(--text-muted);font-style:italic">Tidak ada attachment.</div>`}
+              </div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('');
+
+      return `<div class="card" style="padding:0;overflow:hidden">
+        <!-- Header - clickable -->
+        <div onclick="window._pjmHistoryExpanded=(_idEq('${p.id}',window._pjmHistoryExpanded)?null:'${p.id}');initProjectTab('history')" style="padding:14px 16px;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px">
+              <div style="font-size:13px;font-weight:600">${p.nama}</div>
+              ${p.jenis_program && jenisBadge[p.jenis_program] ? jenisBadge[p.jenis_program] : ''}
+              <span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${isDone?'var(--green-bg)':'var(--bg)'};color:${isDone?'var(--green)':'var(--text-muted)'};font-weight:600">${p.status}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap">
+              <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} · ${p.waktu}</span>
+              ${p.speaker ? `<span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--text-muted)">Task</div>
+              <div style="font-size:14px;font-weight:700;color:${pct===100?'var(--green)':'var(--text-muted)'}">${done}/${tasks.length}</div>
+            </div>
+            <button onclick="event.stopPropagation();openProjectModal('${p.id}')" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--text-muted)"><i class="ti ti-pencil"></i> Edit</button>
+            <i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:13px;color:var(--text-muted)"></i>
+          </div>
+        </div>
+
+        <!-- Expanded content -->
+        ${isExpanded ? `<div style="padding:0 16px 14px;border-top:0.5px solid var(--border)">
+          ${tasks.length === 0 ? `<div style="padding:12px 0;font-size:12px;color:var(--text-muted)">Belum ada task.</div>` : `<div style="padding-top:12px">${taskHTML}</div>`}
+          ${p.capaian_peserta != null ? `
+          <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;gap:20px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:10px;color:var(--text-muted)">Capaian Peserta</div>
+              <div style="font-size:13px;font-weight:600">${p.capaian_peserta} / ${p.target||'—'} <span style="font-size:11px;color:var(--text-muted)">(${p.target?Math.round(p.capaian_peserta/p.target*100):'?'}%)</span></div>
+            </div>
+            ${p.notes_post ? `<div style="flex:1;min-width:0">
+              <div style="font-size:10px;color:var(--text-muted)">Catatan Post-Event</div>
+              <div style="font-size:12px">${p.notes_post}</div>
+            </div>` : ''}
+          </div>` : ''}
+        </div>` : ''}
+      </div>`;
+    }).join('')}
+    </div>`
+  }`;
 }
 
 function renderMonthlyCalendar(){
@@ -8036,7 +8188,7 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
         <div class="cust-field editable">
           <div class="cust-field-label">Status</div>
           <select id="tm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Todo</option><option>On Progress</option><option>Done</option><option>Blocked</option>
+            <option>Todo</option><option>On Progress</option><option>Done</option>
           </select>
         </div>
       </div>
@@ -8113,7 +8265,7 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
         <div class="cust-field editable">
           <div class="cust-field-label">Platform</div>
           <select id="pjm-platform" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Zoom</option><option>Google Meet</option><option>YouTube Live</option><option>IG Live</option><option>Offline</option>
+            <option>Zoom</option><option>Google Meet</option><option>Offline</option>
           </select>
         </div>
         <div class="cust-field editable">
@@ -8132,14 +8284,6 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
           <div class="cust-field-label">Target Peserta</div>
           <input type="number" id="pjm-target" class="cust-field-input" placeholder="200">
         </div>
-        <div class="cust-field editable">
-          <div class="cust-field-label">Link Platform</div>
-          <input class="cust-field-input" id="pjm-zoom" placeholder="https://zoom.us/j/...">
-        </div>
-      </div>
-      <div class="cust-field editable">
-        <div class="cust-field-label">Deskripsi</div>
-        <textarea id="pjm-desc" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Deskripsikan event ini..."></textarea>
       </div>
       <div id="pjm-post-section" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
         <div style="font-size:11px;font-weight:600;color:var(--purple-mid);margin-bottom:8px">📋 Post-Event</div>
@@ -8205,7 +8349,7 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
         <div class="cust-field editable">
           <div class="cust-field-label">Platform</div>
           <select id="dup-platform" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Zoom</option><option>Google Meet</option><option>YouTube Live</option><option>IG Live</option><option>Offline</option>
+            <option>Zoom</option><option>Google Meet</option><option>Offline</option>
           </select>
         </div>
         <div class="cust-field editable">
@@ -8219,19 +8363,11 @@ function designHTML(){ return comingSoonHTML("Design Assets", "ti-palette", "Lib
         <div class="cust-field-label">Speaker</div>
         <input class="cust-field-input" id="dup-speaker" placeholder="Nama speaker — Posisi/perusahaan">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         <div class="cust-field editable">
           <div class="cust-field-label">Target Peserta</div>
           <input type="number" id="dup-target" class="cust-field-input" placeholder="200">
         </div>
-        <div class="cust-field editable">
-          <div class="cust-field-label">Link Platform</div>
-          <input class="cust-field-input" id="dup-zoom" placeholder="https://zoom.us/j/...">
-        </div>
-      </div>
-      <div class="cust-field editable" style="margin-bottom:14px">
-        <div class="cust-field-label">Deskripsi</div>
-        <textarea id="dup-desc" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Deskripsikan event ini..."></textarea>
       </div>
 
       <!-- Checklist Task -->
