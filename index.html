@@ -8207,11 +8207,11 @@ async function initIgPerf() {
   igSnapshots = snaps;
   igTargets = targets;
   igEvalData = evals;
-  // Load baseline dari localStorage kalau ada
+  // Load baseline dari localStorage, fallback ke default hardcode
   const savedBaseline = localStorage.getItem('ig_baseline');
-  if (savedBaseline) igBaseline = parseInt(savedBaseline) || 12016;
   const savedBaselineDate = localStorage.getItem('ig_baseline_date');
-  if (savedBaselineDate) igBaselineDate = savedBaselineDate;
+  igBaseline = savedBaseline ? (parseInt(savedBaseline) || 12042) : 12042;
+  igBaselineDate = savedBaselineDate || '2026-05-21';
   igComputeFollowers();
   renderIgTab('dashboard');
 }
@@ -8238,7 +8238,7 @@ function igComputeFollowers() {
   if (!igSnapshots.length) return;
   const sorted = [...igSnapshots].sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
 
-  // Cari snapshot anchor — yang weekStart paling dekat dengan igBaselineDate (atau terakhir kalau ga ada)
+  // Cari snapshot anchor — yang weekStart paling dekat dengan igBaselineDate
   const anchorDate = igBaselineDate || new Date().toISOString().slice(0,10);
   let anchorIdx = sorted.length - 1;
   let minDiff = Infinity;
@@ -8248,16 +8248,20 @@ function igComputeFollowers() {
   });
 
   sorted[anchorIdx].followersTotal = igBaseline;
-  // Hitung maju dari anchor
+
+  // Hitung MAJU dari anchor (tambah follows_gained tiap minggu)
   for (let i = anchorIdx + 1; i < sorted.length; i++) {
     const gained = sorted[i].followsGained || 0;
-    sorted[i].followersTotal = (sorted[i-1].followersTotal || igBaseline) + gained;
+    sorted[i].followersTotal = sorted[i-1].followersTotal + gained;
   }
-  // Hitung mundur dari anchor
+
+  // Hitung MUNDUR dari anchor (kurang follows_gained snapshot itu sendiri)
   for (let i = anchorIdx - 1; i >= 0; i--) {
-    const gained = sorted[i+1].followsGained || 0;
-    sorted[i].followersTotal = (sorted[i+1].followersTotal || igBaseline) - gained;
+    const gained = sorted[i].followsGained || 0;
+    const prev = sorted[i+1].followersTotal - gained;
+    sorted[i].followersTotal = Math.max(0, prev); // floor 0, ga boleh minus
   }
+
   igSnapshots = sorted;
 }
 
