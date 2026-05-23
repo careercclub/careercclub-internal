@@ -8532,9 +8532,10 @@ function igWeeklyAvgHTML() {
           const a = (s.followsGained||0)/7;
           const barH = Math.max(3, Math.round((a/maxAvg) * chartH));
           const isActive = s.weekStart === snap.weekStart;
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;cursor:pointer;justify-content:flex-end;height:100%" onclick="igWeeklyAvgJump('${s.weekStart}')">
-            <span style="font-size:9px;color:${isActive?'var(--purple-accent)':'var(--text-muted)'};line-height:1.2;margin-bottom:1px">${a.toFixed(1)}</span>
-            <div style="width:100%;height:${barH}px;background:${isActive?'var(--purple-accent)':'var(--purple-light)'};border-radius:2px 2px 0 0"></div>
+          return `<div style="flex:1;height:100%;display:flex;align-items:flex-end;cursor:pointer" onclick="igWeeklyAvgJump('${s.weekStart}')">
+            <div style="position:relative;width:100%;height:${barH}px;background:${isActive?'var(--purple-accent)':'var(--purple-light)'};border-radius:2px 2px 0 0">
+              <span style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:${isActive?'var(--purple-accent)':'var(--text-muted)'};white-space:nowrap">${a.toFixed(1)}</span>
+            </div>
           </div>`;
         }).join('')}
       </div>
