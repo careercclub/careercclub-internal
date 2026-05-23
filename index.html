@@ -8502,8 +8502,7 @@ function igWeeklyAvgHTML() {
   // Bar chart sederhana: 8 minggu terakhir dari posisi ini
   const chartSnaps = sorted.slice(idx, idx + 8).reverse();
   const maxAvg = Math.max(...chartSnaps.map(s => (s.followsGained||0)/7), 1);
-  const chartH = 60; // tinggi area bar
-  const yTick = Math.ceil(maxAvg / 3 / 10) * 10 || 10; // y-axis tick rounded
+  const chartH = 80;
 
   return `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -8519,31 +8518,28 @@ function igWeeklyAvgHTML() {
     </div>
   </div>
 
-  <!-- Mini chart dengan axis -->
   <div style="display:flex;gap:4px;margin-top:8px">
     <!-- Y-axis -->
-    <div style="display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding-bottom:18px;min-width:28px">
-      <span style="font-size:9px;color:var(--text-muted)">${(maxAvg).toFixed(0)}</span>
-      <span style="font-size:9px;color:var(--text-muted)">${(maxAvg/2).toFixed(0)}</span>
+    <div style="display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding-bottom:18px;min-width:24px">
+      <span style="font-size:9px;color:var(--text-muted)">${Math.round(maxAvg)}</span>
+      <span style="font-size:9px;color:var(--text-muted)">${Math.round(maxAvg/2)}</span>
       <span style="font-size:9px;color:var(--text-muted)">0</span>
     </div>
     <!-- Chart area -->
-    <div style="flex:1;display:flex;flex-direction:column">
-      <!-- Bar area -->
-      <div style="height:${chartH}px;display:flex;align-items:flex-end;gap:3px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 2px 0 4px">
+    <div style="flex:1;display:flex;flex-direction:column;gap:0">
+      <div style="position:relative;height:${chartH}px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;gap:3px;padding:0 2px 0 4px;box-sizing:border-box">
         ${chartSnaps.map(s => {
           const a = (s.followsGained||0)/7;
-          const hPct = Math.max(2, (a/maxAvg)*100);
+          const barH = Math.max(3, Math.round((a/maxAvg) * chartH));
           const isActive = s.weekStart === snap.weekStart;
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer" onclick="igWeeklyAvgJump('${s.weekStart}')">
-            <div style="font-size:9px;color:${isActive?'var(--purple-accent)':'var(--text-muted)'};margin-bottom:2px">${a.toFixed(1)}</div>
-            <div style="width:100%;height:${hPct}%;background:${isActive?'var(--purple-accent)':'var(--purple-light)'};border-radius:2px 2px 0 0;min-height:2px"></div>
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;cursor:pointer;justify-content:flex-end;height:100%" onclick="igWeeklyAvgJump('${s.weekStart}')">
+            <span style="font-size:9px;color:${isActive?'var(--purple-accent)':'var(--text-muted)'};line-height:1.2;margin-bottom:1px">${a.toFixed(1)}</span>
+            <div style="width:100%;height:${barH}px;background:${isActive?'var(--purple-accent)':'var(--purple-light)'};border-radius:2px 2px 0 0"></div>
           </div>`;
         }).join('')}
       </div>
-      <!-- X-axis labels -->
       <div style="display:flex;gap:3px;padding:3px 2px 0 4px">
-        ${chartSnaps.map(s => `<div style="flex:1;text-align:center;font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden">${igFmtDate(s.weekStart).split(' ').slice(0,2).join(' ')}</div>`).join('')}
+        ${chartSnaps.map(s => `<div style="flex:1;text-align:center;font-size:9px;color:var(--text-muted);overflow:hidden;white-space:nowrap">${igFmtDate(s.weekStart).split(' ').slice(0,2).join(' ')}</div>`).join('')}
       </div>
     </div>
   </div>`;
