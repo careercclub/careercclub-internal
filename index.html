@@ -488,6 +488,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 .selected-preview{background:var(--purple-light);border-radius:var(--radius);padding:11px;border:0.5px solid rgba(124,111,247,.3);margin-bottom:12px}
 
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <div class="app">
@@ -1398,7 +1399,14 @@ async function sb_saveEvent(e) { return await sb_insert('events', e); }
 async function sb_updateEvent(id, updates) { return await sb_update('events', id, updates); }
 async function sb_deleteEvent(id) { return await sb_delete('events', id); }
 
-// TASKS — schema asli: id, project_id, title, description, status, priority,
+async function sb_loadLinkTemplates() {
+  return await sb_load('event_link_templates', { order: 'urutan', ascending: true });
+}
+async function sb_saveLinkTemplate(row) { return await sb_insert('event_link_templates', row); }
+async function sb_updateLinkTemplate(id, row) { return await sb_update('event_link_templates', id, row); }
+async function sb_deleteLinkTemplate(id) { return await sb_delete('event_link_templates', id); }
+
+
 // phase, assignee_id, due_date, ticket_id
 function _taskRowToJS(d) {
   return {
@@ -1620,7 +1628,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       status: e.status || 'Planning', speaker: e.speaker || '', platform: e.platform || '',
       linkZoom: e.link_zoom || '', target: e.target || 0, deskripsi: e.deskripsi || '',
       jenis_program: e.jenis_program || '',
-      capaian_peserta: e.capaian_peserta ?? null, notes_post: e.notes_post || ''
+      capaian_peserta: e.capaian_peserta ?? null, notes_post: e.notes_post || '',
+      links: e.links || []
+    }));
+    eventLinkTemplates = (await sb_loadLinkTemplates()).map(t => ({
+      id: t.id, jenis_program: t.jenis_program, label: t.label, url: t.url, urutan: t.urutan || 0
     }));
     partnerDeals = await sb_load('partner_deals', { order: 'created_at', ascending: false });
     partners = await sb_load('partners', { order: 'name', ascending: true });
@@ -3738,7 +3750,7 @@ function renderTaskList(projId){
         </tr></thead>
         <tbody>${tlist.map(t=>{
           const person=getPersonById(t.assigneeId);
-          const div=getDivisiById(t.divisiId);
+          const div=getDivisiById(person.divisiId);
           const days=daysUntil(t.deadline);
           const overdue=t.status!=="Done" && days<0;
           return `<tr style="cursor:pointer" onclick="openTaskModal('${t.id}','${projId}')">
@@ -3757,7 +3769,7 @@ function renderTaskList(projId){
             <td>${taskStatusPill(t.status)}</td>
             <td>${taskPriorityPill(t.priority)}</td>
             <td onclick="event.stopPropagation()">
-              <button class="btn btn-sm" onclick="sendTaskInvite('${t.id}')" title="Send invite" style="padding:3px 7px;font-size:10px"><i class="ti ti-send"></i></button>
+              <button class="btn btn-sm" onclick="gcalAddTask('${t.id}')" title="Add to Google Calendar" style="padding:3px 7px;font-size:10px"><i class="ti ti-calendar-plus"></i></button>
             </td>
           </tr>`;
         }).join("")}</tbody>
@@ -3783,6 +3795,7 @@ function settingsHTML(){
     <div class="tab" id="stab-master-ticket" onclick="initSettingsTab('master-ticket')"><i class="ti ti-ticket" style="font-size:12px"></i> Master Ticket</div>
     <div class="tab" id="stab-pain-point" onclick="initSettingsTab('pain-point')"><i class="ti ti-message-search" style="font-size:12px"></i> Pain Point Master</div>
     <div class="tab" id="stab-menu" onclick="initSettingsTab('menu')"><i class="ti ti-layout-sidebar" style="font-size:12px"></i> Menu</div>
+    <div class="tab" id="stab-link-templates" onclick="initSettingsTab('link-templates')"><i class="ti ti-link" style="font-size:12px"></i> Link Template</div>
   </div>
   <div id="settings-tab-content"></div>`;
 }
@@ -4396,6 +4409,9 @@ var projects = [];
 // PROJECT TASKS — loaded from Supabase (tasks table)
 var projectTasks = [];
 
+// EVENT LINK TEMPLATES
+var eventLinkTemplates = [];
+
 let activeProjectId = null;
 let projectTaskView = "list"; // "list" | "kanban"
 let projectActivePhase = "all"; // "all" | "Pre Event" | "Hari H" | "Post Event"
@@ -4641,7 +4657,7 @@ function renderTaskKanban(projId){
               <span><i class="ti ti-user" style="font-size:10px"></i> ${person.nama}</span>
               <span style="${overdue?'color:var(--red);font-weight:600':''}"><i class="ti ti-calendar" style="font-size:10px"></i> ${fmtDateShort(t.deadline)}</span>
             </div>
-            ${t.attachments&&t.attachments.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:0.5px solid var(--border)"><i class="ti ti-paperclip" style="font-size:10px"></i> ${t.attachments.length} attachment</div>`:""}
+            ${t.attachments&&t.attachments.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:0.5px solid var(--border)"><i class="ti ti-paperclip" style="font-size:10px"></i> ${t.attachments.length} attachment</div>`:""}            <div onclick="event.stopPropagation();gcalAddTask('${t.id}')" style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border);font-size:10px;color:var(--purple-accent);cursor:pointer;display:flex;align-items:center;gap:4px"><i class="ti ti-calendar-plus" style="font-size:11px"></i> Add to Calendar</div>
           </div>`;
         }).join("")}
         ${tlist.length===0?`<div style="text-align:center;padding:20px 0;color:var(--text-hint);font-size:11px">Kosong</div>`:""}
@@ -5240,9 +5256,46 @@ function initSettingsTab(tab){
     setTimeout(()=>renderMasterTktTab("divisi"),30);
   }
   else if(tab==="pain-point"){c.innerHTML=ppSettingsMasterHTML();}
+  else if(tab==="link-templates"){c.innerHTML=linkTemplatesSettingsHTML();initLinkTemplatesSettings();}
   else if(tab==="menu"){c.innerHTML=getMenuSettingsHTML();}
 }
 
+
+function linkTemplatesSettingsHTML(){
+  return `<div style="margin-top:16px"><div style="font-size:13px;font-weight:700;margin-bottom:12px">Link Template per Jenis Program</div><div id="lkt-list"></div><div class="card" style="margin-top:12px;padding:16px"><div style="font-size:12px;font-weight:600;margin-bottom:10px">+ Tambah Template</div><div style="display:flex;flex-direction:column;gap:8px"><select id="lkt-jenis" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><option value="Free Class Series">Free Class Series</option><option value="Career Chaser's Academy">Career Chaser's Academy</option></select><input id="lkt-label" placeholder="Label (cth: Link Slido)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><input id="lkt-url" placeholder="URL (https://...)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><button onclick="addLinkTemplate()" class="btn btn-primary" style="font-size:12px">Tambah</button></div></div></div>`;
+}
+async function initLinkTemplatesSettings(){
+  renderLinkTemplatesList();
+}
+function renderLinkTemplatesList(){
+  const el=document.getElementById("lkt-list");if(!el)return;
+  const groups={};
+  eventLinkTemplates.forEach(t=>{if(!groups[t.jenis_program])groups[t.jenis_program]=[];groups[t.jenis_program].push(t);});
+  if(!Object.keys(groups).length){el.innerHTML=`<div class="card" style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">Belum ada template</div>`;return;}
+  el.innerHTML=Object.entries(groups).map(([jenis,items])=>`<div class="card" style="margin-bottom:10px;padding:14px 16px"><div style="font-size:11px;font-weight:700;color:var(--purple-mid);margin-bottom:10px">${jenis}</div><div style="display:flex;flex-direction:column;gap:6px">${items.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border)"><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600">${t.label}</div><div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.url}</div></div><button onclick="deleteLinkTemplate('${t.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px;color:var(--red);flex-shrink:0"><i class="ti ti-trash" style="font-size:11px"></i></button></div>`).join("")}</div></div>`).join("");
+}
+async function addLinkTemplate(){
+  const jenis=document.getElementById("lkt-jenis").value;
+  const label=document.getElementById("lkt-label").value.trim();
+  const url=document.getElementById("lkt-url").value.trim();
+  if(!label||!url){showToast("Label & URL wajib diisi","error");return;}
+  const urutan=eventLinkTemplates.filter(t=>t.jenis_program===jenis).length+1;
+  const row=await sb_saveLinkTemplate({jenis_program:jenis,label,url,urutan});
+  if(!row){showToast("Gagal simpan","error");return;}
+  eventLinkTemplates.push({id:row.id,jenis_program:jenis,label,url,urutan});
+  document.getElementById("lkt-label").value="";
+  document.getElementById("lkt-url").value="";
+  renderLinkTemplatesList();
+  showToast("Template ditambah");
+}
+async function deleteLinkTemplate(id){
+  if(!confirm("Hapus template ini?"))return;
+  const ok=await sb_deleteLinkTemplate(id);
+  if(!ok){showToast("Gagal hapus","error");return;}
+  eventLinkTemplates=eventLinkTemplates.filter(t=>!_idEq(t.id,id));
+  renderLinkTemplatesList();
+  showToast("Template dihapus");
+}
 function removeTmAttachment(i){
   tmTempAttachments.splice(i,1);
   renderTaskAttachments(tmTempAttachments);
@@ -5928,6 +5981,7 @@ function projectTasksHTML(){
     </div>
   </div>
 
+  ${renderEventLinks(p)}
   <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">
     <button onclick="projectActivePhase='all';initProjectTab('tasks')" style="padding:5px 12px;border-radius:20px;font-size:11px;border:0.5px solid ${projectActivePhase==='all'?'var(--purple-accent)':'var(--border)'};background:${projectActivePhase==='all'?'var(--purple-light)':'var(--white)'};color:${projectActivePhase==='all'?'var(--purple-mid)':'var(--text-muted)'};cursor:pointer;font-weight:${projectActivePhase==='all'?'600':'400'}">Semua Phase</button>
     ${TASK_PHASE.map(ph=>{
@@ -5940,6 +5994,46 @@ function projectTasksHTML(){
   `;
 }
 
+
+// ── EVENT LINKS ─────────────────────────────────────────────
+function renderEventLinks(proj) {
+  const templates = eventLinkTemplates.filter(t => t.jenis_program === proj.jenis_program);
+  const adHocLinks = proj.links || [];
+  const total = templates.length + adHocLinks.length;
+  const isOpen = window._linksExpanded === proj.id;
+  const chevron = isOpen ? "ti-chevron-up" : "ti-chevron-down";
+  const tmplHtml = templates.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--purple-light);border-radius:var(--radius)"><i class="ti ti-bookmark" style="font-size:12px;color:var(--purple-accent);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;color:var(--purple-mid)">${t.label}</div><div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.url}</div></div><a href="${t.url}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:3px 8px;flex-shrink:0"><i class="ti ti-external-link" style="font-size:11px"></i></a></div>`).join("");
+  const adhocHtml = adHocLinks.map((lk,idx) => `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border)"><i class="ti ti-link" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600">${lk.label}</div><div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lk.url}</div></div><a href="${lk.url}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:3px 8px;flex-shrink:0"><i class="ti ti-external-link" style="font-size:11px"></i></a><button onclick="openEditLinkModal('${proj.id}',${idx})" class="btn btn-sm" style="font-size:10px;padding:3px 7px;flex-shrink:0"><i class="ti ti-edit" style="font-size:11px"></i></button><button onclick="deleteLinkItem('${proj.id}',${idx})" class="btn btn-sm" style="font-size:10px;padding:3px 7px;flex-shrink:0;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i></button></div>`).join("");
+  const body = isOpen ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${tmplHtml}${adhocHtml}</div>` : "";
+  return `<div class="card" style="margin-bottom:12px;padding:10px 16px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="window._linksExpanded=window._linksExpanded==='${proj.id}'?null:'${proj.id}';initProjectTab('tasks')"><i class="ti ti-link" style="font-size:13px;color:var(--purple-accent)"></i><div style="font-size:12px;font-weight:700;flex:1">Links ${total > 0 ? `<span style="font-size:10px;color:var(--text-muted);font-weight:400">(${total})</span>` : ""}</div><button onclick="event.stopPropagation();openAddLinkModal('${proj.id}')" class="btn btn-sm" style="font-size:11px;padding:3px 8px"><i class="ti ti-plus" style="font-size:11px"></i></button><i class="ti ${chevron}" style="font-size:13px;color:var(--text-muted)"></i></div>${body}</div>`;
+}
+function openAddLinkModal(projId){_openLinkModal(projId,null);}
+function openEditLinkModal(projId,idx){_openLinkModal(projId,idx);}
+function _openLinkModal(projId,idx){
+  const proj=projects.find(x=>_idEq(x.id,projId));if(!proj)return;
+  const isEdit=idx!==null&&idx!==undefined;
+  const existing=isEdit?(proj.links||[])[idx]:null;
+  const modal=document.getElementById("gcal-modal");
+  modal.style.display="flex";
+  modal.innerHTML=`<div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.18)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:18px"><i class="ti ti-link" style="font-size:18px;color:var(--purple-accent)"></i><div style="font-size:14px;font-weight:700">${isEdit?"Edit Link":"Tambah Link"}</div><button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button></div><div style="display:flex;flex-direction:column;gap:12px"><div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABEL</label><input id="lk-label" value="${existing?existing.label:""}" placeholder="cth: Link Slido" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)"></div><div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">URL</label><input id="lk-url" value="${existing?existing.url:""}" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)"></div></div><div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end"><button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button><button onclick="saveLinkItem('${projId}',${isEdit?idx:"null"})" class="btn btn-primary" style="font-size:12px">${isEdit?"Simpan":"Tambah"}</button></div></div>`;
+}
+async function saveLinkItem(projId,idx){
+  const label=document.getElementById("lk-label").value.trim();
+  const url=document.getElementById("lk-url").value.trim();
+  if(!label||!url){showToast("Label & URL wajib diisi","error");return;}
+  const proj=projects.find(x=>_idEq(x.id,projId));if(!proj)return;
+  const links=[...(proj.links||[])];
+  if(idx!==null&&idx!==undefined&&idx!=="null"){links[idx]={label,url};}else{links.push({label,url});}
+  const ok=await sb_updateEvent(projId,{links});if(!ok){showToast("Gagal simpan link","error");return;}
+  proj.links=links;gcalCloseModal();initProjectTab("tasks");showToast(idx!==null&&idx!==undefined&&idx!=="null"?"Link diupdate":"Link ditambah");
+}
+async function deleteLinkItem(projId,idx){
+  if(!confirm("Hapus link ini?"))return;
+  const proj=projects.find(x=>_idEq(x.id,projId));if(!proj)return;
+  const links=[...(proj.links||[])];links.splice(idx,1);
+  const ok=await sb_updateEvent(projId,{links});if(!ok){showToast("Gagal hapus link","error");return;}
+  proj.links=links;initProjectTab("tasks");showToast("Link dihapus");
+}
 function projectHistoryHTML(){
   const jenisFilter = window._pjmHistoryJenisFilter || '';
   const expandedId = window._pjmHistoryExpanded || null;
@@ -9853,7 +9947,192 @@ async function initCompetitor() {
   await reloadCiData();
   renderCiTab();
 }
+
+// ============================================================
+// GOOGLE CALENDAR INTEGRATION
+// ============================================================
+
+const GCAL_CLIENT_ID = '856121311659-sgkkr9sm5tak6nn53h2t38d5m1s5kun8.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+var gcalTokenClient = null;
+var gcalAccessToken = null;
+var gcalPendingTaskId = null;
+
+function gcalInit() {
+  if (!window.google || !window.google.accounts) {
+    showToast('Google Identity Services belum siap, coba lagi sebentar', 'error');
+    return false;
+  }
+  if (!gcalTokenClient) {
+    gcalTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GCAL_CLIENT_ID,
+      scope: GCAL_SCOPE,
+      callback: (resp) => {
+        if (resp.error) { showToast('Login Google gagal: ' + resp.error, 'error'); return; }
+        gcalAccessToken = resp.access_token;
+        // Setelah dapat token, langsung buka modal
+        if (gcalPendingTaskId) _gcalOpenModal(gcalPendingTaskId);
+      },
+    });
+  }
+  return true;
+}
+
+function gcalAddTask(taskId) {
+  if (!gcalInit()) return;
+  gcalPendingTaskId = taskId;
+  if (gcalAccessToken) {
+    _gcalOpenModal(taskId);
+  } else {
+    gcalTokenClient.requestAccessToken();
+  }
+}
+
+function _gcalOpenModal(taskId) {
+  const t = projectTasks.find(x => _idEq(x.id, taskId));
+  if (!t) { showToast('Task tidak ditemukan', 'error'); return; }
+  const person = getPersonById(t.assigneeId);
+  const allPeople = (window.tktPeople || []).filter(p => p.email && !_idEq(p.id, t.assigneeId));
+
+  // Hitung waktu default: due_date jam 09:00–10:00
+  const dateVal = t.deadline ? t.deadline.substring(0, 10) : new Date().toISOString().substring(0, 10);
+  const startDt = dateVal + 'T09:00';
+  const endDt   = dateVal + 'T10:00';
+
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.18);position:relative">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-brand-google" style="font-size:20px;color:#4285F4"></i>
+      <div style="font-size:15px;font-weight:700">Add to Google Calendar</div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUDUL EVENT</label>
+        <input id="gcal-title" value="${t.title}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">MULAI</label>
+          <input id="gcal-start" type="datetime-local" value="${startDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">SELESAI</label>
+          <input id="gcal-end" type="datetime-local" value="${endDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">DESKRIPSI</label>
+        <textarea id="gcal-desc" rows="3" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical">${t.desc || ''}</textarea>
+      </div>
+      ${person && person.email ? `
+      <div style="background:var(--purple-light);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:center;gap:8px">
+        <i class="ti ti-user-check" style="font-size:14px;color:var(--purple-accent)"></i>
+        <div style="font-size:12px"><span style="font-weight:600">Assignee:</span> ${person.nama} <span style="color:var(--text-muted)">(${person.email})</span></div>
+      </div>` : ''}
+      ${allPeople.length > 0 ? `
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px">CC (TAMBAHAN GUEST)</label>
+        <div style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto">
+          ${allPeople.map(p => `
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+            <input type="checkbox" class="gcal-cc" value="${p.email}" data-name="${p.nama}" style="width:14px;height:14px;cursor:pointer">
+            <span>${p.nama} <span style="color:var(--text-muted)">${p.email}</span></span>
+          </label>`).join('')}
+        </div>
+      </div>` : ''}
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
+      <button onclick="gcalCreateEvent('${taskId}')" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-calendar-plus" style="font-size:14px"></i> Buat Event
+      </button>
+    </div>
+  </div>`;
+}
+
+function gcalCloseModal() {
+  const modal = document.getElementById('gcal-modal');
+  if (modal) { modal.style.display = 'none'; modal.innerHTML = ''; }
+  gcalPendingTaskId = null;
+}
+
+async function gcalCreateEvent(taskId) {
+  if (!gcalAccessToken) { showToast('Belum login Google', 'error'); return; }
+
+  const title    = document.getElementById('gcal-title').value.trim();
+  const startRaw = document.getElementById('gcal-start').value;
+  const endRaw   = document.getElementById('gcal-end').value;
+  const desc     = document.getElementById('gcal-desc').value.trim();
+
+  if (!title || !startRaw || !endRaw) { showToast('Judul & waktu wajib diisi', 'error'); return; }
+
+  const t = projectTasks.find(x => _idEq(x.id, taskId));
+  const person = t ? getPersonById(t.assigneeId) : null;
+
+  // Kumpulin attendees
+  const attendees = [];
+  if (person && person.email) attendees.push({ email: person.email, displayName: person.nama });
+  document.querySelectorAll('.gcal-cc:checked').forEach(cb => {
+    attendees.push({ email: cb.value, displayName: cb.dataset.name });
+  });
+
+  const event = {
+    summary: title,
+    description: desc,
+    start: { dateTime: new Date(startRaw).toISOString(), timeZone: 'Asia/Jakarta' },
+    end:   { dateTime: new Date(endRaw).toISOString(),   timeZone: 'Asia/Jakarta' },
+    attendees,
+    reminders: { useDefault: false, overrides: [
+      { method: 'popup', minutes: 1440 },
+      { method: 'email', minutes: 1440 },
+      { method: 'popup', minutes: 360 },
+      { method: 'email', minutes: 360 },
+    ]},
+  };
+
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + gcalAccessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(event),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      if (err.error && err.error.status === 'UNAUTHENTICATED') {
+        gcalAccessToken = null;
+        showToast('Sesi Google expired, login ulang ya', 'error');
+        gcalPendingTaskId = taskId;
+        gcalTokenClient.requestAccessToken();
+        return;
+      }
+      throw new Error(err.error?.message || 'Unknown error');
+    }
+
+    const data = await res.json();
+    gcalCloseModal();
+    const guestCount = attendees.length;
+    showToast(`✅ Event dibuat! ${guestCount > 0 ? guestCount + ' guest di-invite' : ''}`);
+
+    // Buka event di Google Calendar di tab baru
+    if (data.htmlLink) window.open(data.htmlLink, '_blank');
+
+  } catch(e) {
+    showToast('Gagal buat event: ' + e.message, 'error');
+  }
+}
 </script>
+
+<!-- Google Calendar Modal -->
+<div id="gcal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px"></div>
 
 </body>
 </html>
