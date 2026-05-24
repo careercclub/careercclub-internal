@@ -7746,6 +7746,7 @@ function daRenderGallery() {
           <div style="aspect-ratio:1;overflow:hidden;background:var(--bg);position:relative">
             ${thumbUrl ? `<img src="${thumbUrl}" alt="${a.nama||a.kategori}" style="width:100%;height:100%;object-fit:cover" loading="lazy">` : ''}
             ${count > 1 ? `<div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;display:flex;align-items:center;gap:3px"><i class="ti ti-photo" style="font-size:10px"></i> ${count}</div>` : ''}
+            <button onclick="event.stopPropagation();daSendToContentLib('${a.id}')" title="Kirim ke Content Library" style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.6);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;color:#fff;font-size:10px;display:flex;align-items:center;gap:4px"><i class="ti ti-bookmark-plus" style="font-size:11px"></i></button>
           </div>
           <div style="padding:8px 10px">
             ${a.nama ? `<div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nama}</div>` : ''}
@@ -7756,6 +7757,116 @@ function daRenderGallery() {
       }).join('')}
     </div>
   </div>`).join('');
+}
+
+function daSendToContentLib(id) {
+  const a = daAssets.find(x => _idEq(x.id, id));
+  if (!a) return;
+  // Buka modal Content Library upload dengan pre-fill storage_paths & link
+  window._clFiles = [];
+  window._clLabels = [];
+  window._clPrefillPaths = a.storage_paths || [];
+  window._clPrefillLink = a.link || '';
+
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  const allLabels = [...new Set((clData||[]).flatMap(c => c.labels||[]))].sort();
+  const thumbs = (a.storage_paths||[]).map(p => sb_designPublicUrl(p));
+
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-bookmark-plus" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div>
+        <div style="font-size:14px;font-weight:700">Kirim ke Content Library</div>
+        <div style="font-size:11px;color:var(--text-muted)">${a.nama||a.kategori} · ${a.storage_paths.length} gambar</div>
+      </div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+
+    ${thumbs.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:10px;background:var(--bg);border-radius:var(--radius)">
+      ${thumbs.map(u => `<img src="${u}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:0.5px solid var(--border)">`).join('')}
+      <div style="font-size:10px;color:var(--text-muted);align-self:center;margin-left:4px">${thumbs.length} gambar akan di-copy ke Content Library</div>
+    </div>` : ''}
+
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PLATFORM</label>
+          <select id="cl-platform" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+            ${CL_PLATFORM.map(p => `<option value="${p}">${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JENIS KONTEN</label>
+          <select id="cl-jenis" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+            ${CL_JENIS.map(j => `<option value="${j}">${j}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN</label>
+        <input id="cl-link" value="${a.link||''}" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
+        <textarea id="cl-copy" rows="3" placeholder="Paste caption atau copywriting..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+          ${[['cl-views','👁','Views'],['cl-likes','❤️','Likes'],['cl-comments','💬','Comments'],['cl-shares','🔁','Shares']].map(([eid,icon,lbl])=>
+            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">${icon} ${lbl}</label><input id="${eid}" type="number" min="0" placeholder="0" style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
+          ).join('')}
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS (opsional)</label>
+        <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
+        <div style="display:flex;gap:6px">
+          <input id="cl-label-input" list="cl-label-sug" placeholder="Ketik atau pilih label..." style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
+          <datalist id="cl-label-sug">${allLabels.map(l=>`<option value="${l}">`).join('')}</datalist>
+          <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES (opsional)</label>
+        <input id="cl-notes" placeholder="kenapa konten ini menarik..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
+      <button id="cl-upload-btn" onclick="clDoSendFromDA('${id}')" class="btn btn-primary" style="font-size:12px">Kirim ke Content Library</button>
+    </div>
+  </div>`;
+  setTimeout(() => clRenderLabelChips(), 50);
+}
+
+async function clDoSendFromDA(daId) {
+  const a = daAssets.find(x => _idEq(x.id, daId));
+  if (!a) return;
+  const platform    = document.getElementById('cl-platform').value;
+  const jenis       = document.getElementById('cl-jenis').value;
+  const link        = document.getElementById('cl-link').value.trim();
+  const copywriting = document.getElementById('cl-copy').value.trim();
+  const views       = parseInt(document.getElementById('cl-views').value)||0;
+  const likes       = parseInt(document.getElementById('cl-likes').value)||0;
+  const comments    = parseInt(document.getElementById('cl-comments').value)||0;
+  const shares      = parseInt(document.getElementById('cl-shares').value)||0;
+  const notes       = document.getElementById('cl-notes').value.trim();
+  const labels      = window._clLabels || [];
+  const btn = document.getElementById('cl-upload-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+
+  // Copy storage_paths dari Design Asset langsung (tanpa re-upload)
+  const storage_paths = [...(a.storage_paths||[])];
+  const row = { platform, jenis, link, copywriting, views, likes, comments, shares, notes, labels, storage_paths };
+  const saved = await sb_saveContentLib(row);
+  if (!saved) { showToast('Gagal kirim', 'error'); if(btn){btn.disabled=false;btn.textContent='Kirim';} return; }
+  if (!window.clData) window.clData = [];
+  clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
+  gcalCloseModal();
+  showToast('Berhasil dikirim ke Content Library ✓');
 }
 
 function daOpenUploadModal(prefillFile) {
