@@ -11640,7 +11640,8 @@ function clOpenUploadModal(prefillFile) {
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS (opsional)</label>
         <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
         <div style="display:flex;gap:6px">
-          <input id="cl-label-input" placeholder="Ketik label + Enter" style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
+          <input id="cl-label-input" list="cl-label-suggestions-new" placeholder="Ketik atau pilih label..." style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
+          <datalist id="cl-label-suggestions-new">${[...new Set(clData.flatMap(c=>c.labels||[]))].sort().map(l=>`<option value="${l}">`).join('')}</datalist>
           <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
         </div>
       </div>
@@ -11811,7 +11812,12 @@ function clOpenEditModal(id) {
   if (!c) return;
   window._clLabels = [...(c.labels||[])];
   const modal = document.getElementById('gcal-modal');
+  const allLabels = [...new Set(clData.flatMap(x => x.labels||[]))].sort();
   modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:500px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-edit" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div style="font-size:14px;font-weight:700">Edit Konten</div>
       <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-arrow-left"></i></button>
     </div>
     <div style="display:flex;flex-direction:column;gap:11px">
@@ -11840,8 +11846,8 @@ function clOpenEditModal(id) {
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
-          ${[['cle-views','👁','Views',c.views],['cle-likes','❤️','Likes',c.likes],['cle-comments','💬','Comments',c.comments],['cle-shares','🔁','Shares',c.shares]].map(([id,icon,label,val])=>
-            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">${icon} ${label}</label><input id="${id}" type="number" value="${val||0}" style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
+          ${[['cle-views','👁','Views',c.views],['cle-likes','❤️','Likes',c.likes],['cle-comments','💬','Comments',c.comments],['cle-shares','🔁','Shares',c.shares]].map(([eid,icon,lbl,val])=>
+            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">${icon} ${lbl}</label><input id="${eid}" type="number" value="${val||0}" style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
           ).join('')}
         </div>
       </div>
@@ -11849,7 +11855,8 @@ function clOpenEditModal(id) {
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS</label>
         <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
         <div style="display:flex;gap:6px">
-          <input id="cl-label-input" placeholder="Ketik label + Enter" style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
+          <input id="cl-label-input" list="cl-label-suggestions" placeholder="Ketik atau pilih label..." style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
+          <datalist id="cl-label-suggestions">${allLabels.map(l=>`<option value="${l}">`).join('')}</datalist>
           <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
         </div>
       </div>
