@@ -7847,18 +7847,21 @@ async function clDoSendFromDA(daId) {
   if (!a) return;
   const platform    = document.getElementById('cl-platform').value;
   const jenis       = document.getElementById('cl-jenis').value;
-  const link        = document.getElementById('cl-link').value.trim();
+  const link        = document.getElementById('cl-link')?.value.trim()||'';
   const copywriting = document.getElementById('cl-copy').value.trim();
   const views       = parseInt(document.getElementById('cl-views').value)||0;
   const likes       = parseInt(document.getElementById('cl-likes').value)||0;
   const comments    = parseInt(document.getElementById('cl-comments').value)||0;
   const shares      = parseInt(document.getElementById('cl-shares').value)||0;
   const notes       = document.getElementById('cl-notes').value.trim();
-  const labels      = window._clLabels || [];
+  // Ambil label langsung dari chips yang terrender — lebih reliable dari window._clLabels
+  const labelEls    = document.querySelectorAll('#cl-label-chips span');
+  const labels      = labelEls.length
+    ? [...labelEls].map(el => el.childNodes[0]?.textContent?.trim()).filter(Boolean)
+    : (window._clLabels || []);
   const btn = document.getElementById('cl-upload-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
-  // Copy storage_paths dari Design Asset langsung (tanpa re-upload)
   const storage_paths = [...(a.storage_paths||[])];
   const row = { platform, jenis, link, copywriting, views, likes, comments, shares, notes, labels, storage_paths };
   const saved = await sb_saveContentLib(row);
@@ -11852,7 +11855,11 @@ async function clDoUpload() {
   const comments = parseInt(document.getElementById('cl-comments').value)||0;
   const shares   = parseInt(document.getElementById('cl-shares').value)||0;
   const notes    = document.getElementById('cl-notes').value.trim();
-  const labels   = window._clLabels || [];
+  // Baca label dari DOM chips (lebih reliable)
+  const labelEls = document.querySelectorAll('#cl-label-chips span');
+  const labels   = labelEls.length
+    ? [...labelEls].map(el => el.childNodes[0]?.textContent?.trim()).filter(Boolean)
+    : (window._clLabels || []);
   const files    = window._clFiles || [];
 
   const btn = document.getElementById('cl-upload-btn');
