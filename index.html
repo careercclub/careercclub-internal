@@ -7806,7 +7806,7 @@ function daSendToContentLib(id) {
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN</label>
-        <input id="cl-link" value="${a.link||''}" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        ${linkInputHTML("cl-link", a.link||"", "https://...")}
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
@@ -8084,7 +8084,7 @@ function daOpenEditModal(id) {
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK (opsional)</label>
-        <input id="dae-link" value="${a.link||''}" placeholder="https://canva.com/..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+        ${linkInputHTML("dae-link", a.link||"", "https://canva.com/...")}
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES</label>
@@ -11733,7 +11733,7 @@ function clOpenUploadModal(prefillFile) {
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN (opsional)</label>
-        <input id="cl-link" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        ${linkInputHTML("cl-link", "", "https://...")}
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
@@ -11804,6 +11804,23 @@ function clShowPreviews(files) {
       <button onclick="window._clFiles.splice(${i},1);clShowPreviews(window._clFiles)" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-x" style="font-size:9px"></i></button>
     </div>`;
   }).join('');
+}
+
+function linkInputHTML(id, value, placeholder) {
+  placeholder = placeholder || 'https://...';
+  return `<div style="display:flex;gap:6px;align-items:center">
+    <input id="${id}" value="${value||''}" placeholder="${placeholder}" oninput="linkInputRefresh('${id}')" style="flex:1;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+    <a id="${id}-btn" href="${value||'#'}" target="_blank" style="flex-shrink:0;display:${value?'flex':'none'};align-items:center;justify-content:center;width:32px;height:32px;border:0.5px solid var(--border-md);border-radius:var(--radius);color:var(--purple-accent);background:var(--bg);text-decoration:none"><i class="ti ti-external-link" style="font-size:14px"></i></a>
+  </div>`;
+}
+
+function linkInputRefresh(id) {
+  const input = document.getElementById(id);
+  const btn   = document.getElementById(id + '-btn');
+  if (!input || !btn) return;
+  const val = input.value.trim();
+  btn.href = val || '#';
+  btn.style.display = val ? 'flex' : 'none';
 }
 
 function clAddLabel() {
@@ -11948,7 +11965,7 @@ function clOpenEditModal(id) {
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN</label>
-        <input id="cle-link" value="${c.link}" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        ${linkInputHTML("cle-link", c.link, "https://...")}
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
