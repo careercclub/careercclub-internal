@@ -505,6 +505,8 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
       <div class="nav-item" onclick="switchPage('eval',this)"><i class="ti ti-chart-line"></i> Content Evaluation</div>
       <div class="nav-item" onclick="switchPage('ads',this)"><i class="ti ti-ad-2"></i> Meta Ads</div>
       <div class="nav-item" onclick="switchPage('igperf',this)"><i class="ti ti-brand-instagram"></i> Instagram</div>
+      <div class="nav-item" onclick="switchPage('contentlib',this)"><i class="ti ti-bookmark"></i> Content Library</div>
+      <div class="nav-item" onclick="switchPage('voucher',this)"><i class="ti ti-ticket"></i> Voucher</div>
     </div>
     <div class="nav-section">
       <div class="nav-label">Operations</div>
@@ -1413,12 +1415,22 @@ async function sb_updateLinkTemplate(id, row) { return await sb_update('event_li
 async function sb_deleteLinkTemplate(id) { return await sb_delete('event_link_templates', id); }
 
 async function sb_loadResources() { return await sb_load('resources', { order: 'kategori', ascending: true }); }
+async function sb_loadVouchers() { return await sb_load('vouchers', { order: 'created_at', ascending: false }); }
+async function sb_saveVoucher(row) { return await sb_insert('vouchers', row); }
+async function sb_updateVoucher(id, row) { return await sb_update('vouchers', id, row); }
+async function sb_deleteVoucher(id) { return await sb_delete('vouchers', id); }
+
+async function sb_loadContentLib() { return await sb_load('content_library', { order: 'created_at', ascending: false }); }
+async function sb_saveContentLib(row) { return await sb_insert('content_library', row); }
+async function sb_updateContentLib(id, row) { return await sb_update('content_library', id, row); }
+async function sb_deleteContentLib(id) { return await sb_delete('content_library', id); }
 async function sb_saveResource(row) { return await sb_insert('resources', row); }
 async function sb_updateResource(id, row) { return await sb_update('resources', id, row); }
 async function sb_deleteResource(id) { return await sb_delete('resources', id); }
 
 async function sb_loadDesignAssets() { return await sb_load('design_assets', { order: 'created_at', ascending: false }); }
 async function sb_saveDesignAsset(row) { return await sb_insert('design_assets', row); }
+async function sb_updateDesignAsset(id, row) { return await sb_update('design_assets', id, row); }
 async function sb_deleteDesignAsset(id) { return await sb_delete('design_assets', id); }
 async function sb_uploadDesignFile(file, path) {
   const { data, error } = await _sb.storage.from('design-assets').upload(path, file, { upsert: true });
@@ -1884,6 +1896,8 @@ function switchPage(page,el){
   else if(page==="project"){c.innerHTML=projectHTML();initProjectTab("overview");}
   else if(page==="competitor"){c.innerHTML=competitorHTML();initCompetitor();}
   else if(page==="resources"){c.innerHTML=resourcesHTML();initResources();}
+  else if(page==="voucher"){c.innerHTML=voucherHTML();initVoucher();}
+  else if(page==="contentlib"){c.innerHTML=contentLibHTML();initContentLib();}
   else if(page==="painpoint"){c.innerHTML=painPointHTML();initPainPointTab("dashboard");}
   else if(page==="content"){c.innerHTML=contentHTML();}
   else if(page==="design"){c.innerHTML=designHTML();initDesign();}
@@ -6293,6 +6307,60 @@ async function deleteLinkItem(projId,idx){
   const ok=await sb_updateEvent(projId,{links});if(!ok){showToast("Gagal hapus link","error");return;}
   proj.links=links;initProjectTab("tasks");showToast("Link dihapus");
 }
+function openPostEventModal(projId) {
+  const p = projects.find(x => _idEq(x.id, projId));
+  if (!p) return;
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-clipboard-check" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div>
+        <div style="font-size:14px;font-weight:700">Post-Event</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:1px">${p.nama}</div>
+      </div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">TARGET PESERTA</label>
+        <div style="font-size:12px;color:var(--text-muted);padding:6px 0">${p.target ? p.target + ' peserta' : '—'}</div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">CAPAIAN PESERTA (AKTUAL)</label>
+        <input id="pe-capaian" type="number" value="${p.capaian_peserta ?? ''}" placeholder="0" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">CATATAN POST-EVENT</label>
+        <textarea id="pe-notes" rows="4" placeholder="Insight, evaluasi, atau hal yang perlu diperbaiki..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit">${p.notes_post || ''}</textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
+      <button onclick="savePostEvent('${projId}')" class="btn btn-primary" style="font-size:12px"><i class="ti ti-check" style="font-size:12px"></i> Simpan</button>
+    </div>
+  </div>`;
+}
+
+async function savePostEvent(projId) {
+  const p = projects.find(x => _idEq(x.id, projId));
+  if (!p) return;
+  const capaian = document.getElementById('pe-capaian').value;
+  const notes = document.getElementById('pe-notes').value.trim();
+  const updates = {
+    capaian_peserta: capaian !== '' ? parseInt(capaian) : null,
+    notes_post: notes
+  };
+  const ok = await sb_updateEvent(projId, updates);
+  if (!ok) { showToast('Gagal simpan', 'error'); return; }
+  p.capaian_peserta = updates.capaian_peserta;
+  p.notes_post = updates.notes_post;
+  gcalCloseModal();
+  initProjectTab('history');
+  showToast('Post-Event disimpan ✓');
+}
+
 function projectHistoryHTML(){
   const jenisFilter = window._pjmHistoryJenisFilter || '';
   const expandedId = window._pjmHistoryExpanded || null;
@@ -6396,6 +6464,7 @@ function projectHistoryHTML(){
               <div style="font-size:10px;color:var(--text-muted)">Task</div>
               <div style="font-size:14px;font-weight:700;color:${pct===100?'var(--green)':'var(--text-muted)'}">${done}/${tasks.length}</div>
             </div>
+            ${(()=>{ const hp=p.capaian_peserta!=null||(p.notes_post&&p.notes_post.trim()); return `<button onclick="event.stopPropagation();openPostEventModal('${p.id}')" style="background:${hp?'var(--green-bg)':'var(--amber-bg)'};border:1px solid ${hp?'var(--green)':'var(--amber)'};border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:${hp?'var(--green)':'var(--amber)'};display:flex;align-items:center;gap:5px"><i class="ti ti-${hp?'check':'alert-triangle'}" style="font-size:11px"></i> Post-Event ${hp?'✓':'belum diisi'}</button>`; })()}
             <button onclick="event.stopPropagation();openProjectModal('${p.id}')" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--text-muted)"><i class="ti ti-pencil"></i> Edit</button>
             <i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:13px;color:var(--text-muted)"></i>
           </div>
@@ -6611,7 +6680,9 @@ var menuSections = [
     { page: "content",   label: "Content Planning" },
     { page: "eval",      label: "Content Evaluation" },
     { page: "ads",       label: "Meta Ads" },
-    { page: "igperf",    label: "Instagram" }
+    { page: "igperf",    label: "Instagram" },
+    { page: "contentlib", label: "Content Library" },
+    { page: "voucher",   label: "Voucher" }
   ]},
   { label: "Operations",  items: [
     { page: "project",   label: "Program" },
@@ -6633,8 +6704,7 @@ var menuSections = [
 ];
 
 function loadMenuSections(){
-  // Version key: bump this string whenever default menuSections changes
-  var MENU_VERSION = 'v8_intel';
+  var MENU_VERSION = 'v10_contentlib';
   var savedVersion = localStorage.getItem('ccc_menuVersion');
   if(savedVersion !== MENU_VERSION){
     // Config outdated or first run - clear and use default
@@ -6664,6 +6734,8 @@ var pageIconMap = {
   product:   'ti-package',
   partner:   'ti-users-group',
   design:    'ti-palette',
+  contentlib: 'ti-bookmark',
+  voucher:   'ti-ticket',
   resources: 'ti-key',
   settings:  'ti-settings'
 };
@@ -7592,7 +7664,7 @@ async function initDesign() {
 }
 
 function daPasteHandler(e) {
-  // Skip kalau task modal lagi buka — biar _tmPasteHandler yang handle
+  // Skip kalau task modal lagi buka
   const taskModal = document.getElementById('task-modal');
   if (taskModal && taskModal.style.display !== 'none') return;
 
@@ -7603,13 +7675,24 @@ function daPasteHandler(e) {
       const file = item.getAsFile();
       if (!file) break;
       const modal = document.getElementById('gcal-modal');
-      const modalOpen = modal && modal.style.display !== 'none' && modal.innerHTML.includes('da-upload-btn');
-      if (modalOpen) {
+      const modalOpen = modal && modal.style.display !== 'none';
+
+      // Kalau modal "Tambah Gambar" lagi buka
+      if (modalOpen && modal.innerHTML.includes('da-add-btn')) {
+        window._daAddFiles = [...(window._daAddFiles||[]), file];
+        daShowAddPreviews();
+        break;
+      }
+
+      // Kalau modal upload baru lagi buka
+      if (modalOpen && modal.innerHTML.includes('da-upload-btn')) {
         window._daFiles = [...(window._daFiles||[]), file];
         daShowPreviews(window._daFiles);
-      } else {
-        daOpenUploadModal(file);
+        break;
       }
+
+      // Kalau nggak ada modal — buka upload modal baru
+      daOpenUploadModal(file);
       break;
     }
   }
@@ -7834,6 +7917,8 @@ function daRenderPreviewModal(a) {
     <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border);flex-shrink:0">
       <a href="${url}" target="_blank" class="btn btn-sm" style="font-size:11px" title="Buka gambar"><i class="ti ti-photo" style="font-size:12px"></i></a>
       ${a.link ? `<a href="${a.link}" target="_blank" class="btn btn-sm" style="font-size:11px" title="Buka link design"><i class="ti ti-external-link" style="font-size:12px"></i> Link</a>` : ''}
+      <button onclick="daOpenEditModal('${a.id}')" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:12px"></i> Edit</button>
+      <button onclick="daOpenAddImageModal('${a.id}')" class="btn btn-sm" style="font-size:11px"><i class="ti ti-photo-plus" style="font-size:12px"></i> Tambah</button>
       <button onclick="daConfirmDelete('${a.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:12px"></i></button>
       <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
     </div>
@@ -7853,10 +7938,160 @@ function daRenderPreviewModal(a) {
       </div>
       ${total > 1 ? `
       <div style="display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap">
-        ${paths.map((p,i) => `<div onclick="daCarouselIdx['${a.id}']=${i};daRenderPreviewModal(daAssets.find(x=>x.id==='${a.id}'))" style="width:48px;height:48px;border-radius:var(--radius);overflow:hidden;cursor:pointer;border:2px solid ${i===idx?'var(--purple-accent)':'var(--border)'}"><img src="${sb_designPublicUrl(p)}" style="width:100%;height:100%;object-fit:cover"></div>`).join('')}
+        ${paths.map((p,i) => `<div style="position:relative;width:48px;height:48px;flex-shrink:0">
+          <div onclick="daCarouselIdx['${a.id}']=${i};daRenderPreviewModal(daAssets.find(x=>x.id==='${a.id}'))" style="width:48px;height:48px;border-radius:var(--radius);overflow:hidden;cursor:pointer;border:2px solid ${i===idx?'var(--purple-accent)':'var(--border)'}"><img src="${sb_designPublicUrl(p)}" style="width:100%;height:100%;object-fit:cover"></div>
+          <button onclick="event.stopPropagation();daDeleteSingleImage('${a.id}',${i})" style="position:absolute;top:-4px;right:-4px;background:var(--red);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0;z-index:1"><i class="ti ti-x" style="font-size:9px"></i></button>
+        </div>`).join('')}
       </div>` : ''}
     </div>
   </div>`;
+}
+
+function daOpenEditModal(id) {
+  const a = daAssets.find(x => _idEq(x.id, id));
+  if (!a) return;
+  const cats = [...new Set(daAssets.map(x => x.kategori))].sort();
+  const modal = document.getElementById('gcal-modal');
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-edit" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div style="font-size:14px;font-weight:700">Edit Asset</div>
+      <button onclick="daRenderPreviewModal(daAssets.find(x=>x.id==='${id}'))" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-arrow-left"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">KATEGORI</label>
+        <input id="dae-kategori" list="dae-kat-list" value="${a.kategori}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+        <datalist id="dae-kat-list">${cats.map(c=>`<option value="${c}">`).join('')}</datalist>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NAMA</label>
+        <input id="dae-nama" value="${a.nama}" placeholder="Nama asset..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK (opsional)</label>
+        <input id="dae-link" value="${a.link||''}" placeholder="https://canva.com/..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES</label>
+        <input id="dae-notes" value="${a.notes||''}" placeholder="catatan..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="daRenderPreviewModal(daAssets.find(x=>x.id==='${id}'))" class="btn" style="font-size:12px">Batal</button>
+      <button onclick="daSaveEdit('${id}')" class="btn btn-primary" style="font-size:12px">Simpan</button>
+    </div>
+  </div>`;
+}
+
+async function daSaveEdit(id) {
+  const a = daAssets.find(x => _idEq(x.id, id));
+  if (!a) return;
+  const kategori = document.getElementById('dae-kategori').value.trim();
+  const nama = document.getElementById('dae-nama').value.trim();
+  const link = document.getElementById('dae-link').value.trim();
+  const notes = document.getElementById('dae-notes').value.trim();
+  if (!kategori) { showToast('Kategori wajib diisi', 'error'); return; }
+  const ok = await sb_updateDesignAsset(id, { kategori, nama, link, notes });
+  if (!ok) { showToast('Gagal simpan', 'error'); return; }
+  a.kategori = kategori; a.nama = nama; a.link = link; a.notes = notes;
+  daPopulateFilter();
+  daRenderGallery();
+  daRenderPreviewModal(a);
+  showToast('Asset diupdate ✓');
+}
+
+function daOpenAddImageModal(id) {
+  const a = daAssets.find(x => _idEq(x.id, id));
+  if (!a) return;
+  const modal = document.getElementById('gcal-modal');
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-photo-plus" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div style="font-size:14px;font-weight:700">Tambah Gambar</div>
+      <button onclick="daRenderPreviewModal(daAssets.find(x=>x.id==='${id}'))" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-arrow-left"></i></button>
+    </div>
+    <div id="da-add-dropzone" onclick="document.getElementById('da-add-input').click()"
+      style="border:2px dashed var(--border-md);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;background:var(--bg)"
+      ondragover="event.preventDefault();this.style.borderColor='var(--purple-accent)'"
+      ondragleave="this.style.borderColor='var(--border-md)'"
+      ondrop="event.preventDefault();daHandleAddImages(event.dataTransfer.files,'${id}')">
+      <i class="ti ti-photos" style="font-size:28px;color:var(--text-muted);display:block;margin-bottom:8px"></i>
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px">Klik, drag & drop, atau Ctrl+V</div>
+      <div style="font-size:11px;color:var(--text-muted)">PNG, JPG, WEBP — bisa multi-file</div>
+    </div>
+    <input id="da-add-input" type="file" accept="image/*" multiple style="display:none" onchange="daHandleAddImages(this.files,'${id}')">
+    <div id="da-add-preview" style="display:none;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="daRenderPreviewModal(daAssets.find(x=>x.id==='${id}'))" class="btn" style="font-size:12px">Batal</button>
+      <button id="da-add-btn" onclick="daDoAddImages('${id}')" class="btn btn-primary" style="font-size:12px" disabled>Upload</button>
+    </div>
+  </div>`;
+
+  window._daAddFiles = [];
+  // Paste handler
+  modal.onpaste = (e) => {
+    e.stopPropagation();
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) { window._daAddFiles = [...(window._daAddFiles||[]), file]; daShowAddPreviews(); }
+        break;
+      }
+    }
+  };
+}
+
+function daHandleAddImages(files, id) {
+  const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!arr.length) return;
+  window._daAddFiles = [...(window._daAddFiles||[]), ...arr];
+  daShowAddPreviews();
+}
+
+function daShowAddPreviews() {
+  const area = document.getElementById('da-add-preview');
+  const dz = document.getElementById('da-add-dropzone');
+  const btn = document.getElementById('da-add-btn');
+  if (!area) return;
+  area.style.display = 'flex';
+  if (dz) dz.style.display = 'none';
+  if (btn) btn.disabled = false;
+  area.innerHTML = (window._daAddFiles||[]).map((f,i) => {
+    const url = URL.createObjectURL(f);
+    return `<div style="position:relative;width:72px;height:72px;border-radius:var(--radius);overflow:hidden;border:0.5px solid var(--border)">
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="window._daAddFiles.splice(${i},1);daShowAddPreviews()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-x" style="font-size:9px"></i></button>
+    </div>`;
+  }).join('');
+}
+
+async function daDoAddImages(id) {
+  const files = window._daAddFiles || [];
+  if (!files.length) { showToast('Pilih gambar dulu', 'error'); return; }
+  const a = daAssets.find(x => _idEq(x.id, id));
+  if (!a) return;
+  const btn = document.getElementById('da-add-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+  const newPaths = [...(a.storage_paths||[])];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (btn) btn.textContent = `Uploading ${i+1}/${files.length}...`;
+    const ext = file.name?.split('.').pop() || 'png';
+    const path = `${a.kategori.replace(/\s+/g,'-').toLowerCase()}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const sp = await sb_uploadDesignFile(file, path);
+    if (sp) newPaths.push(sp);
+  }
+  const ok = await sb_updateDesignAsset(id, { storage_paths: newPaths });
+  if (!ok) { showToast('Gagal simpan', 'error'); return; }
+  a.storage_paths = newPaths;
+  daRenderGallery();
+  daRenderPreviewModal(a);
+  showToast(`${files.length} gambar ditambahkan ✓`);
 }
 
 function daPrevImg(id) {
@@ -7873,6 +8108,34 @@ function daNextImg(id) {
   const total = a.storage_paths.length;
   daCarouselIdx[id] = ((daCarouselIdx[id]||0) + 1) % total;
   daRenderPreviewModal(a);
+}
+
+async function daDeleteSingleImage(id, idx) {
+  const a = daAssets.find(x => _idEq(x.id, id));
+  if (!a || !a.storage_paths[idx]) return;
+  if (!confirm('Hapus gambar ini dari album?')) return;
+  const path = a.storage_paths[idx];
+  await sb_deleteDesignFile(path);
+  const newPaths = a.storage_paths.filter((_,i) => i !== idx);
+
+  if (!newPaths.length) {
+    // Kalau gambar terakhir dihapus, hapus seluruh asset
+    await sb_deleteDesignAsset(id);
+    daAssets = daAssets.filter(x => !_idEq(x.id, id));
+    gcalCloseModal();
+    daPopulateFilter();
+    daRenderGallery();
+    showToast('Asset dihapus');
+    return;
+  }
+
+  await sb_updateDesignAsset(id, { storage_paths: newPaths });
+  a.storage_paths = newPaths;
+  // Reset carousel index kalau perlu
+  if (daCarouselIdx[id] >= newPaths.length) daCarouselIdx[id] = newPaths.length - 1;
+  daRenderGallery();
+  daRenderPreviewModal(a);
+  showToast('Gambar dihapus ✓');
 }
 
 async function daConfirmDelete(id) {
@@ -10578,6 +10841,406 @@ async function initCompetitor() {
 }
 
 // ============================================================
+// VOUCHER MODULE
+// ============================================================
+
+var voucherData = [];
+var voucherTab = 'overview';
+
+const VOUCHER_TIPE = ['Flash Sale', 'Mega Sale', 'Bundle Sale', 'Voucher Gift'];
+
+function voucherStatus(v) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const end = new Date(v.periode_selesai); end.setHours(0,0,0,0);
+  if (end < now) return 'expired';
+  if (v.kuota != null && v.terpakai >= v.kuota) return 'habis';
+  return 'aktif';
+}
+
+function voucherStatusPill(v) {
+  const s = voucherStatus(v);
+  const map = {
+    aktif:   { label: 'Aktif',   bg: 'var(--green-bg)',  color: 'var(--green)' },
+    habis:   { label: 'Habis',   bg: 'var(--amber-bg)',  color: 'var(--amber)' },
+    expired: { label: 'Expired', bg: 'var(--red-bg)',    color: 'var(--red)'   }
+  };
+  const m = map[s];
+  return `<span style="background:${m.bg};color:${m.color};padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">${m.label}</span>`;
+}
+
+function fmtRp(n) {
+  if (!n && n !== 0) return '—';
+  return 'Rp ' + Number(n).toLocaleString('id-ID');
+}
+
+function voucherHTML() {
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <h2 style="font-size:18px;font-weight:700;margin:0">Voucher</h2>
+    <button onclick="openVoucherModal(null)" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
+      <i class="ti ti-plus" style="font-size:13px"></i> Tambah Voucher
+    </button>
+  </div>
+  <div class="tab-row" style="margin-bottom:16px">
+    <div class="tab active" id="vtab-overview" onclick="voucherSwitchTab('overview')"><i class="ti ti-layout-dashboard" style="font-size:12px"></i> Overview</div>
+    <div class="tab" id="vtab-list" onclick="voucherSwitchTab('list')"><i class="ti ti-ticket" style="font-size:12px"></i> Semua Voucher</div>
+  </div>
+  <div id="voucher-content"></div>`;
+}
+
+function voucherSwitchTab(tab) {
+  voucherTab = tab;
+  document.querySelectorAll('[id^="vtab-"]').forEach(t => t.classList.remove('active'));
+  const btn = document.getElementById('vtab-' + tab);
+  if (btn) btn.classList.add('active');
+  renderVoucherTab();
+}
+
+async function initVoucher() {
+  if (!window._allProducts) {
+    const rows = await sb_loadProducts();
+    window._allProducts = rows.map(p => ({ id: String(p.id), nama: p.nama, harga: p.harga || 0 }));
+  }
+  voucherData = (await sb_loadVouchers()).map(v => ({
+    id: v.id, nama_event: v.nama_event, tipe: v.tipe,
+    periode_mulai: v.periode_mulai, periode_selesai: v.periode_selesai,
+    kode: v.kode, diskon_persen: v.diskon_persen || 0,
+    maks_potongan: v.maks_potongan || null, min_transaksi: v.min_transaksi || 0,
+    kuota: v.kuota || null, terpakai: v.terpakai || 0,
+    product_ids: (v.product_ids || []).map(String), notes: v.notes || '',
+    created_at: v.created_at
+  }));
+  renderVoucherTab();
+}
+
+function renderVoucherTab() {
+  const el = document.getElementById('voucher-content');
+  if (!el) return;
+  if (voucherTab === 'overview') el.innerHTML = renderVoucherOverview();
+  else el.innerHTML = renderVoucherList();
+}
+
+function renderVoucherOverview() {
+  const aktif   = voucherData.filter(v => voucherStatus(v) === 'aktif').length;
+  const habis   = voucherData.filter(v => voucherStatus(v) === 'habis').length;
+  const expired = voucherData.filter(v => voucherStatus(v) === 'expired').length;
+  const totalTerpakai = voucherData.reduce((s,v) => s + (v.terpakai||0), 0);
+  const totalKuota    = voucherData.reduce((s,v) => s + (v.kuota||0), 0);
+  const byTipe = {};
+  VOUCHER_TIPE.forEach(t => { byTipe[t] = voucherData.filter(v => v.tipe === t); });
+
+  return `
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+    ${[
+      { label: 'Total',   val: voucherData.length, color: 'var(--purple-accent)', bg: 'var(--purple-light)' },
+      { label: 'Aktif',   val: aktif,   color: 'var(--green)', bg: 'var(--green-bg)' },
+      { label: 'Habis',   val: habis,   color: 'var(--amber)', bg: 'var(--amber-bg)' },
+      { label: 'Expired', val: expired, color: 'var(--red)',   bg: 'var(--red-bg)' },
+      { label: 'Terpakai/Kuota', val: `${totalTerpakai}/${totalKuota||'∞'}`, color: 'var(--text)', bg: 'var(--bg)' },
+    ].map(c => `<div class="card" style="padding:10px 14px;background:${c.bg};flex:1;min-width:100px">
+      <div style="font-size:10px;color:${c.color};font-weight:600;margin-bottom:2px">${c.label}</div>
+      <div style="font-size:20px;font-weight:800;color:${c.color}">${c.val}</div>
+    </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+    ${VOUCHER_TIPE.map(tipe => {
+      const items = byTipe[tipe] || [];
+      if (!items.length) return '';
+      return `<div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:8px 12px;background:var(--bg);border-bottom:0.5px solid var(--border);font-size:11px;font-weight:700">${tipe} <span style="font-weight:400;color:var(--text-muted)">(${items.length})</span></div>
+        <div style="padding:6px 12px;display:flex;flex-direction:column;gap:5px">
+          ${items.map(v => `<div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.nama_event}</div>
+              <div style="font-size:10px;color:var(--text-muted);font-family:monospace">${v.kode} · ${v.diskon_persen}%</div>
+            </div>
+            ${voucherStatusPill(v)}
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).filter(Boolean).join('')}
+  </div>`;
+}
+
+function renderVoucherList() {
+  if (!voucherData.length) return `<div class="card" style="text-align:center;padding:40px;color:var(--text-muted)">
+    <i class="ti ti-ticket" style="font-size:32px;display:block;margin-bottom:8px"></i>
+    Belum ada voucher. Klik "+ Tambah Voucher".
+  </div>`;
+
+  return `<div style="display:flex;flex-direction:column;gap:8px">
+    ${voucherData.map(v => {
+      const productNames = (v.product_ids||[]).map(id => {
+        const p = (window._allProducts||[]).find(p => p.id === id);
+        return p ? p.nama : null;
+      }).filter(Boolean);
+      const pct = v.kuota ? Math.round((v.terpakai/v.kuota)*100) : null;
+      return `<div class="card" style="padding:12px 14px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+              <div style="font-size:12px;font-weight:700">${v.nama_event}</div>
+              <span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:1px 7px;border-radius:10px;font-weight:600">${v.tipe}</span>
+              ${voucherStatusPill(v)}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-muted);margin-bottom:6px">
+              <span style="font-family:monospace;font-weight:600;color:var(--text)">${v.kode}</span>
+              <span><i class="ti ti-calendar" style="font-size:10px"></i> ${igFmtDate(v.periode_mulai)}–${igFmtDate(v.periode_selesai)}</span>
+              <span><i class="ti ti-discount" style="font-size:10px"></i> ${v.diskon_persen}%</span>
+              ${v.maks_potongan?`<span>maks ${fmtRp(v.maks_potongan)}</span>`:''}
+              ${v.min_transaksi?`<span>min ${fmtRp(v.min_transaksi)}</span>`:''}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <div style="font-size:11px;color:var(--text-muted)">Terpakai: <b style="color:var(--text)">${v.terpakai}</b>${v.kuota?` / ${v.kuota}`:' / ∞'}</div>
+              ${pct!==null?`<div style="flex:1;max-width:100px;height:4px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${Math.min(pct,100)}%;height:100%;background:${pct>=100?'var(--red)':pct>=70?'var(--amber)':'var(--green)'}"></div></div>`:''}
+              ${productNames.length?`<div style="font-size:10px;color:var(--text-muted)">${productNames.join(' · ')}</div>`:''}
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;align-items:flex-start">
+            <button onclick="openVoucherCalc('${v.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-calculator" style="font-size:11px"></i></button>
+            <button onclick="openUpdateTerpakai('${v.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-plus" style="font-size:11px"></i></button>
+            <button onclick="openVoucherModal('${v.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-edit" style="font-size:11px"></i></button>
+            <button onclick="deleteVoucher('${v.id}')" class="btn btn-sm" style="font-size:10px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i></button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function openUpdateTerpakai(id) {
+  const v = voucherData.find(x => _idEq(x.id, id));
+  if (!v) return;
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <i class="ti ti-chart-bar" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div>
+        <div style="font-size:14px;font-weight:700">Update Terpakai</div>
+        <div style="font-size:11px;color:var(--text-muted)">${v.kode} · Sekarang: ${v.terpakai}${v.kuota?' / '+v.kuota:''}</div>
+      </div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUMLAH TERPAKAI</label>
+      <input id="vt-terpakai" type="number" value="${v.terpakai}" min="0" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
+      <button onclick="saveTerpakai('${id}')" class="btn btn-primary" style="font-size:12px">Simpan</button>
+    </div>
+  </div>`;
+}
+
+async function saveTerpakai(id) {
+  const terpakai = parseInt(document.getElementById('vt-terpakai').value) || 0;
+  const ok = await sb_updateVoucher(id, { terpakai });
+  if (!ok) { showToast('Gagal update', 'error'); return; }
+  const v = voucherData.find(x => _idEq(x.id, id));
+  if (v) v.terpakai = terpakai;
+  gcalCloseModal();
+  renderVoucherTab();
+  showToast('Terpakai diupdate');
+}
+
+function openVoucherModal(id) {
+  const v = id ? voucherData.find(x => _idEq(x.id, id)) : null;
+  const allProds = window._allProducts || [];
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-ticket" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div style="font-size:14px;font-weight:700">${v ? 'Edit Voucher' : 'Tambah Voucher'}</div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NAMA EVENT / HARI BESAR</label>
+          <input id="vc-nama" value="${v?v.nama_event:''}" placeholder="cth: Hari Kartini" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">TIPE PROMO</label>
+          <select id="vc-tipe" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+            ${VOUCHER_TIPE.map(t => `<option value="${t}" ${v&&v.tipe===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PERIODE MULAI</label>
+          <input id="vc-mulai" type="date" value="${v?v.periode_mulai:''}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PERIODE SELESAI</label>
+          <input id="vc-selesai" type="date" value="${v?v.periode_selesai:''}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">KODE VOUCHER</label>
+        <input id="vc-kode" value="${v?v.kode:''}" placeholder="cth: KARTINI40" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);font-family:monospace;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">DISKON (%)</label>
+          <input id="vc-diskon" type="number" min="0" max="100" value="${v?v.diskon_persen:''}" placeholder="40" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">MAKS POTONGAN (Rp)</label>
+          <input id="vc-maks" type="number" value="${v&&v.maks_potongan?v.maks_potongan:''}" placeholder="opsional" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">MIN TRANSAKSI (Rp)</label>
+          <input id="vc-min" type="number" value="${v?v.min_transaksi:''}" placeholder="0" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">KUOTA (kosong = unlimited)</label>
+        <input id="vc-kuota" type="number" value="${v&&v.kuota?v.kuota:''}" placeholder="unlimited" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">PRODUK YANG BERLAKU</label>
+        ${allProds.length ? `<div style="display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto;padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);background:var(--bg)">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding-bottom:5px;border-bottom:0.5px solid var(--border)">
+            <input type="checkbox" id="vc-prod-all" onchange="voucherToggleAllProds(this.checked)" style="cursor:pointer"> <b>Semua Produk</b>
+          </label>
+          ${allProds.map(p => `<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+            <input type="checkbox" class="vc-prod" value="${p.id}" ${v&&(v.product_ids||[]).includes(p.id)?'checked':''} style="cursor:pointer">
+            ${p.nama}${p.harga?' <span style="color:var(--text-muted);font-size:10px">('+fmtRp(p.harga)+')</span>':''}
+          </label>`).join('')}
+        </div>` : `<div style="font-size:12px;color:var(--text-muted);padding:8px">Belum ada produk. Tambah dulu di modul Products.</div>`}
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES</label>
+        <input id="vc-notes" value="${v?v.notes:''}" placeholder="catatan tambahan..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
+      <button onclick="saveVoucher('${id||''}')" class="btn btn-primary" style="font-size:12px">${v?'Simpan':'Tambah'}</button>
+    </div>
+  </div>`;
+
+  const allChecked = allProds.length && v && allProds.every(p => (v.product_ids||[]).includes(p.id));
+  const allProdsCb = document.getElementById('vc-prod-all');
+  if (allProdsCb) allProdsCb.checked = allChecked;
+}
+
+function voucherToggleAllProds(checked) {
+  document.querySelectorAll('.vc-prod').forEach(cb => cb.checked = checked);
+}
+
+async function saveVoucher(id) {
+  const nama_event      = document.getElementById('vc-nama').value.trim();
+  const tipe            = document.getElementById('vc-tipe').value;
+  const periode_mulai   = document.getElementById('vc-mulai').value;
+  const periode_selesai = document.getElementById('vc-selesai').value;
+  const kode            = document.getElementById('vc-kode').value.trim();
+  const diskon_persen   = parseInt(document.getElementById('vc-diskon').value) || 0;
+  const maks_potongan   = document.getElementById('vc-maks').value ? parseInt(document.getElementById('vc-maks').value) : null;
+  const min_transaksi   = parseInt(document.getElementById('vc-min').value) || 0;
+  const kuota           = document.getElementById('vc-kuota').value ? parseInt(document.getElementById('vc-kuota').value) : null;
+  const notes           = document.getElementById('vc-notes').value.trim();
+  const product_ids     = [...document.querySelectorAll('.vc-prod:checked')].map(cb => cb.value);
+
+  if (!nama_event || !kode || !periode_mulai || !periode_selesai) {
+    showToast('Nama, kode, dan periode wajib diisi', 'error'); return;
+  }
+
+  const existing = id ? voucherData.find(x => _idEq(x.id, id)) : null;
+  const terpakai = existing ? existing.terpakai : 0;
+  const row = { nama_event, tipe, periode_mulai, periode_selesai, kode, diskon_persen, maks_potongan, min_transaksi, kuota, terpakai, product_ids, notes };
+
+  if (id) {
+    const ok = await sb_updateVoucher(id, row);
+    if (!ok) { showToast('Gagal update', 'error'); return; }
+    const idx = voucherData.findIndex(x => _idEq(x.id, id));
+    if (idx >= 0) voucherData[idx] = { id, ...row };
+    showToast('Voucher diupdate');
+  } else {
+    const saved = await sb_saveVoucher(row);
+    if (!saved) { showToast('Gagal simpan', 'error'); return; }
+    voucherData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
+    showToast('Voucher ditambah');
+  }
+  gcalCloseModal();
+  renderVoucherTab();
+}
+
+async function deleteVoucher(id) {
+  if (!confirm('Hapus voucher ini?')) return;
+  const ok = await sb_deleteVoucher(id);
+  if (!ok) { showToast('Gagal hapus', 'error'); return; }
+  voucherData = voucherData.filter(x => !_idEq(x.id, id));
+  renderVoucherTab();
+  showToast('Voucher dihapus');
+}
+
+function openVoucherCalc(id) {
+  const v = voucherData.find(x => _idEq(x.id, id));
+  if (!v) return;
+  const allProds = (window._allProducts || []).filter(p => !v.product_ids.length || v.product_ids.includes(p.id));
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-calculator" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div>
+        <div style="font-size:14px;font-weight:700">Kalkulator Diskon</div>
+        <div style="font-size:11px;color:var(--text-muted)">${v.kode} · ${v.diskon_persen}%${v.maks_potongan?' · Maks '+fmtRp(v.maks_potongan):''}</div>
+      </div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${allProds.length ? `<div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PILIH PRODUK</label>
+        <select onchange="if(this.value){document.getElementById('calc-harga').value=this.options[this.selectedIndex].dataset.harga||'';calcVoucher(${v.diskon_persen},${v.maks_potongan||'null'},${v.min_transaksi||0})}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+          <option value="">-- atau pilih produk --</option>
+          ${allProds.map(p => `<option value="${p.id}" data-harga="${p.harga||0}">${p.nama}${p.harga?' — '+fmtRp(p.harga):''}</option>`).join('')}
+        </select>
+      </div>` : ''}
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">HARGA ASLI (Rp)</label>
+        <input id="calc-harga" type="number" placeholder="cth: 250000" oninput="calcVoucher(${v.diskon_persen},${v.maks_potongan||'null'},${v.min_transaksi||0})" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+      </div>
+      <div id="calc-result" style="display:none;border-radius:var(--radius);padding:12px 14px;background:var(--purple-light)">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text-muted)">Harga asli</span><span id="cr-asli"></span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text-muted)">Diskon ${v.diskon_persen}%</span><span id="cr-diskon" style="color:var(--green)"></span></div>
+          ${v.maks_potongan?`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted)"><span>Maks potongan</span><span>${fmtRp(v.maks_potongan)}</span></div>`:''}
+          <div style="border-top:0.5px solid var(--border);padding-top:6px;display:flex;justify-content:space-between;font-size:14px;font-weight:700"><span>Harga akhir</span><span id="cr-akhir" style="color:var(--purple-accent)"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function calcVoucher(persen, maks, min) {
+  const harga = parseFloat(document.getElementById('calc-harga').value) || 0;
+  const result = document.getElementById('calc-result');
+  if (!harga) { if (result) result.style.display = 'none'; return; }
+  if (min && harga < min) {
+    result.style.display = 'block';
+    result.style.background = 'var(--red-bg)';
+    result.innerHTML = `<div style="font-size:12px;color:var(--red);text-align:center"><i class="ti ti-alert-triangle"></i> Di bawah minimum transaksi (${fmtRp(min)})</div>`;
+    return;
+  }
+  result.style.background = 'var(--purple-light)';
+  let potongan = Math.round(harga * persen / 100);
+  if (maks) potongan = Math.min(potongan, maks);
+  const akhir = harga - potongan;
+  result.style.display = 'block';
+  document.getElementById('cr-asli').textContent = fmtRp(harga);
+  document.getElementById('cr-diskon').textContent = '- ' + fmtRp(potongan);
+  document.getElementById('cr-akhir').textContent = fmtRp(akhir);
+}
+
+// ============================================================
 // RESOURCES MODULE
 // ============================================================
 
@@ -10748,6 +11411,515 @@ async function deleteRes(id) {
   resourcesData=resourcesData.filter(x=>!_idEq(x.id,id));
   renderResources();
   showToast('Resource dihapus');
+}
+
+
+// ============================================================
+// CONTENT LIBRARY MODULE
+// ============================================================
+
+var clData = [];
+var clCarouselIdx = {};
+
+const CL_JENIS    = ['Carousel', 'Reels/Video', 'Single Image', 'Thread/Text'];
+const CL_PLATFORM = ['Instagram', 'TikTok', 'X', 'Threads', 'YouTube'];
+const CL_PLATFORM_ICON = {
+  Instagram: 'ti-brand-instagram',
+  TikTok: 'ti-brand-tiktok',
+  X: 'ti-brand-x',
+  Threads: 'ti-brand-threads',
+  YouTube: 'ti-brand-youtube'
+};
+
+function contentLibHTML() {
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <h2 style="font-size:18px;font-weight:700;margin:0">Content Library</h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="cl-filter-platform" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        <option value="">Semua Platform</option>
+        ${CL_PLATFORM.map(p => `<option value="${p}">${p}</option>`).join('')}
+      </select>
+      <select id="cl-filter-jenis" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        <option value="">Semua Jenis</option>
+        ${CL_JENIS.map(j => `<option value="${j}">${j}</option>`).join('')}
+      </select>
+      <button onclick="clOpenUploadModal()" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-plus" style="font-size:14px"></i> Tambah
+      </button>
+    </div>
+  </div>
+  <div id="cl-gallery"></div>`;
+}
+
+async function initContentLib() {
+  clData = (await sb_loadContentLib()).map(c => ({
+    id: c.id, jenis: c.jenis, platform: c.platform, link: c.link||'',
+    copywriting: c.copywriting||'', views: c.views||0, likes: c.likes||0,
+    comments: c.comments||0, shares: c.shares||0,
+    storage_paths: c.storage_paths||[], notes: c.notes||'', created_at: c.created_at
+  }));
+  clRenderGallery();
+  document.removeEventListener('paste', clPasteHandler);
+  document.addEventListener('paste', clPasteHandler);
+}
+
+function clPasteHandler(e) {
+  const taskModal = document.getElementById('task-modal');
+  if (taskModal && taskModal.style.display !== 'none') return;
+  const modal = document.getElementById('gcal-modal');
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (!file) break;
+      if (modal && modal.style.display !== 'none' && modal.innerHTML.includes('cl-upload-btn')) {
+        window._clFiles = [...(window._clFiles||[]), file];
+        clShowPreviews(window._clFiles);
+      } else if (modal && modal.style.display !== 'none' && modal.innerHTML.includes('cl-add-btn')) {
+        window._clAddFiles = [...(window._clAddFiles||[]), file];
+        clShowAddPreviews();
+      } else {
+        clOpenUploadModal(file);
+      }
+      break;
+    }
+  }
+}
+
+function clRenderGallery() {
+  const el = document.getElementById('cl-gallery');
+  if (!el) return;
+  const platform = document.getElementById('cl-filter-platform')?.value || '';
+  const jenis    = document.getElementById('cl-filter-jenis')?.value || '';
+  let filtered = clData;
+  if (platform) filtered = filtered.filter(c => c.platform === platform);
+  if (jenis)    filtered = filtered.filter(c => c.jenis === jenis);
+
+  if (!filtered.length) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:48px;color:var(--text-muted)">
+      <i class="ti ti-bookmark" style="font-size:36px;display:block;margin-bottom:10px"></i>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">Belum ada konten</div>
+      <div style="font-size:12px">Klik Tambah atau Ctrl+V untuk tambah konten</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+    ${filtered.map(c => {
+      const thumb = c.storage_paths.length ? sb_designPublicUrl(c.storage_paths[0]) : null;
+      const platformIcon = CL_PLATFORM_ICON[c.platform] || 'ti-world';
+      const total = c.storage_paths.length;
+      return `<div class="card" style="padding:0;overflow:hidden;cursor:pointer" onclick="clOpenPreview('${c.id}')">
+        <div style="aspect-ratio:1;overflow:hidden;background:var(--bg);position:relative">
+          ${thumb
+            ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover" loading="lazy">`
+            : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px"><i class="ti ti-file-text" style="font-size:32px;color:var(--text-hint)"></i><div style="font-size:10px;color:var(--text-hint)">${c.jenis}</div></div>`
+          }
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;display:flex;align-items:center;gap:4px">
+            <i class="ti ${platformIcon}" style="font-size:10px"></i> ${c.platform}
+          </div>
+          ${total > 1 ? `<div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px"><i class="ti ti-photo" style="font-size:10px"></i> ${total}</div>` : ''}
+        </div>
+        <div style="padding:8px 10px">
+          <div style="font-size:10px;color:var(--purple-mid);font-weight:600;margin-bottom:3px">${c.jenis}</div>
+          ${c.copywriting ? `<div style="font-size:11px;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:4px">${c.copywriting.substring(0,80)}${c.copywriting.length>80?'...':''}</div>` : ''}
+          <div style="display:flex;gap:8px;font-size:10px;color:var(--text-muted);flex-wrap:wrap">
+            ${c.views?`<span><i class="ti ti-eye" style="font-size:9px"></i> ${fmtN(c.views)}</span>`:''}
+            ${c.likes?`<span><i class="ti ti-heart" style="font-size:9px"></i> ${fmtN(c.likes)}</span>`:''}
+            ${c.comments?`<span><i class="ti ti-message" style="font-size:9px"></i> ${fmtN(c.comments)}</span>`:''}
+            ${c.shares?`<span><i class="ti ti-share" style="font-size:9px"></i> ${fmtN(c.shares)}</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function clOpenUploadModal(prefillFile) {
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  window._clFiles = [];
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-bookmark" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div style="font-size:14px;font-weight:700">Tambah Konten</div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div id="cl-dropzone" onclick="document.getElementById('cl-file-input').click()"
+        style="border:2px dashed var(--border-md);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;background:var(--bg)"
+        ondragover="event.preventDefault();this.style.borderColor='var(--purple-accent)'"
+        ondragleave="this.style.borderColor='var(--border-md)'"
+        ondrop="event.preventDefault();clHandleFiles(event.dataTransfer.files)">
+        <i class="ti ti-photos" style="font-size:28px;color:var(--text-muted);display:block;margin-bottom:8px"></i>
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px">Klik, drag & drop, atau Ctrl+V</div>
+        <div style="font-size:11px;color:var(--text-muted)">Screenshot konten — multi-file — opsional</div>
+      </div>
+      <input id="cl-file-input" type="file" accept="image/*" multiple style="display:none" onchange="clHandleFiles(this.files)">
+      <div id="cl-preview-area" style="display:none;flex-wrap:wrap;gap:8px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PLATFORM</label>
+          <select id="cl-platform" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+            ${CL_PLATFORM.map(p => `<option value="${p}">${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JENIS KONTEN</label>
+          <select id="cl-jenis" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+            ${CL_JENIS.map(j => `<option value="${j}">${j}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN (opsional)</label>
+        <input id="cl-link" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
+        <textarea id="cl-copy" rows="3" placeholder="Paste caption atau copywriting yang mau diambil..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+          ${[['cl-views','👁 Views'],['cl-likes','❤️ Likes'],['cl-comments','💬 Comments'],['cl-shares','🔁 Shares']].map(([id,label]) =>
+            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">${label}</label><input id="${id}" type="number" min="0" placeholder="0" style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
+          ).join('')}
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES (opsional)</label>
+        <input id="cl-notes" placeholder="kenapa konten ini menarik..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
+      <button id="cl-upload-btn" onclick="clDoUpload()" class="btn btn-primary" style="font-size:12px">Simpan</button>
+    </div>
+  </div>`;
+
+  if (prefillFile) { window._clFiles = [prefillFile]; clShowPreviews([prefillFile]); }
+
+  modal.onpaste = (e) => {
+    e.stopPropagation();
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) { window._clFiles = [...(window._clFiles||[]), file]; clShowPreviews(window._clFiles); }
+        break;
+      }
+    }
+  };
+}
+
+function clHandleFiles(files) {
+  const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!arr.length) return;
+  window._clFiles = [...(window._clFiles||[]), ...arr];
+  clShowPreviews(window._clFiles);
+}
+
+function clShowPreviews(files) {
+  const area = document.getElementById('cl-preview-area');
+  const dz   = document.getElementById('cl-dropzone');
+  if (!area) return;
+  area.style.display = 'flex';
+  if (dz) dz.style.display = 'none';
+  area.innerHTML = files.map((f,i) => {
+    const url = URL.createObjectURL(f);
+    return `<div style="position:relative;width:72px;height:72px;border-radius:var(--radius);overflow:hidden;border:0.5px solid var(--border)">
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="window._clFiles.splice(${i},1);clShowPreviews(window._clFiles)" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-x" style="font-size:9px"></i></button>
+    </div>`;
+  }).join('');
+}
+
+async function clDoUpload() {
+  const platform = document.getElementById('cl-platform').value;
+  const jenis    = document.getElementById('cl-jenis').value;
+  const link     = document.getElementById('cl-link').value.trim();
+  const copywriting = document.getElementById('cl-copy').value.trim();
+  const views    = parseInt(document.getElementById('cl-views').value)||0;
+  const likes    = parseInt(document.getElementById('cl-likes').value)||0;
+  const comments = parseInt(document.getElementById('cl-comments').value)||0;
+  const shares   = parseInt(document.getElementById('cl-shares').value)||0;
+  const notes    = document.getElementById('cl-notes').value.trim();
+  const files    = window._clFiles || [];
+
+  const btn = document.getElementById('cl-upload-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+
+  const storagePaths = [];
+  for (let i = 0; i < files.length; i++) {
+    if (btn) btn.textContent = `Upload ${i+1}/${files.length}...`;
+    const file = files[i];
+    const ext  = file.name?.split('.').pop() || 'png';
+    const path = `content-library/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const sp   = await sb_uploadDesignFile(file, path);
+    if (sp) storagePaths.push(sp);
+  }
+
+  const row = { platform, jenis, link, copywriting, views, likes, comments, shares, notes, storage_paths: storagePaths };
+  const saved = await sb_saveContentLib(row);
+  if (!saved) { showToast('Gagal simpan', 'error'); if(btn){btn.disabled=false;btn.textContent='Simpan';} return; }
+
+  clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
+  gcalCloseModal();
+  clRenderGallery();
+  showToast('Konten ditambah ✓');
+}
+
+function clOpenPreview(id) {
+  const c = clData.find(x => _idEq(x.id, id));
+  if (!c) return;
+  if (!clCarouselIdx[id]) clCarouselIdx[id] = 0;
+  clRenderPreviewModal(c);
+}
+
+function clRenderPreviewModal(c) {
+  const idx   = clCarouselIdx[c.id] || 0;
+  const paths = c.storage_paths || [];
+  const url   = paths[idx] ? sb_designPublicUrl(paths[idx]) : null;
+  const total = paths.length;
+  const platformIcon = CL_PLATFORM_ICON[c.platform] || 'ti-world';
+  const modal = document.getElementById('gcal-modal');
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);width:100%;max-width:640px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border);flex-shrink:0">
+      <i class="ti ${platformIcon}" style="font-size:14px;color:var(--purple-accent)"></i>
+      <span style="font-size:11px;font-weight:600">${c.platform}</span>
+      <span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:1px 7px;border-radius:10px">${c.jenis}</span>
+      ${c.link?`<a href="${c.link}" target="_blank" class="btn btn-sm" style="font-size:10px"><i class="ti ti-external-link" style="font-size:11px"></i> Link</a>`:''}
+      <button onclick="clOpenEditModal('${c.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button>
+      <button onclick="clOpenAddImageModal('${c.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-photo-plus" style="font-size:11px"></i></button>
+      <button onclick="clConfirmDelete('${c.id}')" class="btn btn-sm" style="font-size:10px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i></button>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="overflow-y:auto;flex:1">
+      <div style="padding:12px 16px;border-bottom:0.5px solid var(--border)">
+        <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
+          ${[['ti-eye',c.views,'Views'],['ti-heart',c.likes,'Likes'],['ti-message',c.comments,'Comments'],['ti-share',c.shares,'Shares']].map(([icon,val,label]) =>
+            val ? `<div style="text-align:center"><div style="font-size:14px;font-weight:700">${fmtN(val)}</div><div style="font-size:10px;color:var(--text-muted)"><i class="ti ${icon}" style="font-size:10px"></i> ${label}</div></div>` : ''
+          ).filter(Boolean).join('')}
+        </div>
+        ${c.copywriting?`<div style="font-size:12px;color:var(--text);white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:var(--radius);max-height:120px;overflow-y:auto">${c.copywriting}</div>`:''}
+        ${c.notes?`<div style="font-size:11px;color:var(--text-muted);margin-top:8px;font-style:italic">${c.notes}</div>`:''}
+        <div style="font-size:10px;color:var(--text-hint);margin-top:6px">${igFmtDate(c.created_at)}</div>
+      </div>
+      ${url ? `<div style="position:relative">
+        <img src="${url}" style="width:100%;display:block;object-fit:contain;background:var(--bg)">
+        ${total>1?`<button onclick="clPrevImg('${c.id}')" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-chevron-left"></i></button><button onclick="clNextImg('${c.id}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-chevron-right"></i></button><div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);color:#fff;font-size:11px;padding:3px 10px;border-radius:12px">${idx+1}/${total}</div>`:''}
+      </div>
+      ${total>1?`<div style="display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap">
+        ${paths.map((p,i)=>`<div style="position:relative;width:48px;height:48px;flex-shrink:0">
+          <div onclick="clCarouselIdx['${c.id}']=${i};clRenderPreviewModal(clData.find(x=>x.id==='${c.id}'))" style="width:48px;height:48px;border-radius:var(--radius);overflow:hidden;cursor:pointer;border:2px solid ${i===idx?'var(--purple-accent)':'var(--border)'}"><img src="${sb_designPublicUrl(p)}" style="width:100%;height:100%;object-fit:cover"></div>
+          <button onclick="event.stopPropagation();clDeleteSingleImage('${c.id}',${i})" style="position:absolute;top:-4px;right:-4px;background:var(--red);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0;z-index:1"><i class="ti ti-x" style="font-size:9px"></i></button>
+        </div>`).join('')}
+      </div>`:''}` : `<div style="padding:20px;text-align:center;color:var(--text-hint);font-size:12px">Belum ada screenshot</div>`}
+    </div>
+  </div>`;
+}
+
+function clPrevImg(id){const c=clData.find(x=>_idEq(x.id,id));if(!c)return;const t=c.storage_paths.length;clCarouselIdx[id]=((clCarouselIdx[id]||0)-1+t)%t;clRenderPreviewModal(c);}
+function clNextImg(id){const c=clData.find(x=>_idEq(x.id,id));if(!c)return;const t=c.storage_paths.length;clCarouselIdx[id]=((clCarouselIdx[id]||0)+1)%t;clRenderPreviewModal(c);}
+
+function clOpenEditModal(id) {
+  const c = clData.find(x => _idEq(x.id, id));
+  if (!c) return;
+  const modal = document.getElementById('gcal-modal');
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:500px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-edit" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div style="font-size:14px;font-weight:700">Edit Konten</div>
+      <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-arrow-left"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PLATFORM</label>
+          <select id="cle-platform" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+            ${CL_PLATFORM.map(p=>`<option value="${p}" ${c.platform===p?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JENIS KONTEN</label>
+          <select id="cle-jenis" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+            ${CL_JENIS.map(j=>`<option value="${j}" ${c.jenis===j?'selected':''}>${j}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN</label>
+        <input id="cle-link" value="${c.link}" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
+        <textarea id="cle-copy" rows="3" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit">${c.copywriting}</textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+          ${[['cle-views','👁','Views',c.views],['cle-likes','❤️','Likes',c.likes],['cle-comments','💬','Comments',c.comments],['cle-shares','🔁','Shares',c.shares]].map(([id,icon,label,val])=>
+            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">${icon} ${label}</label><input id="${id}" type="number" value="${val||0}" style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
+          ).join('')}
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES</label>
+        <input id="cle-notes" value="${c.notes}" placeholder="catatan..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" class="btn" style="font-size:12px">Batal</button>
+      <button onclick="clSaveEdit('${id}')" class="btn btn-primary" style="font-size:12px">Simpan</button>
+    </div>
+  </div>`;
+}
+
+async function clSaveEdit(id) {
+  const c = clData.find(x => _idEq(x.id, id));
+  if (!c) return;
+  const updates = {
+    platform:    document.getElementById('cle-platform').value,
+    jenis:       document.getElementById('cle-jenis').value,
+    link:        document.getElementById('cle-link').value.trim(),
+    copywriting: document.getElementById('cle-copy').value.trim(),
+    views:       parseInt(document.getElementById('cle-views').value)||0,
+    likes:       parseInt(document.getElementById('cle-likes').value)||0,
+    comments:    parseInt(document.getElementById('cle-comments').value)||0,
+    shares:      parseInt(document.getElementById('cle-shares').value)||0,
+    notes:       document.getElementById('cle-notes').value.trim()
+  };
+  const ok = await sb_updateContentLib(id, updates);
+  if (!ok) { showToast('Gagal simpan', 'error'); return; }
+  Object.assign(c, updates);
+  clRenderGallery();
+  clRenderPreviewModal(c);
+  showToast('Konten diupdate ✓');
+}
+
+function clOpenAddImageModal(id) {
+  const c = clData.find(x => _idEq(x.id, id));
+  if (!c) return;
+  const modal = document.getElementById('gcal-modal');
+  window._clAddFiles = [];
+  modal.innerHTML = `
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-photo-plus" style="font-size:18px;color:var(--purple-accent)"></i>
+      <div style="font-size:14px;font-weight:700">Tambah Screenshot</div>
+      <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-arrow-left"></i></button>
+    </div>
+    <div id="cl-add-dropzone" onclick="document.getElementById('cl-add-input').click()"
+      style="border:2px dashed var(--border-md);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;background:var(--bg)"
+      ondragover="event.preventDefault();this.style.borderColor='var(--purple-accent)'"
+      ondragleave="this.style.borderColor='var(--border-md)'"
+      ondrop="event.preventDefault();clHandleAddImages(event.dataTransfer.files,'${id}')">
+      <i class="ti ti-photos" style="font-size:28px;color:var(--text-muted);display:block;margin-bottom:8px"></i>
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px">Klik, drag & drop, atau Ctrl+V</div>
+    </div>
+    <input id="cl-add-input" type="file" accept="image/*" multiple style="display:none" onchange="clHandleAddImages(this.files,'${id}')">
+    <div id="cl-add-preview" style="display:none;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" class="btn" style="font-size:12px">Batal</button>
+      <button id="cl-add-btn" onclick="clDoAddImages('${id}')" class="btn btn-primary" style="font-size:12px" disabled>Upload</button>
+    </div>
+  </div>`;
+
+  modal.onpaste = (e) => {
+    e.stopPropagation();
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) { window._clAddFiles = [...(window._clAddFiles||[]), file]; clShowAddPreviews(); }
+        break;
+      }
+    }
+  };
+}
+
+function clHandleAddImages(files, id) {
+  const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!arr.length) return;
+  window._clAddFiles = [...(window._clAddFiles||[]), ...arr];
+  clShowAddPreviews();
+}
+
+function clShowAddPreviews() {
+  const area = document.getElementById('cl-add-preview');
+  const dz   = document.getElementById('cl-add-dropzone');
+  const btn  = document.getElementById('cl-add-btn');
+  if (!area) return;
+  area.style.display = 'flex';
+  if (dz) dz.style.display = 'none';
+  if (btn) btn.disabled = false;
+  area.innerHTML = (window._clAddFiles||[]).map((f,i) => {
+    const url = URL.createObjectURL(f);
+    return `<div style="position:relative;width:72px;height:72px;border-radius:var(--radius);overflow:hidden;border:0.5px solid var(--border)">
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="window._clAddFiles.splice(${i},1);clShowAddPreviews()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-x" style="font-size:9px"></i></button>
+    </div>`;
+  }).join('');
+}
+
+async function clDoAddImages(id) {
+  const files = window._clAddFiles || [];
+  if (!files.length) { showToast('Pilih gambar dulu', 'error'); return; }
+  const c = clData.find(x => _idEq(x.id, id));
+  if (!c) return;
+  const btn = document.getElementById('cl-add-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+  const newPaths = [...(c.storage_paths||[])];
+  for (let i = 0; i < files.length; i++) {
+    if (btn) btn.textContent = `Uploading ${i+1}/${files.length}...`;
+    const file = files[i];
+    const ext  = file.name?.split('.').pop() || 'png';
+    const path = `content-library/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const sp   = await sb_uploadDesignFile(file, path);
+    if (sp) newPaths.push(sp);
+  }
+  const ok = await sb_updateContentLib(id, { storage_paths: newPaths });
+  if (!ok) { showToast('Gagal simpan', 'error'); return; }
+  c.storage_paths = newPaths;
+  clRenderGallery();
+  clRenderPreviewModal(c);
+  showToast(`${files.length} gambar ditambahkan ✓`);
+}
+
+async function clDeleteSingleImage(id, idx) {
+  const c = clData.find(x => _idEq(x.id, id));
+  if (!c || !c.storage_paths[idx]) return;
+  if (!confirm('Hapus screenshot ini?')) return;
+  await sb_deleteDesignFile(c.storage_paths[idx]);
+  const newPaths = c.storage_paths.filter((_,i) => i !== idx);
+  await sb_updateContentLib(id, { storage_paths: newPaths });
+  c.storage_paths = newPaths;
+  if (clCarouselIdx[id] >= newPaths.length) clCarouselIdx[id] = Math.max(0, newPaths.length-1);
+  clRenderGallery();
+  if (!newPaths.length) { gcalCloseModal(); return; }
+  clRenderPreviewModal(c);
+  showToast('Screenshot dihapus ✓');
+}
+
+async function clConfirmDelete(id) {
+  if (!confirm('Hapus konten ini?')) return;
+  const c = clData.find(x => _idEq(x.id, id));
+  if (!c) return;
+  for (const p of (c.storage_paths||[])) await sb_deleteDesignFile(p);
+  await sb_deleteContentLib(id);
+  clData = clData.filter(x => !_idEq(x.id, id));
+  gcalCloseModal();
+  clRenderGallery();
+  showToast('Konten dihapus ✓');
 }
 
 // ============================================================
