@@ -1687,6 +1687,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     eventLinkTemplates = (await sb_loadLinkTemplates()).map(t => ({
       id: t.id, jenis_program: t.jenis_program, label: t.label, url: t.url, urutan: t.urutan || 0
     }));
+
+    // Auto-fix: event yang Planning tapi ada task Done → update ke On Progress
+    for (const proj of projects) {
+      if (proj.status !== 'Planning') continue;
+      const tasks = projectTasks.filter(t => _idEq(t.projectId, proj.id));
+      const doneCount = tasks.filter(t => t.status === 'Done').length;
+      if (doneCount > 0 && doneCount < tasks.length) {
+        proj.status = 'On Progress';
+        sb_updateEvent(proj.id, { status: 'On Progress' });
+      }
+    }
     partnerDeals = await sb_load('partner_deals', { order: 'created_at', ascending: false });
     partners = await sb_load('partners', { order: 'name', ascending: true });
 
@@ -4965,17 +4976,17 @@ async function toggleTaskDone(taskId){
 
 async function autoUpdateEventStatus(projectId) {
   const proj = projects.find(p=>_idEq(p.id, projectId));
-  if(!proj || proj.status === 'Cancelled') return;
+  if(!proj || proj.status === 'Cancelled' || proj.status === 'Done') return;
   const tasks = projectTasks.filter(t=>_idEq(t.projectId, projectId));
   if(!tasks.length) return;
   const doneCount = tasks.filter(t=>t.status==='Done').length;
   let newStatus;
   if(doneCount === 0) newStatus = 'Planning';
   else if(doneCount === tasks.length) {
-    // Semua task done — tampilkan konfirmasi dulu
     showEventDoneConfirm(projectId);
     return;
   } else newStatus = 'On Progress';
+  // Update selalu kalau status berbeda, atau kalau Planning padahal ada task Done
   if(newStatus === proj.status) return;
   proj.status = newStatus;
   await sb_updateEvent(proj.id, { status: newStatus });
@@ -11362,25 +11373,19 @@ function calcVoucher(persen, maks, min) {
 
 var resourcesData = [];
 var resShowPass = {};
-
-function resourcesHTML() {
-  return `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-    <h2 style="font-size:18px;font-weight:700;margin:0">Resources</h2>
-    <button onclick="openResModal(null)" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
-      <i class="ti ti-plus" style="font-size:14px"></i> Tambah
-    </button>
-  </div>
-  <div id="res-content"></div>`;
-}
+var resDragId = null;
+var resDragKat = null;
+var resDragType = null; // 'item' | 'kat'
 
 async function initResources() {
   resShowPass = {};
   resourcesData = (await sb_loadResources()).map(r => ({
     id: r.id, kategori: r.kategori, tipe: r.tipe || 'link',
     nama: r.nama, username: r.username || '', password: r.password || '',
-    email: r.email || '', url: r.url || '', notes: r.notes || ''
+    email: r.email || '', url: r.url || '', notes: r.notes || '',
+    urutan: r.urutan || 0
   }));
+  resourcesData.sort((a,b) => a.urutan - b.urutan);
   renderResources();
 }
 
@@ -11391,30 +11396,53 @@ function renderResources() {
     el.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="ti ti-key" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada resources. Klik "+ Tambah" untuk mulai.</div>`;
     return;
   }
+  // Group by kategori, preserve order by first item urutan
   const groups = {};
+  const katOrder = [];
   resourcesData.forEach(r => {
-    if (!groups[r.kategori]) groups[r.kategori] = [];
+    if (!groups[r.kategori]) { groups[r.kategori] = []; katOrder.push(r.kategori); }
     groups[r.kategori].push(r);
   });
-  el.innerHTML = Object.entries(groups).map(([kat, items]) => `
-  <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
-    <div style="padding:12px 16px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
-      <i class="ti ti-folder" style="font-size:14px;color:var(--purple-accent)"></i>
-      <div style="font-size:13px;font-weight:700">${kat}</div>
-      <span style="font-size:10px;color:var(--text-muted);margin-left:4px">${items.length} item</span>
-    </div>
-    <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
-      ${items.map(r => renderResItem(r)).join('')}
-    </div>
-  </div>`).join('');
+  const uniqueKats = [...new Set(katOrder)];
+
+  el.innerHTML = `<div id="res-kat-list">
+    ${uniqueKats.map(kat => {
+      const items = groups[kat];
+      return `<div class="card res-kat-card" data-kat="${kat}" style="margin-bottom:14px;padding:0;overflow:hidden"
+        draggable="true"
+        ondragstart="resDragStartKat(event,'${kat}')"
+        ondragover="resDragOverKat(event,'${kat}')"
+        ondrop="resDropKat(event,'${kat}')"
+        ondragend="resDragEnd()">
+        <div style="padding:10px 16px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px;cursor:grab">
+          <i class="ti ti-grip-vertical" style="font-size:14px;color:var(--text-hint)"></i>
+          <i class="ti ti-folder" style="font-size:14px;color:var(--purple-accent)"></i>
+          <div style="font-size:13px;font-weight:700">${kat}</div>
+          <span style="font-size:10px;color:var(--text-muted);margin-left:4px">${items.length} item</span>
+        </div>
+        <div class="res-item-list" data-kat="${kat}" style="padding:10px 14px;display:flex;flex-direction:column;gap:8px"
+          ondragover="event.preventDefault()"
+          ondrop="resDropItem(event,'${kat}')">
+          ${items.map(r => renderResItem(r)).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function renderResItem(r) {
   const isCred = r.tipe === 'credential';
   const showP = resShowPass[r.id];
   return `
-  <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--white)">
-    <div style="margin-top:2px">
+  <div class="res-item" data-id="${r.id}" data-kat="${r.kategori}"
+    draggable="true"
+    ondragstart="resDragStartItem(event,'${r.id}','${r.kategori}')"
+    ondragover="resDragOverItem(event,'${r.id}')"
+    ondrop="resDropItem(event,'${r.kategori}')"
+    ondragend="resDragEnd()"
+    style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--white);cursor:grab">
+    <i class="ti ti-grip-vertical" style="font-size:13px;color:var(--text-hint);margin-top:2px;flex-shrink:0"></i>
+    <div style="margin-top:2px;flex-shrink:0">
       <i class="ti ${isCred ? 'ti-lock' : 'ti-link'}" style="font-size:14px;color:${isCred ? 'var(--amber)' : 'var(--purple-accent)'}"></i>
     </div>
     <div style="flex:1;min-width:0">
@@ -11434,90 +11462,93 @@ function renderResItem(r) {
   </div>`;
 }
 
-function openResModal(id) {
-  const r = id ? resourcesData.find(x => _idEq(x.id, id)) : null;
-  const modal = document.getElementById('gcal-modal');
-  modal.style.display = 'flex';
-  const kategoriList = [...new Set(resourcesData.map(x => x.kategori))];
-  modal.innerHTML = `
-  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-      <i class="ti ti-key" style="font-size:18px;color:var(--purple-accent)"></i>
-      <div style="font-size:14px;font-weight:700">${r ? 'Edit Resource' : 'Tambah Resource'}</div>
-      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:11px">
-      <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">TIPE</label>
-        <div style="display:flex;gap:8px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="radio" name="res-tipe" value="link" ${!r||r.tipe==='link'?'checked':''} onchange="document.getElementById('res-cred-fields').style.display=this.value==='credential'?'flex':'none'"> Link</label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="radio" name="res-tipe" value="credential" ${r&&r.tipe==='credential'?'checked':''} onchange="document.getElementById('res-cred-fields').style.display=this.value==='credential'?'flex':'none'"> Credential</label>
-        </div>
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">KATEGORI</label>
-        <input id="res-kategori" list="res-kat-list" value="${r?r.kategori:''}" placeholder="cth: Social Media, Tools, Email" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-        <datalist id="res-kat-list">${kategoriList.map(k=>`<option value="${k}">`).join('')}</datalist>
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NAMA</label>
-        <input id="res-nama" value="${r?r.nama:''}" placeholder="cth: Instagram CareerCclub" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">URL</label>
-        <input id="res-url" value="${r?r.url:''}" placeholder="https://..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-      </div>
-      <div id="res-cred-fields" style="display:${!r||r.tipe==='link'?'none':'flex'};flex-direction:column;gap:11px">
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">EMAIL</label>
-          <input id="res-email" value="${r?r.email:''}" placeholder="email@..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">USERNAME</label>
-          <input id="res-username" value="${r?r.username:''}" placeholder="@username" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PASSWORD</label>
-          <input id="res-password" type="text" value="${r?r.password:''}" placeholder="password" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg);font-family:monospace">
-        </div>
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES</label>
-        <input id="res-notes" value="${r?r.notes:''}" placeholder="catatan tambahan..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
-      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
-      <button onclick="saveRes('${id||''}')" class="btn btn-primary" style="font-size:12px">${r?'Simpan':'Tambah'}</button>
-    </div>
-  </div>`;
+// --- Drag & Drop ---
+
+function resDragStartKat(e, kat) {
+  resDragType = 'kat'; resDragKat = kat;
+  e.dataTransfer.effectAllowed = 'move';
 }
 
-async function saveRes(id) {
-  const tipe     = document.querySelector('input[name="res-tipe"]:checked').value;
-  const kategori = document.getElementById('res-kategori').value.trim();
-  const nama     = document.getElementById('res-nama').value.trim();
-  const url      = document.getElementById('res-url').value.trim();
-  const email    = document.getElementById('res-email')?.value.trim()||'';
-  const username = document.getElementById('res-username')?.value.trim()||'';
-  const password = document.getElementById('res-password')?.value.trim()||'';
-  const notes    = document.getElementById('res-notes').value.trim();
-  if (!kategori||!nama){showToast('Kategori & Nama wajib diisi','error');return;}
-  const row = {tipe,kategori,nama,url,email,username,password,notes};
-  if (id) {
-    const ok = await sb_updateResource(id,row);
-    if(!ok){showToast('Gagal update','error');return;}
-    const idx=resourcesData.findIndex(x=>_idEq(x.id,id));
-    if(idx>=0) resourcesData[idx]={id,...row};
-    showToast('Resource diupdate');
-  } else {
-    const saved=await sb_saveResource(row);
-    if(!saved){showToast('Gagal simpan','error');return;}
-    resourcesData.push({id:saved.id,...row});
-    showToast('Resource ditambah');
-  }
-  gcalCloseModal();
+function resDragOverKat(e, kat) {
+  if (resDragType !== 'kat' || resDragKat === kat) return;
+  e.preventDefault();
+  e.currentTarget.style.outline = '2px solid var(--purple-accent)';
+}
+
+function resDropKat(e, targetKat) {
+  e.preventDefault();
+  if (resDragType !== 'kat' || resDragKat === targetKat) { resDragEnd(); return; }
+  // Reorder kategori
+  const groups = {};
+  const katOrder = [];
+  resourcesData.forEach(r => {
+    if (!groups[r.kategori]) { groups[r.kategori] = []; katOrder.push(r.kategori); }
+    groups[r.kategori].push(r);
+  });
+  const uniqueKats = [...new Set(katOrder)];
+  const fromIdx = uniqueKats.indexOf(resDragKat);
+  const toIdx   = uniqueKats.indexOf(targetKat);
+  uniqueKats.splice(fromIdx, 1);
+  uniqueKats.splice(toIdx, 0, resDragKat);
+  // Rebuild resourcesData in new order
+  const newData = [];
+  uniqueKats.forEach(kat => newData.push(...(groups[kat]||[])));
+  resourcesData = newData;
+  resSaveOrder();
   renderResources();
+  resDragEnd();
+}
+
+function resDragStartItem(e, id, kat) {
+  resDragType = 'item'; resDragId = id; resDragKat = kat;
+  e.stopPropagation();
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function resDragOverItem(e, id) {
+  if (resDragType !== 'item') return;
+  e.preventDefault(); e.stopPropagation();
+  const el = document.querySelector(`.res-item[data-id="${id}"]`);
+  if (el) el.style.outline = '2px solid var(--purple-accent)';
+}
+
+function resDropItem(e, targetKat) {
+  e.preventDefault(); e.stopPropagation();
+  if (resDragType !== 'item' || !resDragId) { resDragEnd(); return; }
+  // Find drop target item
+  const target = e.target.closest('.res-item');
+  const targetId = target?.dataset?.id;
+  // Move dragged item
+  const dragIdx = resourcesData.findIndex(r => String(r.id) === String(resDragId));
+  if (dragIdx === -1) { resDragEnd(); return; }
+  const [moved] = resourcesData.splice(dragIdx, 1);
+  moved.kategori = targetKat; // allow cross-category drag
+  if (targetId && targetId !== resDragId) {
+    const toIdx = resourcesData.findIndex(r => String(r.id) === String(targetId));
+    resourcesData.splice(toIdx, 0, moved);
+  } else {
+    // Drop at end of category
+    const lastIdx = resourcesData.reduce((acc,r,i) => r.kategori===targetKat ? i : acc, -1);
+    resourcesData.splice(lastIdx + 1, 0, moved);
+  }
+  resSaveOrder();
+  renderResources();
+  resDragEnd();
+}
+
+function resDragEnd() {
+  resDragId = null; resDragKat = null; resDragType = null;
+  document.querySelectorAll('.res-kat-card,.res-item').forEach(el => el.style.outline = '');
+}
+
+async function resSaveOrder() {
+  // Save urutan ke Supabase
+  const updates = resourcesData.map((r, i) => ({ id: r.id, urutan: i, kategori: r.kategori }));
+  r = null;
+  for (const u of updates) {
+    resourcesData.find(x => String(x.id) === String(u.id)).urutan = u.urutan;
+    sb_updateResource(u.id, { urutan: u.urutan, kategori: u.kategori });
+  }
 }
 
 async function deleteRes(id) {
