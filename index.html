@@ -1866,7 +1866,9 @@ function initPartnerTab(tab){
   else if(tab==="outreach"){c.innerHTML=partnershipOutreachHTML();renderOutreachLog();}
 }
 function switchPage(page,el){
-  // Dynamic title dari menuSections (ikut rename user) atau fallback ke pageTitles
+  // Cleanup paste handlers dari modul lain
+  document.removeEventListener('paste', clPasteHandler);
+  document.removeEventListener('paste', daPasteHandler);
   var _dynTitle = (function(){
     if(!menuSections || !menuSections.length) return pageTitles[page]||page;
     for(var si=0;si<menuSections.length;si++){
@@ -11433,16 +11435,26 @@ const CL_PLATFORM_ICON = {
 
 function contentLibHTML() {
   return `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
     <h2 style="font-size:18px;font-weight:700;margin:0">Content Library</h2>
-    <div style="display:flex;gap:8px;align-items:center">
-      <select id="cl-filter-platform" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="cl-filter-platform" onchange="clUpdateSortOptions();clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
         <option value="">Semua Platform</option>
         ${CL_PLATFORM.map(p => `<option value="${p}">${p}</option>`).join('')}
       </select>
-      <select id="cl-filter-jenis" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+      <select id="cl-filter-jenis" onchange="clUpdateSortOptions();clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
         <option value="">Semua Jenis</option>
         ${CL_JENIS.map(j => `<option value="${j}">${j}</option>`).join('')}
+      </select>
+      <select id="cl-filter-label" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        <option value="">Semua Label</option>
+      </select>
+      <select id="cl-sort" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        <option value="">Urutkan...</option>
+        <option value="views">↓ Views</option>
+        <option value="likes">↓ Likes</option>
+        <option value="comments">↓ Comments</option>
+        <option value="shares">↓ Shares</option>
       </select>
       <button onclick="clOpenUploadModal()" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
         <i class="ti ti-plus" style="font-size:14px"></i> Tambah
@@ -11457,8 +11469,10 @@ async function initContentLib() {
     id: c.id, jenis: c.jenis, platform: c.platform, link: c.link||'',
     copywriting: c.copywriting||'', views: c.views||0, likes: c.likes||0,
     comments: c.comments||0, shares: c.shares||0,
-    storage_paths: c.storage_paths||[], notes: c.notes||'', created_at: c.created_at
+    storage_paths: c.storage_paths||[], notes: c.notes||'',
+    labels: c.labels||[], created_at: c.created_at
   }));
+  clPopulateLabelFilter();
   clRenderGallery();
   document.removeEventListener('paste', clPasteHandler);
   document.addEventListener('paste', clPasteHandler);
@@ -11488,14 +11502,44 @@ function clPasteHandler(e) {
   }
 }
 
+function clUpdateSortOptions() {
+  const jenis = document.getElementById('cl-filter-jenis')?.value || '';
+  const sel   = document.getElementById('cl-sort');
+  if (!sel) return;
+  const cur = sel.value;
+  // Default sort berdasarkan jenis
+  const isVideo = jenis === 'Reels/Video';
+  sel.innerHTML = `
+    <option value="">Urutkan...</option>
+    <option value="views" ${isVideo&&!cur?'selected':''}>↓ Views</option>
+    <option value="likes" ${!isVideo&&!cur?'selected':''}>↓ Likes</option>
+    <option value="comments">↓ Comments</option>
+    <option value="shares">↓ Shares</option>`;
+  // Kalau jenis baru dipilih dan belum ada pilihan manual, set default
+  if (!cur) sel.value = isVideo ? 'views' : 'likes';
+}
+
+function clPopulateLabelFilter() {
+  const sel = document.getElementById('cl-filter-label');
+  if (!sel) return;
+  const allLabels = [...new Set(clData.flatMap(c => c.labels||[]))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Semua Label</option>' +
+    allLabels.map(l => `<option value="${l}" ${cur===l?'selected':''}>${l}</option>`).join('');
+}
+
 function clRenderGallery() {
   const el = document.getElementById('cl-gallery');
   if (!el) return;
   const platform = document.getElementById('cl-filter-platform')?.value || '';
   const jenis    = document.getElementById('cl-filter-jenis')?.value || '';
+  const label    = document.getElementById('cl-filter-label')?.value || '';
+  const sort     = document.getElementById('cl-sort')?.value || '';
   let filtered = clData;
   if (platform) filtered = filtered.filter(c => c.platform === platform);
   if (jenis)    filtered = filtered.filter(c => c.jenis === jenis);
+  if (label)    filtered = filtered.filter(c => (c.labels||[]).includes(label));
+  if (sort)     filtered = [...filtered].sort((a,b) => (b[sort]||0) - (a[sort]||0));
 
   if (!filtered.length) {
     el.innerHTML = `<div class="card" style="text-align:center;padding:48px;color:var(--text-muted)">
@@ -11524,6 +11568,7 @@ function clRenderGallery() {
         </div>
         <div style="padding:8px 10px">
           <div style="font-size:10px;color:var(--purple-mid);font-weight:600;margin-bottom:3px">${c.jenis}</div>
+          ${c.labels&&c.labels.length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px">${c.labels.map(l=>`<span style="background:var(--purple-light);color:var(--purple-mid);padding:1px 6px;border-radius:8px;font-size:9px;font-weight:600">${l}</span>`).join('')}</div>`:''}
           ${c.copywriting ? `<div style="font-size:11px;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:4px">${c.copywriting.substring(0,80)}${c.copywriting.length>80?'...':''}</div>` : ''}
           <div style="display:flex;gap:8px;font-size:10px;color:var(--text-muted);flex-wrap:wrap">
             ${c.views?`<span><i class="ti ti-eye" style="font-size:9px"></i> ${fmtN(c.views)}</span>`:''}
@@ -11541,6 +11586,7 @@ function clOpenUploadModal(prefillFile) {
   const modal = document.getElementById('gcal-modal');
   modal.style.display = 'flex';
   window._clFiles = [];
+  window._clLabels = [];
   modal.innerHTML = `
   <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
@@ -11591,6 +11637,14 @@ function clOpenUploadModal(prefillFile) {
         </div>
       </div>
       <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS (opsional)</label>
+        <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
+        <div style="display:flex;gap:6px">
+          <input id="cl-label-input" placeholder="Ketik label + Enter" style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
+          <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
+        </div>
+      </div>
+      <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES (opsional)</label>
         <input id="cl-notes" placeholder="kenapa konten ini menarik..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
       </div>
@@ -11602,6 +11656,7 @@ function clOpenUploadModal(prefillFile) {
   </div>`;
 
   if (prefillFile) { window._clFiles = [prefillFile]; clShowPreviews([prefillFile]); }
+  setTimeout(() => clRenderLabelChips(), 50);
 
   modal.onpaste = (e) => {
     e.stopPropagation();
@@ -11639,6 +11694,25 @@ function clShowPreviews(files) {
   }).join('');
 }
 
+function clAddLabel() {
+  const input = document.getElementById('cl-label-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+  if (!window._clLabels) window._clLabels = [];
+  if (window._clLabels.includes(val)) { input.value=''; return; }
+  window._clLabels.push(val);
+  input.value = '';
+  clRenderLabelChips();
+}
+
+function clRenderLabelChips() {
+  const el = document.getElementById('cl-label-chips');
+  if (!el) return;
+  const labels = window._clLabels || [];
+  el.innerHTML = labels.map((l,i) => `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--purple-light);color:var(--purple-mid);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${l}<button onclick="window._clLabels.splice(${i},1);clRenderLabelChips()" style="background:none;border:none;cursor:pointer;padding:0;color:var(--purple-mid);font-size:12px;line-height:1">×</button></span>`).join('');
+}
+
 async function clDoUpload() {
   const platform = document.getElementById('cl-platform').value;
   const jenis    = document.getElementById('cl-jenis').value;
@@ -11649,6 +11723,7 @@ async function clDoUpload() {
   const comments = parseInt(document.getElementById('cl-comments').value)||0;
   const shares   = parseInt(document.getElementById('cl-shares').value)||0;
   const notes    = document.getElementById('cl-notes').value.trim();
+  const labels   = window._clLabels || [];
   const files    = window._clFiles || [];
 
   const btn = document.getElementById('cl-upload-btn');
@@ -11664,12 +11739,13 @@ async function clDoUpload() {
     if (sp) storagePaths.push(sp);
   }
 
-  const row = { platform, jenis, link, copywriting, views, likes, comments, shares, notes, storage_paths: storagePaths };
+  const row = { platform, jenis, link, copywriting, views, likes, comments, shares, notes, labels, storage_paths: storagePaths };
   const saved = await sb_saveContentLib(row);
   if (!saved) { showToast('Gagal simpan', 'error'); if(btn){btn.disabled=false;btn.textContent='Simpan';} return; }
 
   clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
   gcalCloseModal();
+  clPopulateLabelFilter();
   clRenderGallery();
   showToast('Konten ditambah ✓');
 }
@@ -11709,6 +11785,7 @@ function clRenderPreviewModal(c) {
           ).filter(Boolean).join('')}
         </div>
         ${c.copywriting?`<div style="font-size:12px;color:var(--text);white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:var(--radius);max-height:120px;overflow-y:auto">${c.copywriting}</div>`:''}
+        ${c.labels&&c.labels.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${c.labels.map(l=>`<span style="background:var(--purple-light);color:var(--purple-mid);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">${l}</span>`).join('')}</div>`:''}
         ${c.notes?`<div style="font-size:11px;color:var(--text-muted);margin-top:8px;font-style:italic">${c.notes}</div>`:''}
         <div style="font-size:10px;color:var(--text-hint);margin-top:6px">${igFmtDate(c.created_at)}</div>
       </div>
@@ -11732,12 +11809,9 @@ function clNextImg(id){const c=clData.find(x=>_idEq(x.id,id));if(!c)return;const
 function clOpenEditModal(id) {
   const c = clData.find(x => _idEq(x.id, id));
   if (!c) return;
+  window._clLabels = [...(c.labels||[])];
   const modal = document.getElementById('gcal-modal');
   modal.innerHTML = `
-  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:500px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-      <i class="ti ti-edit" style="font-size:18px;color:var(--purple-accent)"></i>
-      <div style="font-size:14px;font-weight:700">Edit Konten</div>
       <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-arrow-left"></i></button>
     </div>
     <div style="display:flex;flex-direction:column;gap:11px">
@@ -11772,6 +11846,14 @@ function clOpenEditModal(id) {
         </div>
       </div>
       <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS</label>
+        <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
+        <div style="display:flex;gap:6px">
+          <input id="cl-label-input" placeholder="Ketik label + Enter" style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
+          <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
+        </div>
+      </div>
+      <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOTES</label>
         <input id="cle-notes" value="${c.notes}" placeholder="catatan..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
       </div>
@@ -11781,6 +11863,7 @@ function clOpenEditModal(id) {
       <button onclick="clSaveEdit('${id}')" class="btn btn-primary" style="font-size:12px">Simpan</button>
     </div>
   </div>`;
+  setTimeout(() => clRenderLabelChips(), 50);
 }
 
 async function clSaveEdit(id) {
@@ -11795,11 +11878,13 @@ async function clSaveEdit(id) {
     likes:       parseInt(document.getElementById('cle-likes').value)||0,
     comments:    parseInt(document.getElementById('cle-comments').value)||0,
     shares:      parseInt(document.getElementById('cle-shares').value)||0,
-    notes:       document.getElementById('cle-notes').value.trim()
+    notes:       document.getElementById('cle-notes').value.trim(),
+    labels:      window._clLabels || []
   };
   const ok = await sb_updateContentLib(id, updates);
   if (!ok) { showToast('Gagal simpan', 'error'); return; }
   Object.assign(c, updates);
+  clPopulateLabelFilter();
   clRenderGallery();
   clRenderPreviewModal(c);
   showToast('Konten diupdate ✓');
