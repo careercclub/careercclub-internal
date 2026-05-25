@@ -22,9 +22,46 @@
   --pink-bg:#fbeaf0;--pink:#993556;--radius:10px;--radius-lg:14px;
 }
 body{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
 .app{display:flex;height:100vh;overflow:hidden}
-.sidebar{width:220px;background:var(--purple-dark);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
-.sidebar-logo{padding:18px 18px 14px;border-bottom:0.5px solid rgba(255,255,255,0.1)}
+.sidebar{width:220px;background:var(--purple-dark);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;overflow-x:hidden;transition:width .2s ease;scrollbar-width:none}.sidebar::-webkit-scrollbar{display:none}
+.sidebar.collapsed{width:52px}
+.sidebar.collapsed .sidebar-logo .logo-text,.sidebar.collapsed .sidebar-logo .logo-sub,.sidebar.collapsed .nav-label,.sidebar.collapsed .nav-item-label,.sidebar.collapsed .nav-item .user-name,.sidebar.collapsed .nav-item .user-role,.sidebar.collapsed .sidebar-bottom .user-name,.sidebar.collapsed .sidebar-bottom .user-role{display:none}
+.sidebar.collapsed .nav-item{padding:8px;justify-content:center;gap:0}
+.sidebar.collapsed .nav-item i{width:auto;font-size:17px}
+.sidebar.collapsed .nav-badge{display:none}
+.sidebar.collapsed .sidebar-logo-text{display:none}
+.sidebar.collapsed .sidebar-logo > div{flex:0}
+.sidebar.collapsed .sidebar-bottom{padding:8px;display:flex;justify-content:center}
+.sidebar-toggle{width:100%;height:36px;border-radius:0;background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,0.5);display:flex;align-items:center;padding:0 14px;gap:9px;font-size:13px;transition:background .15s;border-left:3px solid transparent}
+.sidebar-toggle:hover{background:rgba(255,255,255,0.07);color:#fff}.sidebar.collapsed .sidebar-toggle{justify-content:center;padding:0}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:998}
+@media(max-width:768px){
+  .sidebar{position:fixed;left:-220px;top:0;height:100vh;z-index:999;transition:left .25s ease;width:220px!important}
+  .sidebar.mobile-open{left:0}
+  .sidebar-overlay.active{display:block}
+  .sidebar.collapsed{left:-220px}
+  .mobile-menu-btn{display:flex!important}
+  .main{width:100vw}
+  .content{padding:12px 14px}
+  .topbar{padding:10px 14px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)!important}
+  .tab-row{overflow-x:auto;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .tab-row .tab{white-space:nowrap;flex-shrink:0}
+  h2{font-size:16px!important}
+  /* Program — task toolbar */
+  #proj-select{min-width:0!important;width:100%}
+  /* Tables — horizontal scroll */
+  .mobile-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .mobile-table-wrap table{min-width:480px}
+  /* Resources */
+  .res-kat-card .res-item{flex-wrap:wrap}
+  .res-kat-card .res-item > div:nth-child(3){width:100%;padding-left:38px}
+  /* Overflow text fix */
+  .res-item a{word-break:break-all}
+}
+.mobile-menu-btn{display:none;width:32px;height:32px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.sidebar-logo{padding:0;border-bottom:0.5px solid rgba(255,255,255,0.1)}
 .logo-text{font-size:17px;font-weight:700;color:#fff;letter-spacing:-0.3px}
 .logo-sub{font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
 .nav-section{padding:10px 0 2px}
@@ -493,8 +530,15 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 </head>
 <body>
 <div class="app">
-  <div class="sidebar">
-    <div class="sidebar-logo"><div class="logo-text">CareerCclub</div><div class="logo-sub">Internal Ops</div></div>
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+        <i class="ti ti-layout-sidebar-left-collapse" id="sidebar-toggle-icon" style="font-size:15px"></i>
+        <span class="nav-item-label" style="font-size:12px;color:rgba(255,255,255,0.4)">Collapse</span>
+      </button>
+    </div>
+
     <div class="nav-section">
       <div class="nav-label">Overview</div>
       <div class="nav-item active" onclick="switchPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
@@ -534,7 +578,12 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
   </div>
   <div class="main">
     <div class="topbar">
-      <div id="pageTitle" class="page-title">Dashboard</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu">
+          <i class="ti ti-menu-2" style="font-size:16px;color:var(--text-muted)"></i>
+        </button>
+        <div id="pageTitle" class="page-title">Dashboard</div>
+      </div>
       <div style="display:flex;align-items:center;gap:10px">
         <div class="notif-btn"><i class="ti ti-bell" style="font-size:15px;color:var(--text-muted)"></i><div class="notif-dot"></div></div>
         <div style="font-size:12px;color:var(--text-muted)">May 2026</div>
@@ -1876,7 +1925,46 @@ function initPartnerTab(tab){
   else if(tab==="deals"){c.innerHTML=partnershipDealsHTML();renderPartnerDeals();}
   else if(tab==="outreach"){c.innerHTML=partnershipOutreachHTML();renderOutreachLog();}
 }
+function toggleSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebar-overlay');
+  const icon     = document.getElementById('sidebar-toggle-icon');
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile) {
+    const open = sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active', open);
+  } else {
+    const collapsed = sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+    if (icon) icon.className = collapsed
+      ? 'ti ti-layout-sidebar-left-expand'
+      : 'ti ti-layout-sidebar-left-collapse';
+  }
+}
+
+// Restore sidebar state on load
+(function() {
+  if (window.innerWidth <= 768) {
+    // Mobile: sidebar hidden by default, shown as overlay
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.remove('collapsed');
+  } else if (localStorage.getItem('sidebarCollapsed') === '1') {
+    const sidebar = document.getElementById('sidebar');
+    const icon    = document.getElementById('sidebar-toggle-icon');
+    if (sidebar) sidebar.classList.add('collapsed');
+    if (icon) icon.className = 'ti ti-layout-sidebar-left-expand';
+  }
+})();
+
 function switchPage(page,el){
+  // Close mobile sidebar kalau lagi open
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar?.classList.contains('mobile-open')) {
+    sidebar.classList.remove('mobile-open');
+    overlay?.classList.remove('active');
+  }
   // Cleanup paste handlers dari modul lain
   document.removeEventListener('paste', clPasteHandler);
   document.removeEventListener('paste', daPasteHandler);
@@ -3807,6 +3895,7 @@ function renderTaskList(projId){
         ${phasePill(phase)}
         <span style="font-size:11px;color:var(--text-muted);font-weight:500">${tlist.length} task · ${tlist.filter(t=>t.status==="Done").length} done</span>
       </div>
+      <div class="mobile-table-wrap">
       <table>
         <thead><tr>
           <th style="width:30px"></th>
@@ -3845,6 +3934,7 @@ function renderTaskList(projId){
           </tr>`;
         }).join("")}</tbody>
       </table>
+      </div>
     </div>`;
   }).join("");
 }
@@ -5215,12 +5305,12 @@ function projectOverviewHTML(){
     <div class="stat-card"><div class="stat-label">Task Overdue</div><div class="stat-val" style="color:var(--red)">${overdue}</div></div>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px">
       <div>
         <div style="font-size:13px;font-weight:600">Semua Event</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Klik card untuk lihat detail tasks & timeline</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <select onchange="window._pjmJenisFilter=this.value;initProjectTab('overview')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text)">
           <option value="">Semua Jenis</option>
           <option value="Career Chaser's Academy" ${activeJenisFilter==="Career Chaser's Academy"?"selected":""}>Career Chaser's Academy</option>
@@ -6770,7 +6860,7 @@ function renderSidebarFromConfig(){
   if(!nav) return;
   if(!menuSections || !menuSections.length) return;
   var curPage = window._currentPage || 'dashboard';
-  var h = '<div class="sidebar-logo"><div class="logo-text">CareerCclub</div><div class="logo-sub">Internal Ops</div></div>';
+  var h = '<div class="sidebar-logo"><button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar"><i class="ti ti-layout-sidebar-left-collapse" id="sidebar-toggle-icon" style="font-size:15px"></i><span class="nav-item-label" style="font-size:12px;color:rgba(255,255,255,0.4)">Collapse</span></button></div>';
   menuSections.forEach(function(sec){
     h += '<div class="nav-section"><div class="nav-label">' + sec.label + '</div>';
     sec.items.forEach(function(item){
@@ -6778,7 +6868,7 @@ function renderSidebarFromConfig(){
       var badge = pageBadgeMap[item.page] ? '<span class="nav-badge' + (item.page==='tickets'?' red':'') + '">' + pageBadgeMap[item.page] + '</span>' : '';
       var active = item.page === curPage ? ' active' : '';
       h += '<div class="nav-item' + active + '" onclick="switchPage(\'' + item.page + '\',this)">';
-      h += '<i class="ti ' + icon + '"></i> ' + item.label + badge + '</div>';
+      h += '<i class="ti ' + icon + '"></i><span class="nav-item-label"> ' + item.label + '</span>' + badge + '</div>';
     });
     h += '</div>';
   });
@@ -7758,6 +7848,7 @@ function daRenderGallery() {
             ${thumbUrl ? `<img src="${thumbUrl}" alt="${a.nama||a.kategori}" style="width:100%;height:100%;object-fit:cover" loading="lazy">` : ''}
             ${count > 1 ? `<div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;display:flex;align-items:center;gap:3px"><i class="ti ti-photo" style="font-size:10px"></i> ${count}</div>` : ''}
             <button onclick="event.stopPropagation();daSendToContentLib('${a.id}')" title="Kirim ke Content Library" style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.6);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;color:#fff;font-size:10px;display:flex;align-items:center;gap:4px"><i class="ti ti-bookmark-plus" style="font-size:11px"></i></button>
+            ${a.link ? `<a href="${a.link}" target="_blank" onclick="event.stopPropagation()" style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none" title="Buka link"><i class="ti ti-external-link" style="font-size:12px"></i></a>` : ''}
           </div>
           <div style="padding:8px 10px">
             ${a.nama ? `<div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nama}</div>` : ''}
@@ -11803,6 +11894,7 @@ function clRenderGallery() {
             <i class="ti ${platformIcon}" style="font-size:10px"></i> ${c.platform}
           </div>
           ${total > 1 ? `<div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px"><i class="ti ti-photo" style="font-size:10px"></i> ${total}</div>` : ''}
+          ${c.link ? `<a href="${c.link}" target="_blank" onclick="event.stopPropagation()" style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none" title="Buka link"><i class="ti ti-external-link" style="font-size:12px"></i></a>` : ''}
         </div>
         <div style="padding:8px 10px">
           <div style="font-size:10px;color:var(--purple-mid);font-weight:600;margin-bottom:3px">${c.jenis}</div>
@@ -12028,14 +12120,20 @@ function clRenderPreviewModal(c) {
   modal.innerHTML = `
   <div style="background:var(--white);border-radius:var(--radius-lg);width:100%;max-width:640px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border);flex-shrink:0">
-      <i class="ti ${platformIcon}" style="font-size:14px;color:var(--purple-accent)"></i>
-      <span style="font-size:11px;font-weight:600">${c.platform}</span>
-      <span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:1px 7px;border-radius:10px">${c.jenis}</span>
-      ${c.link?`<a href="${c.link}" target="_blank" class="btn btn-sm" style="font-size:10px"><i class="ti ti-external-link" style="font-size:11px"></i> Link</a>`:''}
-      <button onclick="clOpenEditModal('${c.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button>
-      <button onclick="clOpenAddImageModal('${c.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-photo-plus" style="font-size:11px"></i></button>
-      <button onclick="clConfirmDelete('${c.id}')" class="btn btn-sm" style="font-size:10px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i></button>
-      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+      <i class="ti ${platformIcon}" style="font-size:14px;color:var(--purple-accent);flex-shrink:0"></i>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:700">${c.platform}</span>
+          <span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:1px 7px;border-radius:10px;white-space:nowrap">${c.jenis}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+        ${c.link?`<a href="${c.link}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:3px 7px" title="Buka link"><i class="ti ti-external-link" style="font-size:11px"></i></a>`:''}
+        <button onclick="clOpenEditModal('${c.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px" title="Edit"><i class="ti ti-edit" style="font-size:11px"></i></button>
+        <button onclick="clOpenAddImageModal('${c.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px" title="Tambah gambar"><i class="ti ti-photo-plus" style="font-size:11px"></i></button>
+        <button onclick="clConfirmDelete('${c.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px;color:var(--red)" title="Hapus"><i class="ti ti-trash" style="font-size:11px"></i></button>
+        <button onclick="gcalCloseModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:0;display:flex;align-items:center;margin-left:4px"><i class="ti ti-x"></i></button>
+      </div>
     </div>
     <div style="overflow-y:auto;flex:1">
       <div style="padding:12px 16px;border-bottom:0.5px solid var(--border)">
