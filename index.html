@@ -2122,7 +2122,53 @@ function crmHTML(){
   </div>`;
 }
 
-function initCRM(){populateFilters();renderBuyers();renderCRMStats();}
+
+// ── BUYERS SUPABASE ──────────────────────────────────────
+function _buyerRowToJS(d) {
+  return {
+    id: d.id,
+    name: d.name || '',
+    wa: d.wa || '',
+    email: d.email || '',
+    produk: d.produk || '',
+    klasifikasi: d.klasifikasi || 'Belum Diklasifikasi',
+    harga: d.harga || 0,
+    industri: d.industri || '',
+    tahap: d.tahap || '',
+    sumber: d.sumber || '',
+    status: d.status || 'Belum diblast',
+    talentPool: d.talent_pool || false,
+    tanggal: d.tanggal || '',
+    riwayat: Array.isArray(d.riwayat) ? d.riwayat : []
+  };
+}
+function _buyerJSToRow(b) {
+  return {
+    id: b.id,
+    name: b.name || '',
+    wa: b.wa || '',
+    email: b.email || '',
+    produk: b.produk || '',
+    klasifikasi: b.klasifikasi || 'Belum Diklasifikasi',
+    harga: b.harga || 0,
+    industri: b.industri || '',
+    tahap: b.tahap || '',
+    sumber: b.sumber || '',
+    status: b.status || 'Belum diblast',
+    talent_pool: b.talentPool || false,
+    tanggal: b.tanggal || '',
+    riwayat: b.riwayat || []
+  };
+}
+async function sb_loadBuyers() {
+  const rows = await sb_load('buyers', { order: 'created_at', ascending: false });
+  return rows.map(_buyerRowToJS);
+}
+async function sb_insertBuyer(b) { return await sb_insert('buyers', _buyerJSToRow(b)); }
+async function sb_updateBuyer(id, b) { return await sb_update('buyers', id, _buyerJSToRow(b)); }
+async function sb_deleteBuyer(id) { return await sb_delete('buyers', id); }
+
+async function initCRM(){buyers = await sb_loadBuyers();populateFilters();renderBuyers();renderCRMStats();}
 function renderCRMStats(){
   const el=document.getElementById("crm-stats");if(!el)return;
   const total=buyers.length,belumPool=buyers.filter(b=>!b.talentPool).length,
@@ -2208,10 +2254,15 @@ function updateActionBar(){
   bar.style.display=selectedBuyers.size>0?"flex":"none";
   const el=document.getElementById("sel-count");if(el) el.textContent=`${selectedBuyers.size} dipilih`;
 }
-function applyMark(){
+async function applyMark(){
   const val=document.getElementById("mark-sel").value;if(!val) return;
   let count=0;
-  buyers.forEach(b=>{if(selectedBuyers.has(b.id)){b.status=val;count++;}});
+  for(const b of buyers){
+    if(selectedBuyers.has(b.id)||selectedBuyers.has(String(b.id))){
+      b.status=val;count++;
+      await sb_updateBuyer(b.id,b);
+    }
+  }
   selectedBuyers.clear();renderBuyers();renderCRMStats();
   showToast(`${count} buyer ditandai: ${val}`);
 }
@@ -2784,17 +2835,22 @@ function qcChangeKlas(i,val){
   }
   renderQC();
 }
-function confirmImportCRM(){
+async function confirmImportCRM(){
   let added=0,skipped=0;
+  const toInsert = [];
   qcRows.forEach((r,i)=>{
     if(!qcSelected.has(i)) return;
     if(buyers.find(b=>b.wa===r.wa)){skipped++;return;}
-    buyers.push({id:Date.now()+i,name:r.name,wa:r.wa,email:r.email,produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]});
+    const newBuyer = {id:Date.now()+i,name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
+    buyers.push(newBuyer);
+    toInsert.push(newBuyer);
     if(!masterProduk.find(m=>m.nama.toLowerCase()===r.produk.toLowerCase())&&r.klasifikasi!=="Belum Diklasifikasi"){
       masterProduk.push({id:Date.now()+i+999,nama:r.produk,klasifikasi:r.klasifikasi});
     }
     added++;
   });
+  // Save ke Supabase
+  for(const b of toInsert){ await sb_insertBuyer(b); }
   closeQC();populateFilters();renderBuyers();renderCRMStats();
   showToast(`${added} buyer diimport${skipped>0?`, ${skipped} duplikat diskip`:""}`);
 }
@@ -3013,7 +3069,7 @@ function deleteDeal(){
 let activeCustId=null;
 function openCustModal(id){
   activeCustId=id;
-  const b=buyers.find(x=>x.id===id);if(!b) return;
+  const b=buyers.find(x=>_idEq(x.id,id));if(!b) return;
   const init=(b.name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
   document.getElementById("cust-av").textContent=init;
   document.getElementById("cust-nm").textContent=b.name||"—";
@@ -3067,21 +3123,22 @@ function saveEdit(field,val){
   const b=buyers.find(x=>x.id===activeCustId);
   if(b) b[field]=val;
 }
-function saveCustModal(){
-  const b=buyers.find(x=>x.id===activeCustId);if(!b) return;
+async function saveCustModal(){
+  const b=buyers.find(x=>_idEq(x.id,activeCustId));if(!b) return;
   b.name=document.getElementById("ed-name").value;
   b.wa=document.getElementById("ed-wa").value;
   b.email=document.getElementById("ed-email").value;
   b.industri=document.getElementById("ed-industri").value;
   b.tahap=document.getElementById("ed-tahap").value;
   b.sumber=document.getElementById("ed-sumber").value;
+  await sb_updateBuyer(b.id, b);
   document.getElementById("cust-nm").textContent=b.name||"—";
   document.getElementById("cust-wa-disp").textContent=b.wa;
   const pipeEl=document.getElementById("crm-pipeline");
   if(pipeEl&&pipeEl.style.display!=="none") renderPipeline();
   if(document.getElementById("buyer-tbody")) renderBuyers();
   closeCustModal();
-  showToast(`Data ${b.name||"buyer"} disimpan`);
+  showToast(`Data ${b.name||"buyer"} disimpan ✓`);
 }
 
 
