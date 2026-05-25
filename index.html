@@ -2606,6 +2606,8 @@ async function _blastSend() {
             to: r.email,
             subject,
             html: _blastBuildHTML(r),
+            from_name: localStorage.getItem('ccc_blast_from_name') || 'CareerCclub',
+            from_email: localStorage.getItem('ccc_blast_from_email') || 'onboarding@resend.dev',
             scheduled_at: scheduled ? new Date(scheduled).toISOString() : undefined,
           }),
         });
