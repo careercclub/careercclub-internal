@@ -2075,6 +2075,7 @@ function crmHTML(){
               <th class="checkbox-col"><input type="checkbox" id="check-all" onchange="toggleAll(this)"></th>
               <th style="width:115px">Nama</th>
               <th style="width:100px">WA</th>
+              <th style="width:130px">Email</th>
               <th style="width:110px">Klasifikasi</th>
               <th style="width:140px">Produk terakhir</th>
               <th style="width:58px">Harga</th>
@@ -2213,11 +2214,14 @@ function syncCheckAll(){
 function renderBuyers(){
   const filtered=getFiltered();
   const tbody=document.getElementById("buyer-tbody");if(!tbody) return;
-  tbody.innerHTML=filtered.map(b=>`
+  tbody.innerHTML=filtered.map(b=>{
+    const sid=String(b.id);
+    return `
     <tr>
-      <td><input type="checkbox" data-id="${b.id}" ${selectedBuyers.has(b.id)?"checked":""} onchange="toggleBuyer('${b.id}',this)"></td>
-      <td title="${b.name}" style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openCustModal('${b.id}')">${b.name||"-"}</td>
+      <td><input type="checkbox" data-id="${sid}" ${selectedBuyers.has(sid)||selectedBuyers.has(b.id)?"checked":""} onchange="toggleBuyer('${sid}',this)"></td>
+      <td title="${b.name}" style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openCustModal('${sid}')">${b.name||"-"}</td>
       <td title="${b.wa}" style="font-size:11px;color:var(--text-muted)">${b.wa}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${b.email||'<span style="color:var(--text-hint);font-style:italic">—</span>'}</td>
       <td>${klasPill(b.klasifikasi)}</td>
       <td title="${b.produk}" style="font-size:11px;color:var(--text-muted)">${b.produk.length>20?b.produk.slice(0,20)+"…":b.produk}</td>
       <td style="font-size:11px">Rp${(b.harga/1000).toFixed(0)}k</td>
@@ -2226,8 +2230,9 @@ function renderBuyers(){
       <td style="font-size:11px">${b.sumber}</td>
       <td>${statusPill(b.status)}</td>
       <td>${talentPill(b.talentPool)}</td>
-      <td><span style="font-size:11px;color:var(--purple-accent);cursor:pointer" onclick="showRiwayat('${b.id}')">${b.riwayat.length}x</span></td>
-    </tr>`).join("");
+      <td><span style="font-size:11px;color:var(--purple-accent);cursor:pointer" onclick="showRiwayat('${sid}')">${b.riwayat.length}x</span></td>
+    </tr>`;
+  }).join("");
   document.getElementById("row-count").textContent=`${filtered.length} dari ${buyers.length} buyers`;
   syncCheckAll();updateActionBar();
 }
