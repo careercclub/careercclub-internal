@@ -37,7 +37,7 @@ export default async function handler(req) {
 
     for (const recipient of recipients) {
       const payload = {
-        from: `${from_name || 'CareerCclub'} <${from_email || 'noreply@careercclub.com'}>`,
+        from: `${from_name || 'CareerCclub'} <${from_email || 'onboarding@resend.dev'}>`,
         to: [typeof recipient === 'string' ? recipient : recipient.email],
         subject,
         html,
