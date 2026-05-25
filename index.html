@@ -2047,6 +2047,7 @@ function crmHTML(){
     <div class="tab-row">
       <div class="tab active" id="tab-btn-buyers" onclick="crmTab('buyers')">Data Buyers</div>
       <div class="tab" id="tab-btn-pipeline" onclick="crmTab('pipeline')"><i class="ti ti-layout-kanban" style="font-size:12px"></i> Pipeline</div>
+      <div class="tab" id="tab-btn-blast" onclick="crmTab('blast')"><i class="ti ti-send" style="font-size:12px"></i> Email Blast</div>
       <div class="tab" id="tab-btn-import" onclick="crmTab('import')">Import</div>
     </div>
     <div id="crm-buyers">
@@ -2097,6 +2098,7 @@ function crmHTML(){
       </div>
       <div class="pipeline-wrap" id="pipeline-wrap"></div>
     </div>
+    <div id="crm-blast" style="display:none"></div>
     <div id="crm-import" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div>
@@ -2235,13 +2237,469 @@ function clearCRMFilters(){
   renderBuyers();
 }
 function crmTab(tab){
-  ["buyers","pipeline","import"].forEach(t=>{
+  ["buyers","pipeline","blast","import"].forEach(t=>{
     const btn=document.getElementById(`tab-btn-${t}`);
     const el=document.getElementById(`crm-${t}`);
     if(btn) btn.classList.toggle("active",t===tab);
     if(el) el.style.display=t===tab?"block":"none";
   });
   if(tab==="pipeline") renderPipeline();
+  if(tab==="blast") renderEmailBlast();
+}
+
+
+// ═══════════════════════════════════════════
+// EMAIL BLAST MODULE
+// ═══════════════════════════════════════════
+
+var _blastTemplates = JSON.parse(localStorage.getItem('ccc_blast_templates') || '[]');
+var _blastLogs = JSON.parse(localStorage.getItem('ccc_blast_logs') || '[]');
+var _blastTab = 'compose'; // compose | templates | history
+
+function saveBlastTemplates() { localStorage.setItem('ccc_blast_templates', JSON.stringify(_blastTemplates)); }
+function saveBlastLogs() { localStorage.setItem('ccc_blast_logs', JSON.stringify(_blastLogs)); }
+
+function renderEmailBlast() {
+  const el = document.getElementById('crm-blast');
+  if (!el) return;
+
+  const tabs = [
+    { id: 'compose', label: '<i class="ti ti-send"></i> Compose & Kirim' },
+    { id: 'templates', label: '<i class="ti ti-bookmark"></i> Templates' },
+    { id: 'history', label: '<i class="ti ti-history"></i> History' },
+    { id: 'settings', label: '<i class="ti ti-settings"></i> Settings' },
+  ];
+
+  el.innerHTML = `
+  <div style="margin-top:4px">
+    <div class="tab-row" style="margin-bottom:16px">
+      ${tabs.map(t => `<div class="tab ${_blastTab===t.id?'active':''}" onclick="_blastTab='${t.id}';renderEmailBlast()">${t.label}</div>`).join('')}
+    </div>
+    <div id="blast-content"></div>
+  </div>`;
+
+  const c = document.getElementById('blast-content');
+  if (_blastTab === 'compose') c.innerHTML = _blastComposeHTML();
+  if (_blastTab === 'templates') c.innerHTML = _blastTemplatesHTML();
+  if (_blastTab === 'history') c.innerHTML = _blastHistoryHTML();
+  if (_blastTab === 'settings') c.innerHTML = _blastSettingsHTML();
+}
+
+// ─── COMPOSE ───────────────────────────────
+function _blastComposeHTML() {
+  const industries = [...new Set(buyers.map(b => b.industri).filter(Boolean))].sort();
+  const tahaps = [...new Set(buyers.map(b => b.tahap).filter(Boolean))].sort();
+  const recipientCount = _blastGetRecipients().length;
+
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    <!-- Kiri: Segment + Composer -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <!-- Segment -->
+      <div class="card" style="padding:14px 16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-filter" style="color:var(--purple-accent)"></i> Target Penerima</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">SEGMENT</label>
+            <select id="bl-seg" onchange="_blastUpdateCount()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+              <option value="all">Semua kontak (${buyers.length})</option>
+              <option value="has_email">Punya email saja</option>
+              <option value="belum_diblast">Belum pernah diblast</option>
+              <option value="custom">Filter kustom...</option>
+            </select>
+          </div>
+          <div id="bl-custom-filters" style="display:none;flex-direction:column;gap:6px">
+            <select id="bl-klas" onchange="_blastUpdateCount()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+              <option value="">Semua klasifikasi</option>
+              ${KLASIFIKASI_LIST.map(k=>`<option value="${k}">${k}</option>`).join('')}
+            </select>
+            <select id="bl-industri" onchange="_blastUpdateCount()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+              <option value="">Semua industri</option>
+              ${industries.map(i=>`<option value="${i}">${i}</option>`).join('')}
+            </select>
+            <select id="bl-tahap" onchange="_blastUpdateCount()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+              <option value="">Semua tahap</option>
+              ${tahaps.map(t=>`<option value="${t}">${t}</option>`).join('')}
+            </select>
+          </div>
+          <div id="bl-recipient-count" style="font-size:12px;font-weight:600;color:var(--purple-accent);padding:7px 10px;background:var(--purple-light);border-radius:var(--radius)">
+            <i class="ti ti-users" style="font-size:12px"></i> ${recipientCount} penerima
+          </div>
+        </div>
+      </div>
+
+      <!-- Subject + Scheduling -->
+      <div class="card" style="padding:14px 16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-mail" style="color:var(--purple-accent)"></i> Detail Email</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">SUBJECT</label>
+            <input id="bl-subject" placeholder="Subject email..." style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">TEMPLATE (opsional)</label>
+            <select id="bl-tpl" onchange="_blastLoadTemplate()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+              <option value="">— Pilih template —</option>
+              ${_blastTemplates.map((t,i)=>`<option value="${i}">${t.nama}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JADWAL KIRIM (opsional)</label>
+            <input id="bl-schedule" type="datetime-local" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+            <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Kosongkan untuk kirim sekarang</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kanan: Email Builder -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="padding:14px 16px;flex:1">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+          <span><i class="ti ti-pencil" style="color:var(--purple-accent)"></i> Email Builder</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="_blastPreview()" style="font-size:11px"><i class="ti ti-eye"></i> Preview</button>
+            <button class="btn btn-sm" onclick="_blastSaveAsTemplate()" style="font-size:11px"><i class="ti ti-bookmark"></i> Simpan Template</button>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div style="margin-bottom:8px">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">HEADER</label>
+          <input id="bl-header-title" placeholder="Judul header email..." style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white);margin-bottom:5px">
+          <input id="bl-header-subtitle" placeholder="Subtitle (opsional)..." style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+          <div style="display:flex;gap:6px;margin-top:5px;align-items:center">
+            <label style="font-size:11px;color:var(--text-muted)">Warna header:</label>
+            <input id="bl-header-color" type="color" value="#2d2777" style="width:32px;height:28px;border:0.5px solid var(--border-md);border-radius:6px;cursor:pointer;padding:2px">
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div style="margin-bottom:8px">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">ISI EMAIL</label>
+          <textarea id="bl-body" rows="8" placeholder="Tulis isi email di sini... Gunakan {nama} untuk personalisasi nama penerima." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white);resize:vertical;line-height:1.6"></textarea>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi nama penerima</div>
+        </div>
+
+        <!-- CTA -->
+        <div style="margin-bottom:8px">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">TOMBOL CTA (opsional)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <input id="bl-cta-text" placeholder="Teks tombol, cth: Daftar Sekarang" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+            <input id="bl-cta-url" placeholder="https://..." style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div>
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">FOOTER</label>
+          <input id="bl-footer" placeholder="cth: © 2026 CareerCclub. Jl. Contoh No.1, Jakarta." value="© 2026 CareerCclub | careercclub.com" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        </div>
+      </div>
+
+      <!-- Send Button -->
+      <button onclick="_blastSend()" class="btn btn-primary" style="width:100%;padding:11px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px">
+        <i class="ti ti-send"></i> Kirim Email Blast
+      </button>
+    </div>
+  </div>`;
+}
+
+function _blastUpdateCount() {
+  const seg = document.getElementById('bl-seg');
+  const customFilters = document.getElementById('bl-custom-filters');
+  if (seg) {
+    if (customFilters) customFilters.style.display = seg.value === 'custom' ? 'flex' : 'none';
+  }
+  const el = document.getElementById('bl-recipient-count');
+  if (el) {
+    const count = _blastGetRecipients().length;
+    el.innerHTML = `<i class="ti ti-users" style="font-size:12px"></i> ${count} penerima`;
+  }
+}
+
+function _blastGetRecipients() {
+  const seg = document.getElementById('bl-seg');
+  const segVal = seg ? seg.value : 'all';
+  let list = buyers.filter(b => b.email && b.email.includes('@'));
+
+  if (segVal === 'belum_diblast') list = list.filter(b => b.status === 'Belum diblast');
+  if (segVal === 'custom') {
+    const klas = document.getElementById('bl-klas')?.value;
+    const industri = document.getElementById('bl-industri')?.value;
+    const tahap = document.getElementById('bl-tahap')?.value;
+    if (klas) list = list.filter(b => b.klasifikasi === klas);
+    if (industri) list = list.filter(b => b.industri === industri);
+    if (tahap) list = list.filter(b => b.tahap === tahap);
+  }
+  return list;
+}
+
+function _blastBuildHTML(recipient) {
+  const headerTitle = document.getElementById('bl-header-title')?.value || 'CareerCclub';
+  const headerSub = document.getElementById('bl-header-subtitle')?.value || '';
+  const headerColor = document.getElementById('bl-header-color')?.value || '#2d2777';
+  const body = (document.getElementById('bl-body')?.value || '').replace(/\n/g, '<br>').replace(/\{nama\}/g, recipient?.name || 'Kak');
+  const ctaText = document.getElementById('bl-cta-text')?.value;
+  const ctaUrl = document.getElementById('bl-cta-url')?.value;
+  const footer = document.getElementById('bl-footer')?.value || '© 2026 CareerCclub';
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f4f4f7;font-family:'Helvetica Neue',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%">
+        <!-- Header -->
+        <tr><td style="background:${headerColor};border-radius:12px 12px 0 0;padding:32px 40px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:#fff;margin-bottom:6px">${headerTitle}</div>
+          ${headerSub ? `<div style="font-size:14px;color:rgba(255,255,255,0.75)">${headerSub}</div>` : ''}
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="background:#ffffff;padding:36px 40px">
+          <div style="font-size:15px;line-height:1.7;color:#1a1a2e">${body}</div>
+          ${ctaText && ctaUrl ? `<div style="text-align:center;margin-top:28px"><a href="${ctaUrl}" style="display:inline-block;background:${headerColor};color:#fff;padding:13px 32px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none">${ctaText}</a></div>` : ''}
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="background:#f4f4f7;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center">
+          <div style="font-size:11px;color:#888">${footer}</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table></body></html>`;
+}
+
+function _blastPreview() {
+  const html = _blastBuildHTML({ name: 'Kak Sample' });
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function _blastLoadTemplate() {
+  const sel = document.getElementById('bl-tpl');
+  if (!sel || sel.value === '') return;
+  const tpl = _blastTemplates[parseInt(sel.value)];
+  if (!tpl) return;
+  if (document.getElementById('bl-subject')) document.getElementById('bl-subject').value = tpl.subject || '';
+  if (document.getElementById('bl-header-title')) document.getElementById('bl-header-title').value = tpl.headerTitle || '';
+  if (document.getElementById('bl-header-subtitle')) document.getElementById('bl-header-subtitle').value = tpl.headerSub || '';
+  if (document.getElementById('bl-header-color')) document.getElementById('bl-header-color').value = tpl.headerColor || '#2d2777';
+  if (document.getElementById('bl-body')) document.getElementById('bl-body').value = tpl.body || '';
+  if (document.getElementById('bl-cta-text')) document.getElementById('bl-cta-text').value = tpl.ctaText || '';
+  if (document.getElementById('bl-cta-url')) document.getElementById('bl-cta-url').value = tpl.ctaUrl || '';
+  if (document.getElementById('bl-footer')) document.getElementById('bl-footer').value = tpl.footer || '';
+  showToast('Template "' + tpl.nama + '" dimuat ✓');
+}
+
+function _blastSaveAsTemplate() {
+  const nama = prompt('Nama template:');
+  if (!nama) return;
+  const tpl = {
+    id: Date.now(),
+    nama,
+    subject: document.getElementById('bl-subject')?.value || '',
+    headerTitle: document.getElementById('bl-header-title')?.value || '',
+    headerSub: document.getElementById('bl-header-subtitle')?.value || '',
+    headerColor: document.getElementById('bl-header-color')?.value || '#2d2777',
+    body: document.getElementById('bl-body')?.value || '',
+    ctaText: document.getElementById('bl-cta-text')?.value || '',
+    ctaUrl: document.getElementById('bl-cta-url')?.value || '',
+    footer: document.getElementById('bl-footer')?.value || '',
+    createdAt: new Date().toISOString(),
+  };
+  _blastTemplates.push(tpl);
+  saveBlastTemplates();
+  showToast('Template "' + nama + '" disimpan ✓');
+}
+
+async function _blastSend() {
+  const subject = document.getElementById('bl-subject')?.value.trim();
+  if (!subject) { showToast('Subject wajib diisi', 'error'); return; }
+
+  const recipients = _blastGetRecipients();
+  if (!recipients.length) { showToast('Tidak ada penerima yang valid (cek filter & pastikan ada email)', 'error'); return; }
+
+  const bodyEmpty = !document.getElementById('bl-body')?.value.trim();
+  if (bodyEmpty) { showToast('Isi email tidak boleh kosong', 'error'); return; }
+
+  const apiKey = localStorage.getItem('ccc_blast_api_key');
+  if (!apiKey) { showToast('API Key belum diset — buka tab Settings', 'error'); return; }
+
+  const scheduled = document.getElementById('bl-schedule')?.value;
+  const ok = window.confirm('Kirim ke ' + recipients.length + ' penerima?' + (scheduled ? ' | Dijadwalkan: ' + scheduled : ' | Kirim sekarang'));
+  if (!ok) return;
+
+  showToast('Mengirim... mohon tunggu ⏳');
+
+  const toList = recipients.map(r => ({ email: r.email, name: r.name }));
+  const htmlContent = _blastBuildHTML(null); // Base HTML (tanpa personalisasi per-recipient, karena batch)
+
+  // Personalisasi per-recipient: kirim satu per satu kalau < 50, batch kalau lebih
+  let sent = 0, failed = 0, errors = [];
+
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+    const batch = recipients.slice(i, i + BATCH_SIZE);
+    for (const r of batch) {
+      try {
+        const res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: r.email,
+            subject,
+            html: _blastBuildHTML(r),
+            scheduled_at: scheduled ? new Date(scheduled).toISOString() : undefined,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) sent++;
+        else { failed++; errors.push(r.email + ': ' + (data.error || 'failed')); }
+      } catch(e) {
+        failed++;
+        errors.push(r.email + ': ' + e.message);
+      }
+    }
+  }
+
+  // Log ke history
+  const log = {
+    id: Date.now(),
+    subject,
+    segment: document.getElementById('bl-seg')?.value || 'all',
+    total: recipients.length,
+    sent,
+    failed,
+    errors: errors.slice(0, 10),
+    scheduled: scheduled || null,
+    sentAt: new Date().toISOString(),
+  };
+  _blastLogs.unshift(log);
+  if (_blastLogs.length > 100) _blastLogs = _blastLogs.slice(0, 100);
+  saveBlastLogs();
+
+  // Update blast status di buyers
+  if (!scheduled) {
+    recipients.forEach(r => {
+      const b = buyers.find(x => x.id === r.id);
+      if (b) b.status = 'Diblast';
+    });
+    renderBuyers();
+  }
+
+  showToast(`✅ Selesai! ${sent} terkirim${failed > 0 ? ', ' + failed + ' gagal' : ''}`);
+  _blastTab = 'history';
+  renderEmailBlast();
+}
+
+// ─── TEMPLATES ──────────────────────────────
+function _blastTemplatesHTML() {
+  if (!_blastTemplates.length) return `<div class="card" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="ti ti-bookmark-off" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada template. Buat di tab Compose → Simpan Template.</div>`;
+  return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+    ${_blastTemplates.map((t,i) => `
+    <div class="card" style="padding:14px 16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">${t.nama}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">${t.subject || '—'}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-primary" onclick="_blastUseTemplate(${i})" style="font-size:11px;flex:1"><i class="ti ti-send"></i> Pakai</button>
+        <button class="btn btn-sm" onclick="_blastDeleteTemplate(${i})" style="font-size:11px;color:var(--red)"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function _blastUseTemplate(idx) {
+  _blastTab = 'compose';
+  renderEmailBlast();
+  setTimeout(() => {
+    const sel = document.getElementById('bl-tpl');
+    if (sel) { sel.value = String(idx); _blastLoadTemplate(); }
+  }, 100);
+}
+
+function _blastDeleteTemplate(idx) {
+  if (!confirm('Hapus template "' + _blastTemplates[idx].nama + '"?')) return;
+  _blastTemplates.splice(idx, 1);
+  saveBlastTemplates();
+  renderEmailBlast();
+  showToast('Template dihapus');
+}
+
+// ─── HISTORY ────────────────────────────────
+function _blastHistoryHTML() {
+  if (!_blastLogs.length) return `<div class="card" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="ti ti-history" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada riwayat blast.</div>`;
+  return `<div class="card" style="padding:0;overflow:hidden">
+    <table style="width:100%">
+      <thead><tr style="background:var(--bg)">
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">SUBJECT</th>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">SEGMENT</th>
+        <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)">TOTAL</th>
+        <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--green)">TERKIRIM</th>
+        <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--red)">GAGAL</th>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">WAKTU</th>
+      </tr></thead>
+      <tbody>
+        ${_blastLogs.map(l => `<tr style="border-top:0.5px solid var(--border)">
+          <td style="padding:10px 14px;font-size:12px;font-weight:500">${l.subject}</td>
+          <td style="padding:10px 14px;font-size:11px;color:var(--text-muted)">${l.segment}</td>
+          <td style="padding:10px 14px;font-size:12px;text-align:center">${l.total}</td>
+          <td style="padding:10px 14px;font-size:12px;text-align:center;font-weight:600;color:var(--green)">${l.sent}</td>
+          <td style="padding:10px 14px;font-size:12px;text-align:center;font-weight:600;color:${l.failed>0?'var(--red)':'var(--text-muted)'}">${l.failed}</td>
+          <td style="padding:10px 14px;font-size:11px;color:var(--text-muted)">${l.scheduled ? '⏰ ' + new Date(l.scheduled).toLocaleString('id-ID') : new Date(l.sentAt).toLocaleString('id-ID')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ─── SETTINGS ───────────────────────────────
+function _blastSettingsHTML() {
+  const savedKey = localStorage.getItem('ccc_blast_api_key') || '';
+  const savedFrom = localStorage.getItem('ccc_blast_from_name') || 'CareerCclub';
+  const savedEmail = localStorage.getItem('ccc_blast_from_email') || '';
+  return `<div style="max-width:480px">
+    <div class="card" style="padding:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Konfigurasi Email Blast</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">RESEND API KEY</label>
+          <input id="bl-api-key" type="password" value="${savedKey}" placeholder="re_xxxxxxxxxxxx" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Dapatkan di <a href="https://resend.com/api-keys" target="_blank" style="color:var(--purple-accent)">resend.com/api-keys</a></div>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NAMA PENGIRIM</label>
+          <input id="bl-from-name" value="${savedFrom}" placeholder="CareerCclub" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">EMAIL PENGIRIM</label>
+          <input id="bl-from-email" value="${savedEmail}" placeholder="noreply@careercclub.com" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Domain harus sudah diverifikasi di Resend</div>
+        </div>
+        <button onclick="_blastSaveSettings()" class="btn btn-primary" style="font-size:12px;padding:9px"><i class="ti ti-check"></i> Simpan Settings</button>
+      </div>
+    </div>
+    <div class="card" style="padding:16px;margin-top:12px;background:var(--blue-bg);border-color:var(--blue)">
+      <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px"><i class="ti ti-info-circle"></i> Setup Guide</div>
+      <ol style="font-size:12px;color:var(--text);line-height:1.8;padding-left:16px;margin:0">
+        <li>Daftar di <a href="https://resend.com" target="_blank" style="color:var(--blue)">resend.com</a> (gratis)</li>
+        <li>Verifikasi domain careercclub.com di Resend → Domains</li>
+        <li>Buat API Key di Resend → API Keys</li>
+        <li>Tambah environment variable <code style="background:white;padding:1px 5px;border-radius:3px">RESEND_API_KEY</code> di Vercel dashboard</li>
+        <li>Push file <code style="background:white;padding:1px 5px;border-radius:3px">api/send-email.js</code> ke repo GitHub</li>
+      </ol>
+    </div>
+  </div>`;
+}
+
+function _blastSaveSettings() {
+  const key = document.getElementById('bl-api-key')?.value.trim();
+  const name = document.getElementById('bl-from-name')?.value.trim();
+  const email = document.getElementById('bl-from-email')?.value.trim();
+  if (key) localStorage.setItem('ccc_blast_api_key', key);
+  if (name) localStorage.setItem('ccc_blast_from_name', name);
+  if (email) localStorage.setItem('ccc_blast_from_email', email);
+  showToast('Settings tersimpan ✓');
 }
 
 function handleLynkid(input){
