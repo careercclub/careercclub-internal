@@ -534,6 +534,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 .pipe-card-ads:hover{border-color:var(--purple-accent);background:#f0efff}
 .selected-preview{background:var(--purple-light);border-radius:var(--radius);padding:11px;border:0.5px solid rgba(124,111,247,.3);margin-bottom:12px}
 
+@media (max-width: 768px) { #dash-layout { grid-template-columns: 1fr !important; } }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -2011,7 +2012,7 @@ function switchPage(page,el){
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   if(el) el.classList.add("active");
   const c=document.getElementById("mainContent");
-  if(page==="dashboard") c.innerHTML=dashboardHTML();
+  if(page==="dashboard") { c.innerHTML=dashboardHTML(); initDashboard(); }
   else if(page==="crm"){c.innerHTML=crmHTML();initCRM();}
   else if(page==="pipeline"){c.innerHTML=pipelineHTML();renderPipeline();}
   else if(page==="master"){c.innerHTML=masterHTML();renderMaster();}
@@ -2037,18 +2038,180 @@ function switchPage(page,el){
 
 function dashboardHTML(){
   return `
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:65vh;text-align:center;padding:40px 20px">
-    <div style="width:88px;height:88px;border-radius:24px;background:linear-gradient(135deg,var(--purple-light),var(--purple-soft,#e9def7));display:flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:0 6px 20px rgba(124,58,237,0.12)">
-      <i class="ti ti-layout-dashboard" style="font-size:42px;color:var(--purple-accent)"></i>
+  <div id="dash-layout" style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start">
+    <!-- Kiri: Mini Calendar -->
+    <div>
+      <div id="dash-calendar"></div>
     </div>
-    <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:-0.3px">Dashboard</div>
-    <div style="font-size:13px;color:var(--text-muted);max-width:380px;line-height:1.55;margin-bottom:18px">
-      Lagi kita siapin overview metrik gabungan dari semua modul — CRM, tickets, program, sampai pain point. Coming soon!
+    <!-- Kanan: Upcoming Tasks -->
+    <div class="card" style="padding:14px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-clock" style="font-size:14px;color:var(--purple-accent)"></i> Upcoming Tasks
+      </div>
+      <div id="dash-upcoming"></div>
     </div>
-    <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--purple-light);border-radius:999px;font-size:11px;font-weight:600;color:var(--purple-mid)">
-      <i class="ti ti-tools" style="font-size:12px"></i> Sedang dibangun
-    </div>
-  </div>`;
+  </div>
+`;
+}
+
+function toLocalDateISO(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + d;
+}
+
+
+function renderDashCalendar() {
+  const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  const dayNames=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
+  const m=window._dashCalMonth!==undefined?window._dashCalMonth:new Date().getMonth();
+  const y=window._dashCalYear!==undefined?window._dashCalYear:new Date().getFullYear();
+  window._dashCalMonth=m; window._dashCalYear=y;
+  const firstDay=new Date(y,m,1);
+  const lastDay=new Date(y,m+1,0);
+  const startWeekday=firstDay.getDay();
+  const daysInMonth=lastDay.getDate();
+  const today=new Date(); today.setHours(0,0,0,0);
+
+  const eventsByDate={};
+  projectTasks.forEach(t=>{
+    if(!t.deadline) return;
+    if(!eventsByDate[t.deadline]) eventsByDate[t.deadline]=[];
+    eventsByDate[t.deadline].push({type:"task",data:t});
+  });
+  projects.forEach(p=>{
+    if(!p.tanggal) return;
+    if(!eventsByDate[p.tanggal]) eventsByDate[p.tanggal]=[];
+    eventsByDate[p.tanggal].push({type:"event",data:p});
+  });
+
+  const cells=[];
+  for(let i=0;i<startWeekday;i++){cells.push({date:new Date(y,m,-(startWeekday-i-1)),inMonth:false});}
+  for(let i=1;i<=daysInMonth;i++){cells.push({date:new Date(y,m,i),inMonth:true});}
+  while(cells.length%7!==0){cells.push({date:new Date(y,m+1,cells.length-startWeekday-daysInMonth+1),inMonth:false});}
+  while(cells.length<35){cells.push({date:new Date(y,m+1,cells.length-startWeekday-daysInMonth+1),inMonth:false});}
+
+  const phaseColors={"Pre Event":{bg:"#d1fae5",fg:"#059669"},"Hari H":{bg:"#fee2e2",fg:"#dc2626"},"Post Event":{bg:"#dbeafe",fg:"#2563eb"}};
+
+  let html = '<div class="card" style="padding:0;overflow:hidden">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid var(--border)">';
+  html += '<div style="display:flex;align-items:center;gap:8px">';
+  html += '<button class="btn btn-sm" onclick="dashCalNav(-1)" style="padding:4px 8px"><i class="ti ti-chevron-left"></i></button>';
+  html += '<div style="font-size:13px;font-weight:600;min-width:130px;text-align:center">'+monthNames[m]+' '+y+'</div>';
+  html += '<button class="btn btn-sm" onclick="dashCalNav(1)" style="padding:4px 8px"><i class="ti ti-chevron-right"></i></button>';
+  html += '<button class="btn btn-sm" onclick="dashCalToday()" style="font-size:11px">Hari ini</button>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;align-items:center;font-size:10px;color:var(--text-muted)">';
+  html += '<span style="width:8px;height:8px;border-radius:2px;background:#059669;display:inline-block"></span>Pre';
+  html += '<span style="width:8px;height:8px;border-radius:2px;background:#dc2626;display:inline-block;margin-left:4px"></span>Hari H';
+  html += '<span style="width:8px;height:8px;border-radius:2px;background:#2563eb;display:inline-block;margin-left:4px"></span>Post';
+  html += '</div></div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg);border-bottom:0.5px solid var(--border)">';
+  dayNames.forEach(d=>{html+='<div style="padding:6px;text-align:center;font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase">'+d+'</div>';});
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr)">';
+  cells.forEach(function(cell,idx){
+    var dateISO=toLocalDateISO(cell.date);
+    var items=eventsByDate[dateISO]||[];
+    var isToday=cell.date.getTime()===today.getTime();
+    var isWeekend=cell.date.getDay()===0||cell.date.getDay()===6;
+    var borderRight=idx%7!==6?"0.5px solid var(--border)":"none";
+    var borderBottom=idx<cells.length-7?"0.5px solid var(--border)":"none";
+    var bgCell=!cell.inMonth?"#fafaf7":isToday?"var(--purple-light)":isWeekend?"#fafaf7":"var(--white)";
+    html += "<div ondragover=\"event.preventDefault()\" ondrop=\"calDrop(event,'" + dateISO + "')\" style=\"min-height:70px;padding:4px;border-right:" + borderRight + ";border-bottom:" + borderBottom + ";background:" + bgCell + ";opacity:" + (cell.inMonth?1:0.5) + ";display:flex;flex-direction:column;gap:2px;overflow:hidden\">";
+    var dayNum = cell.date.getDate();
+    var dayWeight = isToday ? "700" : "500";
+    var dayColor = isToday ? "var(--purple-mid)" : !cell.inMonth ? "var(--text-hint)" : "var(--text)";
+    var nowBadge = isToday ? "<span style=\"font-size:8px;margin-left:3px;background:var(--purple-accent);color:#fff;padding:1px 4px;border-radius:6px\">NOW</span>" : "";
+    html += "<div style=\"font-size:10px;font-weight:" + dayWeight + ";color:" + dayColor + ";margin-bottom:1px\">" + dayNum + nowBadge + "</div>";
+    items.slice(0,2).forEach(function(it){
+      if(it.type==="event"){
+        var evName = it.data.nama.substring(0,15).replace(/"/g, "&quot;");
+        html += "<div onclick=\"switchPage('program')\" title=\"" + evName + "\" style=\"background:var(--purple-accent);color:#fff;padding:2px 5px;border-radius:3px;font-size:9px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-broadcast\" style=\"font-size:8px\"></i> " + evName + "</div>";
+      } else {
+        var t=it.data;
+        var isDone=t.status==="Done";
+        var isProgress=t.status==="On Progress";
+        var pc=phaseColors[t.phase]||{bg:"var(--amber-bg)",fg:"var(--amber)"};
+        var safeTitle = t.title.replace(/"/g, "&quot;");
+        var opac = isDone ? "0.5" : "1";
+        var deco = isDone ? "text-decoration:line-through;" : "";
+        var bLeft = isProgress ? "border-left:2px solid " + pc.fg + ";" : "";
+        html += "<div draggable=\"true\" ondragstart=\"calDragStart(event,'" + t.id + "','" + t.projectId + "')\" onclick=\"event.stopPropagation()\" title=\"" + safeTitle + "\" style=\"background:" + pc.bg + ";color:" + pc.fg + ";padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:" + opac + ";" + deco + bLeft + "\">" + t.title + "</div>";
+      }
+    });
+    if(items.length>2){html += "<div style=\"font-size:8px;color:var(--text-muted);padding:1px 4px\">+" + (items.length-2) + " lagi</div>";}
+    html += "</div>";
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function dashCalNav(delta) {
+  window._dashCalMonth = (window._dashCalMonth!==undefined?window._dashCalMonth:new Date().getMonth()) + delta;
+  if(window._dashCalMonth<0){window._dashCalMonth=11;window._dashCalYear=(window._dashCalYear||new Date().getFullYear())-1;}
+  if(window._dashCalMonth>11){window._dashCalMonth=0;window._dashCalYear=(window._dashCalYear||new Date().getFullYear())+1;}
+  const el=document.getElementById('dash-calendar');
+  if(el) el.innerHTML=renderDashCalendar();
+}
+
+function dashCalToday() {
+  const now=new Date();
+  window._dashCalMonth=now.getMonth();
+  window._dashCalYear=now.getFullYear();
+  const el=document.getElementById('dash-calendar');
+  if(el) el.innerHTML=renderDashCalendar();
+}
+
+function renderDashUpcoming() {
+  const today=new Date(); today.setHours(0,0,0,0);
+  const future=new Date(today); future.setDate(future.getDate()+7);
+  const upcoming=projectTasks.filter(t=>{
+    if(!t.deadline || t.status==="Done") return false;
+    const d=new Date(t.deadline); d.setHours(0,0,0,0);
+    return d>=today && d<=future;
+  }).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+
+  const el=document.getElementById('dash-upcoming');
+  if(!el) return;
+
+  if(!upcoming.length){
+    el.innerHTML='<div style="text-align:center;color:var(--text-hint);font-size:12px;padding:20px 0"><i class="ti ti-check" style="font-size:24px;display:block;margin-bottom:6px"></i>Tidak ada task dalam 7 hari</div>';
+    return;
+  }
+
+  const phaseColors={"Pre Event":{bg:"#d1fae5",fg:"#059669"},"Hari H":{bg:"#fee2e2",fg:"#dc2626"},"Post Event":{bg:"#dbeafe",fg:"#2563eb"}};
+  let html='';
+  let lastDate='';
+  upcoming.forEach(t=>{
+    if(t.deadline!==lastDate){
+      const d=new Date(t.deadline); d.setHours(0,0,0,0);
+      const isToday=d.getTime()===today.getTime();
+      const isTomorrow=d.getTime()===today.getTime()+86400000;
+      const label=isToday?'<span style="color:var(--red);font-weight:700">Hari ini</span>':isTomorrow?'<span style="color:var(--amber);font-weight:700">Besok</span>':fmtDateShort(t.deadline);
+      html+='<div style="font-size:10px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">'+label+'</div>';
+      lastDate=t.deadline;
+    }
+    const pc=phaseColors[t.phase]||{bg:"var(--amber-bg)",fg:"var(--amber)"};
+    const proj=projects.find(p=>_idEq(p.id,t.projectId));
+    html+="<div style=\"display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer\" onclick=\"switchPage('program')\">";
+    html+='<div style="width:8px;height:8px;border-radius:2px;background:'+pc.fg+';flex-shrink:0"></div>';
+    html+='<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.title+'</div>';
+    if(proj) html+='<div style="font-size:10px;color:var(--text-muted)">'+proj.nama+'</div>';
+    html+='</div>';
+    html+='<span style="font-size:9px;padding:1px 6px;border-radius:8px;background:'+pc.bg+';color:'+pc.fg+';flex-shrink:0">'+t.phase+'</span>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+function initDashboard() {
+  const mc=document.querySelector('.lk-content');
+  if(mc) mc.scrollTop=0;
+  const calEl=document.getElementById('dash-calendar');
+  if(calEl) calEl.innerHTML=renderDashCalendar();
+  renderDashUpcoming();
 }
 
 function crmHTML(){
@@ -7204,6 +7367,48 @@ function projectHistoryHTML(){
   return header + historyProjects.map(renderHistoryCard).join('');
 }
 
+// ═══════════════════════════════════════════
+// DRAG-TO-RESCHEDULE (Global Calendar Helper)
+// ═══════════════════════════════════════════
+var _calDragTaskId = null;
+var _calDragProjId = null;
+
+function calDragStart(e, taskId, projId) {
+  _calDragTaskId = taskId;
+  _calDragProjId = projId;
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+async function calDrop(e, newDateISO) {
+  e.preventDefault();
+  if (!_calDragTaskId) return;
+  const task = projectTasks.find(t => _idEq(t.id, _calDragTaskId));
+  if (!task) return;
+  if (task.deadline === newDateISO) return; // no change
+
+  const oldDeadline = task.deadline;
+  task.deadline = newDateISO;
+
+  // Update Supabase
+  try {
+    await sb_update('tasks', task.id, { due_date: newDateISO });
+    showToast('Deadline diperbarui ke ' + fmtDateShort(newDateISO));
+  } catch(err) {
+    task.deadline = oldDeadline; // rollback
+    showToast('Gagal update deadline', 'error');
+  }
+
+  _calDragTaskId = null;
+  _calDragProjId = null;
+
+  // Re-render calendar yang aktif
+  const calEl = document.getElementById('project-tab-content');
+  if (calEl) calEl.innerHTML = renderMonthlyCalendar();
+  const dashCalEl = document.getElementById('dash-calendar');
+  if (dashCalEl) dashCalEl.innerHTML = renderDashCalendar();
+}
+
+
 function renderMonthlyCalendar(){
   const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
   const dayNames=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
@@ -7269,14 +7474,14 @@ function renderMonthlyCalendar(){
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr)">
       ${cells.map((cell,idx)=>{
-        const dateISO=cell.date.toISOString().split("T")[0];
+        const dateISO=toLocalDateISO(cell.date);
         const items=eventsByDate[dateISO]||[];
         const isToday=cell.date.getTime()===today.getTime();
         const isWeekend=cell.date.getDay()===0||cell.date.getDay()===6;
         const dayNum=cell.date.getDate();
         const borderRight=(idx%7!==6)?"0.5px solid var(--border)":"none";
         const borderBottom=idx<cells.length-7?"0.5px solid var(--border)":"none";
-        return `<div style="min-height:90px;padding:6px;border-right:${borderRight};border-bottom:${borderBottom};background:${!cell.inMonth?"#fafaf7":isToday?"var(--purple-light)":isWeekend?"#fafaf7":"var(--white)"};opacity:${cell.inMonth?1:0.5};display:flex;flex-direction:column;gap:3px;overflow:hidden">
+        return `<div ondragover="event.preventDefault();this.style.background='var(--purple-light)'" ondragleave="this.style.background=''" ondrop="calDrop(event,'${dateISO}');this.style.background=''" style="min-height:90px;padding:6px;border-right:${borderRight};border-bottom:${borderBottom};background:${!cell.inMonth?"#fafaf7":isToday?"var(--purple-light)":isWeekend?"#fafaf7":"var(--white)"};opacity:${cell.inMonth?1:0.5};display:flex;flex-direction:column;gap:3px;overflow:hidden">
           <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isToday?"var(--purple-mid)":!cell.inMonth?"var(--text-hint)":"var(--text)"};margin-bottom:2px">${dayNum}${isToday?'<span style="font-size:9px;margin-left:4px;background:var(--purple-accent);color:#fff;padding:1px 5px;border-radius:8px;font-weight:600">HARI INI</span>':""}</div>
           ${items.slice(0,3).map(it=>{
             if(it.type==="event"){
@@ -7285,11 +7490,13 @@ function renderMonthlyCalendar(){
             } else {
               const t=it.data;
               const person=getPersonById(t.assigneeId);
-              const isOverdue=t.status!=="Done"&&cell.date<today;
               const isDone=t.status==="Done";
-              const bg=isDone?"var(--green-bg)":isOverdue?"var(--red-bg)":"var(--amber-bg)";
-              const fg=isDone?"var(--green)":isOverdue?"var(--red)":"var(--amber)";
-              return `<div onclick="event.stopPropagation();openTaskModal('${t.id}','${t.projectId}')" title="${t.title} - ${person.nama}" style="background:${bg};color:${fg};padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;${isDone?'text-decoration:line-through':''}">${t.title}</div>`;
+              const isProgress=t.status==="On Progress";
+              const phaseColors={"Pre Event":{bg:"#d1fae5",fg:"#059669"},"Hari H":{bg:"#fee2e2",fg:"#dc2626"},"Post Event":{bg:"#dbeafe",fg:"#2563eb"}};
+              const pc=phaseColors[t.phase]||{bg:"var(--amber-bg)",fg:"var(--amber)"};
+              const opacity=isDone?"0.5":"1";
+              const borderLeft=isProgress?"3px solid "+pc.fg:"none";
+              return `<div draggable="true" ondragstart="calDragStart(event,'${t.id}','${t.projectId}')" onclick="event.stopPropagation();openTaskModal('${t.id}','${t.projectId}')" title="${t.title}" style="background:${pc.bg};color:${pc.fg};padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;opacity:${opacity};${isDone?'text-decoration:line-through':''}${borderLeft?';border-left:'+borderLeft:''}">${t.title}</div>`;
             }
           }).join("")}
           ${items.length>3?`<div style="font-size:9px;color:var(--text-muted);padding:2px 6px;font-weight:500">+${items.length-3} lainnya</div>`:""}
@@ -7311,7 +7518,7 @@ function renderMonthlyCalendar(){
       const next7=[];
       for(let i=0;i<=range;i++){
         const d=new Date(today);d.setDate(today.getDate()+i);
-        const iso=d.toISOString().split("T")[0];
+        const iso=toLocalDateISO(d);
         if(eventsByDate[iso]){
           eventsByDate[iso].forEach(it=>next7.push({date:iso,...it}));
         }
@@ -11561,7 +11768,7 @@ function ciRenderProducts() {
 
 function ciProductCardHTML(p) {
   const prof = ciProfiles.find(x => _idEq(x.id, p.competitor_id));
-  const imageUrls = Array.isArray(p.image_urls) && p.image_urls.length ? p.image_urls : (p.image_url ? [p.image_url] : []);
+  const imageUrls = (p.image_urls && Array.isArray(p.image_urls) && p.image_urls.length) ? p.image_urls : (p.image_url ? [p.image_url] : []);
   const mainImg = imageUrls[0] || null;
   const links = Array.isArray(p.links) && p.links.length ? p.links : (p.link ? [{label:'Landing Page', url:p.link}] : []);
   const fitur = Array.isArray(p.fitur) ? p.fitur : [];
@@ -11594,7 +11801,8 @@ async function ciOpenProductFullDetail(prod_id) {
   const prof = ciProfiles.find(x => _idEq(x.id, p.competitor_id));
   const prices = await sb_loadProductPrices(prod_id);
 
-  const imageUrls = Array.isArray(p.image_urls) ? p.image_urls : (p.image_url ? [p.image_url] : []);
+  const _rawImgUrls = p.image_urls && Array.isArray(p.image_urls) && p.image_urls.length ? p.image_urls : null;
+  const imageUrls = _rawImgUrls ? _rawImgUrls : (p.image_url ? [p.image_url] : []);
   const links = Array.isArray(p.links) ? p.links : (p.link ? [{label:'Landing Page', url:p.link}] : []);
   const fitur = Array.isArray(p.fitur) ? p.fitur : [];
 
@@ -11669,11 +11877,11 @@ async function ciOpenProductFullDetail(prod_id) {
         <div>
           <label class="form-label" style="margin-bottom:6px">Links</label>
           <div style="display:flex;flex-direction:column;gap:5px" id="ci-pfd-links">
-            ${overlay._links.map((l, i) => `
+            ${overlay._links.slice(1).map((l, i) => `
               <div style="display:flex;align-items:center;gap:6px">
-                <input class="form-input" placeholder="Label (cth: Landing Page)" value="${l.label||''}" style="width:130px;flex-shrink:0" oninput="ciPfdUpdateLink(${i},'label',this.value)">
-                <input class="form-input" placeholder="https://..." value="${l.url||''}" style="flex:1" oninput="ciPfdUpdateLink(${i},'url',this.value)">
-                <button onclick="ciPfdRemoveLink(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);flex-shrink:0"><i class="ti ti-x"></i></button>
+                <input class="form-input" placeholder="Label (cth: Instagram Post)" value="${l.label||''}" style="width:130px;flex-shrink:0" oninput="ciPfdUpdateLink(${i+1},'label',this.value)">
+                <input class="form-input" placeholder="https://..." value="${l.url||''}" style="flex:1" oninput="ciPfdUpdateLink(${i+1},'url',this.value)">
+                <button onclick="ciPfdRemoveLink(${i+1})" style="background:none;border:none;cursor:pointer;color:var(--red);flex-shrink:0"><i class="ti ti-x"></i></button>
               </div>`).join('')}
           </div>
           <button onclick="ciPfdAddLink()" class="btn btn-sm" style="margin-top:5px;font-size:11px;border-style:dashed;width:100%"><i class="ti ti-plus"></i> Tambah Link</button>
@@ -11768,7 +11976,9 @@ async function ciSaveProductDetail(prod_id) {
     const inputs = div.querySelectorAll('input');
     return { label: inputs[0]?.value||'', url: inputs[1]?.value||'' };
   }).filter(l => l.url);
-  const links = mainLink ? [{label:'Landing Page', url:mainLink}, ...extraLinks] : extraLinks;
+  // index 0 = main link (Landing Page), index 1+ = extra links
+  const mainLabel = modal?._links?.[0]?.label || 'Landing Page';
+  const links = mainLink ? [{label:mainLabel, url:mainLink}, ...extraLinks] : extraLinks;
 
   const row = {
     nama: document.getElementById('ci-pfd-nama')?.value.trim(),
