@@ -22,6 +22,13 @@
   --pink-bg:#fbeaf0;--pink:#993556;--radius:10px;--radius-lg:14px;
 }
 body{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+.ci-search-dropdown{position:relative;display:inline-block;width:100%}
+.ci-search-dropdown input{width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white);cursor:pointer}
+.ci-search-dropdown .ci-dd-list{position:absolute;top:100%;left:0;right:0;background:var(--white);border:0.5px solid var(--border-md);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:999;max-height:240px;overflow-y:auto;display:none}
+.ci-search-dropdown .ci-dd-list.open{display:block}
+.ci-search-dropdown .ci-dd-item{padding:7px 12px;font-size:12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-search-dropdown .ci-dd-item:hover{background:var(--purple-light);color:var(--purple-mid)}
+.ci-search-dropdown .ci-dd-item.selected{background:var(--purple-light);color:var(--purple-mid);font-weight:600}
 .ti{visibility:hidden}.fonts-loaded .ti{visibility:visible}
 html,body,.app,.main,.sidebar,.content,.modal-body,.pipeline-wrap,.pipeline-cards,.pipe-cards-ads,.lk-content,.cust-body,.pipeline-cards{scrollbar-width:none}html::-webkit-scrollbar,body::-webkit-scrollbar,.app::-webkit-scrollbar,.main::-webkit-scrollbar,.sidebar::-webkit-scrollbar,.content::-webkit-scrollbar,.modal-body::-webkit-scrollbar,.pipeline-wrap::-webkit-scrollbar,.pipeline-cards::-webkit-scrollbar,.pipe-cards-ads::-webkit-scrollbar,.lk-content::-webkit-scrollbar,.cust-body::-webkit-scrollbar{display:none}
 [style*="overflow-y:auto"],[style*="overflow-y: auto"],[style*="overflow:auto"],[style*="overflow: auto"]{scrollbar-width:none}[style*="overflow-y:auto"]::-webkit-scrollbar,[style*="overflow-y: auto"]::-webkit-scrollbar,[style*="overflow:auto"]::-webkit-scrollbar{display:none}
@@ -1639,7 +1646,7 @@ function _adsRowToJS(d) {
     id: d.id,
     evalId: d.eval_id || null,
     judul: d.judul || '',
-    tipe: d.format || 'Carousel',          // app uses `tipe`
+    tipe: d.format || 'Carousel',          // app uses tipe field
     format: d.format || 'Carousel',
     tanggal: d.tanggal || '',
     reach: d.reach, impr: d.impressions, views: d.views,
@@ -3216,6 +3223,7 @@ const tktPrioList=["High","Med","Low"];
 
 // ── HELPER FUNCTIONS ──────────────────────────────
 // _idEq: cocokin ID yang mungkin campur tipe (UUID string vs angka seed lama)
+
 function _idEq(a,b){ if(a===b) return true; if(a==null||b==null) return false; return String(a)===String(b); }
 function getDivisiById(id){return tktDivisi.find(x=>_idEq(x.id,id))||{nama:"—",color:"purple"};}
 function getPersonById(id){return tktPeople.find(x=>_idEq(x.id,id))||{nama:"—",email:"",divisiId:null,level:"staff",color:"purple"};}
@@ -5836,8 +5844,8 @@ function projectOverviewHTML(){
   const filtered = activeJenisFilter ? projects.filter(p=>p.jenis_program===activeJenisFilter) : projects;
 
   const jenisBadge = {
-    "Career Chaser's Academy": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>`,
-    "Free Class Series": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>`,
+    "CCA": '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>',
+    "Free Class Series": '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>',
   };
 
   return `
@@ -5856,7 +5864,7 @@ function projectOverviewHTML(){
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <select onchange="window._pjmJenisFilter=this.value;initProjectTab('overview')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text)">
           <option value="">Semua Jenis</option>
-          <option value="Career Chaser's Academy" ${activeJenisFilter==="Career Chaser's Academy"?"selected":""}>Career Chaser's Academy</option>
+          <option value="CCA" ${activeJenisFilter==="CCA"?"selected":""}>Career Chaser's Academy</option>
           <option value="Free Class Series" ${activeJenisFilter==="Free Class Series"?"selected":""}>Free Class Series</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="openProjectModal(null)"><i class="ti ti-plus"></i> Event Baru</button>
@@ -6214,7 +6222,7 @@ function ciRemoveTarget(idx) {
 
 
 function linkTemplatesSettingsHTML(){
-  return `<div style="margin-top:16px"><div style="font-size:13px;font-weight:700;margin-bottom:12px">Link Template per Jenis Program</div><div id="lkt-list"></div><div class="card" style="margin-top:12px;padding:16px"><div style="font-size:12px;font-weight:600;margin-bottom:10px">+ Tambah Template</div><div style="display:flex;flex-direction:column;gap:8px"><select id="lkt-jenis" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><option value="Free Class Series">Free Class Series</option><option value="Career Chaser's Academy">Career Chaser's Academy</option></select><input id="lkt-label" placeholder="Label (cth: Link Slido)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><input id="lkt-url" placeholder="URL (https://...)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><button onclick="addLinkTemplate()" class="btn btn-primary" style="font-size:12px">Tambah</button></div></div></div>`;
+  return `<div style="margin-top:16px"><div style="font-size:13px;font-weight:700;margin-bottom:12px">Link Template per Jenis Program</div><div id="lkt-list"></div><div class="card" style="margin-top:12px;padding:16px"><div style="font-size:12px;font-weight:600;margin-bottom:10px">+ Tambah Template</div><div style="display:flex;flex-direction:column;gap:8px"><select id="lkt-jenis" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><option value="Free Class Series">Free Class Series</option><option value="CCA">Career Chaser's Academy</option></select><input id="lkt-label" placeholder="Label (cth: Link Slido)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><input id="lkt-url" placeholder="URL (https://...)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><button onclick="addLinkTemplate()" class="btn btn-primary" style="font-size:12px">Tambah</button></div></div></div>`;
 }
 async function initLinkTemplatesSettings(){
   renderLinkTemplatesList();
@@ -6920,7 +6928,7 @@ function projectTasksHTML(){
     <div style="font-size:11px;color:var(--text-muted);font-weight:500">Event:</div>
     <select onchange="window._pjmTasksJenisFilter=this.value;initProjectTab('tasks')" style="font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
       <option value="">Semua Jenis</option>
-      <option value="Career Chaser's Academy" ${jenisFilter==="Career Chaser's Academy"?"selected":""}>CCA</option>
+      <option value="CCA" ${jenisFilter==="CCA"?"selected":""}>CCA</option>
       <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
     </select>
     <button class="btn btn-primary btn-sm" onclick="openProjectModal(null)"><i class="ti ti-plus"></i> Event Baru</button>
@@ -6929,8 +6937,8 @@ function projectTasksHTML(){
   activeProjectId = p.id;
 
   const jenisBadge = {
-    "Career Chaser's Academy": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>`,
-    "Free Class Series": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>`,
+    "CCA": '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>',
+    "Free Class Series": '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>',
   };
 
   return `
@@ -6938,7 +6946,7 @@ function projectTasksHTML(){
     <div style="font-size:11px;color:var(--text-muted);font-weight:500">Event:</div>
     <select onchange="window._pjmTasksJenisFilter=this.value;initProjectTab('tasks')" style="font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
       <option value="">Semua Jenis</option>
-      <option value="Career Chaser's Academy" ${jenisFilter==="Career Chaser's Academy"?"selected":""}>CCA</option>
+      <option value="CCA" ${jenisFilter==="CCA"?"selected":""}>CCA</option>
       <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
     </select>
     <select id="proj-select" onchange="activeProjectId=this.value;initProjectTab('tasks')" style="font-size:12px;min-width:240px;flex:1">
@@ -7084,165 +7092,116 @@ async function savePostEvent(projId) {
 function projectHistoryHTML(){
   const jenisFilter = window._pjmHistoryJenisFilter || '';
   const expandedId = window._pjmHistoryExpanded || null;
-  const jenisBadge = {
-    "Career Chaser's Academy": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>`,
-    "Free Class Series": `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>`,
-  };
+  const _ccaBadge = '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid);font-weight:600">CCA</span>';
+  const _fcsBadge = '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--teal-bg);color:var(--teal);font-weight:600">Free Class</span>';
+  const jenisBadge = {"CCA": _ccaBadge, "Free Class Series": _fcsBadge};
   const historyProjects = projects
-    .filter(p => ['Done','Cancelled'].includes(p.status))
+    .filter(p => p.status === 'Done' || p.status === 'Cancelled')
     .filter(p => jenisFilter ? p.jenis_program === jenisFilter : true)
     .sort((a,b) => b.tanggal.localeCompare(a.tanggal));
 
-  return `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-    <div style="font-size:12px;color:var(--text-muted)">${historyProjects.length} event selesai/dibatalkan</div>
-    <select onchange="window._pjmHistoryJenisFilter=this.value;initProjectTab('history')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
-      <option value="">Semua Jenis</option>
-      <option value="Career Chaser's Academy" ${jenisFilter==="Career Chaser's Academy"?"selected":""}>CCA</option>
-      <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
-    </select>
-  </div>
-  ${historyProjects.length === 0 ? `<div class="card"><div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="ti ti-history" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event selesai.</div></div>` :
-    `<div style="display:flex;flex-direction:column;gap:8px">
-    ${historyProjects.map(p => {
-      const tasks = projectTasks.filter(t => _idEq(t.projectId, p.id));
-      const done = tasks.filter(t => t.status === 'Done').length;
-      const pct = tasks.length ? Math.round(done/tasks.length*100) : 0;
-      const isDone = p.status === 'Done';
-      const isExpanded = _idEq(expandedId, p.id);
+  function renderHistoryCard(p) {
+    const tasks = projectTasks.filter(t => _idEq(t.projectId, p.id));
+    const done = tasks.filter(t => t.status === 'Done').length;
+    const pct = tasks.length ? Math.round(done/tasks.length*100) : 0;
+    const isDone = p.status === 'Done';
+    const isExpanded = _idEq(expandedId, p.id);
+    const grouped = {"Pre Event":[],"Hari H":[],"Post Event":[]};
+    tasks.forEach(t => { if(grouped[t.phase]) grouped[t.phase].push(t); });
 
-      // Task list grouped by phase
-      const grouped = {"Pre Event":[],"Hari H":[],"Post Event":[]};
-      tasks.forEach(t=>{ if(grouped[t.phase]) grouped[t.phase].push(t); });
-      const taskHTML = Object.entries(grouped).map(([phase, tlist]) => {
-        if(!tlist.length) return '';
-        return `<div style="margin-bottom:10px">
-          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:5px">${phase}</div>
-          ${tlist.map(t => {
-            const atts = Array.isArray(t.attachments) ? t.attachments : [];
-            const expandKey = 'hist_task_'+String(t.id);
-            const taskExpanded = window[expandKey] || false;
-            return `<div style="border-bottom:0.5px solid var(--border)">
-              <div onclick="window['${expandKey}']=!window['${expandKey}'];initProjectTab('history')" style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer">
-                <div style="width:14px;height:14px;border-radius:4px;background:${t.status==='Done'?'var(--purple-accent)':'var(--bg)'};border:1.5px solid ${t.status==='Done'?'var(--purple-accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                  ${t.status==='Done'?'<i class="ti ti-check" style="font-size:9px;color:white"></i>':''}
-                </div>
-                <div style="flex:1;font-size:12px;${t.status==='Done'?'text-decoration:line-through;color:var(--text-muted)':''}">${t.title}</div>
-                ${atts.length ? `<span style="font-size:10px;color:var(--text-muted)"><i class="ti ti-paperclip" style="font-size:10px"></i> ${atts.length}</span>` : ''}
-                <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${t.status==='Done'?'var(--green-bg)':'var(--bg)'};color:${t.status==='Done'?'var(--green)':'var(--text-muted)'}">${t.status}</span>
-                <i class="ti ti-chevron-${taskExpanded?'up':'down'}" style="font-size:11px;color:var(--text-muted)"></i>
-              </div>
-              ${taskExpanded ? `<div style="padding:6px 0 10px 22px">
-                ${t.desc ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${t.desc}</div>` : ''}
-                <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text-muted);margin-bottom:8px">
-                  ${t.deadline ? `<span><i class="ti ti-calendar" style="font-size:10px"></i> ${fmtDateShort(t.deadline)}</span>` : ''}
-                  ${t.priority ? `<span><i class="ti ti-flag" style="font-size:10px"></i> ${t.priority}</span>` : ''}
-                </div>
-                ${atts.length ? `<div style="display:flex;flex-direction:column;gap:5px">
-                  ${atts.map(a => {
-                    if(a.tipe==='link') return `<a href="${a.url}" target="_blank" style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:7px;text-decoration:none;color:var(--text)">
-                      <div style="width:28px;height:28px;border-radius:6px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-link" style="font-size:13px;color:var(--purple-mid)"></i></div>
-                      <div style="flex:1;min-width:0">
-                        <div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nama}</div>
-                        <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.url}</div>
-                      </div>
-                      <i class="ti ti-external-link" style="font-size:11px;color:var(--text-muted)"></i>
-                    </a>`;
-                    if(a.tipe==='image') return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:7px">
-                      <img src="${a.url||a.data}" style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0">
-                      <div style="font-size:11px;font-weight:500">${a.nama}</div>
-                      ${a.url?`<a href="${a.url}" target="_blank" style="color:var(--blue);font-size:10px;margin-left:auto">↗</a>`:''}
-                    </div>`;
-                    return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:7px">
-                      <div style="width:28px;height:28px;border-radius:6px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file" style="font-size:13px;color:var(--text-muted)"></i></div>
-                      <div style="font-size:11px;font-weight:500">${a.nama}</div>
-                    </div>`;
-                  }).join('')}
-                </div>` : `<div style="font-size:11px;color:var(--text-muted);font-style:italic">Tidak ada attachment.</div>`}
-              </div>` : ''}
-            </div>`;
-          }).join('')}
-        </div>`;
-      }).join('');
+    let taskHTML = '';
+    Object.entries(grouped).forEach(function([phase, tlist]) {
+      if(!tlist.length) return;
+      let taskItems = '';
+      tlist.forEach(function(t) {
+        const atts = Array.isArray(t.attachments) ? t.attachments : [];
+        const expandKey = 'hist_task_'+String(t.id);
+        const taskExpanded = window[expandKey] || false;
+        const checkBg = t.status==='Done' ? 'var(--purple-accent)' : 'var(--bg)';
+        const checkBorder = t.status==='Done' ? 'var(--purple-accent)' : 'var(--border)';
+        const checkIcon = t.status==='Done' ? '<i class="ti ti-check" style="font-size:9px;color:white"></i>' : '';
+        const titleStyle = t.status==='Done' ? 'text-decoration:line-through;color:var(--text-muted)' : '';
+        const statusBg = t.status==='Done' ? 'var(--green-bg)' : 'var(--bg)';
+        const statusColor = t.status==='Done' ? 'var(--green)' : 'var(--text-muted)';
+        const chevron = taskExpanded ? 'up' : 'down';
+        let attachHTML = atts.length ? '<span style="font-size:10px;color:var(--text-muted)"><i class="ti ti-paperclip" style="font-size:10px"></i> '+atts.length+'</span>' : '';
 
-      return `<div class="card" style="padding:0;overflow:hidden">
-        <!-- Header - clickable -->
-        <div onclick="window._pjmHistoryExpanded=(_idEq('${p.id}',window._pjmHistoryExpanded)?null:'${p.id}');initProjectTab('history')" style="padding:14px 16px;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px">
-              <div style="font-size:13px;font-weight:600">${p.nama}</div>
-              ${p.jenis_program && jenisBadge[p.jenis_program] ? jenisBadge[p.jenis_program] : ''}
-              <span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${isDone?'var(--green-bg)':'var(--bg)'};color:${isDone?'var(--green)':'var(--text-muted)'};font-weight:600">${p.status}</span>
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap">
-              <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} · ${p.waktu}</span>
-              ${p.speaker ? `<span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>` : ''}
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-            <div style="text-align:right">
-              <div style="font-size:10px;color:var(--text-muted)">Task</div>
-              <div style="font-size:14px;font-weight:700;color:${pct===100?'var(--green)':'var(--text-muted)'}">${done}/${tasks.length}</div>
-            </div>
-            ${(()=>{ const hp=p.capaian_peserta!=null||(p.notes_post&&p.notes_post.trim()); return `<button onclick="event.stopPropagation();openPostEventModal('${p.id}')" style="background:${hp?'var(--green-bg)':'var(--amber-bg)'};border:1px solid ${hp?'var(--green)':'var(--amber)'};border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:${hp?'var(--green)':'var(--amber)'};display:flex;align-items:center;gap:5px"><i class="ti ti-${hp?'check':'alert-triangle'}" style="font-size:11px"></i> Post-Event ${hp?'✓':'belum diisi'}</button>`; })()}
-            <button onclick="event.stopPropagation();openProjectModal('${p.id}')" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--text-muted)"><i class="ti ti-pencil"></i> Edit</button>
-            <i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:13px;color:var(--text-muted)"></i>
-          </div>
-        </div>
+        let expandedContent = '';
+        if(taskExpanded) {
+          let attItems = '';
+          atts.forEach(function(a) {
+            const isImg = a.type && a.type.startsWith('image');
+            attItems += '<a href="'+a.url+'" target="_blank" style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg);border-radius:6px;text-decoration:none;color:var(--text)">'
+              + (isImg ? '<img src="'+a.url+'" style="width:32px;height:32px;object-fit:cover;border-radius:4px">' : '<i class="ti ti-file" style="font-size:16px;color:var(--text-muted)"></i>')
+              + '<span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.name+'</span></a>';
+          });
+          expandedContent = '<div style="padding:6px 0 10px 22px">'
+            + (t.desc ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">'+t.desc+'</div>' : '')
+            + '<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text-muted);margin-bottom:8px">'
+            + (t.deadline ? '<span><i class="ti ti-calendar" style="font-size:10px"></i> '+fmtDateShort(t.deadline)+'</span>' : '')
+            + '</div>'
+            + (atts.length ? '<div style="display:flex;flex-direction:column;gap:5px">'+attItems+'</div>' : '')
+            + '</div>';
+        }
 
-        <!-- Expanded content -->
-        ${isExpanded ? `<div style="padding:0 16px 14px;border-top:0.5px solid var(--border)">
-          ${tasks.length === 0 ? `<div style="padding:12px 0;font-size:12px;color:var(--text-muted)">Belum ada task.</div>` : `<div style="padding-top:12px">${taskHTML}</div>`}
+        taskItems += '<div style="border-bottom:0.5px solid var(--border)">'
+          + '<div onclick="var _k=\"hist_task_\"+String(t.id);window[_k]=!window[_k];initProjectTab(\"history\")" style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer">'
+          + '<div style="width:14px;height:14px;border-radius:4px;background:'+checkBg+';border:1.5px solid '+checkBorder+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'+checkIcon+'</div>'
+          + '<div style="flex:1;font-size:12px;'+titleStyle+'">'+t.title+'</div>'
+          + attachHTML
+          + '<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+statusBg+';color:'+statusColor+'">'+t.status+'</span>'
+          + '<i class="ti ti-chevron-'+chevron+'" style="font-size:11px;color:var(--text-muted)"></i>'
+          + '</div>'
+          + expandedContent
+          + '</div>';
+      });
+      taskHTML += '<div style="margin-bottom:10px">'
+        + '<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:5px">'+phase+'</div>'
+        + taskItems
+        + '</div>';
+    });
 
-          ${(() => {
-            const templates = eventLinkTemplates.filter(t => t.jenis_program === p.jenis_program);
-            const adHoc = p.links || [];
-            if (!templates.length && !adHoc.length) return '';
-            const total = templates.length + adHoc.length;
-            const isOpen = window['_histLinks_'+p.id] || false;
-            return `<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
-              <div onclick="window['_histLinks_${p.id}']=!window['_histLinks_${p.id}'];initProjectTab('history')" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:${isOpen?'8px':'0'}">
-                <i class="ti ti-link" style="font-size:12px;color:var(--purple-accent)"></i>
-                <div style="font-size:11px;font-weight:600;flex:1">Links <span style="font-weight:400;color:var(--text-muted)">(${total})</span></div>
-                <i class="ti ti-chevron-${isOpen?'up':'down'}" style="font-size:11px;color:var(--text-muted)"></i>
-              </div>
-              ${isOpen ? `<div style="display:flex;flex-direction:column;gap:5px">
-                ${templates.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--purple-light);border-radius:var(--radius)">
-                  <i class="ti ti-bookmark" style="font-size:11px;color:var(--purple-accent);flex-shrink:0"></i>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:11px;font-weight:600;color:var(--purple-mid)">${t.label}</div>
-                    <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.url}</div>
-                  </div>
-                  <a href="${t.url}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:2px 7px;flex-shrink:0"><i class="ti ti-external-link" style="font-size:10px"></i></a>
-                </div>`).join('')}
-                ${adHoc.map(lk => `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border)">
-                  <i class="ti ti-link" style="font-size:11px;color:var(--text-muted);flex-shrink:0"></i>
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:11px;font-weight:600">${lk.label}</div>
-                    <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lk.url}</div>
-                  </div>
-                  <a href="${lk.url}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:2px 7px;flex-shrink:0"><i class="ti ti-external-link" style="font-size:10px"></i></a>
-                </div>`).join('')}
-              </div>` : ''}
-            </div>`;
-          })()}
+    const badge = p.jenis_program && jenisBadge[p.jenis_program] ? jenisBadge[p.jenis_program] : '';
+    const statusColor2 = isDone ? 'var(--green)' : 'var(--red)';
+    const pctColor = pct===100 ? 'var(--green)' : 'var(--purple-accent)';
 
-          ${p.capaian_peserta != null ? `
-          <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;gap:20px;flex-wrap:wrap">
-            <div>
-              <div style="font-size:10px;color:var(--text-muted)">Capaian Peserta</div>
-              <div style="font-size:13px;font-weight:600">${p.capaian_peserta} / ${p.target||'—'} <span style="font-size:11px;color:var(--text-muted)">(${p.target?Math.round(p.capaian_peserta/p.target*100):'?'}%)</span></div>
-            </div>
-            ${p.notes_post ? `<div style="flex:1;min-width:0">
-              <div style="font-size:10px;color:var(--text-muted)">Catatan Post-Event</div>
-              <div style="font-size:12px">${p.notes_post}</div>
-            </div>` : ''}
-          </div>` : ''}
-        </div>` : ''}
-      </div>`;
-    }).join('')}
-    </div>`
-  }`;
+    let html = '<div class="card" style="padding:0;overflow:hidden;margin-bottom:8px">'
+      + ('<div onclick="window._pjmHistoryExpanded=\'' + (isExpanded?'':p.id) + '\';initProjectTab(\'history\')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer">')
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      + '<div style="font-size:13px;font-weight:700">'+p.nama+'</div>'+badge
+      + '<span style="font-size:10px;padding:1px 7px;border-radius:8px;background:var(--bg);color:'+statusColor2+';font-weight:600">'+p.status+'</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--text-muted)">'+fmtDateShort(p.tanggal)+(p.platform?' · '+p.platform:'')+'</div>'
+      + '</div>'
+      + '<div style="text-align:right;flex-shrink:0">'
+      + '<div style="font-size:16px;font-weight:700;color:'+pctColor+'">'+pct+'%</div>'
+      + '<div style="font-size:10px;color:var(--text-muted)">'+done+'/'+tasks.length+' task</div>'
+      + '</div>'
+      + '<i class="ti ti-chevron-'+(isExpanded?'up':'down')+'" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i>'
+      + '</div>';
+
+    if(isExpanded) {
+      html += '<div style="padding:0 16px 16px">' + taskHTML + '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  let header = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">'
+    + '<div style="font-size:12px;color:var(--text-muted)">'+historyProjects.length+' event selesai/dibatalkan</div>'
+    + '<select onchange="window._pjmHistoryJenisFilter=this.value;initProjectTab(\'history\')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white)">'
+    + '<option value="">Semua Jenis</option>'
+    + '<option value="CCA" '+(jenisFilter==="CCA"?"selected":"")+'>CCA</option>'
+    + '<option value="Free Class Series" '+(jenisFilter==="Free Class Series"?"selected":"")+'>Free Class</option>'
+    + '</select>'
+    + '</div>';
+
+  if(!historyProjects.length) {
+    return header + '<div class="card"><div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="ti ti-history" style="font-size:32px;display:block;margin-bottom:8px"></i>Belum ada event selesai.</div></div>';
+  }
+
+  return header + historyProjects.map(renderHistoryCard).join('');
 }
 
 function renderMonthlyCalendar(){
@@ -10081,7 +10040,7 @@ async function daConfirmDelete(id) {
         <div class="cust-field-label">Jenis Program</div>
         <select id="pjm-jenis" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
           <option value="">— Pilih Jenis —</option>
-          <option value="Career Chaser's Academy">Career Chaser's Academy</option>
+          <option value="CCA">Career Chaser's Academy</option>
           <option value="Free Class Series">Free Class Series</option>
         </select>
       </div>
@@ -10165,7 +10124,7 @@ async function daConfirmDelete(id) {
         <div class="cust-field-label">Jenis Program</div>
         <select id="dup-jenis" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
           <option value="">— Pilih Jenis —</option>
-          <option value="Career Chaser's Academy">Career Chaser's Academy</option>
+          <option value="CCA">Career Chaser's Academy</option>
           <option value="Free Class Series">Free Class Series</option>
         </select>
       </div>
@@ -11124,15 +11083,13 @@ function competitorHTML() {
     <div class="tab active" id="citab-overview" onclick="switchCiTab('overview',this)"><i class="ti ti-layout-dashboard" style="font-size:11px"></i> Overview</div>
     <div class="tab" id="citab-profiles" onclick="switchCiTab('profiles',this)"><i class="ti ti-building-store" style="font-size:11px"></i> Kompetitor</div>
     <div class="tab" id="citab-products" onclick="switchCiTab('products',this)"><i class="ti ti-tag" style="font-size:11px"></i> Produk & Pricing</div>
-    <div class="tab" id="citab-snapshots" onclick="switchCiTab('snapshots',this)"><i class="ti ti-camera" style="font-size:11px"></i> Snapshots</div>
-    <div class="tab" id="citab-flags" onclick="switchCiTab('flags',this)"><i class="ti ti-flag" style="font-size:11px"></i> Intel Flags</div>
   </div>
   <div id="ci-tab-body" style="margin-top:14px"></div>`;
 }
 
 function switchCiTab(tab, el) {
   ciActiveTab = tab;
-  document.querySelectorAll('#citab-overview,#citab-profiles,#citab-products,#citab-snapshots,#citab-flags').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#citab-overview,#citab-profiles,#citab-products').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   renderCiTab();
 }
@@ -11143,11 +11100,9 @@ function renderCiTab() {
   if (ciActiveTab === 'overview') c.innerHTML = ciOverviewHTML();
   else if (ciActiveTab === 'profiles') {
     c.innerHTML = ciProfilesHTML();
-    ciProfiles.forEach(p => ciLoadProducts(p.id));
+    ciRenderProfiles();
   }
   else if (ciActiveTab === 'products') { c.innerHTML = ciProductsHTML(); ciLoadAllProducts(); }
-  else if (ciActiveTab === 'snapshots') c.innerHTML = ciSnapshotsHTML();
-  else if (ciActiveTab === 'flags') c.innerHTML = ciFlagsHTML();
 }
 
 // ─── HELPERS ──────────────────────────────────────────────
@@ -11176,10 +11131,7 @@ function ciOverviewHTML() {
   const direct = ciProfiles.filter(p => p.category === 'direct').length;
   const indirect = ciProfiles.filter(p => p.category === 'indirect').length;
   const subs = ciProfiles.filter(p => p.category === 'substitusi').length;
-  const threatMap = {};
-  ciSnapshots.forEach(s => { if (!threatMap[s.competitor_id]) threatMap[s.competitor_id] = s.threat_level; });
-  const highThreat = Object.values(threatMap).filter(t => t === 'high').length;
-  const recentFlags = [...ciFlags].sort((a,b) => new Date(b.flag_date) - new Date(a.flag_date)).slice(0, 6);
+  const highThreat = ciProfiles.filter(p => p.threat_level === 'high').length;
 
   return `
   <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
@@ -11218,41 +11170,93 @@ function ciOverviewHTML() {
     </div>
 
     <div class="card" style="padding:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-weight:700;font-size:13px">Intel Flags Terbaru</div>
-        <button class="btn btn-primary btn-sm" onclick="openCiFlagModal()" style="font-size:11px"><i class="ti ti-flag-plus"></i> Tambah</button>
-      </div>
-      ${recentFlags.length === 0 ? `<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:24px 0">Belum ada intel flags.</div>` :
-        recentFlags.map(f => {
-          const prof = ciProfiles.find(p => _idEq(p.id, f.competitor_id));
-          return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border)">
-            ${_ciFlagBadge(f.flag_type)}
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;color:var(--text);line-height:1.4">${f.description}</div>
-              <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${prof ? prof.name : '—'} · ${igFmtDate(f.flag_date)}</div>
-            </div>
-          </div>`;
-        }).join('')
+      <div style="font-weight:700;font-size:13px;margin-bottom:12px">Threat Level</div>
+      ${ciProfiles.filter(p => p.threat_level).length === 0 ? `<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:24px 0">Belum ada threat level yang diset.</div>` :
+        ciProfiles.filter(p => p.threat_level).sort((a,b) => {
+          const order = {high:0, medium:1, low:2};
+          return (order[a.threat_level]||3) - (order[b.threat_level]||3);
+        }).map(p => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">
+          ${_ciAvatar(p, 30)}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600">${p.name}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${p.niche||'—'}</div>
+          </div>
+          ${_ciThreatPill(p.threat_level)}
+        </div>`).join('')
       }
     </div>
   </div>`;
 }
 
 // ─── PROFILES ─────────────────────────────────────────────
+var _ciProfileFilter = { sort: '', audience: '', category: '' };
+
 function ciProfilesHTML() {
+  const allAudiences = [...new Set(ciProfiles.flatMap(p => p.target_audience ? p.target_audience.split('|').map(s=>s.trim()).filter(Boolean) : []))].sort();
   return `
-  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <select id="ci-prof-sort" onchange="_ciProfileFilter.sort=this.value;ciRenderProfiles()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        <option value="">Urutkan...</option>
+        <option value="ig_desc">Instagram Tertinggi</option>
+        <option value="tt_desc">TikTok Tertinggi</option>
+        <option value="yt_desc">YouTube Tertinggi</option>
+        <option value="threat_high">Threat: High</option>
+        <option value="threat_med">Threat: Medium</option>
+        <option value="threat_low">Threat: Low</option>
+        <option value="name_asc">Nama A-Z</option>
+      </select>
+      <select id="ci-prof-cat" onchange="_ciProfileFilter.category=this.value;ciRenderProfiles()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        <option value="">Semua Kategori</option>
+        <option value="direct">Direct</option>
+        <option value="indirect">Indirect</option>
+        <option value="substitusi">Substitusi</option>
+      </select>
+      <select id="ci-prof-aud" onchange="_ciProfileFilter.audience=this.value;ciRenderProfiles()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+        <option value="">Semua Target Audience</option>
+        ${allAudiences.map(a => `<option value="${a}">${a}</option>`).join('')}
+      </select>
+    </div>
     <button class="btn btn-primary" onclick="openCiProfileModal()" style="font-size:12px;display:flex;align-items:center;gap:6px"><i class="ti ti-plus" style="font-size:13px"></i> Tambah Kompetitor</button>
   </div>
-  ${ciProfiles.length === 0 ? `<div class="card" style="text-align:center;color:var(--text-muted);padding:48px">Belum ada kompetitor ditambahkan.</div>` :
-    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;align-items:start">
-    ${ciProfiles.map(p => {
-      const latestSnap = ciSnapshots.filter(s => _idEq(s.competitor_id, p.id)).sort((a,b) => new Date(b.snapshot_date) - new Date(a.snapshot_date))[0];
-      const snapCount = ciSnapshots.filter(s => _idEq(s.competitor_id, p.id)).length;
-      const flagCount = ciFlags.filter(f => _idEq(f.competitor_id, p.id)).length;
-      const threat = latestSnap ? latestSnap.threat_level : null;
+  <div id="ci-profiles-grid"></div>`;
+}
+
+function ciRenderProfiles() {
+  const grid = document.getElementById('ci-profiles-grid');
+  if (!grid) return;
+
+  let list = [...ciProfiles];
+
+  // Filter kategori
+  if (_ciProfileFilter.category) list = list.filter(p => p.category === _ciProfileFilter.category);
+
+  // Filter audience
+  if (_ciProfileFilter.audience) list = list.filter(p => p.target_audience && p.target_audience.includes(_ciProfileFilter.audience));
+
+  // Sort
+  const getFol = (p, pl) => {
+    const f = typeof p.followers === 'string' ? JSON.parse(p.followers||'{}') : (p.followers||{});
+    return parseInt(f[pl]||0);
+  };
+  const threatOrder = { high: 0, medium: 1, low: 2 };
+  if (_ciProfileFilter.sort === 'ig_desc') list.sort((a,b) => getFol(b,'Instagram') - getFol(a,'Instagram'));
+  else if (_ciProfileFilter.sort === 'tt_desc') list.sort((a,b) => getFol(b,'TikTok') - getFol(a,'TikTok'));
+  else if (_ciProfileFilter.sort === 'yt_desc') list.sort((a,b) => getFol(b,'YouTube') - getFol(a,'YouTube'));
+  else if (_ciProfileFilter.sort === 'threat_high') list = list.filter(p => p.threat_level === 'high');
+  else if (_ciProfileFilter.sort === 'threat_med') list = list.filter(p => p.threat_level === 'medium');
+  else if (_ciProfileFilter.sort === 'threat_low') list = list.filter(p => p.threat_level === 'low');
+  else if (_ciProfileFilter.sort === 'name_asc') list.sort((a,b) => a.name.localeCompare(b.name));
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="card" style="text-align:center;color:var(--text-muted);padding:48px">Tidak ada kompetitor yang sesuai filter.</div>`;
+    return;
+  }
+
+  grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
+    ${list.map(p => {
       const platforms = Array.isArray(p.platforms) ? p.platforms : (p.platforms ? JSON.parse(p.platforms) : []);
-      return `<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:0">
+      return `<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:0;height:100%">
         <!-- Header -->
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:10px">
@@ -11271,7 +11275,6 @@ function ciProfilesHTML() {
         <!-- Kategori + Threat -->
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
           ${_ciCatPill(p.category)}
-          ${_ciThreatPill(threat)}
         </div>
 
         <!-- Platform -->
@@ -11299,110 +11302,23 @@ function ciProfilesHTML() {
         <!-- Notes -->
         ${p.notes ? `<div style="font-size:11px;color:var(--text-muted);padding:7px 9px;background:var(--bg);border-radius:6px;margin-bottom:10px;line-height:1.5;border-left:3px solid var(--border-md)">${p.notes}</div>` : ''}
 
-        <!-- Produk Section -->
-        <div style="margin-bottom:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Produk</div>
-            <button onclick="ciOpenAddProduct('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--purple-accent);font-size:11px;display:flex;align-items:center;gap:3px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah</button>
-          </div>
-          <div id="ci-products-${p.id}" style="display:flex;flex-direction:column;gap:6px">
-            <div style="font-size:11px;color:var(--text-hint);font-style:italic">Memuat...</div>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:10px;border-top:0.5px solid var(--border)">
-          <div style="display:flex;gap:10px">
-            <span style="font-size:11px;color:var(--text-muted)"><i class="ti ti-camera" style="font-size:10px"></i> ${snapCount}</span>
-            <span style="font-size:11px;color:var(--text-muted)"><i class="ti ti-flag" style="font-size:10px"></i> ${flagCount}</span>
-            ${latestSnap ? `<span style="font-size:11px;color:var(--text-muted)">${igFmtDate(latestSnap.snapshot_date)}</span>` : ''}
-          </div>
-          <div style="display:flex;gap:5px">
-            <button onclick="openCiSnapshotModal('${p.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-camera" style="font-size:11px"></i> Snapshot</button>
-            <button onclick="openCiFlagModal('${p.id}')" class="btn btn-sm" style="font-size:10px;color:var(--amber)"><i class="ti ti-flag" style="font-size:11px"></i> Flag</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('')}
-    </div>`
-  }`;
-}
-
-// ─── SNAPSHOTS ────────────────────────────────────────────
-function ciSnapshotsHTML() {
-  const sorted = [...ciSnapshots].sort((a,b) => new Date(b.snapshot_date) - new Date(a.snapshot_date));
-  return `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div style="font-size:12px;color:var(--text-muted)">${sorted.length} snapshot tersimpan</div>
-    <button class="btn btn-primary" onclick="openCiSnapshotModal()" style="font-size:12px;display:flex;align-items:center;gap:6px"><i class="ti ti-plus" style="font-size:13px"></i> Tambah Snapshot</button>
-  </div>
-  ${sorted.length === 0 ? `<div class="card" style="text-align:center;color:var(--text-muted);padding:48px">Belum ada snapshot.</div>` :
-    `<div style="display:flex;flex-direction:column;gap:8px">
-    ${sorted.map(s => {
-      const prof = ciProfiles.find(p => _idEq(p.id, s.competitor_id));
-      const followers = s.followers ? (typeof s.followers === 'string' ? JSON.parse(s.followers) : s.followers) : {};
-      const follEntries = Object.entries(followers);
-      const _platIcon = { Instagram: 'brand-instagram', TikTok: 'brand-tiktok', YouTube: 'brand-youtube' };
-      const _platColor = { Instagram: '#E1306C', TikTok: '#010101', YouTube: '#FF0000' };
-      return `<div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:center;gap:9px">
-          ${_ciAvatar(prof, 32)}
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:12px">${prof ? prof.name : '—'}</div>
-            <div style="font-size:10px;color:var(--text-muted)">${igFmtDate(s.snapshot_date)}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:4px">
-            ${_ciThreatPill(s.threat_level)}
-            ${s.ads_active === true ? `<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:var(--green-bg);color:var(--green);font-weight:600">Ads ✓</span>` : ''}
-            <button onclick="openCiSnapshotModal(null,'${s.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;padding:2px"><i class="ti ti-pencil"></i></button>
-            <button onclick="deleteCiSnapshot('${s.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:12px;padding:2px"><i class="ti ti-trash"></i></button>
-          </div>
-        </div>
-
-        ${follEntries.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${follEntries.map(([k,v]) => `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg);border-radius:8px;flex:1;min-width:90px">
-            <i class="ti ti-${_platIcon[k]||'device-mobile'}" style="font-size:16px;color:${_platColor[k]||'var(--text-muted)'}"></i>
-            <div>
-              <div style="font-size:9px;color:var(--text-muted);line-height:1">${k}</div>
-              <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtN(v)}</div>
-            </div>
-          </div>`).join('')}
+        <!-- Followers + Threat -->
+        ${(p.followers && Object.keys(typeof p.followers==='string'?JSON.parse(p.followers):p.followers).length) || p.threat_level ? `<div style="margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          ${p.threat_level ? _ciThreatPill(p.threat_level) : ''}
+          ${Object.entries(typeof p.followers==='string'?JSON.parse(p.followers||'{}'):(p.followers||{})).map(([k,v]) => `<span style="font-size:11px;font-weight:600;color:var(--purple-mid)"><span style="color:var(--text-muted);font-weight:400">${k}</span> ${fmtN(v)}</span>`).join('')}
         </div>` : ''}
 
-        ${s.notes ? `<div style="font-size:11px;color:var(--text-muted);padding:6px 8px;background:var(--bg);border-radius:6px;line-height:1.5;border-left:2px solid var(--purple-accent)">${s.notes}</div>` : ''}
-      </div>`;
-    }).join('')}
-    </div>`
-  }`;
-}
-
-// ─── FLAGS ────────────────────────────────────────────────
-function ciFlagsHTML() {
-  const sorted = [...ciFlags].sort((a,b) => new Date(b.flag_date) - new Date(a.flag_date));
-  return `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div style="font-size:12px;color:var(--text-muted)">${sorted.length} intel flags</div>
-    <button class="btn btn-primary" onclick="openCiFlagModal()" style="font-size:12px;display:flex;align-items:center;gap:6px"><i class="ti ti-flag-plus" style="font-size:13px"></i> Tambah Flag</button>
-  </div>
-  ${sorted.length === 0 ? `<div class="card" style="text-align:center;color:var(--text-muted);padding:48px">Belum ada intel flags.</div>` :
-    `<div style="display:flex;flex-direction:column;gap:6px">
-    ${sorted.map(f => {
-      const prof = ciProfiles.find(p => _idEq(p.id, f.competitor_id));
-      return `<div class="card" style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px">
-        ${_ciFlagBadge(f.flag_type)}
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:var(--text);line-height:1.5">${f.description}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-            ${prof ? `<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)">${_ciAvatar(prof,16)} ${prof.name}</span>` : ''}
-            <span style="font-size:10px;color:var(--text-muted)">${igFmtDate(f.flag_date)}</span>
+        <!-- Footer -->
+        <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:auto;padding-top:10px;border-top:0.5px solid var(--border)">
+          <div style="display:flex;gap:5px">
+            <button onclick="openCiProfileModal('${p.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-pencil" style="font-size:11px"></i> Edit</button>
           </div>
         </div>
-        <button onclick="deleteCiFlag('${f.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;flex-shrink:0"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('')}
-    </div>`
-  }`;
+    </div>`;
 }
+
 
 // ─── MODAL PROFILE ────────────────────────────────────────
 function openCiProfileModal(profileId) {
@@ -11485,6 +11401,25 @@ function openCiProfileModal(profileId) {
         </div>
       </div>
 
+      <!-- Followers -->
+      <div>
+        <label class="form-label">Followers</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          ${['Instagram','TikTok','YouTube'].map(pl => {
+            const fols = p && p.followers ? (typeof p.followers==='string' ? JSON.parse(p.followers) : p.followers) : {};
+            return `<div><label style="font-size:10px;color:var(--text-muted)">${pl}</label><input class="form-input" id="ci-p-fol-${pl.toLowerCase()}" type="number" value="${fols[pl]||''}" placeholder="0" style="margin-top:3px"></div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Threat Level -->
+      <div>
+        <label class="form-label">Threat Level</label>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          ${['low','medium','high'].map(t => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="radio" name="ci-p-threat" value="${t}" ${p && p.threat_level===t ? 'checked' : !p && t==='medium' ? 'checked' : ''}> ${t.charAt(0).toUpperCase()+t.slice(1)}</label>`).join('')}
+        </div>
+      </div>
+
       <!-- Catatan -->
       <div>
         <label class="form-label">Catatan</label>
@@ -11526,6 +11461,11 @@ async function saveCiProfile(profileId) {
   const name = document.getElementById('ci-p-name').value.trim();
   if (!name) { showToast('Nama wajib diisi!', 'error'); return; }
   const platforms = [...document.querySelectorAll('#ci-profile-modal input[type=checkbox]:checked')].map(c => c.value);
+  const followers = {};
+  ['instagram','tiktok','youtube'].forEach(pl => {
+    const v = document.getElementById('ci-p-fol-'+pl)?.value;
+    if (v) followers[pl.charAt(0).toUpperCase()+pl.slice(1)] = parseInt(v);
+  });
   const row = {
     name,
     category: document.getElementById('ci-p-category').value,
@@ -11535,6 +11475,8 @@ async function saveCiProfile(profileId) {
     target_audience: [...document.querySelectorAll('#ci-target-pills input[type=checkbox]:checked')].map(c => c.value).join(' | '),
     notes: document.getElementById('ci-p-notes').value.trim(),
     logo_url: document.getElementById('ci-logo-url').value || null,
+    followers,
+    threat_level: document.querySelector('input[name="ci-p-threat"]:checked')?.value || null,
   };
   if (profileId) row.id = profileId;
   try {
@@ -11563,7 +11505,7 @@ function ciProductsHTML() {
       <select id="ci-prod-filter-kat" onchange="_ciProdFilter.kategori=this.value;ciRenderProducts()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
         ${categories.map(k => `<option value="${k==='Semua'?'':k}">${k}</option>`).join('')}
       </select>
-      <select id="ci-prod-filter-comp" onchange="_ciProdFilter.competitor=this.value;ciRenderProducts()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+<select id="ci-prod-filter-comp" onchange="_ciProdFilter.competitor=this.value;ciRenderProducts()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white);max-width:180px">
         <option value="">Semua Kompetitor</option>
         ${ciProfiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
       </select>
@@ -11576,6 +11518,7 @@ function ciProductsHTML() {
 async function ciLoadAllProducts() {
   _ciAllProducts = await sb_loadAllCompetitorProducts();
   ciRenderProducts();
+
 }
 
 function ciRenderProducts() {
@@ -11610,7 +11553,7 @@ function ciRenderProducts() {
         </div>
       </div>`).join('');
   } else {
-    c.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">
+    c.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;align-items:start">
       ${filtered.map(p => ciProductCardHTML(p)).join('')}
     </div>`;
   }
@@ -11618,19 +11561,29 @@ function ciRenderProducts() {
 
 function ciProductCardHTML(p) {
   const prof = ciProfiles.find(x => _idEq(x.id, p.competitor_id));
-  return `<div class="card" style="padding:0;overflow:hidden;cursor:pointer" onclick="ciOpenProductFullDetail('${p.id}')">
-    ${p.image_url ? `<img src="${p.image_url}" style="width:100%;height:130px;object-fit:cover;display:block">` :
-      `<div style="width:100%;height:130px;background:var(--purple-light);display:flex;align-items:center;justify-content:center"><i class="ti ti-package" style="font-size:32px;color:var(--purple-mid)"></i></div>`}
-    <div style="padding:10px 12px">
-      <div style="font-weight:600;font-size:12px;margin-bottom:4px">${p.nama||'—'}</div>
+  const imageUrls = Array.isArray(p.image_urls) && p.image_urls.length ? p.image_urls : (p.image_url ? [p.image_url] : []);
+  const mainImg = imageUrls[0] || null;
+  const links = Array.isArray(p.links) && p.links.length ? p.links : (p.link ? [{label:'Landing Page', url:p.link}] : []);
+  const fitur = Array.isArray(p.fitur) ? p.fitur : [];
+  return `<div class="card" style="padding:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column" onclick="ciOpenProductFullDetail('${p.id}')">
+    <div style="width:100%;height:200px;flex-shrink:0;overflow:hidden;background:var(--bg);position:relative">
+      ${mainImg ?
+        `<img src="${mainImg}" style="width:100%;height:100%;object-fit:cover;display:block">` :
+        `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><i class="ti ti-package" style="font-size:32px;color:var(--purple-mid)"></i></div>`}
+      ${imageUrls.length > 1 ? `<div style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.5);color:#fff;font-size:10px;padding:2px 6px;border-radius:8px"><i class="ti ti-photos" style="font-size:10px"></i> ${imageUrls.length}</div>` : ''}
+    </div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;flex:1">
+      <div style="font-weight:600;font-size:12px;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:32px">${p.nama||'—'}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:5px">
+        <div style="display:flex;align-items:center;gap:5px;min-width:0">
           ${prof ? _ciAvatar(prof, 18) : ''}
-          <span style="font-size:10px;color:var(--text-muted)">${prof ? prof.name : '—'}</span>
+          <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prof ? prof.name : '—'}</span>
         </div>
-        <span style="font-size:12px;font-weight:700;color:var(--purple-mid)">${p.harga ? 'Rp'+fmtN(p.harga) : '—'}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--purple-mid);flex-shrink:0;margin-left:6px">${p.harga ? 'Rp'+fmtN(p.harga) : '—'}</span>
       </div>
-      ${p.link ? `<a href="${p.link}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:var(--purple-accent);text-decoration:none;display:flex;align-items:center;gap:3px"><i class="ti ti-external-link" style="font-size:10px"></i> Landing page</a>` : ''}
+      <div style="margin-top:auto">
+        ${links.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${links.map(l => `<a href="${l.url}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:var(--purple-accent);text-decoration:none;display:flex;align-items:center;gap:2px;padding:2px 6px;background:var(--purple-light);border-radius:6px"><i class="ti ti-external-link" style="font-size:9px"></i>${l.label||'Link'}</a>`).join('')}</div>` : ''}
+      </div>
     </div>
   </div>`;
 }
@@ -11641,129 +11594,202 @@ async function ciOpenProductFullDetail(prod_id) {
   const prof = ciProfiles.find(x => _idEq(x.id, p.competitor_id));
   const prices = await sb_loadProductPrices(prod_id);
 
+  const imageUrls = Array.isArray(p.image_urls) ? p.image_urls : (p.image_url ? [p.image_url] : []);
+  const links = Array.isArray(p.links) ? p.links : (p.link ? [{label:'Landing Page', url:p.link}] : []);
+  const fitur = Array.isArray(p.fitur) ? p.fitur : [];
+
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.id = 'ci-prod-full-modal';
-  overlay.innerHTML = `
-  <div class="modal" style="max-width:540px;width:100%">
-    <div class="modal-header">
-      <div style="display:flex;align-items:center;gap:8px">
-        ${prof ? _ciAvatar(prof, 28) : ''}
-        <div>
-          <div class="modal-title">${p.nama||'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${prof ? prof.name : '—'}${p.kategori ? ' · '+p.kategori : ''}</div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="document.getElementById('ci-prod-full-modal').remove()"><i class="ti ti-x"></i></button>
-    </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+  overlay._imageUrls = [...imageUrls];
+  overlay._links = [...links];
+  overlay._fitur = [...fitur];
 
-      <!-- Gambar -->
-      <div id="ci-pfd-img-wrap" onclick="document.getElementById('ci-pfd-img-input').click()" style="cursor:pointer;border-radius:var(--radius);overflow:hidden;border:1.5px dashed var(--border-md)">
-        ${p.image_url ? `<img src="${p.image_url}" style="width:100%;max-height:200px;object-fit:cover;display:block">` :
-          `<div style="height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-hint)"><i class="ti ti-photo" style="font-size:24px;margin-bottom:4px"></i><div style="font-size:11px">Klik atau Ctrl+V untuk upload gambar</div></div>`}
+  const renderModal = () => {
+    overlay.innerHTML = `
+    <div class="modal" style="max-width:600px;width:100%;max-height:92vh;display:flex;flex-direction:column">
+      <div class="modal-header" style="flex-shrink:0">
+        <div class="modal-title">Edit Produk</div>
+        <button class="modal-close" onclick="document.getElementById('ci-prod-full-modal').remove()"><i class="ti ti-x"></i></button>
       </div>
-      <input type="file" id="ci-pfd-img-input" accept="image/*" style="display:none" onchange="ciHandleProdDetailImg(this.files[0],'${prod_id}')">
-      <input type="hidden" id="ci-pfd-img-url" value="${p.image_url||''}">
+      <div class="modal-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
 
-      <!-- Info -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label class="form-label">Nama Produk</label>
-          <input class="form-input" id="ci-pfd-nama" value="${p.nama||''}">
-        </div>
-        <div>
-          <label class="form-label">Kategori</label>
-          <select class="form-input" id="ci-pfd-kat">
-            <option value="">Pilih...</option>
-            ${CI_PROD_CATEGORIES.map(k => `<option value="${k}" ${p.kategori===k?'selected':''}>${k}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label class="form-label">Harga Saat Ini (Rp)</label>
-          <input class="form-input" type="number" id="ci-pfd-harga" value="${p.harga||''}">
-        </div>
-        <div>
-          <label class="form-label">Link Landing Page</label>
-          <input class="form-input" id="ci-pfd-link" value="${p.link||''}" placeholder="https://...">
-        </div>
-      </div>
-      <div>
-        <label class="form-label">Catatan</label>
-        <input class="form-input" id="ci-pfd-catatan" value="${p.catatan||''}" placeholder="cth: harga promo, bundling, dll">
-      </div>
+        <!-- Kompetitor (read-only info) -->
+        ${prof ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:var(--radius)">
+          ${_ciAvatar(prof, 28)}
+          <div style="font-size:12px;font-weight:600">${prof.name}</div>
+        </div>` : ''}
 
-      <!-- Pricing History -->
-      <div>
-        <div style="font-size:11px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
-          <span>Pricing History</span>
-          <button onclick="ciAddPriceHistory('${prod_id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-plus"></i> Catat Harga</button>
+        <!-- Gambar -->
+        <div>
+          <label class="form-label">Gambar</label>
+          <div id="ci-pg-img-preview-edit" onclick="document.getElementById('ci-pfd-img-input').click()" style="width:100%;min-height:110px;border:2px dashed var(--border-md);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg);overflow:hidden;margin-top:4px">
+            ${overlay._imageUrls.length ? `<div style="width:100%;position:relative">
+              <img src="${overlay._imageUrls[0]}" style="width:100%;height:auto;max-height:300px;object-fit:contain;display:block;background:var(--bg)">
+              ${overlay._imageUrls.length > 1 ? `<div style="padding:4px 8px;font-size:10px;color:var(--text-hint);background:var(--bg)"><i class="ti ti-photos" style="font-size:10px"></i> ${overlay._imageUrls.length} gambar</div>` : ''}
+            </div>` : `<div style="text-align:center;color:var(--text-hint)"><i class="ti ti-photo" style="font-size:24px;display:block;margin-bottom:4px"></i><div style="font-size:11px">Klik atau Ctrl+V</div></div>`}
+          </div>
+          <input type="file" id="ci-pfd-img-input" accept="image/*" style="display:none" onchange="ciPfdAddImg(this.files[0])">
         </div>
-        <div id="ci-price-history-list" style="display:flex;flex-direction:column;gap:5px">
-          ${prices.length === 0 ? `<div style="font-size:11px;color:var(--text-hint);font-style:italic;text-align:center;padding:12px">Belum ada history harga.</div>` :
-            prices.map(pr => `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:8px">
-              <div style="flex:1;min-width:0">
-                <div style="display:flex;align-items:center;gap:6px">
-                  <span style="font-size:12px;font-weight:700">${pr.harga ? 'Rp'+fmtN(pr.harga) : '—'}</span>
-                  ${pr.link ? `<a href="${pr.link}" target="_blank" style="font-size:10px;color:var(--purple-accent);display:flex;align-items:center;gap:2px"><i class="ti ti-external-link" style="font-size:10px"></i> Link</a>` : ''}
+
+        <!-- Nama + Kategori -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label class="form-label">Nama Produk *</label>
+            <input class="form-input" id="ci-pfd-nama" value="${p.nama||''}">
+          </div>
+          <div>
+            <label class="form-label">Kategori</label>
+            <select class="form-input" id="ci-pfd-kat">
+              <option value="">Pilih...</option>
+              ${CI_PROD_CATEGORIES.map(k => `<option value="${k}" ${p.kategori===k?'selected':''}>${k}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- Harga + Link utama -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label class="form-label">Harga (Rp)</label>
+            <input class="form-input" type="number" id="ci-pfd-harga" value="${p.harga||''}" placeholder="299000">
+          </div>
+          <div>
+            <label class="form-label">Link Landing Page</label>
+            <input class="form-input" id="ci-pfd-link-main" value="${overlay._links[0]?.url||p.link||''}" placeholder="https://...">
+          </div>
+        </div>
+
+        <!-- Catatan -->
+        <div>
+          <label class="form-label">Catatan</label>
+          <input class="form-input" id="ci-pfd-catatan" value="${p.catatan||''}" placeholder="cth: harga promo, bundling">
+        </div>
+
+        <!-- Multiple Links -->
+        <div>
+          <label class="form-label" style="margin-bottom:6px">Links</label>
+          <div style="display:flex;flex-direction:column;gap:5px" id="ci-pfd-links">
+            ${overlay._links.map((l, i) => `
+              <div style="display:flex;align-items:center;gap:6px">
+                <input class="form-input" placeholder="Label (cth: Landing Page)" value="${l.label||''}" style="width:130px;flex-shrink:0" oninput="ciPfdUpdateLink(${i},'label',this.value)">
+                <input class="form-input" placeholder="https://..." value="${l.url||''}" style="flex:1" oninput="ciPfdUpdateLink(${i},'url',this.value)">
+                <button onclick="ciPfdRemoveLink(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);flex-shrink:0"><i class="ti ti-x"></i></button>
+              </div>`).join('')}
+          </div>
+          <button onclick="ciPfdAddLink()" class="btn btn-sm" style="margin-top:5px;font-size:11px;border-style:dashed;width:100%"><i class="ti ti-plus"></i> Tambah Link</button>
+        </div>
+
+        <!-- Fitur / Benefit -->
+        <div>
+          <label class="form-label" style="margin-bottom:6px">Fitur / Benefit</label>
+          <div style="display:flex;flex-direction:column;gap:5px" id="ci-pfd-fitur">
+            ${overlay._fitur.map((f, i) => `
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="color:var(--purple-mid);font-size:12px;flex-shrink:0">✦</span>
+                <input class="form-input" value="${f}" style="flex:1" oninput="ciPfdUpdateFitur(${i},this.value)" placeholder="cth: Akses seumur hidup">
+                <button onclick="ciPfdRemoveFitur(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);flex-shrink:0"><i class="ti ti-x"></i></button>
+              </div>`).join('')}
+          </div>
+          <button onclick="ciPfdAddFitur()" class="btn btn-sm" style="margin-top:5px;font-size:11px;border-style:dashed;width:100%"><i class="ti ti-plus"></i> Tambah Fitur</button>
+        </div>
+
+        <!-- Pricing History -->
+        <div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+            <span>Pricing History</span>
+            <button onclick="ciAddPriceHistory('${prod_id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-plus"></i> Catat Harga</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            ${prices.length === 0 ? `<div style="font-size:11px;color:var(--text-hint);font-style:italic;text-align:center;padding:12px">Belum ada history harga.</div>` :
+              prices.map(pr => `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:8px">
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                    <span style="font-size:12px;font-weight:700">${pr.harga ? 'Rp'+fmtN(pr.harga) : '—'}</span>
+                    ${pr.link ? `<a href="${pr.link}" target="_blank" style="font-size:10px;color:var(--purple-accent);display:flex;align-items:center;gap:2px"><i class="ti ti-external-link" style="font-size:10px"></i> Link</a>` : ''}
+                  </div>
+                  <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${igFmtDate(pr.recorded_at)}${pr.catatan ? ' · '+pr.catatan : ''}</div>
                 </div>
-                <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${igFmtDate(pr.recorded_at)}${pr.catatan ? ' · '+pr.catatan : ''}</div>
-              </div>
-            </div>`).join('')
-          }
+              </div>`).join('')
+            }
+          </div>
         </div>
-      </div>
 
-    </div>
-    <div class="modal-footer">
-      <button class="btn" style="color:var(--red)" onclick="ciDeleteProductFromDetail('${prod_id}','${p.competitor_id}')"><i class="ti ti-trash"></i> Hapus</button>
-      <button class="btn" onclick="document.getElementById('ci-prod-full-modal').remove()">Tutup</button>
-      <button class="btn btn-primary" onclick="ciSaveProductDetail('${prod_id}')"><i class="ti ti-check"></i> Simpan</button>
-    </div>
-  </div>`;
+      </div>
+      <div class="modal-footer" style="flex-shrink:0">
+        <button class="btn" style="color:var(--red)" onclick="ciDeleteProductFromDetail('${prod_id}','${p.competitor_id}')"><i class="ti ti-trash"></i> Hapus</button>
+        <button class="btn" onclick="document.getElementById('ci-prod-full-modal').remove()">Tutup</button>
+        <button class="btn btn-primary" onclick="ciSaveProductDetail('${prod_id}')"><i class="ti ti-check"></i> Simpan</button>
+      </div>
+    </div>`;
+  };
+
+  renderModal();
   document.body.appendChild(overlay);
 
-  // Paste handler untuk gambar
+  // Expose helper functions via overlay
+  window.ciPfdAddImg = async (file) => {
+    if (!file) return;
+    const path = `competitor-products/${Date.now()}_${file.name||'img.png'}`;
+    const uploaded = await sb_uploadDesignFile(file, path);
+    if (!uploaded) { showToast('Gagal upload', 'error'); return; }
+    const url = sb_designPublicUrl(uploaded);
+    overlay._imageUrls.push(url);
+    renderModal(); document.body.appendChild(overlay);
+    showToast('Gambar ditambahkan ✓');
+  };
+  window.ciPfdRemoveImg = (i) => { overlay._imageUrls.splice(i, 1); renderModal(); document.body.appendChild(overlay); };
+  window.ciPfdAddLink = () => { overlay._links.push({label:'', url:''}); renderModal(); document.body.appendChild(overlay); };
+  window.ciPfdRemoveLink = (i) => { overlay._links.splice(i, 1); renderModal(); document.body.appendChild(overlay); };
+  window.ciPfdUpdateLink = (i, key, val) => { if (overlay._links[i]) overlay._links[i][key] = val; };
+  window.ciPfdAddFitur = () => { overlay._fitur.push(''); renderModal(); document.body.appendChild(overlay); };
+  window.ciPfdRemoveFitur = (i) => { overlay._fitur.splice(i, 1); renderModal(); document.body.appendChild(overlay); };
+  window.ciPfdUpdateFitur = (i, val) => { overlay._fitur[i] = val; };
+
+  // Paste handler
   overlay._pasteFn = (e) => {
     const item = [...e.clipboardData.items].find(i => i.type.startsWith('image'));
-    if (item) ciHandleProdDetailImg(item.getAsFile(), prod_id);
+    if (item) window.ciPfdAddImg(item.getAsFile());
   };
   document.addEventListener('paste', overlay._pasteFn);
 }
 
 async function ciHandleProdDetailImg(file, prod_id) {
-  if (!file) return;
-  const path = `competitor-products/${Date.now()}_${file.name||'img.png'}`;
-  const uploaded = await sb_uploadDesignFile(file, path);
-  if (!uploaded) { showToast('Gagal upload', 'error'); return; }
-  const url = sb_designPublicUrl(uploaded);
-  document.getElementById('ci-pfd-img-url').value = url;
-  const wrap = document.getElementById('ci-pfd-img-wrap');
-  if (wrap) wrap.innerHTML = `<img src="${url}" style="width:100%;max-height:200px;object-fit:cover;display:block">`;
-  showToast('Gambar terupload ✓');
+  // Legacy — not used anymore
 }
 
 async function ciSaveProductDetail(prod_id) {
+  const modal = document.getElementById('ci-prod-full-modal');
+  // Collect latest values from inputs
+  const fiturEls = document.querySelectorAll('#ci-pfd-fitur > div input');
+  const fitur = [...fiturEls].map(i => i.value.trim()).filter(Boolean);
+  const mainLink = document.getElementById('ci-pfd-link-main')?.value.trim() || null;
+  const linksEls = document.querySelectorAll('#ci-pfd-links > div');
+  const extraLinks = [...linksEls].map(div => {
+    const inputs = div.querySelectorAll('input');
+    return { label: inputs[0]?.value||'', url: inputs[1]?.value||'' };
+  }).filter(l => l.url);
+  const links = mainLink ? [{label:'Landing Page', url:mainLink}, ...extraLinks] : extraLinks;
+
   const row = {
     nama: document.getElementById('ci-pfd-nama')?.value.trim(),
     kategori: document.getElementById('ci-pfd-kat')?.value || null,
     harga: parseInt(document.getElementById('ci-pfd-harga')?.value) || null,
-    link: document.getElementById('ci-pfd-link')?.value.trim() || null,
     catatan: document.getElementById('ci-pfd-catatan')?.value.trim() || null,
-    image_url: document.getElementById('ci-pfd-img-url')?.value || null,
+    image_url: modal?._imageUrls?.[0] || null,
+    image_urls: modal?._imageUrls || [],
+    links,
+    fitur,
+    link: mainLink,
   };
   await sb_updateCompetitorProduct(prod_id, row);
-  // Update local cache
   const idx = _ciAllProducts.findIndex(p => _idEq(p.id, prod_id));
   if (idx > -1) _ciAllProducts[idx] = { ..._ciAllProducts[idx], ...row };
-  const modal = document.getElementById('ci-prod-full-modal');
   if (modal?._pasteFn) document.removeEventListener('paste', modal._pasteFn);
   modal?.remove();
   ciRenderProducts();
   showToast('Produk tersimpan ✓');
 }
+
 
 function ciAddPriceHistory(prod_id) {
   const today = new Date().toISOString().split('T')[0];
@@ -11849,7 +11875,8 @@ function ciOpenAddProductGlobal() {
       <div class="modal-title">Tambah Produk Kompetitor</div>
       <button class="modal-close" onclick="document.getElementById('ci-prod-add-global').remove()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow-y:auto">
+      <!-- Kompetitor -->
       <div>
         <label class="form-label">Kompetitor *</label>
         <select class="form-input" id="ci-pg-comp">
@@ -11857,11 +11884,16 @@ function ciOpenAddProductGlobal() {
           ${ciProfiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
         </select>
       </div>
-      <div id="ci-pg-img-preview" onclick="document.getElementById('ci-pg-img-input').click()" style="width:100%;height:110px;border:2px dashed var(--border-md);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg);overflow:hidden">
-        <div style="text-align:center;color:var(--text-hint)"><i class="ti ti-photo" style="font-size:24px;display:block;margin-bottom:4px"></i><div style="font-size:11px">Klik atau Ctrl+V untuk upload gambar</div></div>
+      <!-- Gambar -->
+      <div>
+        <label class="form-label">Gambar</label>
+        <div id="ci-pg-img-preview" onclick="document.getElementById('ci-pg-img-input').click()" style="width:100%;height:110px;border:2px dashed var(--border-md);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg);overflow:hidden;margin-top:4px">
+          <div style="text-align:center;color:var(--text-hint)"><i class="ti ti-photo" style="font-size:24px;display:block;margin-bottom:4px"></i><div style="font-size:11px">Klik atau Ctrl+V</div></div>
+        </div>
+        <input type="file" id="ci-pg-img-input" accept="image/*" style="display:none" onchange="ciHandleProdGlobalImg(this.files[0])">
+        <input type="hidden" id="ci-pg-img-url">
       </div>
-      <input type="file" id="ci-pg-img-input" accept="image/*" style="display:none" onchange="ciHandleProdGlobalImg(this.files[0])">
-      <input type="hidden" id="ci-pg-img-url">
+      <!-- Nama + Kategori -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label class="form-label">Nama Produk *</label>
@@ -11875,6 +11907,7 @@ function ciOpenAddProductGlobal() {
           </select>
         </div>
       </div>
+      <!-- Harga + Link -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label class="form-label">Harga (Rp)</label>
@@ -11885,9 +11918,22 @@ function ciOpenAddProductGlobal() {
           <input class="form-input" id="ci-pg-link" placeholder="https://...">
         </div>
       </div>
+      <!-- Catatan -->
       <div>
         <label class="form-label">Catatan</label>
         <input class="form-input" id="ci-pg-catatan" placeholder="cth: harga promo, bundling">
+      </div>
+      <!-- Links tambahan -->
+      <div>
+        <label class="form-label">Links Tambahan</label>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px" id="ci-pg-links-list"></div>
+        <button onclick="ciPgAddLink()" class="btn btn-sm" style="margin-top:5px;font-size:11px;border-style:dashed;width:100%"><i class="ti ti-plus"></i> Tambah Link</button>
+      </div>
+      <!-- Fitur / Benefit -->
+      <div>
+        <label class="form-label">Fitur / Benefit</label>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px" id="ci-pg-fitur-list"></div>
+        <button onclick="ciPgAddFitur()" class="btn btn-sm" style="margin-top:5px;font-size:11px;border-style:dashed;width:100%"><i class="ti ti-plus"></i> Tambah Fitur</button>
       </div>
     </div>
     <div class="modal-footer">
@@ -11902,6 +11948,24 @@ function ciOpenAddProductGlobal() {
     if (item) ciHandleProdGlobalImg(item.getAsFile());
   };
   document.addEventListener('paste', overlay._pasteFn);
+}
+
+function ciPgAddLink() {
+  const c = document.getElementById('ci-pg-links-list');
+  if (!c) return;
+  const d = document.createElement('div');
+  d.style.cssText = 'display:flex;align-items:center;gap:6px';
+  d.innerHTML = '<input class="form-input" placeholder="Label (cth: Landing Page)" style="width:130px;flex-shrink:0"><input class="form-input" placeholder="https://..." style="flex:1"><button onclick="this.closest(\'div\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red)"><i class="ti ti-x"></i></button>';
+  c.appendChild(d);
+}
+
+function ciPgAddFitur() {
+  const c = document.getElementById('ci-pg-fitur-list');
+  if (!c) return;
+  const d = document.createElement('div');
+  d.style.cssText = 'display:flex;align-items:center;gap:6px';
+  d.innerHTML = '<span style="color:var(--purple-mid);font-size:12px;flex-shrink:0">✦</span><input class="form-input" placeholder="cth: Akses seumur hidup" style="flex:1"><button onclick="this.closest(\'div\').remove()" style="background:none;border:none;cursor:pointer;color:var(--red)"><i class="ti ti-x"></i></button>';
+  c.appendChild(d);
 }
 
 async function ciHandleProdGlobalImg(file) {
@@ -11920,14 +11984,26 @@ async function ciSaveProductGlobal() {
   const competitor_id = document.getElementById('ci-pg-comp')?.value;
   const nama = document.getElementById('ci-pg-nama')?.value.trim();
   if (!competitor_id || !nama) { showToast('Kompetitor & nama wajib diisi', 'error'); return; }
+  const mainLink = document.getElementById('ci-pg-link')?.value.trim() || null;
+  const linkDivs = document.querySelectorAll('#ci-pg-links-list > div');
+  const extraLinks = [...linkDivs].map(div => {
+    const inputs = div.querySelectorAll('input');
+    return { label: inputs[0]?.value||'', url: inputs[1]?.value||'' };
+  }).filter(l => l.url);
+  const links = mainLink ? [{label:'Landing Page', url:mainLink}, ...extraLinks] : extraLinks;
+  const fiturDivs = document.querySelectorAll('#ci-pg-fitur-list > div input.form-input');
+  const fitur = [...fiturDivs].map(i => i.value.trim()).filter(Boolean);
   const row = {
     competitor_id,
     nama,
     kategori: document.getElementById('ci-pg-kat')?.value || null,
     harga: parseInt(document.getElementById('ci-pg-harga')?.value) || null,
-    link: document.getElementById('ci-pg-link')?.value.trim() || null,
+    link: mainLink,
+    links,
+    fitur,
     catatan: document.getElementById('ci-pg-catatan')?.value.trim() || null,
     image_url: document.getElementById('ci-pg-img-url')?.value || null,
+    image_urls: document.getElementById('ci-pg-img-url')?.value ? [document.getElementById('ci-pg-img-url').value] : [],
   };
   try {
     const saved = await sb_saveCompetitorProduct(row);
@@ -12117,7 +12193,7 @@ async function ciSaveProduct(competitor_id) {
 
 
 // ─── DATA & ACTIONS ───────────────────────────────────────
-var ciProfiles = [], ciSnapshots = [], ciFlags = [], ciActiveTab = 'overview';
+var ciProfiles = [], ciActiveTab = 'overview';
 var CI_TARGET_AUDIENCE = JSON.parse(localStorage.getItem('ccc_ci_target_audience') || JSON.stringify([
   'Mahasiswa Tingkat Akhir',
   'Fresh Graduate (< 1 tahun)',
@@ -12144,8 +12220,6 @@ var CI_PROD_CATEGORIES = JSON.parse(localStorage.getItem('ccc_ci_prod_categories
 
 async function reloadCiData() {
   ciProfiles = await sb_loadCompetitorProfiles();
-  ciSnapshots = await sb_loadCompetitorSnapshots();
-  ciFlags = await sb_loadCompetitorFlags();
 }
 
 function ciSelectCompetitor(id) {
