@@ -2679,10 +2679,12 @@ function _blastGetRecipients() {
 }
 
 function _blastBuildHTML(recipient) {
-  const headerTitle = document.getElementById('bl-header-title')?.value || 'CareerCclub';
-  const headerSub = document.getElementById('bl-header-subtitle')?.value || '';
+  const _nama = recipient?.name || 'Kak';
+  const _replaceNama = (s) => s.replace(/\{nama\}/g, _nama);
+  const headerTitle = _replaceNama(document.getElementById('bl-header-title')?.value || 'CareerCclub');
+  const headerSub = _replaceNama(document.getElementById('bl-header-subtitle')?.value || '');
   const headerColor = document.getElementById('bl-header-color')?.value || '#2d2777';
-  const body = (document.getElementById('bl-body')?.value || '').replace(/\n/g, '<br>').replace(/\{nama\}/g, recipient?.name || 'Kak');
+  const body = _replaceNama((document.getElementById('bl-body')?.value || '').replace(/\n/g, '<br>'));
   const ctaText = document.getElementById('bl-cta-text')?.value;
   const ctaUrl = document.getElementById('bl-cta-url')?.value;
   const footer = document.getElementById('bl-footer')?.value || '© 2026 CareerCclub';
