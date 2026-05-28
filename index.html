@@ -2399,7 +2399,7 @@ async function sb_insertBuyer(b) { return await sb_insert('buyers', _buyerJSToRo
 async function sb_updateBuyer(id, b) { return await sb_update('buyers', id, _buyerJSToRow(b)); }
 async function sb_deleteBuyer(id) { return await sb_delete('buyers', id); }
 
-async function initCRM(){buyers = await sb_loadBuyers();populateFilters();renderBuyers();renderCRMStats();}
+async function initCRM(){buyers = await sb_loadBuyers();populateFilters();renderBuyers();renderCRMStats();crmTab('buyers');}
 function renderCRMStats(){
   const el=document.getElementById("crm-stats");if(!el)return;
   const total=buyers.length,belumPool=buyers.filter(b=>!b.talentPool).length,
