@@ -2062,6 +2062,11 @@ function toLocalDateISO(date) {
 }
 
 
+function renderDashCalendarInPlace() {
+  const el = document.getElementById('dash-calendar');
+  if (el) el.innerHTML = renderDashCalendar();
+}
+
 function renderDashCalendar() {
   const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
   const dayNames=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
@@ -2125,7 +2130,9 @@ function renderDashCalendar() {
     var dayColor = isToday ? "var(--purple-mid)" : !cell.inMonth ? "var(--text-hint)" : "var(--text)";
     var nowBadge = isToday ? "<span style=\"font-size:8px;margin-left:3px;background:var(--purple-accent);color:#fff;padding:1px 4px;border-radius:6px\">NOW</span>" : "";
     html += "<div style=\"font-size:10px;font-weight:" + dayWeight + ";color:" + dayColor + ";margin-bottom:1px\">" + dayNum + nowBadge + "</div>";
-    items.slice(0,2).forEach(function(it){
+    var showAll = window['_calExpanded_'+dateISO] || false;
+    var visItems = showAll ? items : items.slice(0,2);
+    visItems.forEach(function(it){
       if(it.type==="event"){
         var evName = it.data.nama.substring(0,15).replace(/"/g, "&quot;");
         html += "<div onclick=\"switchPage('program')\" title=\"" + evName + "\" style=\"background:var(--purple-accent);color:#fff;padding:2px 5px;border-radius:3px;font-size:9px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-broadcast\" style=\"font-size:8px\"></i> " + evName + "</div>";
@@ -2141,7 +2148,11 @@ function renderDashCalendar() {
         html += "<div draggable=\"true\" ondragstart=\"calDragStart(event,'" + t.id + "','" + t.projectId + "')\" onclick=\"event.stopPropagation()\" title=\"" + safeTitle + "\" style=\"background:" + pc.bg + ";color:" + pc.fg + ";padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:" + opac + ";" + deco + bLeft + "\">" + t.title + "</div>";
       }
     });
-    if(items.length>2){html += "<div style=\"font-size:8px;color:var(--text-muted);padding:1px 4px\">+" + (items.length-2) + " lagi</div>";}
+    if(items.length>2){
+      var expandKey2 = "_calExpanded_" + dateISO;
+      var expandLabel = showAll ? "Sempit ▲" : ("+" + (items.length-2) + " lainnya ▼");
+      html += "<div onclick=\"window['" + expandKey2 + "']=!window['" + expandKey2 + "'];renderDashCalendarInPlace()\" style=\"font-size:8px;color:var(--purple-accent);padding:1px 4px;cursor:pointer;font-weight:600\">" + expandLabel + "</div>";
+    }
     html += "</div>";
   });
   html += '</div></div>';
@@ -7483,7 +7494,7 @@ function renderMonthlyCalendar(){
         const borderBottom=idx<cells.length-7?"0.5px solid var(--border)":"none";
         return `<div ondragover="event.preventDefault();this.style.background='var(--purple-light)'" ondragleave="this.style.background=''" ondrop="calDrop(event,'${dateISO}');this.style.background=''" style="min-height:90px;padding:6px;border-right:${borderRight};border-bottom:${borderBottom};background:${!cell.inMonth?"#fafaf7":isToday?"var(--purple-light)":isWeekend?"#fafaf7":"var(--white)"};opacity:${cell.inMonth?1:0.5};display:flex;flex-direction:column;gap:3px;overflow:hidden">
           <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isToday?"var(--purple-mid)":!cell.inMonth?"var(--text-hint)":"var(--text)"};margin-bottom:2px">${dayNum}${isToday?'<span style="font-size:9px;margin-left:4px;background:var(--purple-accent);color:#fff;padding:1px 5px;border-radius:8px;font-weight:600">HARI INI</span>':""}</div>
-          ${items.slice(0,3).map(it=>{
+          ${(window["_calExpanded_"+dateISO]?items:items.slice(0,3)).map(it=>{
             if(it.type==="event"){
               const p=it.data;
               return `<div onclick="event.stopPropagation();openProjectModal('${p.id}')" title="${p.nama} - ${p.waktu}" style="background:var(--purple-accent);color:#fff;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-broadcast" style="font-size:9px"></i> ${p.waktu} ${p.nama.replace(/Free Class: /,"")}</div>`;
@@ -7499,7 +7510,7 @@ function renderMonthlyCalendar(){
               return `<div draggable="true" ondragstart="calDragStart(event,'${t.id}','${t.projectId}')" onclick="event.stopPropagation();openTaskModal('${t.id}','${t.projectId}')" title="${t.title}" style="background:${pc.bg};color:${pc.fg};padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;opacity:${opacity};${isDone?'text-decoration:line-through':''}${borderLeft?';border-left:'+borderLeft:''}">${t.title}</div>`;
             }
           }).join("")}
-          ${items.length>3?`<div style="font-size:9px;color:var(--text-muted);padding:2px 6px;font-weight:500">+${items.length-3} lainnya</div>`:""}
+          ${items.length>3?`<div onclick="window['_calExpanded_'+dateISO]=!window['_calExpanded_'+dateISO];document.getElementById('project-tab-content').innerHTML=renderMonthlyCalendar()" style="font-size:9px;color:var(--purple-accent);padding:2px 6px;font-weight:600;cursor:pointer">${window['_calExpanded_'+dateISO]?'Sempit ▲':'+' + (items.length-3) + ' lainnya ▼'}</div>`:""}
         </div>`;
       }).join("")}
     </div>
