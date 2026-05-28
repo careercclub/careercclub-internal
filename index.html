@@ -2547,8 +2547,8 @@ function crmTab(tab){
     if(btn) btn.classList.toggle("active",t===tab);
     if(el) el.style.display=t===tab?"block":"none";
   });
-  if(tab==="pipeline") renderPipeline();
-  if(tab==="blast") renderEmailBlast();
+  if(tab==="pipeline") requestAnimationFrame(()=>renderPipeline());
+  if(tab==="blast") requestAnimationFrame(()=>renderEmailBlast());
 }
 
 
@@ -12420,6 +12420,8 @@ function renderTpList() {
         <th style="padding:8px 10px;text-align:left;font-weight:600">Tier</th>
         <th style="padding:8px 10px;text-align:left;font-weight:600">IPK</th>
         <th style="padding:8px 10px;text-align:left;font-weight:600">Lulus</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:600">Target MT</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:600">Posisi MT</th>
         <th style="padding:8px 10px;text-align:left;font-weight:600">Pipeline</th>
         <th style="padding:8px 10px;text-align:left;font-weight:600">Aksi</th>
       </tr>
@@ -12438,6 +12440,8 @@ function renderTpList() {
             <td style="padding:8px 10px"><span style="font-size:10px;padding:2px 6px;border-radius:6px;background:var(--purple-light);color:var(--purple-mid)">${r.campus_tier||'—'}</span></td>
             <td style="padding:8px 10px;color:var(--text-muted)">${r.ipk||'—'}</td>
             <td style="padding:8px 10px;color:var(--text-muted)">${r.tahun_lulus||'—'}</td>
+            <td style="padding:8px 10px;max-width:160px">${_tpPills(r.target_mt,'#ede9fe','#6d28d9')}</td>
+            <td style="padding:8px 10px;max-width:160px">${_tpPills(r.posisi_mt,'#dbeafe','#1d4ed8')}</td>
             <td style="padding:8px 10px">
               <span style="font-size:10px;padding:2px 8px;border-radius:8px;font-weight:600;background:${isBuyer?'var(--green-bg)':'var(--amber-bg)'};color:${isBuyer?'var(--green)':'var(--amber)'}">
                 ${isBuyer?'Sudah Beli':'Belum Beli'}
@@ -12451,6 +12455,13 @@ function renderTpList() {
     </tbody>
   </table>
   </div>`;
+}
+
+function _tpPills(val, bg, color) {
+  if (!val || !val.trim()) return '<span style="color:var(--text-hint)">—</span>';
+  return val.split(',').map(v=>v.trim()).filter(Boolean).map(v=>
+    `<span style="display:inline-block;font-size:9px;padding:2px 6px;border-radius:10px;background:${bg};color:${color};margin:1px;white-space:nowrap">${v}</span>`
+  ).join('');
 }
 
 function _tpIsBuyer(r) {
@@ -12758,15 +12769,26 @@ function renderTpAnalytics() {
       ${content}
     </div>`;
 
-  const domisiliData = freq(data.map(d=>d.domisili));
-  const sumberData   = freq(data.map(d=>d.sumber));
-  const statusData   = freq(data.map(d=>d.status));
+  // Helper freq dengan split koma
+  const freqMulti = (arr) => {
+    const m = {};
+    arr.forEach(v => {
+      if (!v) return;
+      v.split(',').map(s=>s.trim()).filter(Boolean).forEach(item => { m[item]=(m[item]||0)+1; });
+    });
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  };
+
+  const domisiliData   = freq(data.map(d=>d.domisili));
+  const sumberData     = freq(data.map(d=>d.sumber));
+  const statusData     = freq(data.map(d=>d.status));
   const pendidikanData = freq(data.map(d=>d.pendidikan));
-  const tierData     = freq(data.map(d=>d.campus_tier));
-  const angkatanData = freq(data.map(d=>d.angkatan||d.tahun_lulus));
-  const univData     = freq(data.map(d=>d.universitas));
-  const posisiData   = freq(data.map(d=>d.posisi_mt));
-  const ipkRangeData = Object.entries(ipkRanges).filter(([,v])=>v>0);
+  const tierData       = freq(data.map(d=>d.campus_tier));
+  const angkatanData   = freq(data.map(d=>d.angkatan||d.tahun_lulus));
+  const univData       = freq(data.map(d=>d.universitas));
+  const posisiData     = freqMulti(data.map(d=>d.posisi_mt));
+  const targetData     = freqMulti(data.map(d=>d.target_mt));
+  const ipkRangeData   = Object.entries(ipkRanges).filter(([,v])=>v>0);
 
   c.innerHTML = `
   <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
@@ -12785,6 +12807,9 @@ function renderTpAnalytics() {
     ${card('Angkatan / Tahun Lulus', 'ti-calendar', hbar(angkatanData, total, 10))}
     ${card('Universitas Terbanyak', 'ti-building', hbar(univData, total, 10))}
     ${card('Minat Posisi MT', 'ti-briefcase', hbar(posisiData, total, 10))}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px">
+    ${card('Target Industri MT', 'ti-building-factory', hbar(targetData, total, 15))}
   </div>`;
 }
 
