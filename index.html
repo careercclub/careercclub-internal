@@ -1910,7 +1910,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
     partnerDeals = await sb_load('partner_deals', { order: 'created_at', ascending: false });
-    partners = await sb_load('partners', { order: 'name', ascending: true });
+    partners = (await sb_load('partners', { order: 'name', ascending: true })).map(_partnerRowToJS);
 
     // Products — load from Supabase, then fetch pain/passion points for each
     try {
@@ -4415,6 +4415,49 @@ var partners=[];
 let partnerIdCounter=300;
 let activePartnerId=null;
 
+function _partnerRowToJS(d){
+  return {
+    id: d.id,
+    name: d.name||'',
+    type: d.type||'Corporate',
+    tier: d.tier||'B',
+    status: d.status||'Prospek',
+    pic: d.contact_name||'',
+    email: d.contact_email||'',
+    wa: d.contact_phone||'',
+    pos: d.pos||'',
+    li: d.li||'',
+    kota: d.kota||'',
+    industri: d.industri||'',
+    scope: d.scope||'',
+    notes: d.notes||'',
+    lastContact: d.last_contact||'-',
+  };
+}
+function _partnerJSToRow(p){
+  return {
+    name: p.name,
+    type: p.type,
+    tier: p.tier,
+    status: p.status,
+    contact_name: p.pic,
+    contact_email: p.email,
+    contact_phone: p.wa,
+    pos: p.pos,
+    li: p.li,
+    kota: p.kota,
+    industri: p.industri,
+    scope: p.scope,
+    notes: p.notes,
+    last_contact: p.lastContact,
+  };
+}
+// Translate JS field name → Supabase column name
+function _partnerFieldToCol(field){
+  const map={pic:'contact_name',email:'contact_email',wa:'contact_phone',lastContact:'last_contact'};
+  return map[field]||field;
+}
+
 const PARTNER_STATUSES=["Prospek","Contacted","Negotiation","Active","Inactive"];
 const PARTNER_TYPES=["Corporate","Campus","Media"];
 const PARTNER_TIERS=["A","B","C"];
@@ -4540,7 +4583,7 @@ function savePartnerField(id,field,val){
   const p=partners.find(x=>x.id===id);if(!p) return;
   p[field]=val.trim();
   clearTimeout(p._saveTimer);
-  p._saveTimer=setTimeout(()=>sb_update("partners",id,{[field]:val.trim()}),600);
+  p._saveTimer=setTimeout(()=>sb_update("partners",id,{[_partnerFieldToCol(field)]:val.trim()}),600);
 }
 async function deletePartner(id){
   if(!confirm("Hapus partner ini?")) return;
@@ -4586,7 +4629,7 @@ function closePartnerModal(){document.getElementById("partner-modal").style.disp
 async function savePartnerModal(){
   const name=document.getElementById("pm-name").value.trim();
   if(!name){showToast("Nama wajib diisi");return;}
-  const data={
+  const jsData={
     name,type:document.getElementById("pm-type").value,
     pic:document.getElementById("pm-pic").value,pos:document.getElementById("pm-pos").value,
     wa:document.getElementById("pm-wa").value,email:document.getElementById("pm-email").value,
@@ -4595,16 +4638,17 @@ async function savePartnerModal(){
     status:document.getElementById("pm-status").value,scope:document.getElementById("pm-scope").value,
     notes:document.getElementById("pm-notes").value,lastContact:document.getElementById("pm-lastcontact").value,
   };
+  const rowData=_partnerJSToRow(jsData);
   if(activePartnerId){
-    const ok=await sb_update("partners",activePartnerId,data);
+    const ok=await sb_update("partners",activePartnerId,rowData);
     if(!ok) return;
     const p=partners.find(x=>x.id===activePartnerId);
-    if(p) Object.assign(p,data);
+    if(p) Object.assign(p,jsData);
     showToast("Partner diupdate");
   } else {
-    const row=await sb_insert("partners",data);
+    const row=await sb_insert("partners",rowData);
     if(!row) return;
-    partners.push(row);
+    partners.push(_partnerRowToJS(row));
     showToast("Partner baru ditambahkan");
   }
   closePartnerModal();
