@@ -681,7 +681,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
       <div class="nav-label">Internal</div>
       <div class="nav-item" onclick="switchPage('tickets',this)"><i class="ti ti-ticket"></i> Tickets <span class="nav-badge red" id="nav-badge-tickets" style="display:none">0</span></div>
       <div class="nav-item" onclick="switchPage('product',this)"><i class="ti ti-package"></i> Products</div>
-      <div class="nav-item" onclick="switchPage('partner',this)"><i class="ti ti-users-group"></i> Partnership</div>
+      <div class="nav-item" onclick="switchPage('partner',this)"><i class="ti ti-users-group"></i> B2B Partnership</div>
       <div class="nav-item" onclick="switchPage('design',this)"><i class="ti ti-palette"></i> Design Assets</div>
       <div class="nav-item" onclick="switchPage('resources',this)"><i class="ti ti-key"></i> Resources</div>
     </div>
@@ -2071,7 +2071,7 @@ function paymentPill(s){
   return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${color};background:${bg};padding:2px 7px;border-radius:20px"><i class="ti ${icon}" style="font-size:10px"></i>${s}</span>`;
 }
 
-const pageTitles={dashboard:"Dashboard",crm:"CRM",talentpool:"Talent Pool Network",pipeline:"Sales Pipeline",content:"Content Planning",eval:"Content Evaluation",ads:"Meta Ads",igperf:"Instagram Performance",project:"Program",loker:"Job Vacancy MT",tickets:"Ticket System",product:"Product Management",partner:"Partnership",design:"Graphic Design",master:"Master Produk",masterTicket:"Master Ticket","p-overview":"Partnership — Overview","p-master":"Partnership — Master Data","p-pipeline":"Partnership — Pipeline","p-deals":"Partnership — Deals & Scope","p-outreach":"Partnership — Outreach Log"};
+const pageTitles={dashboard:"Dashboard",crm:"CRM",talentpool:"Talent Pool Network",pipeline:"Sales Pipeline",content:"Content Planning",eval:"Content Evaluation",ads:"Meta Ads",igperf:"Instagram Performance",project:"Program",loker:"Job Vacancy MT",tickets:"Ticket System",product:"Product Management",partner:"B2B Partnership",design:"Graphic Design",master:"Master Produk",masterTicket:"Master Ticket","p-overview":"B2B Partnership — Overview","p-master":"B2B Partnership — Master Data","p-pipeline":"B2B Partnership — Pipeline","p-deals":"B2B Partnership — Deals & Scope","p-outreach":"B2B Partnership — Outreach Log"};
 
 
 // === PARTNERSHIP MODULE ===
@@ -4459,8 +4459,8 @@ function _partnerFieldToCol(field){
 }
 
 const PARTNER_STATUSES=["Prospek","Contacted","Negotiation","Active","Inactive"];
-const PARTNER_TYPES=["Corporate","Campus","Media"];
-const PARTNER_TIERS=["A","B","C"];
+const PARTNER_TYPES=["Corporate"];
+const PARTNER_TIERS=["Strategic","Standard"];
 
 function pStatusPill(s){const m={Active:"pill-green",Negotiation:"pill-amber",Contacted:"pill-blue",Prospek:"pill-gray",Inactive:"pill-red"};return`<span class="pill ${m[s]||"pill-gray"}">${s}</span>`;}
 function pTypePill(t){const m={Corporate:"pill-purple",Campus:"pill-teal",Media:"pill-pink"};return`<span class="pill ${m[t]||"pill-gray"}">${t}</span>`;}
@@ -4514,9 +4514,8 @@ function partnershipMasterHTML(){
     </div>
     <div class="pt-filter">
       <input type="text" id="p-srch" placeholder="Cari nama / PIC..." oninput="renderPartnerMaster()">
-      <select id="p-ftype" onchange="renderPartnerMaster()"><option value="">Semua tipe</option>${PARTNER_TYPES.map(t=>`<option>${t}</option>`).join("")}</select>
       <select id="p-fstatus" onchange="renderPartnerMaster()"><option value="">Semua status</option>${PARTNER_STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>
-      <select id="p-ftier" onchange="renderPartnerMaster()"><option value="">Semua tier</option>${PARTNER_TIERS.map(t=>`<option value="${t}">Tier ${t}</option>`).join("")}</select>
+      <select id="p-ftier" onchange="renderPartnerMaster()"><option value="">Semua tier</option>${PARTNER_TIERS.map(t=>`<option value="${t}">${t}</option>`).join("")}</select>
       <button class="btn btn-sm" onclick="resetPartnerFilter()"><i class="ti ti-refresh"></i></button>
     </div>
     <div style="overflow-x:auto" id="partner-table-wrap"></div>
@@ -4526,12 +4525,10 @@ function partnershipMasterHTML(){
 function initPartnerMaster(){renderPartnerMaster();}
 function getFilteredPartners(){
   const q=(document.getElementById("p-srch")||{}).value?.toLowerCase()||"";
-  const ft=(document.getElementById("p-ftype")||{}).value||"";
   const fs=(document.getElementById("p-fstatus")||{}).value||"";
   const ftr=(document.getElementById("p-ftier")||{}).value||"";
   return partners.filter(p=>{
-    if(q&&!`${p.name}${p.pic}${p.kota}`.toLowerCase().includes(q)) return false;
-    if(ft&&p.type!==ft) return false;
+    if(q&&!`${p.name}${p.pic}`.toLowerCase().includes(q)) return false;
     if(fs&&p.status!==fs) return false;
     if(ftr&&p.tier!==ftr) return false;
     return true;
@@ -4547,28 +4544,24 @@ function renderPartnerMaster(){
   if(!data.length){wrap.innerHTML=`<div style="padding:32px;text-align:center;font-size:12px;color:var(--text-muted)">Tidak ada data</div>`;return;}
   wrap.innerHTML=`<table style="table-layout:fixed">
     <thead><tr>
-      <th style="width:150px">Nama</th>
-      <th style="width:80px">Tipe</th>
+      <th style="width:170px">Nama</th>
+      <th style="width:90px">Tier</th>
       <th style="width:110px">PIC</th>
       <th style="width:110px">Jabatan</th>
-      <th style="width:105px">WA</th>
-      <th style="width:145px">Email</th>
-      <th style="width:70px">Kota</th>
-      <th style="width:55px">Tier</th>
+      <th style="width:115px">WA</th>
+      <th style="width:155px">Email</th>
       <th style="width:80px">Status</th>
-      <th style="width:130px">Scope</th>
-      <th style="width:95px">Last Contact</th>
+      <th style="width:140px">Scope</th>
+      <th style="width:100px">Last Contact</th>
       <th style="width:52px"></th>
     </tr></thead>
     <tbody>${data.map(p=>`<tr>
       <td style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openPartnerModal('${p.id}')">${p.name}</td>
-      <td><select class="inline-edit" onchange="savePartnerField('${p.id}','type',this.value)">${PARTNER_TYPES.map(t=>`<option ${t===p.type?"selected":""}>${t}</option>`).join("")}</select></td>
+      <td><select class="inline-edit" onchange="savePartnerField('${p.id}','tier',this.value)">${PARTNER_TIERS.map(t=>`<option ${t===p.tier?"selected":""}>${t}</option>`).join("")}</select></td>
       <td><input class="inline-edit" value="${p.pic}" onchange="savePartnerField('${p.id}','pic',this.value)"></td>
       <td><input class="inline-edit" value="${p.pos}" onchange="savePartnerField('${p.id}','pos',this.value)"></td>
       <td><input class="inline-edit" value="${p.wa}" onchange="savePartnerField('${p.id}','wa',this.value)" style="font-size:11px"></td>
       <td><input class="inline-edit" value="${p.email}" onchange="savePartnerField('${p.id}','email',this.value)" style="font-size:11px"></td>
-      <td><input class="inline-edit" value="${p.kota}" onchange="savePartnerField('${p.id}','kota',this.value)"></td>
-      <td><select class="inline-edit" onchange="savePartnerField('${p.id}','tier',this.value)">${PARTNER_TIERS.map(t=>`<option ${t===p.tier?"selected":""}>  ${t}</option>`).join("")}</select></td>
       <td><select class="inline-edit" onchange="savePartnerField('${p.id}','status',this.value)">${PARTNER_STATUSES.map(s=>`<option ${s===p.status?"selected":""}>${s}</option>`).join("")}</select></td>
       <td><input class="inline-edit" value="${p.scope}" onchange="savePartnerField('${p.id}','scope',this.value)" style="font-size:11px"></td>
       <td><input class="inline-edit" value="${p.lastContact}" onchange="savePartnerField('${p.id}','lastContact',this.value)" style="font-size:11px"></td>
@@ -4577,12 +4570,6 @@ function renderPartnerMaster(){
       </td>
     </tr>`).join("")}</tbody>
   </table>`;
-  document.getElementById("p-row-count").textContent=`${data.length} dari ${partners.length} partner`;
-}
-function savePartnerField(id,field,val){
-  const p=partners.find(x=>x.id===id);if(!p) return;
-  p[field]=val.trim();
-  clearTimeout(p._saveTimer);
   p._saveTimer=setTimeout(()=>sb_update("partners",id,{[_partnerFieldToCol(field)]:val.trim()}),600);
 }
 async function deletePartner(id){
@@ -4605,18 +4592,16 @@ function exportPartnerCSV(){
 function openPartnerModal(id){
   activePartnerId=id;
   const isNew=!id;
-  const p=isNew?{id:null,name:"",type:"Corporate",pic:"",pos:"",wa:"",email:"",li:"",kota:"",industri:"",tier:"B",status:"Prospek",scope:"",notes:"",lastContact:"-"}:partners.find(x=>x.id===id);
+  const p=isNew?{id:null,name:"",type:"Corporate",pic:"",pos:"",wa:"",email:"",li:"",kota:"",industri:"",tier:"Standard",status:"Prospek",scope:"",notes:"",lastContact:"-"}:partners.find(x=>x.id===id);
   if(!p) return;
   document.getElementById("pm-title").textContent=isNew?"Tambah Partner Baru":p.name;
   document.getElementById("pm-name").value=p.name;
-  document.getElementById("pm-type").value=p.type;
+  document.getElementById("pm-tier").value=p.tier||"Standard";
   document.getElementById("pm-pic").value=p.pic;
   document.getElementById("pm-pos").value=p.pos;
   document.getElementById("pm-wa").value=p.wa;
-  document.getElementById("pm-email").value=p.email;
+  document.getElementById("pm-email").value=p.email||"";
   document.getElementById("pm-li").value=p.li||"";
-  document.getElementById("pm-kota").value=p.kota;
-  document.getElementById("pm-industri").value=p.industri;
   document.getElementById("pm-tier").value=p.tier;
   document.getElementById("pm-status").value=p.status;
   document.getElementById("pm-scope").value=p.scope;
@@ -4630,11 +4615,11 @@ async function savePartnerModal(){
   const name=document.getElementById("pm-name").value.trim();
   if(!name){showToast("Nama wajib diisi");return;}
   const jsData={
-    name,type:document.getElementById("pm-type").value,
+    name,type:"Corporate",
     pic:document.getElementById("pm-pic").value,pos:document.getElementById("pm-pos").value,
     wa:document.getElementById("pm-wa").value,email:document.getElementById("pm-email").value,
-    li:document.getElementById("pm-li").value,kota:document.getElementById("pm-kota").value,
-    industri:document.getElementById("pm-industri").value,tier:document.getElementById("pm-tier").value,
+    li:document.getElementById("pm-li").value,kota:"",
+    industri:"",tier:document.getElementById("pm-tier").value,
     status:document.getElementById("pm-status").value,scope:document.getElementById("pm-scope").value,
     notes:document.getElementById("pm-notes").value,lastContact:document.getElementById("pm-lastcontact").value,
   };
@@ -7834,7 +7819,7 @@ var menuSections = [
   { label: "Internal",    items: [
     { page: "tickets",   label: "Tickets" },
     { page: "product",   label: "Products" },
-    { page: "partner",   label: "Partnership" },
+    { page: "partner",   label: "B2B Partnership" },
     { page: "design",    label: "Graphic Design" },
     { page: "resources", label: "Resources" }
   ]},
@@ -9432,16 +9417,13 @@ async function daConfirmDelete(id) {
     </div>
     <div class="modal-body" style="padding:16px 20px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Nama Perusahaan / Kampus</div><input class="cust-field-input" id="pm-name" placeholder="contoh: PT Unilever Indonesia"></div>
-        <div class="cust-field editable"><div class="cust-field-label">Tipe</div><select id="pm-type" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option>Corporate</option><option>Campus</option><option>Media</option></select></div>
-        <div class="cust-field editable"><div class="cust-field-label">Tier</div><select id="pm-tier" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="A">A — Priority</option><option value="B">B — Standard</option><option value="C">C — Cold</option></select></div>
+        <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Nama Perusahaan</div><input class="cust-field-input" id="pm-name" placeholder="contoh: PT Unilever Indonesia"></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tier</div><select id="pm-tier" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="Strategic">Strategic</option><option value="Standard">Standard</option></select></div>
         <div class="cust-field editable"><div class="cust-field-label">Nama PIC</div><input class="cust-field-input" id="pm-pic" placeholder="Nama PIC"></div>
         <div class="cust-field editable"><div class="cust-field-label">Jabatan PIC</div><input class="cust-field-input" id="pm-pos" placeholder="HR Manager, Kadiv Career, dll"></div>
         <div class="cust-field editable"><div class="cust-field-label">WhatsApp</div><input class="cust-field-input" id="pm-wa" placeholder="+62..."></div>
         <div class="cust-field editable"><div class="cust-field-label">Email</div><input class="cust-field-input" id="pm-email" placeholder="email@company.com"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">LinkedIn URL</div><input class="cust-field-input" id="pm-li" placeholder="https://linkedin.com/in/..."></div>
-        <div class="cust-field editable"><div class="cust-field-label">Kota</div><input class="cust-field-input" id="pm-kota" placeholder="Jakarta, Bandung, dll"></div>
-        <div class="cust-field editable"><div class="cust-field-label">Industri</div><input class="cust-field-input" id="pm-industri" placeholder="FMCG, Perbankan, Universitas..."></div>
         <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><select id="pm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option>Prospek</option><option>Contacted</option><option>Negotiation</option><option>Active</option><option>Inactive</option></select></div>
         <div class="cust-field editable"><div class="cust-field-label">Last Contact</div><input class="cust-field-input" id="pm-lastcontact" placeholder="12 Mei 2026"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Scope Kolaborasi</div><input class="cust-field-input" id="pm-scope" placeholder="Webinar, job posting, promo bundling..."></div>
