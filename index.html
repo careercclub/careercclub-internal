@@ -535,6 +535,110 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 .selected-preview{background:var(--purple-light);border-radius:var(--radius);padding:11px;border:0.5px solid rgba(124,111,247,.3);margin-bottom:12px}
 
 @media (max-width: 768px) { #dash-layout { grid-template-columns: 1fr !important; } #dash-layout > div:last-child .card { max-height: 400px; } }
+
+/* ═══════════════ MOBILE RESPONSIVE — GLOBAL OVERRIDES ═══════════════ */
+@media (max-width: 768px) {
+  /* Semua inline grid multi-kolom → 1 kolom (kecuali stats yang biar 2 kolom) */
+  [style*="grid-template-columns:1fr 1fr"]:not(.stats-grid),
+  [style*="grid-template-columns: 1fr 1fr"]:not(.stats-grid),
+  [style*="grid-template-columns:1fr 1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr"],
+  [style*="grid-template-columns:2fr 1fr"],
+  [style*="grid-template-columns:repeat(3"],
+  [style*="grid-template-columns: repeat(3"],
+  [style*="grid-template-columns:repeat(4"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Stats grid 5 & 4 kolom → 2 kolom */
+  [style*="grid-template-columns:repeat(5,1fr)"],
+  .stats-strip-5 {
+    grid-template-columns: repeat(2,1fr) !important;
+  }
+  /* Grid dengan kolom fixed (label + isi) → stack */
+  [style*="grid-template-columns:150px 1fr"],
+  [style*="grid-template-columns:200px 1fr"],
+  [style*="grid-template-columns:80px 1fr"],
+  [style*="grid-template-columns:60px 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Semua tabel bisa scroll horizontal */
+  .card table, .content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* Modal: lebar penuh, padding aman, scroll vertikal */
+  .modal, .modal-overlay > div, [class*="modal"] > .modal {
+    max-width: 94vw !important;
+    width: 94vw !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+  }
+  .modal-overlay { padding: 12px !important; }
+
+  /* Filter rows wrap */
+  .filter-row { flex-wrap: wrap !important; gap: 6px !important; }
+  .filter-row > * { flex: 1 1 calc(50% - 6px) !important; min-width: 0 !important; }
+  .filter-row input, .filter-row select { width: 100% !important; }
+
+  /* Action bar wrap */
+  .action-bar { flex-wrap: wrap !important; }
+  .action-bar button { flex: 1 1 auto !important; }
+
+  /* Pipeline kanban → horizontal scroll */
+  [class*="pipeline-wrap"], [id*="pipeline-wrap"] {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .pipeline-col { flex: 0 0 260px !important; min-width: 260px !important; }
+
+  /* Sub-tab row (email blast, dll) scroll */
+  .tab-row { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Email blast builder column stack */
+  [style*="grid-template-columns:1fr 1fr"][style*="gap:16px"] { grid-template-columns: 1fr !important; }
+
+  /* Card padding lebih kecil */
+  .card { padding: 14px !important; }
+
+  /* Input & select full width di mobile */
+  .content select, .content input[type="text"], .content input[type="search"],
+  .content input[type="email"], .content input[type="url"], .content input[type="number"],
+  .content input[type="datetime-local"], .content textarea {
+    max-width: 100% !important;
+  }
+
+  /* Loker module */
+  .lk-topbar { flex-wrap: wrap; gap: 8px; }
+  .lk-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+
+  /* Charts/donut wrap */
+  svg { max-width: 100%; height: auto; }
+
+  /* Calendar tetap 7 kolom — perkecil teks & padding biar muat */
+  [style*="grid-template-columns:repeat(7,1fr)"] { font-size: 10px; }
+  [style*="grid-template-columns:repeat(7,1fr)"] > div { padding: 2px !important; min-height: 0 !important; }
+
+  /* Stats grid tetap 2 kolom, kecuali yang 5 */
+  .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+
+  /* Page title & header lebih ringkas */
+  .content { padding: 12px !important; }
+}
+
+/* Tablet kecil (480px ke bawah) — stats jadi 1 kolom */
+@media (max-width: 480px) {
+  .stats-grid, .stats-strip-5, [style*="grid-template-columns:repeat(5,1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  .filter-row > * { flex: 1 1 100% !important; }
+}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -4433,10 +4537,15 @@ function renderPartnerMaster(){
   document.getElementById("p-row-count").textContent=`${data.length} dari ${partners.length} partner`;
 }
 function savePartnerField(id,field,val){
-  const p=partners.find(x=>x.id===id);if(p) p[field]=val.trim();
+  const p=partners.find(x=>x.id===id);if(!p) return;
+  p[field]=val.trim();
+  clearTimeout(p._saveTimer);
+  p._saveTimer=setTimeout(()=>sb_update("partners",id,{[field]:val.trim()}),600);
 }
-function deletePartner(id){
+async function deletePartner(id){
   if(!confirm("Hapus partner ini?")) return;
+  const ok=await sb_delete("partners",id);
+  if(!ok) return;
   partners=partners.filter(x=>x.id!==id);
   renderPartnerMaster();
   showToast("Partner dihapus");
@@ -4474,7 +4583,7 @@ function openPartnerModal(id){
   document.getElementById("partner-modal").style.display="flex";
 }
 function closePartnerModal(){document.getElementById("partner-modal").style.display="none";activePartnerId=null;}
-function savePartnerModal(){
+async function savePartnerModal(){
   const name=document.getElementById("pm-name").value.trim();
   if(!name){showToast("Nama wajib diisi");return;}
   const data={
@@ -4487,20 +4596,26 @@ function savePartnerModal(){
     notes:document.getElementById("pm-notes").value,lastContact:document.getElementById("pm-lastcontact").value,
   };
   if(activePartnerId){
+    const ok=await sb_update("partners",activePartnerId,data);
+    if(!ok) return;
     const p=partners.find(x=>x.id===activePartnerId);
     if(p) Object.assign(p,data);
     showToast("Partner diupdate");
   } else {
-    partners.push({id:++partnerIdCounter,...data});
+    const row=await sb_insert("partners",data);
+    if(!row) return;
+    partners.push(row);
     showToast("Partner baru ditambahkan");
   }
   closePartnerModal();
   const cur=document.getElementById("partner-table-wrap");
   if(cur) renderPartnerMaster();
 }
-function deletePartnerFromModal(){
+async function deletePartnerFromModal(){
   if(!activePartnerId) return;
   if(!confirm("Hapus partner ini?")) return;
+  const ok=await sb_delete("partners",activePartnerId);
+  if(!ok) return;
   partners=partners.filter(x=>x.id!==activePartnerId);
   closePartnerModal();
   renderPartnerMaster();
@@ -4568,12 +4683,25 @@ function renderPartnerDeals(){
     }).join("")}</tbody>
   </table>`;
 }
-function savePDealField(id,field,val){const d=partnerDeals.find(x=>x.id===id);if(d) d[field]=val.trim();}
-function deletePDeal(id){if(!confirm("Hapus deal ini?")) return;partnerDeals=partnerDeals.filter(x=>x.id!==id);renderPartnerDeals();showToast("Deal dihapus");}
-function addPDeal(){
-  // partnerId = UUID string. parseInt→NaN, NaN||1 = nempel ke partner fiktif. Ambil mentah.
+async function savePDealField(id,field,val){
+  const d=partnerDeals.find(x=>x.id===id);if(!d) return;
+  d[field]=val.trim();
+  clearTimeout(d._saveTimer);
+  d._saveTimer=setTimeout(()=>sb_update("partner_deals",id,{[field]:val.trim()}),600);
+}
+async function deletePDeal(id){
+  if(!confirm("Hapus deal ini?")) return;
+  const ok=await sb_delete("partner_deals",id);
+  if(!ok) return;
+  partnerDeals=partnerDeals.filter(x=>x.id!==id);
+  renderPartnerDeals();showToast("Deal dihapus");
+}
+async function addPDeal(){
   const partnerId=document.getElementById("pd-partner").value||null;
-  partnerDeals.push({id:++pDealIdCounter,partnerId,nama:"Deal baru",scope:"-",status:"Negotiation",deadline:"-",nilai:"-",catatan:""});
+  const payload={partnerId,nama:"Deal baru",scope:"-",status:"Negotiation",deadline:"-",nilai:"-",catatan:""};
+  const row=await sb_insert("partner_deals",payload);
+  if(!row) return;
+  partnerDeals.push(row);
   renderPartnerDeals();showToast("Deal ditambahkan");
 }
 function partnershipDealsHTML(){
@@ -12754,7 +12882,7 @@ function renderTpAnalytics() {
         <div style="display:flex;align-items:center;gap:8px">
           <div style="font-size:10px;color:var(--text-body);width:120px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${label}">${label}</div>
           <div style="flex:1;background:var(--bg);border-radius:20px;overflow:hidden;height:14px">
-            <div style="height:100%;background:${COLORS[i%COLORS.length]};border-radius:20px;width:${(count/maxVal*100).toFixed(1)}%;transition:width .3s"></div>
+            <div style="height:100%;background:var(--purple-accent,#6c63ff);border-radius:20px;width:${(count/maxVal*100).toFixed(1)}%;transition:width .3s"></div>
           </div>
           <div style="font-size:10px;color:var(--text-muted);width:42px;text-align:right;flex-shrink:0">${count} (${pct(count,totalN)}%)</div>
         </div>`).join('')}
