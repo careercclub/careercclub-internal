@@ -682,6 +682,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
       <div class="nav-item" onclick="switchPage('tickets',this)"><i class="ti ti-ticket"></i> Tickets <span class="nav-badge red" id="nav-badge-tickets" style="display:none">0</span></div>
       <div class="nav-item" onclick="switchPage('product',this)"><i class="ti ti-package"></i> Products</div>
       <div class="nav-item" onclick="switchPage('partner',this)"><i class="ti ti-users-group"></i> B2B Partnership</div>
+      <div class="nav-item" onclick="switchPage('orgpartner',this)"><i class="ti ti-school"></i> Org Partnership</div>
       <div class="nav-item" onclick="switchPage('design',this)"><i class="ti ti-palette"></i> Design Assets</div>
       <div class="nav-item" onclick="switchPage('resources',this)"><i class="ti ti-key"></i> Resources</div>
     </div>
@@ -1840,6 +1841,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       { id: 'tkt-form-modal',    fn: () => closeNewTktModal() },
       { id: 'qc-modal',          fn: () => closeQC() },
       { id: 'partner-modal',     fn: () => closePartnerModal() },
+      { id: 'org-partner-modal', fn: () => closeOrgPartnerModal() },
       { id: 'project-modal',     fn: () => closeProjectModal() },
       { id: 'prod-modal',        fn: () => closeProdModal() },
       { id: 'eval-modal',        fn: () => closeEvalModal() },
@@ -1909,8 +1911,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         sb_updateEvent(proj.id, { status: 'On Progress' });
       }
     }
-    partnerDeals = await sb_load('partner_deals', { order: 'created_at', ascending: false });
+    partnerDeals = (await sb_load('partner_deals', { order: 'created_at', ascending: false })).map(_pDealRowToJS);
     partners = (await sb_load('partners', { order: 'name', ascending: true })).map(_partnerRowToJS);
+    outreachLog = (await sb_load('partner_outreach', { order: 'created_at', ascending: false })).map(_outreachRowToJS);
+    orgPartnerDeals = (await sb_load('org_deals', { order: 'created_at', ascending: false })).map(_opDealRowToJS);
+    orgPartners = (await sb_load('org_partners', { order: 'name', ascending: true })).map(_orgPartnerRowToJS);
+    orgOutreachLog = (await sb_load('org_outreach', { order: 'created_at', ascending: false })).map(_orgOutreachRowToJS);
+    deals = (await sb_load('crm_deals', { order: 'created_at', ascending: false })).map(_dealRowToJS);
 
     // Products — load from Supabase, then fetch pain/passion points for each
     try {
@@ -2071,7 +2078,7 @@ function paymentPill(s){
   return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${color};background:${bg};padding:2px 7px;border-radius:20px"><i class="ti ${icon}" style="font-size:10px"></i>${s}</span>`;
 }
 
-const pageTitles={dashboard:"Dashboard",crm:"CRM",talentpool:"Talent Pool Network",pipeline:"Sales Pipeline",content:"Content Planning",eval:"Content Evaluation",ads:"Meta Ads",igperf:"Instagram Performance",project:"Program",loker:"Job Vacancy MT",tickets:"Ticket System",product:"Product Management",partner:"B2B Partnership",design:"Graphic Design",master:"Master Produk",masterTicket:"Master Ticket","p-overview":"B2B Partnership — Overview","p-master":"B2B Partnership — Master Data","p-pipeline":"B2B Partnership — Pipeline","p-deals":"B2B Partnership — Deals & Scope","p-outreach":"B2B Partnership — Outreach Log"};
+const pageTitles={dashboard:"Dashboard",crm:"CRM",talentpool:"Talent Pool Network",pipeline:"Sales Pipeline",content:"Content Planning",eval:"Content Evaluation",ads:"Meta Ads",igperf:"Instagram Performance",project:"Program",loker:"Job Vacancy MT",tickets:"Ticket System",product:"Product Management",partner:"B2B Partnership",orgpartner:"Org Partnership",design:"Graphic Design",master:"Master Produk",masterTicket:"Master Ticket","p-overview":"B2B Partnership — Overview","p-master":"B2B Partnership — Master Data","p-pipeline":"B2B Partnership — Pipeline","p-deals":"B2B Partnership — Deals & Scope","p-outreach":"B2B Partnership — Outreach Log","op-overview":"Org Partnership — Overview","op-master":"Org Partnership — Master Data","op-pipeline":"Org Partnership — Pipeline","op-deals":"Org Partnership — Deals & Scope","op-outreach":"Org Partnership — Outreach Log"};
 
 
 // === PARTNERSHIP MODULE ===
@@ -2164,6 +2171,7 @@ function switchPage(page,el){
   else if(page==="tickets"){c.innerHTML=ticketsHTML();renderTickets();}
   else if(page==="masterTicket"){c.innerHTML=masterTicketPageHTML();setTimeout(()=>renderMasterTktTab("divisi"),30);}
   else if(page==="partner"){c.innerHTML=partnerHTML();initPartnerTab("overview");}
+  else if(page==="orgpartner"){c.innerHTML=orgPartnerHTML();initOrgPartnerTab("overview");}
   else if(page==="loker"){c.innerHTML=lokerHTML();setTimeout(()=>window.dispatchEvent(new CustomEvent("initLoker")),100);}
   else if(page==="settings"){c.innerHTML=settingsHTML();initSettingsTab("master-produk");}
   else if(page==="product"){c.innerHTML=productHTML();initProdTab("catalog");}
@@ -3276,7 +3284,6 @@ function addMasterRow(){masterProduk.push({id:Date.now(),nama:"Nama produk baru"
 
 // ─── DEALS (deal-based pipeline) ─────────────────────────────
 let deals = [];
-let dealIdCounter = 200;
 
 const DEAL_STAGES=[
   {key:"Belum diblast",label:"Belum Diblast",dot:"#9ca3af"},
@@ -3286,6 +3293,32 @@ const DEAL_STAGES=[
   {key:"Convert",label:"Convert ✓",dot:"#3b6d11"},
 ];
 const DEAL_TIPE=["Upsell","Downsell","Cross-sell"];
+
+function _dealRowToJS(d){
+  return {
+    id: d.id,
+    buyerId: d.buyer_id||null,
+    tipe: d.tipe||'Upsell',
+    produkTarget: d.produk_target||'',
+    klasTarget: d.klas_target||'',
+    hargaTarget: parseFloat(d.harga_target)||0,
+    stage: d.stage||'Belum diblast',
+    catatan: d.catatan||'',
+    tanggal: d.tanggal||'',
+  };
+}
+function _dealJSToRow(d){
+  return {
+    buyer_id: d.buyerId||null,
+    tipe: d.tipe,
+    produk_target: d.produkTarget,
+    klas_target: d.klasTarget,
+    harga_target: d.hargaTarget||0,
+    stage: d.stage,
+    catatan: d.catatan,
+    tanggal: d.tanggal,
+  };
+}
 
 function dealTipePill(t){
   const map={"Upsell":"pill-purple","Downsell":"pill-amber","Cross-sell":"pill-teal"};
@@ -3316,7 +3349,9 @@ function renderPipeline(){
     });
     const totalTarget=stageDeals.reduce((s,d)=>s+d.hargaTarget,0);
     return `
-    <div class="pipeline-col ${stage.key==="Convert"?"pipeline-col-convert":""}">
+    <div class="pipeline-col ${stage.key==="Convert"?"pipeline-col-convert":""}"
+      ondragover="event.preventDefault()"
+      ondrop="_dealPipelineDrop(event,'${stage.key}')">
       <div class="pipeline-header">
         <div class="pipeline-header-title">
           <span class="pipeline-dot" style="background:${stage.dot}"></span>${stage.label}
@@ -3329,7 +3364,9 @@ function renderPipeline(){
           ?`<div style="text-align:center;padding:20px 0;font-size:11px;color:var(--text-hint)">Kosong</div>`
           :stageDeals.map(d=>{
             const b=buyers.find(x=>x.id===d.buyerId)||{};
-            return `<div class="pipeline-card" onclick="openDealModal('${d.id}')">
+            return `<div class="pipeline-card" draggable="true"
+              ondragstart="_dealPipelineDragStart(event,'${d.id}')"
+              onclick="openDealModal('${d.id}')">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
                 <div class="pipeline-card-name">${b.name||"—"}</div>
                 ${dealTipePill(d.tipe)}
@@ -3348,6 +3385,18 @@ function renderPipeline(){
       </div>
     </div>`;
   }).join("");
+}
+
+function _dealPipelineDragStart(e,id){e.dataTransfer.setData('dealId',id);}
+async function _dealPipelineDrop(e,stage){
+  e.preventDefault();
+  const id=e.dataTransfer.getData('dealId');
+  const d=deals.find(x=>String(x.id)===String(id));
+  if(!d||d.stage===stage) return;
+  d.stage=stage;
+  await sb_update('crm_deals',d.id,{stage});
+  renderPipeline();
+  showToast(`Dipindah ke ${stage}`);
 }
 
 // ─── DEAL MODAL ───────────────────────────────────────────────
@@ -3372,30 +3421,24 @@ function closeDealModal(){
 function renderDealModal(d, preStage="Belum diblast"){
   const isEdit=!!d;
   document.getElementById("deal-modal-title").textContent=isEdit?"Edit Deal":"Deal Baru";
-  // buyer dropdown
   const buyerSel=document.getElementById("dm-buyer");
   buyerSel.innerHTML=`<option value="">Pilih customer...</option>`+
     buyers.map(b=>`<option value="${b.id}" ${isEdit&&d.buyerId===b.id?"selected":""}>${b.name} · ${b.wa.slice(-4)}</option>`).join("");
-  // tipe
   const tipeSel=document.getElementById("dm-tipe");
   tipeSel.innerHTML=DEAL_TIPE.map(t=>`<option ${isEdit&&d.tipe===t?"selected":""}>${t}</option>`).join("");
-  // stage
   const stageSel=document.getElementById("dm-stage");
   stageSel.innerHTML=DEAL_STAGES.map(s=>`<option value="${s.key}" ${(isEdit?d.stage:preStage)===s.key?"selected":""}>${s.label}</option>`).join("");
-  // produk target — populate dari master
   const produkSel=document.getElementById("dm-produk");
   produkSel.innerHTML=`<option value="">Pilih produk target...</option>`+
     masterProduk.map(m=>`<option value="${m.nama}" ${isEdit&&d.produkTarget===m.nama?"selected":""}>${m.nama}</option>`).join("");
-  // fields
   document.getElementById("dm-harga").value=isEdit?d.hargaTarget:"";
   document.getElementById("dm-catatan").value=isEdit?d.catatan:"";
   document.getElementById("dm-tanggal").value=isEdit?d.tanggal:"";
-  // delete btn
   document.getElementById("dm-delete-btn").style.display=isEdit?"inline-flex":"none";
 }
 
-function saveDeal(){
-  const buyerId=parseInt(document.getElementById("dm-buyer").value);
+async function saveDeal(){
+  const buyerId=document.getElementById("dm-buyer").value;
   if(!buyerId){showToast("Pilih dulu customer-nya");return;}
   const produkTarget=document.getElementById("dm-produk").value;
   if(!produkTarget){showToast("Pilih produk target");return;}
@@ -3406,25 +3449,33 @@ function saveDeal(){
   const tanggal=document.getElementById("dm-tanggal").value;
   const klasTarget=getKlasifikasi(produkTarget);
 
+  const jsData={buyerId,tipe,produkTarget,klasTarget,hargaTarget,stage,catatan,tanggal};
+
   if(activeDealId){
+    const ok=await sb_update("crm_deals",activeDealId,_dealJSToRow(jsData));
+    if(!ok) return;
     const d=deals.find(x=>x.id===activeDealId);
-    if(d) Object.assign(d,{buyerId,tipe,produkTarget,klasTarget,hargaTarget,stage,catatan,tanggal});
+    if(d) Object.assign(d,jsData);
     showToast("Deal diupdate");
   } else {
-    deals.push({id:++dealIdCounter,buyerId,tipe,produkTarget,klasTarget,hargaTarget,stage,catatan,tanggal});
+    const row=await sb_insert("crm_deals",_dealJSToRow(jsData));
+    if(!row) return;
+    deals.push(_dealRowToJS(row));
     showToast("Deal baru ditambahkan");
   }
   closeDealModal();
   renderPipeline();
 }
 
-function deleteDeal(){
+async function deleteDeal(){
   if(!activeDealId) return;
-  const d=deals.find(x=>x.id===activeDealId);
+  if(!confirm("Hapus deal ini?")) return;
+  const ok=await sb_delete("crm_deals",activeDealId);
+  if(!ok) return;
   deals=deals.filter(x=>x.id!==activeDealId);
   closeDealModal();
   renderPipeline();
-  showToast(`Deal dihapus`);
+  showToast("Deal dihapus");
 }
 
 // ─── CUSTOMER DETAIL MODAL ────────────────────────────────────
@@ -4051,7 +4102,7 @@ async function saveNewTicket(){
   const prioritas=document.getElementById("nf-prio").value;
   const deskripsi=document.getElementById("nf-desc").value.trim();
   const deadlineRaw=document.getElementById("nf-deadline").value;
-  const deadline=deadlineRaw ? deadlineRaw.split("-").reverse().join("-") : "";
+  const deadline=deadlineRaw || "";
   const links=newTktLinks.filter(l=>l.trim());
   const files=[...newTktFiles];
   const cc=[...newTktCC];
@@ -4420,24 +4471,24 @@ function _partnerRowToJS(d){
     id: d.id,
     name: d.name||'',
     type: d.type||'Corporate',
-    tier: d.tier||'B',
-    status: d.status||'Prospek',
+    category: d.category||'',
+    tier: d.tier||'Standard',
+    status: d.status||'Approached',
     pic: d.contact_name||'',
     email: d.contact_email||'',
     wa: d.contact_phone||'',
     pos: d.pos||'',
     li: d.li||'',
-    kota: d.kota||'',
-    industri: d.industri||'',
     scope: d.scope||'',
     notes: d.notes||'',
-    lastContact: d.last_contact||'-',
+    inputDate: d.input_date||'',
   };
 }
 function _partnerJSToRow(p){
   return {
     name: p.name,
     type: p.type,
+    category: p.category,
     tier: p.tier,
     status: p.status,
     contact_name: p.pic,
@@ -4445,29 +4496,28 @@ function _partnerJSToRow(p){
     contact_phone: p.wa,
     pos: p.pos,
     li: p.li,
-    kota: p.kota,
-    industri: p.industri,
     scope: p.scope,
     notes: p.notes,
-    last_contact: p.lastContact,
+    input_date: p.inputDate,
   };
 }
 // Translate JS field name → Supabase column name
 function _partnerFieldToCol(field){
-  const map={pic:'contact_name',email:'contact_email',wa:'contact_phone',lastContact:'last_contact'};
+  const map={pic:'contact_name',email:'contact_email',wa:'contact_phone',inputDate:'input_date',category:'category'};
   return map[field]||field;
 }
 
-const PARTNER_STATUSES=["Prospek","Contacted","Negotiation","Active","Inactive"];
+const PARTNER_STATUSES=["Approached","Sales Meet","Negotiation","Closed Deal","Closed Lost"];
 const PARTNER_TYPES=["Corporate"];
 const PARTNER_TIERS=["Strategic","Standard"];
+const PARTNER_CATEGORIES=["MT Program Company","HR Services Company"];
 
-function pStatusPill(s){const m={Active:"pill-green",Negotiation:"pill-amber",Contacted:"pill-blue",Prospek:"pill-gray",Inactive:"pill-red"};return`<span class="pill ${m[s]||"pill-gray"}">${s}</span>`;}
+function pStatusPill(s){const m={"Approached":"pill-blue","Sales Meet":"pill-amber","Negotiation":"pill-amber","Closed Deal":"pill-green","Closed Lost":"pill-red"};return`<span class="pill ${m[s]||"pill-gray"}">${s}</span>`;}
 function pTypePill(t){const m={Corporate:"pill-purple",Campus:"pill-teal",Media:"pill-pink"};return`<span class="pill ${m[t]||"pill-gray"}">${t}</span>`;}
 function pTierBadge(t){const c={A:"color:var(--green);font-weight:700",B:"color:var(--blue);font-weight:600",C:"color:var(--text-muted)"};return`<span style="font-size:11px;${c[t]||""}">Tier ${t}</span>`;}
 
 function partnershipOverviewHTML(){
-  const active=partners.filter(x=>x.status==="Active").length;
+  const active=partners.filter(x=>x.status==="Closed Deal").length;
   const nego=partners.filter(x=>x.status==="Negotiation").length;
   const corp=partners.filter(x=>x.type==="Corporate").length;
   const camp=partners.filter(x=>x.type==="Campus").length;
@@ -4475,7 +4525,7 @@ function partnershipOverviewHTML(){
   return `
   <div class="stats-grid" style="grid-template-columns:repeat(5,1fr)">
     <div class="stat-card"><div class="stat-label">Total Partner</div><div class="stat-val">${partners.length}</div><div class="stat-change" style="color:var(--text-muted)">${corp} corp · ${camp} campus</div></div>
-    <div class="stat-card"><div class="stat-label">Active</div><div class="stat-val" style="color:var(--green)">${active}</div><div class="stat-change up">Berjalan</div></div>
+    <div class="stat-card"><div class="stat-label">Closed Deal</div><div class="stat-val" style="color:var(--green)">${active}</div><div class="stat-change up">Berjalan</div></div>
     <div class="stat-card"><div class="stat-label">Negotiation</div><div class="stat-val" style="color:var(--amber)">${nego}</div><div class="stat-change" style="color:var(--amber)">Follow-up needed</div></div>
     <div class="stat-card"><div class="stat-label">Tier A</div><div class="stat-val" style="color:var(--blue)">${tierA}</div><div class="stat-change" style="color:var(--text-muted)">Priority</div></div>
     <div class="stat-card"><div class="stat-label">B2B Corporate</div><div class="stat-val">${corp}</div><div class="stat-change" style="color:var(--text-muted)">HR/TA partners</div></div>
@@ -4544,19 +4594,21 @@ function renderPartnerMaster(){
   if(!data.length){wrap.innerHTML=`<div style="padding:32px;text-align:center;font-size:12px;color:var(--text-muted)">Tidak ada data</div>`;return;}
   wrap.innerHTML=`<table style="table-layout:fixed">
     <thead><tr>
-      <th style="width:170px">Nama</th>
+      <th style="width:160px">Nama Company</th>
+      <th style="width:120px">Category</th>
       <th style="width:90px">Tier</th>
-      <th style="width:110px">PIC</th>
-      <th style="width:110px">Jabatan</th>
-      <th style="width:115px">WA</th>
+      <th style="width:110px">Nama Kontak</th>
+      <th style="width:100px">Role</th>
+      <th style="width:115px">Phone</th>
       <th style="width:155px">Email</th>
       <th style="width:80px">Status</th>
-      <th style="width:140px">Scope</th>
-      <th style="width:100px">Last Contact</th>
+      <th style="width:120px">Scope</th>
+      <th style="width:100px">Tanggal Input</th>
       <th style="width:52px"></th>
     </tr></thead>
     <tbody>${data.map(p=>`<tr>
       <td style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openPartnerModal('${p.id}')">${p.name}</td>
+      <td><select class="inline-edit" onchange="savePartnerField('${p.id}','category',this.value)"><option value="">—</option>${PARTNER_CATEGORIES.map(c=>`<option ${c===p.category?"selected":""}>${c}</option>`).join("")}</select></td>
       <td><select class="inline-edit" onchange="savePartnerField('${p.id}','tier',this.value)">${PARTNER_TIERS.map(t=>`<option ${t===p.tier?"selected":""}>${t}</option>`).join("")}</select></td>
       <td><input class="inline-edit" value="${p.pic}" onchange="savePartnerField('${p.id}','pic',this.value)"></td>
       <td><input class="inline-edit" value="${p.pos}" onchange="savePartnerField('${p.id}','pos',this.value)"></td>
@@ -4564,12 +4616,17 @@ function renderPartnerMaster(){
       <td><input class="inline-edit" value="${p.email}" onchange="savePartnerField('${p.id}','email',this.value)" style="font-size:11px"></td>
       <td><select class="inline-edit" onchange="savePartnerField('${p.id}','status',this.value)">${PARTNER_STATUSES.map(s=>`<option ${s===p.status?"selected":""}>${s}</option>`).join("")}</select></td>
       <td><input class="inline-edit" value="${p.scope}" onchange="savePartnerField('${p.id}','scope',this.value)" style="font-size:11px"></td>
-      <td><input class="inline-edit" value="${p.lastContact}" onchange="savePartnerField('${p.id}','lastContact',this.value)" style="font-size:11px"></td>
+      <td><input class="inline-edit" value="${p.inputDate}" onchange="savePartnerField('${p.id}','inputDate',this.value)" style="font-size:11px" type="date"></td>
       <td style="white-space:nowrap">
         <button class="btn btn-sm" style="padding:0 6px;border:none;color:var(--text-muted)" onclick="deletePartner('${p.id}')" title="Hapus"><i class="ti ti-trash"></i></button>
       </td>
     </tr>`).join("")}</tbody>
   </table>`;
+}
+async function savePartnerField(id,field,val){
+  const p=partners.find(x=>x.id===id);if(!p) return;
+  p[field]=val.trim();
+  clearTimeout(p._saveTimer);
   p._saveTimer=setTimeout(()=>sb_update("partners",id,{[_partnerFieldToCol(field)]:val.trim()}),600);
 }
 async function deletePartner(id){
@@ -4592,21 +4649,21 @@ function exportPartnerCSV(){
 function openPartnerModal(id){
   activePartnerId=id;
   const isNew=!id;
-  const p=isNew?{id:null,name:"",type:"Corporate",pic:"",pos:"",wa:"",email:"",li:"",kota:"",industri:"",tier:"Standard",status:"Prospek",scope:"",notes:"",lastContact:"-"}:partners.find(x=>x.id===id);
+  const p=isNew?{id:null,name:"",type:"Corporate",category:"",pic:"",pos:"",wa:"",email:"",li:"",tier:"Standard",status:"Approached",scope:"",notes:"",inputDate:""}:partners.find(x=>x.id===id);
   if(!p) return;
   document.getElementById("pm-title").textContent=isNew?"Tambah Partner Baru":p.name;
   document.getElementById("pm-name").value=p.name;
+  document.getElementById("pm-category").value=p.category||"";
   document.getElementById("pm-tier").value=p.tier||"Standard";
   document.getElementById("pm-pic").value=p.pic;
   document.getElementById("pm-pos").value=p.pos;
   document.getElementById("pm-wa").value=p.wa;
   document.getElementById("pm-email").value=p.email||"";
   document.getElementById("pm-li").value=p.li||"";
-  document.getElementById("pm-tier").value=p.tier;
-  document.getElementById("pm-status").value=p.status;
+  document.getElementById("pm-status").value=p.status||"Approached";
   document.getElementById("pm-scope").value=p.scope;
   document.getElementById("pm-notes").value=p.notes;
-  document.getElementById("pm-lastcontact").value=p.lastContact;
+  document.getElementById("pm-inputdate").value=p.inputDate||"";
   document.getElementById("prod-delete-btn").style.display=isNew?"none":"inline-flex";
   document.getElementById("partner-modal").style.display="flex";
 }
@@ -4616,12 +4673,13 @@ async function savePartnerModal(){
   if(!name){showToast("Nama wajib diisi");return;}
   const jsData={
     name,type:"Corporate",
+    category:document.getElementById("pm-category").value,
     pic:document.getElementById("pm-pic").value,pos:document.getElementById("pm-pos").value,
     wa:document.getElementById("pm-wa").value,email:document.getElementById("pm-email").value,
-    li:document.getElementById("pm-li").value,kota:"",
-    industri:"",tier:document.getElementById("pm-tier").value,
+    li:document.getElementById("pm-li").value,
+    tier:document.getElementById("pm-tier").value,
     status:document.getElementById("pm-status").value,scope:document.getElementById("pm-scope").value,
-    notes:document.getElementById("pm-notes").value,lastContact:document.getElementById("pm-lastcontact").value,
+    notes:document.getElementById("pm-notes").value,inputDate:document.getElementById("pm-inputdate").value,
   };
   const rowData=_partnerJSToRow(jsData);
   if(activePartnerId){
@@ -4653,39 +4711,86 @@ async function deletePartnerFromModal(){
 
 // PIPELINE KANBAN PARTNERSHIP
 function partnershipPipelineHTML(){
+  const dotMap={
+    "Approached":"#6c63ff",
+    "Sales Meet":"#f59e0b",
+    "Negotiation":"#854f0b",
+    "Closed Deal":"#3b6d11",
+    "Closed Lost":"#e24b4a"
+  };
   const cols=PARTNER_STATUSES.map(s=>{
     const items=partners.filter(x=>x.status===s);
-    const dotMap={Prospek:"#9ca3af",Contacted:"#185fa5",Negotiation:"#854f0b",Active:"#3b6d11",Inactive:"#e24b4a"};
-    return `<div class="pipeline-col">
+    return `<div class="pipeline-col" data-stage="${s}" ondragover="event.preventDefault()" ondrop="_pPipelineDrop(event,'${s}')">
       <div class="pipeline-header">
         <div class="pipeline-header-title"><span class="pipeline-dot" style="background:${dotMap[s]}"></span>${s}</div>
         <span class="pipeline-count">${items.length}</span>
       </div>
       <div class="pipeline-cards">
         ${items.length===0?`<div style="text-align:center;padding:20px 0;font-size:11px;color:var(--text-hint)">Kosong</div>`:items.map(p=>`
-          <div class="pipeline-card" onclick="openPartnerModal('${p.id}')">
+          <div class="pipeline-card" draggable="true" ondragstart="_pPipelineDragStart(event,'${p.id}')" onclick="openPartnerModal('${p.id}')">
             <div class="pipeline-card-name">${p.name}</div>
-            <div class="pipeline-card-produk">${p.pic} · ${p.pos}</div>
-            <div class="pipeline-card-footer">
-              ${pTypePill(p.type)}
+            <div class="pipeline-card-produk" style="font-size:10px;color:var(--text-muted)">${p.category||'—'}</div>
+            <div class="pipeline-card-footer" style="margin-top:4px">
               ${pTierBadge(p.tier)}
+              ${p.pic?`<span style="font-size:10px;color:var(--text-muted)">${p.pic}</span>`:''}
             </div>
-            ${p.notes&&p.notes!=="-"?`<div style="margin-top:5px;font-size:10px;color:var(--text-hint);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${p.notes}"</div>`:""}
           </div>`).join("")}
         <div style="text-align:center;padding:6px 0"><span style="font-size:10px;color:var(--purple-accent);cursor:pointer" onclick="openPartnerModal(null)">+ Tambah</span></div>
       </div>
     </div>`;
   }).join("");
-  return `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${partners.length} partner · klik kartu untuk edit</div>
+  return `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${partners.length} partner · drag kartu untuk pindah stage</div>
   <div class="pipeline-wrap" style="height:500px">${cols}</div>`;
+}
+
+function _pPipelineDragStart(e,id){e.dataTransfer.setData('partnerId',id);}
+async function _pPipelineDrop(e,stage){
+  e.preventDefault();
+  const id=e.dataTransfer.getData('partnerId');
+  const p=partners.find(x=>String(x.id)===String(id));
+  if(!p||p.status===stage) return;
+  p.status=stage;
+  await sb_update('partners',p.id,{status:stage});
+  const wrap=document.getElementById('partner-pipeline-wrap');
+  if(wrap) wrap.innerHTML=partnershipPipelineHTML();
+  showToast(`Dipindah ke ${stage}`);
 }
 
 // DEALS & SCOPE — loaded from Supabase (partner_deals table)
 var partnerDeals=[];
 let pDealIdCounter=100;
+
+function _pDealRowToJS(d){
+  return {
+    id: d.id,
+    partnerId: d.partner_id||null,
+    nama: d.title||'Deal baru',
+    status: d.stage||'Negotiation',
+    nilai: d.value||'-',
+    catatan: d.notes||'',
+    scope: d.scope||'',
+    deadline: d.deadline||'-',
+  };
+}
+function _pDealJSToRow(d){
+  const rawNilai = d.nilai;
+  const sanitizedNilai = (rawNilai==='-'||rawNilai===''||rawNilai==null||isNaN(parseFloat(rawNilai))) ? null : parseFloat(rawNilai);
+  const rawDeadline = d.deadline;
+  const sanitizedDeadline = (rawDeadline==='-'||rawDeadline===''||rawDeadline==null) ? null : rawDeadline;
+  return {
+    partner_id: d.partnerId||null,
+    title: d.nama,
+    stage: d.status,
+    value: sanitizedNilai,
+    notes: d.catatan,
+    scope: d.scope,
+    deadline: sanitizedDeadline,
+  };
+}
+const _pDealFieldToCol = (f) => ({partnerId:'partner_id',nama:'title',status:'stage',nilai:'value',catatan:'notes'}[f]||f);
+
 function renderPartnerDeals(){
   const wrap=document.getElementById("pdeals-wrap");if(!wrap) return;
-  const stMap={Active:"pill-green",Negotiation:"pill-amber",Done:"pill-blue",Cancelled:"pill-red"};
   wrap.innerHTML=`<table style="table-layout:fixed">
     <thead><tr>
       <th style="width:140px">Nama Deal</th>
@@ -4716,7 +4821,15 @@ async function savePDealField(id,field,val){
   const d=partnerDeals.find(x=>x.id===id);if(!d) return;
   d[field]=val.trim();
   clearTimeout(d._saveTimer);
-  d._saveTimer=setTimeout(()=>sb_update("partner_deals",id,{[field]:val.trim()}),600);
+  const col=_pDealFieldToCol(field);
+  let dbVal=val.trim();
+  if(field==='nilai'){
+    dbVal=(dbVal==='-'||dbVal===''||isNaN(parseFloat(dbVal)))?null:parseFloat(dbVal);
+  }
+  if(field==='deadline'){
+    dbVal=(dbVal==='-'||dbVal==='')?null:dbVal;
+  }
+  d._saveTimer=setTimeout(()=>sb_update("partner_deals",id,{[col]:dbVal}),600);
 }
 async function deletePDeal(id){
   if(!confirm("Hapus deal ini?")) return;
@@ -4727,10 +4840,10 @@ async function deletePDeal(id){
 }
 async function addPDeal(){
   const partnerId=document.getElementById("pd-partner").value||null;
-  const payload={partnerId,nama:"Deal baru",scope:"-",status:"Negotiation",deadline:"-",nilai:"-",catatan:""};
+  const payload=_pDealJSToRow({partnerId,nama:"Deal baru",scope:"",status:"Negotiation",deadline:null,nilai:null,catatan:""});
   const row=await sb_insert("partner_deals",payload);
   if(!row) return;
-  partnerDeals.push(row);
+  partnerDeals.push(_pDealRowToJS(row));
   renderPartnerDeals();showToast("Deal ditambahkan");
 }
 function partnershipDealsHTML(){
@@ -4747,18 +4860,30 @@ function partnershipDealsHTML(){
 }
 
 // OUTREACH LOG
-let outreachLog=[
-  {id:1,partnerId:1,channel:"WhatsApp",tanggal:"10 Mei 2026",isi:"Follow-up meeting webinar Q2",respons:"Replied",catatan:"Setuju, tunggu jadwal"},
-  {id:2,partnerId:2,channel:"Email",tanggal:"8 Mei 2026",isi:"Kirim proposal MT Batch Program",respons:"Replied",catatan:"Minta revisi scope"},
-  {id:3,partnerId:3,channel:"LinkedIn",tanggal:"5 Mei 2026",isi:"First outreach perkenalan CCC",respons:"No Reply",catatan:"Follow up +3 hari"},
-  {id:4,partnerId:4,channel:"WhatsApp",tanggal:"9 Mei 2026",isi:"Koordinasi jadwal webinar Mei",respons:"Replied",catatan:"Fix tanggal 24 Mei"},
-  {id:5,partnerId:7,channel:"LinkedIn",tanggal:"3 Mei 2026",isi:"Cold outreach TA Lead Telkomsel",respons:"No Reply",catatan:"Coba WA minggu depan"},
-  {id:6,partnerId:8,channel:"WhatsApp",tanggal:"4 Mei 2026",isi:"Follow-up kolaborasi webinar",respons:"Replied",catatan:"Belum fix jadwal, tunggu"},
-];
-let outreachIdCounter=200;
+var outreachLog=[];
+function _outreachRowToJS(d){
+  return {
+    id: d.id,
+    partnerId: d.partner_id||null,
+    channel: d.channel||'WhatsApp',
+    tanggal: d.tanggal||'',
+    isi: d.isi||'-',
+    respons: d.respons||'No Reply',
+    catatan: d.catatan||'',
+  };
+}
+function _outreachJSToRow(o){
+  return {
+    partner_id: o.partnerId||null,
+    channel: o.channel,
+    tanggal: o.tanggal,
+    isi: o.isi,
+    respons: o.respons,
+    catatan: o.catatan,
+  };
+}
 function renderOutreachLog(){
   const wrap=document.getElementById("outreach-log-wrap");if(!wrap) return;
-  const rMap={"Replied":"pill-green","No Reply":"pill-amber","Meeting Scheduled":"pill-blue","Declined":"pill-red"};
   wrap.innerHTML=`<table style="table-layout:fixed">
     <thead><tr>
       <th style="width:140px">Partner</th>
@@ -4769,7 +4894,7 @@ function renderOutreachLog(){
       <th style="width:160px">Catatan</th>
       <th style="width:40px"></th>
     </tr></thead>
-    <tbody>${outreachLog.map(o=>{
+    <tbody>${outreachLog.length===0?`<tr><td colspan="7" style="text-align:center;padding:24px;font-size:12px;color:var(--text-muted)">Belum ada log outreach</td></tr>`:outreachLog.map(o=>{
       const p=partners.find(x=>x.id===o.partnerId)||{};
       return`<tr>
         <td style="font-weight:500;font-size:12px">${p.name||"-"}</td>
@@ -4783,12 +4908,26 @@ function renderOutreachLog(){
     }).join("")}</tbody>
   </table>`;
 }
-function saveOutreachField(id,field,val){const o=outreachLog.find(x=>x.id===id);if(o) o[field]=val.trim();}
-function deleteOutreach(id){if(!confirm("Hapus log ini?")) return;outreachLog=outreachLog.filter(x=>x.id!==id);renderOutreachLog();showToast("Log dihapus");}
-function addOutreach(){
-  // partnerId = UUID string. parseInt→NaN, NaN||1 = nempel ke partner fiktif. Ambil mentah.
+async function saveOutreachField(id,field,val){
+  const o=outreachLog.find(x=>x.id===id);if(!o) return;
+  o[field]=val.trim();
+  clearTimeout(o._saveTimer);
+  o._saveTimer=setTimeout(()=>sb_update("partner_outreach",id,{[field]:val.trim()}),600);
+}
+async function deleteOutreach(id){
+  if(!confirm("Hapus log ini?")) return;
+  const ok=await sb_delete("partner_outreach",id);
+  if(!ok) return;
+  outreachLog=outreachLog.filter(x=>x.id!==id);
+  renderOutreachLog();showToast("Log dihapus");
+}
+async function addOutreach(){
   const partnerId=document.getElementById("ol-partner").value||null;
-  outreachLog.unshift({id:++outreachIdCounter,partnerId,channel:"WhatsApp",tanggal:new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}),isi:"-",respons:"No Reply",catatan:""});
+  const tanggal=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+  const payload=_outreachJSToRow({partnerId,channel:"WhatsApp",tanggal,isi:"-",respons:"No Reply",catatan:""});
+  const row=await sb_insert("partner_outreach",payload);
+  if(!row) return;
+  outreachLog.unshift(_outreachRowToJS(row));
   renderOutreachLog();showToast("Log ditambahkan");
 }
 function partnershipOutreachHTML(){
@@ -4803,6 +4942,493 @@ function partnershipOutreachHTML(){
     <div style="overflow-x:auto" id="outreach-log-wrap"></div>
   </div>`;
 }
+
+// ── ORG PARTNERSHIP MODULE ─────────────────────────────────────────────────
+
+var orgPartners = [];
+var orgPartnerDeals = [];
+let activeOrgPartnerId = null;
+
+// Constants
+const OP_STATUSES = ["Approached","Sales Meet","Negotiation","Closed Deal","Closed Lost"];
+const OP_TIERS = ["Strategic","Standard"];
+const OP_CATEGORIES = ["BEM / Organisasi Mahasiswa","Career Center","Himpunan Mahasiswa","Unit Kemahasiswaan","Lainnya"];
+
+// Mapper: Supabase row → JS object
+function _orgPartnerRowToJS(d){
+  return {
+    id: d.id,
+    name: d.name||'',
+    category: d.category||'',
+    tier: d.tier||'Standard',
+    status: d.status||'Approached',
+    pic: d.contact_name||'',
+    email: d.contact_email||'',
+    wa: d.contact_phone||'',
+    pos: d.pos||'',
+    li: d.li||'',
+    scope: d.scope||'',
+    notes: d.notes||'',
+    inputDate: d.input_date||'',
+  };
+}
+// Mapper: JS object → Supabase row
+function _orgPartnerJSToRow(p){
+  return {
+    name: p.name,
+    category: p.category,
+    tier: p.tier,
+    status: p.status,
+    contact_name: p.pic,
+    contact_email: p.email,
+    contact_phone: p.wa,
+    pos: p.pos,
+    li: p.li,
+    scope: p.scope,
+    notes: p.notes,
+    input_date: p.inputDate,
+  };
+}
+function _orgPartnerFieldToCol(field){
+  const map={pic:'contact_name',email:'contact_email',wa:'contact_phone',inputDate:'input_date'};
+  return map[field]||field;
+}
+
+// Deal mappers
+function _opDealRowToJS(d){
+  return {
+    id: d.id,
+    orgPartnerId: d.org_partner_id||null,
+    nama: d.title||'Deal baru',
+    status: d.stage||'Negotiation',
+    nilai: d.value||null,
+    catatan: d.notes||'',
+    scope: d.scope||'',
+    deadline: d.deadline||null,
+  };
+}
+function _opDealJSToRow(d){
+  const rawNilai = d.nilai;
+  const sanitizedNilai = (rawNilai==='-'||rawNilai===''||rawNilai==null||isNaN(parseFloat(rawNilai))) ? null : parseFloat(rawNilai);
+  const rawDeadline = d.deadline;
+  const sanitizedDeadline = (rawDeadline==='-'||rawDeadline===''||rawDeadline==null) ? null : rawDeadline;
+  return {
+    org_partner_id: d.orgPartnerId||null,
+    title: d.nama,
+    stage: d.status,
+    value: sanitizedNilai,
+    notes: d.catatan,
+    scope: d.scope,
+    deadline: sanitizedDeadline,
+  };
+}
+const _opDealFieldToCol = (f) => ({orgPartnerId:'org_partner_id',nama:'title',status:'stage',nilai:'value',catatan:'notes'}[f]||f);
+
+// Pill helpers
+function opStatusPill(s){const m={"Approached":"pill-blue","Sales Meet":"pill-amber","Negotiation":"pill-amber","Closed Deal":"pill-green","Closed Lost":"pill-red"};return`<span class="pill ${m[s]||"pill-gray"}">${s}</span>`;}
+function opTierBadge(t){const c={Strategic:"color:var(--green);font-weight:700",Standard:"color:var(--blue);font-weight:600"};return`<span style="font-size:11px;${c[t]||""}">${t}</span>`;}
+
+// ── PAGE HTML ──
+function orgPartnerHTML(){
+  return `
+  <div class="tab-row">
+    <div class="tab active" id="optab-overview" onclick="initOrgPartnerTab('overview')">Overview</div>
+    <div class="tab" id="optab-master" onclick="initOrgPartnerTab('master')"><i class="ti ti-database" style="font-size:12px"></i> Master Data</div>
+    <div class="tab" id="optab-pipeline" onclick="initOrgPartnerTab('pipeline')"><i class="ti ti-layout-kanban" style="font-size:12px"></i> Pipeline</div>
+    <div class="tab" id="optab-deals" onclick="initOrgPartnerTab('deals')">Deals & Scope</div>
+    <div class="tab" id="optab-outreach" onclick="initOrgPartnerTab('outreach')"><i class="ti ti-send" style="font-size:12px"></i> Outreach Log</div>
+  </div>
+  <div id="org-partner-tab-content"></div>`;
+}
+function initOrgPartnerTab(tab){
+  document.querySelectorAll("#mainContent .tab").forEach(t=>t.classList.remove("active"));
+  const btn=document.getElementById("optab-"+tab);
+  if(btn) btn.classList.add("active");
+  const c=document.getElementById("org-partner-tab-content");
+  if(tab==="overview") c.innerHTML=opOverviewHTML();
+  else if(tab==="master"){c.innerHTML=opMasterHTML();initOrgPartnerMaster();}
+  else if(tab==="pipeline") c.innerHTML=opPipelineHTML();
+  else if(tab==="deals"){c.innerHTML=opDealsHTML();renderOrgPartnerDeals();}
+  else if(tab==="outreach"){c.innerHTML=opOutreachHTML();renderOrgOutreachLog();}
+}
+
+// ── OVERVIEW ──
+function opOverviewHTML(){
+  const closed=orgPartners.filter(x=>x.status==="Closed Deal").length;
+  const nego=orgPartners.filter(x=>x.status==="Negotiation").length;
+  const strategic=orgPartners.filter(x=>x.tier==="Strategic").length;
+  return `
+  <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card"><div class="stat-label">Total Org Partner</div><div class="stat-val">${orgPartners.length}</div><div class="stat-change" style="color:var(--text-muted)">kampus & organisasi</div></div>
+    <div class="stat-card"><div class="stat-label">Closed Deal</div><div class="stat-val" style="color:var(--green)">${closed}</div><div class="stat-change up">Berjalan</div></div>
+    <div class="stat-card"><div class="stat-label">Negotiation</div><div class="stat-val" style="color:var(--amber)">${nego}</div><div class="stat-change" style="color:var(--amber)">Follow-up needed</div></div>
+    <div class="stat-card"><div class="stat-label">Strategic</div><div class="stat-val" style="color:var(--blue)">${strategic}</div><div class="stat-change" style="color:var(--text-muted)">Priority partners</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600">Partner Terbaru & Aktif</div>
+      <button class="btn btn-primary btn-sm" onclick="initOrgPartnerTab('master')"><i class="ti ti-arrow-right"></i> Lihat semua</button>
+    </div>
+    <div style="overflow-x:auto">
+    <table style="table-layout:fixed">
+      <thead><tr><th style="width:160px">Nama</th><th style="width:140px">Tipe</th><th style="width:110px">PIC</th><th style="width:90px">Jabatan</th><th style="width:80px">Status</th><th style="width:70px">Tier</th><th style="width:120px">Scope</th></tr></thead>
+      <tbody>${orgPartners.slice(0,6).map(p=>`<tr>
+        <td style="font-weight:500;cursor:pointer;color:var(--purple-mid)" onclick="openOrgPartnerModal('${p.id}')">${p.name}</td>
+        <td style="font-size:11px">${p.category||'—'}</td>
+        <td>${p.pic}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${p.pos}</td>
+        <td>${opStatusPill(p.status)}</td>
+        <td>${opTierBadge(p.tier)}</td>
+        <td style="font-size:11px;color:var(--text-muted)" title="${p.scope}">${p.scope.length>22?p.scope.slice(0,22)+"…":p.scope}</td>
+      </tr>`).join("")}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+// ── MASTER DATA ──
+function opMasterHTML(){
+  return `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div><div style="font-size:13px;font-weight:600">Master Data Org Partnership</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">Klik nama untuk buka detail. Edit langsung di tabel.</div></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-primary btn-sm" onclick="openOrgPartnerModal(null)"><i class="ti ti-plus"></i> Tambah</button>
+      </div>
+    </div>
+    <div class="pt-filter">
+      <input type="text" id="op-srch" placeholder="Cari nama / PIC..." oninput="renderOrgPartnerMaster()">
+      <select id="op-fstatus" onchange="renderOrgPartnerMaster()"><option value="">Semua status</option>${OP_STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>
+      <select id="op-ftier" onchange="renderOrgPartnerMaster()"><option value="">Semua tier</option>${OP_TIERS.map(t=>`<option value="${t}">${t}</option>`).join("")}</select>
+      <button class="btn btn-sm" onclick="resetOrgPartnerFilter()"><i class="ti ti-refresh"></i></button>
+    </div>
+    <div style="overflow-x:auto" id="op-table-wrap"></div>
+    <div class="row-count" id="op-row-count"></div>
+  </div>`;
+}
+function initOrgPartnerMaster(){renderOrgPartnerMaster();}
+function getFilteredOrgPartners(){
+  const q=(document.getElementById("op-srch")||{}).value?.toLowerCase()||"";
+  const fs=(document.getElementById("op-fstatus")||{}).value||"";
+  const ftr=(document.getElementById("op-ftier")||{}).value||"";
+  return orgPartners.filter(p=>{
+    if(q&&!`${p.name}${p.pic}`.toLowerCase().includes(q)) return false;
+    if(fs&&p.status!==fs) return false;
+    if(ftr&&p.tier!==ftr) return false;
+    return true;
+  });
+}
+function resetOrgPartnerFilter(){
+  ["op-srch","op-fstatus","op-ftier"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  renderOrgPartnerMaster();
+}
+function renderOrgPartnerMaster(){
+  const data=getFilteredOrgPartners();
+  const wrap=document.getElementById("op-table-wrap");if(!wrap) return;
+  if(!data.length){wrap.innerHTML=`<div style="padding:32px;text-align:center;font-size:12px;color:var(--text-muted)">Tidak ada data</div>`;
+    document.getElementById("op-row-count").textContent="";return;}
+  wrap.innerHTML=`<table style="table-layout:fixed">
+    <thead><tr>
+      <th style="width:160px">Nama Org / Kampus</th>
+      <th style="width:150px">Tipe</th>
+      <th style="width:80px">Tier</th>
+      <th style="width:110px">Nama Kontak</th>
+      <th style="width:100px">Role</th>
+      <th style="width:115px">Phone</th>
+      <th style="width:155px">Email</th>
+      <th style="width:80px">Status</th>
+      <th style="width:120px">Scope</th>
+      <th style="width:100px">Tanggal Input</th>
+      <th style="width:52px"></th>
+    </tr></thead>
+    <tbody>${data.map(p=>`<tr>
+      <td style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openOrgPartnerModal('${p.id}')">${p.name}</td>
+      <td><select class="inline-edit" onchange="saveOrgPartnerField('${p.id}','category',this.value)"><option value="">—</option>${OP_CATEGORIES.map(c=>`<option ${c===p.category?"selected":""}>${c}</option>`).join("")}</select></td>
+      <td><select class="inline-edit" onchange="saveOrgPartnerField('${p.id}','tier',this.value)">${OP_TIERS.map(t=>`<option ${t===p.tier?"selected":""}>${t}</option>`).join("")}</select></td>
+      <td><input class="inline-edit" value="${p.pic}" onchange="saveOrgPartnerField('${p.id}','pic',this.value)"></td>
+      <td><input class="inline-edit" value="${p.pos}" onchange="saveOrgPartnerField('${p.id}','pos',this.value)"></td>
+      <td><input class="inline-edit" value="${p.wa}" onchange="saveOrgPartnerField('${p.id}','wa',this.value)" style="font-size:11px"></td>
+      <td><input class="inline-edit" value="${p.email}" onchange="saveOrgPartnerField('${p.id}','email',this.value)" style="font-size:11px"></td>
+      <td><select class="inline-edit" onchange="saveOrgPartnerField('${p.id}','status',this.value)">${OP_STATUSES.map(s=>`<option ${s===p.status?"selected":""}>${s}</option>`).join("")}</select></td>
+      <td><input class="inline-edit" value="${p.scope}" onchange="saveOrgPartnerField('${p.id}','scope',this.value)" style="font-size:11px"></td>
+      <td><input class="inline-edit" value="${p.inputDate}" onchange="saveOrgPartnerField('${p.id}','inputDate',this.value)" style="font-size:11px" type="date"></td>
+      <td><button class="btn btn-sm" style="padding:0 6px;border:none;color:var(--text-muted)" onclick="deleteOrgPartner('${p.id}')" title="Hapus"><i class="ti ti-trash"></i></button></td>
+    </tr>`).join("")}</tbody>
+  </table>`;
+  const rc=document.getElementById("op-row-count");
+  if(rc) rc.textContent=`${data.length} dari ${orgPartners.length} data`;
+}
+async function saveOrgPartnerField(id,field,val){
+  const p=orgPartners.find(x=>x.id===id);if(!p) return;
+  p[field]=val.trim();
+  clearTimeout(p._saveTimer);
+  p._saveTimer=setTimeout(()=>sb_update("org_partners",id,{[_orgPartnerFieldToCol(field)]:val.trim()}),600);
+}
+async function deleteOrgPartner(id){
+  if(!confirm("Hapus org partner ini?")) return;
+  const ok=await sb_delete("org_partners",id);
+  if(!ok) return;
+  orgPartners=orgPartners.filter(x=>x.id!==id);
+  renderOrgPartnerMaster();showToast("Partner dihapus");
+}
+
+// ── MODAL ──
+function openOrgPartnerModal(id){
+  activeOrgPartnerId=id;
+  const isNew=!id;
+  const p=isNew?{id:null,name:"",category:"",pic:"",pos:"",wa:"",email:"",li:"",tier:"Standard",status:"Approached",scope:"",notes:"",inputDate:""}:orgPartners.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById("opm-title").textContent=isNew?"Tambah Org Partner Baru":p.name;
+  document.getElementById("opm-name").value=p.name;
+  document.getElementById("opm-category").value=p.category||"";
+  document.getElementById("opm-tier").value=p.tier||"Standard";
+  document.getElementById("opm-pic").value=p.pic;
+  document.getElementById("opm-pos").value=p.pos;
+  document.getElementById("opm-wa").value=p.wa;
+  document.getElementById("opm-email").value=p.email||"";
+  document.getElementById("opm-li").value=p.li||"";
+  document.getElementById("opm-status").value=p.status||"Approached";
+  document.getElementById("opm-scope").value=p.scope;
+  document.getElementById("opm-notes").value=p.notes;
+  document.getElementById("opm-inputdate").value=p.inputDate||"";
+  document.getElementById("opm-delete-btn").style.display=isNew?"none":"inline-flex";
+  document.getElementById("org-partner-modal").style.display="flex";
+}
+function closeOrgPartnerModal(){document.getElementById("org-partner-modal").style.display="none";activeOrgPartnerId=null;}
+async function saveOrgPartnerModal(){
+  const name=document.getElementById("opm-name").value.trim();
+  if(!name){showToast("Nama wajib diisi");return;}
+  const jsData={
+    name,
+    category:document.getElementById("opm-category").value,
+    pic:document.getElementById("opm-pic").value,
+    pos:document.getElementById("opm-pos").value,
+    wa:document.getElementById("opm-wa").value,
+    email:document.getElementById("opm-email").value,
+    li:document.getElementById("opm-li").value,
+    tier:document.getElementById("opm-tier").value,
+    status:document.getElementById("opm-status").value,
+    scope:document.getElementById("opm-scope").value,
+    notes:document.getElementById("opm-notes").value,
+    inputDate:document.getElementById("opm-inputdate").value,
+  };
+  const rowData=_orgPartnerJSToRow(jsData);
+  if(activeOrgPartnerId){
+    const ok=await sb_update("org_partners",activeOrgPartnerId,rowData);
+    if(!ok) return;
+    const p=orgPartners.find(x=>x.id===activeOrgPartnerId);
+    if(p) Object.assign(p,jsData);
+    showToast("Partner diupdate");
+  } else {
+    const row=await sb_insert("org_partners",rowData);
+    if(!row) return;
+    orgPartners.push(_orgPartnerRowToJS(row));
+    showToast("Partner baru ditambahkan");
+  }
+  closeOrgPartnerModal();
+  if(document.getElementById("op-table-wrap")) renderOrgPartnerMaster();
+}
+async function deleteOrgPartnerFromModal(){
+  if(!activeOrgPartnerId) return;
+  if(!confirm("Hapus partner ini?")) return;
+  const ok=await sb_delete("org_partners",activeOrgPartnerId);
+  if(!ok) return;
+  orgPartners=orgPartners.filter(x=>x.id!==activeOrgPartnerId);
+  closeOrgPartnerModal();
+  renderOrgPartnerMaster();showToast("Partner dihapus");
+}
+
+// ── PIPELINE ──
+function opPipelineHTML(){
+  const dotMap={"Approached":"#6c63ff","Sales Meet":"#f59e0b","Negotiation":"#854f0b","Closed Deal":"#3b6d11","Closed Lost":"#e24b4a"};
+  const cols=OP_STATUSES.map(s=>{
+    const items=orgPartners.filter(x=>x.status===s);
+    return `<div class="pipeline-col" data-stage="${s}" ondragover="event.preventDefault()" ondrop="_opPipelineDrop(event,'${s}')">
+      <div class="pipeline-header">
+        <div class="pipeline-header-title"><span class="pipeline-dot" style="background:${dotMap[s]}"></span>${s}</div>
+        <span class="pipeline-count">${items.length}</span>
+      </div>
+      <div class="pipeline-cards">
+        ${items.length===0?`<div style="text-align:center;padding:20px 0;font-size:11px;color:var(--text-hint)">Kosong</div>`:items.map(p=>`
+          <div class="pipeline-card" draggable="true" ondragstart="_opPipelineDragStart(event,'${p.id}')" onclick="openOrgPartnerModal('${p.id}')">
+            <div class="pipeline-card-name">${p.name}</div>
+            <div class="pipeline-card-produk" style="font-size:10px;color:var(--text-muted)">${p.category||'—'}</div>
+            <div class="pipeline-card-footer" style="margin-top:4px">
+              ${opTierBadge(p.tier)}
+              ${p.pic?`<span style="font-size:10px;color:var(--text-muted)">${p.pic}</span>`:''}
+            </div>
+          </div>`).join("")}
+        <div style="text-align:center;padding:6px 0"><span style="font-size:10px;color:var(--purple-accent);cursor:pointer" onclick="openOrgPartnerModal(null)">+ Tambah</span></div>
+      </div>
+    </div>`;
+  }).join("");
+  return `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${orgPartners.length} org partner · drag kartu untuk pindah stage</div>
+  <div class="pipeline-wrap" style="height:500px">${cols}</div>`;
+}
+function _opPipelineDragStart(e,id){e.dataTransfer.setData('opPartnerId',id);}
+async function _opPipelineDrop(e,stage){
+  e.preventDefault();
+  const id=e.dataTransfer.getData('opPartnerId');
+  const p=orgPartners.find(x=>String(x.id)===String(id));
+  if(!p||p.status===stage) return;
+  p.status=stage;
+  await sb_update('org_partners',p.id,{status:stage});
+  const c=document.getElementById("org-partner-tab-content");
+  if(c) c.innerHTML=opPipelineHTML();
+  showToast(`Dipindah ke ${stage}`);
+}
+
+// ── DEALS ──
+function renderOrgPartnerDeals(){
+  const wrap=document.getElementById("op-deals-wrap");if(!wrap) return;
+  wrap.innerHTML=`<table style="table-layout:fixed">
+    <thead><tr>
+      <th style="width:140px">Nama Deal</th>
+      <th style="width:150px">Org Partner</th>
+      <th style="width:80px">Status</th>
+      <th style="width:150px">Scope</th>
+      <th style="width:90px">Deadline</th>
+      <th style="width:110px">Nilai</th>
+      <th style="width:130px">Catatan</th>
+      <th style="width:40px"></th>
+    </tr></thead>
+    <tbody>${orgPartnerDeals.map(d=>{
+      const p=orgPartners.find(x=>x.id===d.orgPartnerId)||{};
+      return`<tr>
+        <td style="font-weight:500"><input class="inline-edit" value="${d.nama}" onchange="saveOpDealField('${d.id}','nama',this.value)"></td>
+        <td style="font-size:11px;color:var(--text-muted)">${p.name||"-"}</td>
+        <td><select class="inline-edit" onchange="saveOpDealField('${d.id}','status',this.value)"><option ${d.status==="Active"?"selected":""}>Active</option><option ${d.status==="Negotiation"?"selected":""}>Negotiation</option><option ${d.status==="Done"?"selected":""}>Done</option><option ${d.status==="Cancelled"?"selected":""}>Cancelled</option></select></td>
+        <td><input class="inline-edit" value="${d.scope||''}" onchange="saveOpDealField('${d.id}','scope',this.value)" style="font-size:11px"></td>
+        <td><input class="inline-edit" value="${d.deadline||''}" onchange="saveOpDealField('${d.id}','deadline',this.value)" style="font-size:11px"></td>
+        <td><input class="inline-edit" value="${d.nilai||''}" onchange="saveOpDealField('${d.id}','nilai',this.value)" style="font-size:11px"></td>
+        <td><input class="inline-edit" value="${d.catatan||''}" onchange="saveOpDealField('${d.id}','catatan',this.value)" style="font-size:11px"></td>
+        <td><button class="btn btn-sm" style="padding:0 6px;border:none;color:var(--text-muted)" onclick="deleteOpDeal('${d.id}')"><i class="ti ti-trash"></i></button></td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table>`;
+}
+async function saveOpDealField(id,field,val){
+  const d=orgPartnerDeals.find(x=>x.id===id);if(!d) return;
+  d[field]=val.trim();
+  clearTimeout(d._saveTimer);
+  const col=_opDealFieldToCol(field);
+  let dbVal=val.trim();
+  if(field==='nilai') dbVal=(dbVal===''||isNaN(parseFloat(dbVal)))?null:parseFloat(dbVal);
+  if(field==='deadline') dbVal=(dbVal==='')?null:dbVal;
+  d._saveTimer=setTimeout(()=>sb_update("org_deals",id,{[col]:dbVal}),600);
+}
+async function deleteOpDeal(id){
+  if(!confirm("Hapus deal ini?")) return;
+  const ok=await sb_delete("org_deals",id);
+  if(!ok) return;
+  orgPartnerDeals=orgPartnerDeals.filter(x=>x.id!==id);
+  renderOrgPartnerDeals();showToast("Deal dihapus");
+}
+async function addOpDeal(){
+  const orgPartnerId=document.getElementById("op-deal-partner").value||null;
+  const payload=_opDealJSToRow({orgPartnerId,nama:"Deal baru",scope:"",status:"Negotiation",deadline:null,nilai:null,catatan:""});
+  const row=await sb_insert("org_deals",payload);
+  if(!row) return;
+  orgPartnerDeals.push(_opDealRowToJS(row));
+  renderOrgPartnerDeals();showToast("Deal ditambahkan");
+}
+function opDealsHTML(){
+  return `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div><div style="font-size:13px;font-weight:600">Deals & Scope Kolaborasi</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">Edit langsung di tabel. Satu partner bisa punya beberapa deal.</div></div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <select id="op-deal-partner" style="height:32px;font-size:12px"><option value="">Pilih org partner...</option>${orgPartners.map(p=>`<option value="${p.id}">${p.name}</option>`).join("")}</select>
+        <button class="btn btn-primary btn-sm" onclick="addOpDeal()"><i class="ti ti-plus"></i> Tambah Deal</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto" id="op-deals-wrap"></div>
+  </div>`;
+}
+
+// ── OUTREACH LOG ──
+var orgOutreachLog=[];
+function _orgOutreachRowToJS(d){
+  return {
+    id: d.id,
+    orgPartnerId: d.org_partner_id||null,
+    channel: d.channel||'WhatsApp',
+    tanggal: d.tanggal||'',
+    isi: d.isi||'-',
+    respons: d.respons||'No Reply',
+    catatan: d.catatan||'',
+  };
+}
+function _orgOutreachJSToRow(o){
+  return {
+    org_partner_id: o.orgPartnerId||null,
+    channel: o.channel,
+    tanggal: o.tanggal,
+    isi: o.isi,
+    respons: o.respons,
+    catatan: o.catatan,
+  };
+}
+function renderOrgOutreachLog(){
+  const wrap=document.getElementById("op-outreach-wrap");if(!wrap) return;
+  wrap.innerHTML=`<table style="table-layout:fixed">
+    <thead><tr>
+      <th style="width:150px">Partner</th>
+      <th style="width:90px">Channel</th>
+      <th style="width:90px">Tanggal</th>
+      <th style="width:180px">Isi Outreach</th>
+      <th style="width:120px">Respons</th>
+      <th style="width:160px">Catatan</th>
+      <th style="width:40px"></th>
+    </tr></thead>
+    <tbody>${orgOutreachLog.length===0?`<tr><td colspan="7" style="text-align:center;padding:24px;font-size:12px;color:var(--text-muted)">Belum ada log outreach</td></tr>`:orgOutreachLog.map(o=>{
+      const p=orgPartners.find(x=>x.id===o.orgPartnerId)||{};
+      return`<tr>
+        <td style="font-weight:500;font-size:12px">${p.name||"-"}</td>
+        <td><input class="inline-edit" value="${o.channel}" onchange="saveOrgOutreachField('${o.id}','channel',this.value)"></td>
+        <td><input class="inline-edit" value="${o.tanggal}" onchange="saveOrgOutreachField('${o.id}','tanggal',this.value)" style="font-size:11px"></td>
+        <td><input class="inline-edit" value="${o.isi}" onchange="saveOrgOutreachField('${o.id}','isi',this.value)" style="font-size:11px"></td>
+        <td><select class="inline-edit" onchange="saveOrgOutreachField('${o.id}','respons',this.value)"><option ${o.respons==="Replied"?"selected":""}>Replied</option><option ${o.respons==="No Reply"?"selected":""}>No Reply</option><option ${o.respons==="Meeting Scheduled"?"selected":""}>Meeting Scheduled</option><option ${o.respons==="Declined"?"selected":""}>Declined</option></select></td>
+        <td><input class="inline-edit" value="${o.catatan}" onchange="saveOrgOutreachField('${o.id}','catatan',this.value)" style="font-size:11px"></td>
+        <td><button class="btn btn-sm" style="padding:0 6px;border:none;color:var(--text-muted)" onclick="deleteOrgOutreach('${o.id}')"><i class="ti ti-trash"></i></button></td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table>`;
+}
+async function saveOrgOutreachField(id,field,val){
+  const o=orgOutreachLog.find(x=>x.id===id);if(!o) return;
+  o[field]=val.trim();
+  clearTimeout(o._saveTimer);
+  o._saveTimer=setTimeout(()=>sb_update("org_outreach",id,{[field]:val.trim()}),600);
+}
+async function deleteOrgOutreach(id){
+  if(!confirm("Hapus log ini?")) return;
+  const ok=await sb_delete("org_outreach",id);
+  if(!ok) return;
+  orgOutreachLog=orgOutreachLog.filter(x=>x.id!==id);
+  renderOrgOutreachLog();showToast("Log dihapus");
+}
+async function addOrgOutreach(){
+  const orgPartnerId=document.getElementById("op-ol-partner").value||null;
+  const tanggal=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+  const payload=_orgOutreachJSToRow({orgPartnerId,channel:"WhatsApp",tanggal,isi:"-",respons:"No Reply",catatan:""});
+  const row=await sb_insert("org_outreach",payload);
+  if(!row) return;
+  orgOutreachLog.unshift(_orgOutreachRowToJS(row));
+  renderOrgOutreachLog();showToast("Log ditambahkan");
+}
+function opOutreachHTML(){
+  return`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div><div style="font-size:13px;font-weight:600">Outreach Log</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">Catat semua aktivitas outreach per org partner. Edit langsung.</div></div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <select id="op-ol-partner" style="height:32px;font-size:12px"><option value="">Pilih org partner...</option>${orgPartners.map(p=>`<option value="${p.id}">${p.name}</option>`).join("")}</select>
+        <button class="btn btn-primary btn-sm" onclick="addOrgOutreach()"><i class="ti ti-plus"></i> Catat Outreach</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto" id="op-outreach-wrap"></div>
+  </div>`;
+}
+
+// ── END ORG PARTNERSHIP MODULE ─────────────────────────────────────────────
 
 function showToast(msg){
   const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
@@ -7820,6 +8446,7 @@ var menuSections = [
     { page: "tickets",   label: "Tickets" },
     { page: "product",   label: "Products" },
     { page: "partner",   label: "B2B Partnership" },
+    { page: "orgpartner", label: "Org Partnership" },
     { page: "design",    label: "Graphic Design" },
     { page: "resources", label: "Resources" }
   ]},
@@ -7827,7 +8454,7 @@ var menuSections = [
 ];
 
 function loadMenuSections(){
-  var MENU_VERSION = 'v10_contentlib';
+  var MENU_VERSION = 'v11_orgpartner';
   var savedVersion = localStorage.getItem('ccc_menuVersion');
   if(savedVersion !== MENU_VERSION){
     // Config outdated or first run - clear and use default
@@ -7856,6 +8483,7 @@ var pageIconMap = {
   tickets:   'ti-ticket',
   product:   'ti-package',
   partner:   'ti-users-group',
+  orgpartner: 'ti-school',
   design:    'ti-palette',
   contentlib: 'ti-bookmark',
   voucher:   'ti-ticket',
@@ -9418,14 +10046,15 @@ async function daConfirmDelete(id) {
     <div class="modal-body" style="padding:16px 20px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Nama Perusahaan</div><input class="cust-field-input" id="pm-name" placeholder="contoh: PT Unilever Indonesia"></div>
+        <div class="cust-field editable"><div class="cust-field-label">Category</div><select id="pm-category" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="">— Pilih —</option><option value="MT Program Company">MT Program Company</option><option value="HR Services Company">HR Services Company</option></select></div>
         <div class="cust-field editable"><div class="cust-field-label">Tier</div><select id="pm-tier" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="Strategic">Strategic</option><option value="Standard">Standard</option></select></div>
-        <div class="cust-field editable"><div class="cust-field-label">Nama PIC</div><input class="cust-field-input" id="pm-pic" placeholder="Nama PIC"></div>
-        <div class="cust-field editable"><div class="cust-field-label">Jabatan PIC</div><input class="cust-field-input" id="pm-pos" placeholder="HR Manager, Kadiv Career, dll"></div>
-        <div class="cust-field editable"><div class="cust-field-label">WhatsApp</div><input class="cust-field-input" id="pm-wa" placeholder="+62..."></div>
+        <div class="cust-field editable"><div class="cust-field-label">Nama Kontak</div><input class="cust-field-input" id="pm-pic" placeholder="Nama PIC"></div>
+        <div class="cust-field editable"><div class="cust-field-label">Role</div><input class="cust-field-input" id="pm-pos" placeholder="HR Manager, Kadiv Career, dll"></div>
+        <div class="cust-field editable"><div class="cust-field-label">Phone Number</div><input class="cust-field-input" id="pm-wa" placeholder="+62..."></div>
         <div class="cust-field editable"><div class="cust-field-label">Email</div><input class="cust-field-input" id="pm-email" placeholder="email@company.com"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">LinkedIn URL</div><input class="cust-field-input" id="pm-li" placeholder="https://linkedin.com/in/..."></div>
-        <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><select id="pm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option>Prospek</option><option>Contacted</option><option>Negotiation</option><option>Active</option><option>Inactive</option></select></div>
-        <div class="cust-field editable"><div class="cust-field-label">Last Contact</div><input class="cust-field-input" id="pm-lastcontact" placeholder="12 Mei 2026"></div>
+        <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><select id="pm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option>Approached</option><option>Sales Meet</option><option>Negotiation</option><option>Closed Deal</option><option>Closed Lost</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tanggal Input</div><input class="cust-field-input" id="pm-inputdate" type="date"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Scope Kolaborasi</div><input class="cust-field-input" id="pm-scope" placeholder="Webinar, job posting, promo bundling..."></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Catatan Internal</div><textarea id="pm-notes" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Notes..."></textarea></div>
       </div>
@@ -9438,9 +10067,36 @@ async function daConfirmDelete(id) {
   </div>
 </div>
 
-
-
-<script>
+<!-- ORG PARTNER MODAL -->
+<div id="org-partner-modal" style="display:none" class="modal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div class="pt-modal">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border)">
+      <div class="modal-title" style="font-size:14px;font-weight:700" id="opm-title">Detail Org Partner</div>
+      <button class="btn btn-sm" onclick="closeOrgPartnerModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Nama Organisasi / Kampus</div><input class="cust-field-input" id="opm-name" placeholder="contoh: BEM FEB UI, Career Center Unpad..."></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tipe</div><select id="opm-category" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="">— Pilih —</option><option value="BEM / Organisasi Mahasiswa">BEM / Organisasi Mahasiswa</option><option value="Career Center">Career Center</option><option value="Himpunan Mahasiswa">Himpunan Mahasiswa</option><option value="Unit Kemahasiswaan">Unit Kemahasiswaan</option><option value="Lainnya">Lainnya</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tier</div><select id="opm-tier" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="Strategic">Strategic</option><option value="Standard">Standard</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Nama Kontak (PIC)</div><input class="cust-field-input" id="opm-pic" placeholder="Nama PIC / Ketua / Staff"></div>
+        <div class="cust-field editable"><div class="cust-field-label">Role / Jabatan</div><input class="cust-field-input" id="opm-pos" placeholder="Ketua BEM, Staff Career, dll"></div>
+        <div class="cust-field editable"><div class="cust-field-label">Phone / WhatsApp</div><input class="cust-field-input" id="opm-wa" placeholder="+62..."></div>
+        <div class="cust-field editable"><div class="cust-field-label">Email</div><input class="cust-field-input" id="opm-email" placeholder="email@organisasi.com"></div>
+        <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">LinkedIn / Instagram URL</div><input class="cust-field-input" id="opm-li" placeholder="https://linkedin.com/in/... atau instagram.com/..."></div>
+        <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><select id="opm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option>Approached</option><option>Sales Meet</option><option>Negotiation</option><option>Closed Deal</option><option>Closed Lost</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tanggal Input</div><input class="cust-field-input" id="opm-inputdate" type="date"></div>
+        <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Scope Kolaborasi</div><input class="cust-field-input" id="opm-scope" placeholder="Promo webinar, sharing session, bundling, dll..."></div>
+        <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Catatan Internal</div><textarea id="opm-notes" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Notes..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
+      <button class="btn btn-danger btn-sm" id="opm-delete-btn" onclick="deleteOrgPartnerFromModal()" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>
+      <button class="btn btn-sm" onclick="closeOrgPartnerModal()">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveOrgPartnerModal()"><i class="ti ti-check"></i> Simpan</button>
+    </div>
+  </div>
+</div>
 
   // localStorage mode
   const LS_KEY = "mt_vacancies";
@@ -12995,7 +13651,34 @@ function renderTpBlast() {
 function _tpBlastComposeHTML() {
   const domisilis = [...new Set(_tpData.map(b => b.domisili).filter(Boolean))].sort();
   const tiers = [...new Set(_tpData.map(b => b.campus_tier).filter(Boolean))].sort();
+  const sumbers = [...new Set(_tpData.map(b => b.sumber).filter(Boolean))].sort();
+  const statuses = [...new Set(_tpData.map(b => b.status).filter(Boolean))].sort();
+  const pendidikans = [...new Set(_tpData.map(b => b.pendidikan).filter(Boolean))].sort();
+
+  // Top 3 angkatan by frequency
+  const angkatanFreq = {};
+  _tpData.forEach(b => { if(b.angkatan) angkatanFreq[b.angkatan] = (angkatanFreq[b.angkatan]||0)+1; });
+  const top3Angkatan = Object.entries(angkatanFreq).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
+
+  // Top 10 universitas by frequency
+  const uniFreq = {};
+  _tpData.forEach(b => { if(b.universitas) uniFreq[b.universitas] = (uniFreq[b.universitas]||0)+1; });
+  const top10Uni = Object.entries(uniFreq).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]);
+
+  // Minat posisi MT (posisi_mt) - multi value split koma
+  const posisiFreq = {};
+  _tpData.forEach(b => { (b.posisi_mt||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(v => { posisiFreq[v]=(posisiFreq[v]||0)+1; }); });
+  const posisiOpts = Object.keys(posisiFreq).sort();
+
+  // Target industri (target_mt) - multi value split koma
+  const indFreq = {};
+  _tpData.forEach(b => { (b.target_mt||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(v => { indFreq[v]=(indFreq[v]||0)+1; }); });
+  const indOpts = Object.keys(indFreq).sort();
+
+  const ipkRanges = ['< 3.0','3.0 – 3.25','3.26 – 3.50','3.51 – 3.75','3.76 – 4.00'];
+
   const count = _tpBlastGetRecipients().length;
+  const selStyle = `width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)`;
   return `
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div style="display:flex;flex-direction:column;gap:12px">
@@ -13004,22 +13687,54 @@ function _tpBlastComposeHTML() {
         <div style="display:flex;flex-direction:column;gap:8px">
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">SEGMENT</label>
-            <select id="tpbl-seg" onchange="_tpBlastUpdateCount()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+            <select id="tpbl-seg" onchange="_tpBlastUpdateCount()" style="${selStyle}">
               <option value="all">Semua talent pool (${_tpData.length})</option>
-              <option value="has_email">Punya email saja</option>
               <option value="sudah_beli">Sudah beli</option>
               <option value="belum_beli">Belum beli</option>
               <option value="custom">Filter kustom...</option>
             </select>
           </div>
           <div id="tpbl-custom-filters" style="display:none;flex-direction:column;gap:6px">
-            <select id="tpbl-domisili" onchange="_tpBlastUpdateCount()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+            <input id="tpbl-search" placeholder="Cari nama / email spesifik..." oninput="_tpBlastUpdateCount()" style="${selStyle}">
+            <select id="tpbl-domisili" onchange="_tpBlastUpdateCount()" style="${selStyle}">
               <option value="">Semua domisili</option>
               ${domisilis.map(d=>`<option value="${d}">${d}</option>`).join('')}
             </select>
-            <select id="tpbl-tier" onchange="_tpBlastUpdateCount()" style="width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
+            <select id="tpbl-tier" onchange="_tpBlastUpdateCount()" style="${selStyle}">
               <option value="">Semua campus tier</option>
               ${tiers.map(t=>`<option value="${t}">${t}</option>`).join('')}
+            </select>
+            <select id="tpbl-sumber" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua sumber</option>
+              ${sumbers.map(s=>`<option value="${s}">${s}</option>`).join('')}
+            </select>
+            <select id="tpbl-status" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua status</option>
+              ${statuses.map(s=>`<option value="${s}">${s}</option>`).join('')}
+            </select>
+            <select id="tpbl-pendidikan" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua pendidikan</option>
+              ${pendidikans.map(p=>`<option value="${p}">${p}</option>`).join('')}
+            </select>
+            <select id="tpbl-ipk" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua range IPK</option>
+              ${ipkRanges.map(r=>`<option value="${r}">${r}</option>`).join('')}
+            </select>
+            <select id="tpbl-angkatan" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua angkatan</option>
+              ${top3Angkatan.map(a=>`<option value="${a}">${a}</option>`).join('')}
+            </select>
+            <select id="tpbl-universitas" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua universitas</option>
+              ${top10Uni.map(u=>`<option value="${u}">${u}</option>`).join('')}
+            </select>
+            <select id="tpbl-posisi" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua minat posisi MT</option>
+              ${posisiOpts.map(p=>`<option value="${p}">${p}</option>`).join('')}
+            </select>
+            <select id="tpbl-industri" onchange="_tpBlastUpdateCount()" style="${selStyle}">
+              <option value="">Semua target industri</option>
+              ${indOpts.map(i=>`<option value="${i}">${i}</option>`).join('')}
             </select>
           </div>
           <div id="tpbl-recipient-count" style="font-size:12px;font-weight:600;color:var(--purple-accent);padding:7px 10px;background:var(--purple-light);border-radius:var(--radius)">
@@ -13105,10 +13820,40 @@ function _tpBlastGetRecipients() {
   if (seg === 'sudah_beli') list = list.filter(b => b.sudah_beli);
   if (seg === 'belum_beli') list = list.filter(b => !b.sudah_beli);
   if (seg === 'custom') {
-    const dom = document.getElementById('tpbl-domisili')?.value;
-    const tier = document.getElementById('tpbl-tier')?.value;
-    if (dom) list = list.filter(b => b.domisili === dom);
-    if (tier) list = list.filter(b => b.campus_tier === tier);
+    const search   = document.getElementById('tpbl-search')?.value?.toLowerCase().trim();
+    const dom      = document.getElementById('tpbl-domisili')?.value;
+    const tier     = document.getElementById('tpbl-tier')?.value;
+    const sumber   = document.getElementById('tpbl-sumber')?.value;
+    const status   = document.getElementById('tpbl-status')?.value;
+    const pend     = document.getElementById('tpbl-pendidikan')?.value;
+    const ipkRange = document.getElementById('tpbl-ipk')?.value;
+    const angkatan = document.getElementById('tpbl-angkatan')?.value;
+    const uni      = document.getElementById('tpbl-universitas')?.value;
+    const posisi   = document.getElementById('tpbl-posisi')?.value;
+    const industri = document.getElementById('tpbl-industri')?.value;
+
+    if (search)   list = list.filter(b => b.nama?.toLowerCase().includes(search) || b.email?.toLowerCase().includes(search));
+    if (dom)      list = list.filter(b => b.domisili === dom);
+    if (tier)     list = list.filter(b => b.campus_tier === tier);
+    if (sumber)   list = list.filter(b => b.sumber === sumber);
+    if (status)   list = list.filter(b => b.status === status);
+    if (pend)     list = list.filter(b => b.pendidikan === pend);
+    if (angkatan) list = list.filter(b => b.angkatan === angkatan);
+    if (uni)      list = list.filter(b => b.universitas === uni);
+    if (posisi)   list = list.filter(b => (b.posisi_mt||'').split(',').map(x=>x.trim()).includes(posisi));
+    if (industri) list = list.filter(b => (b.target_mt||'').split(',').map(x=>x.trim()).includes(industri));
+    if (ipkRange) {
+      list = list.filter(b => {
+        const v = parseFloat(b.ipk);
+        if (isNaN(v)) return false;
+        if (ipkRange === '< 3.0')       return v < 3.0;
+        if (ipkRange === '3.0 – 3.25')  return v >= 3.0 && v <= 3.25;
+        if (ipkRange === '3.26 – 3.50') return v >= 3.26 && v <= 3.50;
+        if (ipkRange === '3.51 – 3.75') return v >= 3.51 && v <= 3.75;
+        if (ipkRange === '3.76 – 4.00') return v >= 3.76 && v <= 4.00;
+        return true;
+      });
+    }
   }
   return list;
 }
@@ -14749,33 +15494,23 @@ function clRenderPreviewModal(c) {
   modal.innerHTML = `
   <div style="background:var(--white);border-radius:var(--radius-lg);width:100%;max-width:640px;box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border);flex-shrink:0">
-      <i class="ti ${platformIcon}" style="font-size:14px;color:var(--purple-accent);flex-shrink:0"></i>
+      <i class="ti ${platformIcon}" style="font-size:15px;color:var(--purple-accent);flex-shrink:0"></i>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span style="font-size:12px;font-weight:700">${c.platform}</span>
+          <span style="font-size:13px;font-weight:700">${c.platform}</span>
           <span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:1px 7px;border-radius:10px;white-space:nowrap">${c.jenis}</span>
         </div>
       </div>
-      <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
-        ${c.link?`<a href="${c.link}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:3px 7px" title="Buka link"><i class="ti ti-external-link" style="font-size:11px"></i></a>`:''}
-        <button onclick="clOpenEditModal('${c.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px" title="Edit"><i class="ti ti-edit" style="font-size:11px"></i></button>
-        <button onclick="clOpenAddImageModal('${c.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px" title="Tambah gambar"><i class="ti ti-photo-plus" style="font-size:11px"></i></button>
-        <button onclick="clConfirmDelete('${c.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px;color:var(--red)" title="Hapus"><i class="ti ti-trash" style="font-size:11px"></i></button>
-        <button onclick="gcalCloseModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:0;display:flex;align-items:center;margin-left:4px"><i class="ti ti-x"></i></button>
+      <div style="display:flex;gap:5px;flex-shrink:0;align-items:center">
+        ${c.link?`<a href="${c.link}" target="_blank" class="btn btn-sm" style="padding:5px 9px;display:flex;align-items:center;gap:5px" title="Buka link"><i class="ti ti-external-link" style="font-size:14px"></i><span style="font-size:11px">Buka Link</span></a>`:''}
+        <button onclick="clOpenEditModal('${c.id}')" class="btn btn-sm" style="padding:5px 9px;display:flex;align-items:center;gap:5px" title="Edit"><i class="ti ti-edit" style="font-size:14px"></i><span style="font-size:11px">Edit</span></button>
+        <button onclick="clOpenAddImageModal('${c.id}')" class="btn btn-sm" style="padding:5px 9px;display:flex;align-items:center;gap:5px" title="Tambah gambar"><i class="ti ti-photo-plus" style="font-size:14px"></i><span style="font-size:11px">Tambah Gambar</span></button>
+        <button onclick="clConfirmDelete('${c.id}')" class="btn btn-sm" style="padding:5px 9px;color:var(--red)" title="Hapus"><i class="ti ti-trash" style="font-size:14px"></i></button>
+        <button onclick="gcalCloseModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:5px;display:flex;align-items:center;margin-left:2px"><i class="ti ti-x" style="font-size:18px"></i></button>
       </div>
     </div>
     <div style="overflow-y:auto;flex:1">
-      <div style="padding:12px 16px;border-bottom:0.5px solid var(--border)">
-        <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
-          ${[['ti-eye',c.views,'Views'],['ti-heart',c.likes,'Likes'],['ti-message',c.comments,'Comments'],['ti-share',c.shares,'Shares']].map(([icon,val,label]) =>
-            val ? `<div style="text-align:center"><div style="font-size:14px;font-weight:700">${fmtN(val)}</div><div style="font-size:10px;color:var(--text-muted)"><i class="ti ${icon}" style="font-size:10px"></i> ${label}</div></div>` : ''
-          ).filter(Boolean).join('')}
-        </div>
-        ${c.copywriting?`<div style="font-size:12px;color:var(--text);white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:var(--radius);max-height:120px;overflow-y:auto">${c.copywriting}</div>`:''}
-        ${c.labels&&c.labels.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${c.labels.map(l=>`<span style="background:var(--purple-light);color:var(--purple-mid);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">${l}</span>`).join('')}</div>`:''}
-        ${c.notes?`<div style="font-size:11px;color:var(--text-muted);margin-top:8px;font-style:italic">${c.notes}</div>`:''}
-        <div style="font-size:10px;color:var(--text-hint);margin-top:6px">${igFmtDate(c.created_at)}</div>
-      </div>
+      ${c.copywriting?`<div style="padding:10px 16px;border-bottom:0.5px solid var(--border)"><div style="font-size:12px;color:var(--text);white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:var(--radius);max-height:120px;overflow-y:auto">${c.copywriting}</div></div>`:''}
       ${url ? `<div style="position:relative">
         <img src="${url}" style="width:100%;display:block;object-fit:contain;background:var(--bg)">
         ${total>1?`<button onclick="clPrevImg('${c.id}')" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-chevron-left"></i></button><button onclick="clNextImg('${c.id}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-chevron-right"></i></button><div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);color:#fff;font-size:11px;padding:3px 10px;border-radius:12px">${idx+1}/${total}</div>`:''}
@@ -14786,6 +15521,16 @@ function clRenderPreviewModal(c) {
           <button onclick="event.stopPropagation();clDeleteSingleImage('${c.id}',${i})" style="position:absolute;top:-4px;right:-4px;background:var(--red);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0;z-index:1"><i class="ti ti-x" style="font-size:9px"></i></button>
         </div>`).join('')}
       </div>`:''}` : `<div style="padding:20px;text-align:center;color:var(--text-hint);font-size:12px">Belum ada screenshot</div>`}
+      <div style="padding:10px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;border-top:0.5px solid var(--border)">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+          ${[['ti-eye',c.views,'Views'],['ti-heart',c.likes,'Likes'],['ti-message',c.comments,'Cmts'],['ti-share',c.shares,'Shares']].map(([icon,val,label]) =>
+            val ? `<div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px;font-weight:700">${fmtN(val)}</span><span style="font-size:10px;color:var(--text-muted)"><i class="ti ${icon}" style="font-size:10px"></i> ${label}</span></div>` : ''
+          ).filter(Boolean).join('')}
+        </div>
+        ${c.labels&&c.labels.length?`<div style="display:flex;flex-wrap:wrap;gap:3px">${c.labels.map(l=>`<span style="background:var(--purple-light);color:var(--purple-mid);padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600">${l}</span>`).join('')}</div>`:''}
+        ${c.notes?`<div style="font-size:11px;color:var(--text-muted);font-style:italic">${c.notes}</div>`:''}
+        <div style="font-size:10px;color:var(--text-hint);margin-left:auto;white-space:nowrap">${igFmtDate(c.created_at)}</div>
+      </div>
     </div>
   </div>`;
 }
