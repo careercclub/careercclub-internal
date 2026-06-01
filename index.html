@@ -2888,8 +2888,10 @@ function _blastInitQuill() {
 
 function _blastGetBodyHTML() {
   if (_blastQuill) return _blastQuill.root.innerHTML;
-  const el = document.getElementById('bl-body');
-  return el ? el.value.replace(/\n/g,'<br>') : '';
+  const el = document.querySelector('#bl-quill-editor .ql-editor');
+  if (el) return el.innerHTML;
+  const ta = document.getElementById('bl-body');
+  return ta ? ta.value.replace(/\n/g,'<br>') : '';
 }
 
 function _blastSetBodyHTML(html) {
@@ -2907,7 +2909,7 @@ function _blastBuildHTML(recipient) {
   const headerTitle = _replaceNama(document.getElementById('bl-header-title')?.value ?? 'CareerCclub');
   const headerSub   = _replaceNama(document.getElementById('bl-header-subtitle')?.value ?? '');
   const headerColor = document.getElementById('bl-header-color')?.value ?? '#2d2777';
-  const body        = _replaceNama(_blastGetBodyHTML());
+  const body        = _tpSanitizeBodyForEmail(_replaceNama(_blastGetBodyHTML()), headerColor);
   const ctaText     = document.getElementById('bl-cta-text')?.value ?? '';
   const ctaUrl      = document.getElementById('bl-cta-url')?.value ?? '';
   const footer      = document.getElementById('bl-footer')?.value ?? '© 2026 CareerCclub';
@@ -13875,8 +13877,11 @@ function _tpInitQuill() {
 
 function _tpGetBodyHTML() {
   if (_tpQuill) return _tpQuill.root.innerHTML;
-  const el = document.getElementById('tpbl-body');
-  return el ? el.value.replace(/\n/g,'<br>') : '';
+  // Fallback: ambil langsung dari DOM kalau Quill instance hilang
+  const el = document.querySelector('#tpbl-quill-editor .ql-editor');
+  if (el) return el.innerHTML;
+  const ta = document.getElementById('tpbl-body');
+  return ta ? ta.value.replace(/\n/g,'<br>') : '';
 }
 
 function _tpSetBodyHTML(html) {
@@ -13940,13 +13945,27 @@ function _tpBlastGetRecipients() {
   return list;
 }
 
+function _tpSanitizeBodyForEmail(html, headerColor) {
+  // Inject inline styles ke <a> tag supaya muncul di email client
+  html = html.replace(/<a /g, `<a style="color:${headerColor||'#2d2777'};text-decoration:underline;font-weight:600;" `);
+  // Inject inline styles ke <img> tag supaya responsive
+  html = html.replace(/<img /g, '<img style="max-width:100%;height:auto;display:block;margin:8px 0;" ');
+  // Wrap <ul>/<ol> dengan style
+  html = html.replace(/<ul>/g, '<ul style="padding-left:20px;margin:8px 0;">');
+  html = html.replace(/<ol>/g, '<ol style="padding-left:20px;margin:8px 0;">');
+  html = html.replace(/<li>/g, '<li style="margin-bottom:4px;">');
+  // Remove empty Quill paragraph
+  html = html.replace(/<p><br><\/p>/g, '<br>');
+  return html;
+}
+
 function _tpBlastBuildHTML(recipient) {
   const _nama = recipient?.nama || 'Kak';
   const _r = (s) => (s||'').replace(/\{nama\}/g, _nama);
   const headerTitle = _r(document.getElementById('tpbl-header-title')?.value ?? 'CareerCclub');
   const headerSub   = _r(document.getElementById('tpbl-header-subtitle')?.value ?? '');
   const headerColor = document.getElementById('tpbl-header-color')?.value ?? '#2d2777';
-  const body = _r(_tpGetBodyHTML());
+  const body = _tpSanitizeBodyForEmail(_r(_tpGetBodyHTML()), headerColor);
   const ctaText     = document.getElementById('tpbl-cta-text')?.value ?? '';
   const ctaUrl      = document.getElementById('tpbl-cta-url')?.value ?? '';
   const footer      = document.getElementById('tpbl-footer')?.value ?? '© 2026 CareerCclub';
