@@ -647,8 +647,10 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 /* Quill editor custom styling */
 #tpbl-quill-editor { min-height:160px; font-size:13px; background:var(--white); }
 #tpbl-quill-editor .ql-editor { min-height:160px; font-size:13px; line-height:1.6; }
+#tpbl-quill-editor .ql-editor p { margin:0 0 4px 0; }
 #bl-quill-editor { min-height:160px; font-size:13px; background:var(--white); }
 #bl-quill-editor .ql-editor { min-height:160px; font-size:13px; line-height:1.6; }
+#bl-quill-editor .ql-editor p { margin:0 0 4px 0; }
 .ql-toolbar.ql-snow { border:0.5px solid var(--border-md); border-radius:var(--radius) var(--radius) 0 0; background:var(--bg); }
 .ql-container.ql-snow { border:0.5px solid var(--border-md); border-top:none; border-radius:0 0 var(--radius) var(--radius); }
 </style>
@@ -13970,6 +13972,9 @@ function _tpBlastGetRecipients() {
 }
 
 function _tpSanitizeBodyForEmail(html, headerColor) {
+  // Fix paragraph spacing
+  html = html.replace(/<p>/g, '<p style="margin:0 0 6px 0;padding:0;">');
+  html = html.replace(/<p class="/g, '<p style="margin:0 0 6px 0;padding:0;" class="');
   // Inject inline styles ke <a> tag supaya muncul di email client
   html = html.replace(/<a /g, `<a style="color:${headerColor||'#2d2777'};text-decoration:underline;font-weight:600;" `);
   // Inject inline styles ke <img> tag supaya responsive
