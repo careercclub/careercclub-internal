@@ -641,6 +641,17 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<style>
+/* Quill editor custom styling */
+#tpbl-quill-editor { min-height:160px; font-size:13px; background:var(--white); }
+#tpbl-quill-editor .ql-editor { min-height:160px; font-size:13px; line-height:1.6; }
+#bl-quill-editor { min-height:160px; font-size:13px; background:var(--white); }
+#bl-quill-editor .ql-editor { min-height:160px; font-size:13px; line-height:1.6; }
+.ql-toolbar.ql-snow { border:0.5px solid var(--border-md); border-radius:var(--radius) var(--radius) 0 0; background:var(--bg); }
+.ql-container.ql-snow { border:0.5px solid var(--border-md); border-top:none; border-radius:0 0 var(--radius) var(--radius); }
+</style>
 </head>
 <body>
 <div class="app">
@@ -2696,7 +2707,7 @@ function renderEmailBlast() {
   </div>`;
 
   const c = document.getElementById('blast-content');
-  if (_blastTab === 'compose') c.innerHTML = _blastComposeHTML();
+  if (_blastTab === 'compose') { c.innerHTML = _blastComposeHTML(); _blastInitQuill(); }
   if (_blastTab === 'templates') c.innerHTML = _blastTemplatesHTML();
   if (_blastTab === 'history') c.innerHTML = _blastHistoryHTML();
   if (_blastTab === 'settings') c.innerHTML = _blastSettingsHTML();
@@ -2796,8 +2807,9 @@ function _blastComposeHTML() {
         <!-- Body -->
         <div style="margin-bottom:8px">
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">ISI EMAIL</label>
-          <textarea id="bl-body" rows="8" placeholder="Tulis isi email di sini... Gunakan {nama} untuk personalisasi nama penerima." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white);resize:vertical;line-height:1.6"></textarea>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi nama penerima</div>
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">ISI EMAIL</label>
+          <div id="bl-quill-editor"></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:5px">Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi nama penerima. Gambar via URL: klik ikon gambar → paste URL.</div>
         </div>
 
         <!-- CTA -->
@@ -2854,16 +2866,51 @@ function _blastGetRecipients() {
   return list;
 }
 
+var _blastQuill = null;
+
+function _blastInitQuill() {
+  const el = document.getElementById('bl-quill-editor');
+  if (!el || !window.Quill) return;
+  _blastQuill = new Quill('#bl-quill-editor', {
+    theme: 'snow',
+    placeholder: 'Tulis isi email di sini... Gunakan {nama} untuk personalisasi.',
+    modules: {
+      toolbar: [
+        ['bold','italic','underline','strike'],
+        [{ color: [] }, { background: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link', 'image'],
+        ['clean']
+      ]
+    }
+  });
+}
+
+function _blastGetBodyHTML() {
+  if (_blastQuill) return _blastQuill.root.innerHTML;
+  const el = document.getElementById('bl-body');
+  return el ? el.value.replace(/\n/g,'<br>') : '';
+}
+
+function _blastSetBodyHTML(html) {
+  if (_blastQuill) {
+    _blastQuill.root.innerHTML = html || '';
+  } else {
+    const el = document.getElementById('bl-body');
+    if (el) el.value = html || '';
+  }
+}
+
 function _blastBuildHTML(recipient) {
-  const _nama = recipient?.name || 'Kak';
-  const _replaceNama = (s) => s.replace(/\{nama\}/g, _nama);
-  const headerTitle = _replaceNama(document.getElementById('bl-header-title')?.value || 'CareerCclub');
-  const headerSub = _replaceNama(document.getElementById('bl-header-subtitle')?.value || '');
-  const headerColor = document.getElementById('bl-header-color')?.value || '#2d2777';
-  const body = _replaceNama((document.getElementById('bl-body')?.value || '').replace(/\n/g, '<br>'));
-  const ctaText = document.getElementById('bl-cta-text')?.value;
-  const ctaUrl = document.getElementById('bl-cta-url')?.value;
-  const footer = document.getElementById('bl-footer')?.value || '© 2026 CareerCclub';
+  const _nama = recipient?.nama || recipient?.name || 'Kak';
+  const _replaceNama = (s) => (s||'').replace(/\{nama\}/g, _nama);
+  const headerTitle = _replaceNama(document.getElementById('bl-header-title')?.value ?? 'CareerCclub');
+  const headerSub   = _replaceNama(document.getElementById('bl-header-subtitle')?.value ?? '');
+  const headerColor = document.getElementById('bl-header-color')?.value ?? '#2d2777';
+  const body        = _replaceNama(_blastGetBodyHTML());
+  const ctaText     = document.getElementById('bl-cta-text')?.value ?? '';
+  const ctaUrl      = document.getElementById('bl-cta-url')?.value ?? '';
+  const footer      = document.getElementById('bl-footer')?.value ?? '© 2026 CareerCclub';
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f4f4f7;font-family:'Helvetica Neue',Arial,sans-serif">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0">
@@ -2904,10 +2951,10 @@ function _blastLoadTemplate() {
   if (document.getElementById('bl-header-title')) document.getElementById('bl-header-title').value = tpl.headerTitle || '';
   if (document.getElementById('bl-header-subtitle')) document.getElementById('bl-header-subtitle').value = tpl.headerSub || '';
   if (document.getElementById('bl-header-color')) document.getElementById('bl-header-color').value = tpl.headerColor || '#2d2777';
-  if (document.getElementById('bl-body')) document.getElementById('bl-body').value = tpl.body || '';
   if (document.getElementById('bl-cta-text')) document.getElementById('bl-cta-text').value = tpl.ctaText || '';
   if (document.getElementById('bl-cta-url')) document.getElementById('bl-cta-url').value = tpl.ctaUrl || '';
   if (document.getElementById('bl-footer')) document.getElementById('bl-footer').value = tpl.footer || '';
+  _blastSetBodyHTML(tpl.body || '');
   showToast('Template "' + tpl.nama + '" dimuat ✓');
 }
 
@@ -2921,7 +2968,7 @@ function _blastSaveAsTemplate() {
     headerTitle: document.getElementById('bl-header-title')?.value || '',
     headerSub: document.getElementById('bl-header-subtitle')?.value || '',
     headerColor: document.getElementById('bl-header-color')?.value || '#2d2777',
-    body: document.getElementById('bl-body')?.value || '',
+    body: _blastGetBodyHTML(),
     ctaText: document.getElementById('bl-cta-text')?.value || '',
     ctaUrl: document.getElementById('bl-cta-url')?.value || '',
     footer: document.getElementById('bl-footer')?.value || '',
@@ -2939,7 +2986,7 @@ async function _blastSend() {
   const recipients = _blastGetRecipients();
   if (!recipients.length) { showToast('Tidak ada penerima yang valid (cek filter & pastikan ada email)', 'error'); return; }
 
-  const bodyEmpty = !document.getElementById('bl-body')?.value.trim();
+  const bodyEmpty = !_blastGetBodyHTML() || _blastGetBodyHTML() === '<p><br></p>';
   if (bodyEmpty) { showToast('Isi email tidak boleh kosong', 'error'); return; }
 
   const apiKey = localStorage.getItem('ccc_blast_api_key');
@@ -13131,7 +13178,7 @@ async function sb_loadTalentPool() {
   return error ? [] : data;
 }
 async function sb_insertTalentPool(rows) {
-  const { data, error } = await _sb.from('talent_pool').insert(rows).select();
+  const { data, error } = await _sb.from('talent_pool').upsert(rows, { onConflict: 'email', ignoreDuplicates: false }).select();
   if (error) throw error;
   return data;
 }
@@ -13482,7 +13529,7 @@ async function tpConfirmImport() {
     document.getElementById('tp-import-modal').remove();
     _tpData = await sb_loadTalentPool();
     renderTpList();
-    showToast(_tpParsedRows.length + ' data berhasil diimport ✓');
+    showToast(_tpParsedRows.length + ' data diproses (baru ditambah, lama diupdate) ✓');
   } catch(e) {
     showToast('Gagal import: ' + _sbErrInfo(e), 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
@@ -13642,7 +13689,7 @@ function renderTpBlast() {
     <div id="tp-blast-content"></div>
   </div>`;
   const bc = document.getElementById('tp-blast-content');
-  if (_tpBlastTab === 'compose')   bc.innerHTML = _tpBlastComposeHTML();
+  if (_tpBlastTab === 'compose')   { bc.innerHTML = _tpBlastComposeHTML(); _tpInitQuill(); }
   if (_tpBlastTab === 'templates') bc.innerHTML = _tpBlastTemplatesHTML();
   if (_tpBlastTab === 'history')   bc.innerHTML = _tpBlastHistoryHTML();
   if (_tpBlastTab === 'settings')  bc.innerHTML = _blastSettingsHTML(); // reuse settings CRM
@@ -13784,8 +13831,8 @@ function _tpBlastComposeHTML() {
         </div>
         <div style="margin-bottom:8px">
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">ISI EMAIL</label>
-          <textarea id="tpbl-body" rows="8" placeholder="Tulis isi email di sini... Gunakan {nama} untuk personalisasi nama penerima." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white);resize:vertical;line-height:1.6"></textarea>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi nama penerima</div>
+          <div id="tpbl-quill-editor"></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:5px">Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi nama penerima. Gambar via URL: klik ikon gambar → paste URL.</div>
         </div>
         <div style="margin-bottom:8px">
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">TOMBOL CTA (opsional)</label>
@@ -13804,6 +13851,41 @@ function _tpBlastComposeHTML() {
       </button>
     </div>
   </div>`;
+}
+
+var _tpQuill = null;
+
+function _tpInitQuill() {
+  const el = document.getElementById('tpbl-quill-editor');
+  if (!el || !window.Quill) return;
+  _tpQuill = new Quill('#tpbl-quill-editor', {
+    theme: 'snow',
+    placeholder: 'Tulis isi email di sini... Gunakan {nama} untuk personalisasi.',
+    modules: {
+      toolbar: [
+        ['bold','italic','underline','strike'],
+        [{ color: [] }, { background: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link', 'image'],
+        ['clean']
+      ]
+    }
+  });
+}
+
+function _tpGetBodyHTML() {
+  if (_tpQuill) return _tpQuill.root.innerHTML;
+  const el = document.getElementById('tpbl-body');
+  return el ? el.value.replace(/\n/g,'<br>') : '';
+}
+
+function _tpSetBodyHTML(html) {
+  if (_tpQuill) {
+    _tpQuill.root.innerHTML = html || '';
+  } else {
+    const el = document.getElementById('tpbl-body');
+    if (el) el.value = html || '';
+  }
 }
 
 function _tpBlastUpdateCount() {
@@ -13860,14 +13942,14 @@ function _tpBlastGetRecipients() {
 
 function _tpBlastBuildHTML(recipient) {
   const _nama = recipient?.nama || 'Kak';
-  const _r = (s) => s.replace(/\{nama\}/g, _nama);
-  const headerTitle = _r(document.getElementById('tpbl-header-title')?.value || 'CareerCclub');
-  const headerSub = _r(document.getElementById('tpbl-header-subtitle')?.value || '');
-  const headerColor = document.getElementById('tpbl-header-color')?.value || '#2d2777';
-  const body = _r((document.getElementById('tpbl-body')?.value || '').replace(/\n/g, '<br>'));
-  const ctaText = document.getElementById('tpbl-cta-text')?.value;
-  const ctaUrl = document.getElementById('tpbl-cta-url')?.value;
-  const footer = document.getElementById('tpbl-footer')?.value || '© 2026 CareerCclub';
+  const _r = (s) => (s||'').replace(/\{nama\}/g, _nama);
+  const headerTitle = _r(document.getElementById('tpbl-header-title')?.value ?? 'CareerCclub');
+  const headerSub   = _r(document.getElementById('tpbl-header-subtitle')?.value ?? '');
+  const headerColor = document.getElementById('tpbl-header-color')?.value ?? '#2d2777';
+  const body = _r(_tpGetBodyHTML());
+  const ctaText     = document.getElementById('tpbl-cta-text')?.value ?? '';
+  const ctaUrl      = document.getElementById('tpbl-cta-url')?.value ?? '';
+  const footer      = document.getElementById('tpbl-footer')?.value ?? '© 2026 CareerCclub';
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f4f4f7;font-family:'Helvetica Neue',Arial,sans-serif">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0">
     <tr><td align="center">
@@ -13899,10 +13981,11 @@ function _tpBlastLoadTemplate() {
   if (!sel || sel.value === '') return;
   const tpl = _tpBlastTemplates[parseInt(sel.value)];
   if (!tpl) return;
-  ['subject','header-title','header-subtitle','header-color','body','cta-text','cta-url','footer'].forEach(f => {
+  ['subject','header-title','header-subtitle','header-color','cta-text','cta-url','footer'].forEach(f => {
     const el = document.getElementById('tpbl-' + f);
     if (el) el.value = tpl[f.replace(/-/g,'_')] || (f==='header-color'?'#2d2777':'');
   });
+  _tpSetBodyHTML(tpl.body || '');
   showToast('Template "' + tpl.nama + '" dimuat ✓');
 }
 
@@ -13915,7 +13998,7 @@ function _tpBlastSaveAsTemplate() {
     header_title: document.getElementById('tpbl-header-title')?.value || '',
     header_subtitle: document.getElementById('tpbl-header-subtitle')?.value || '',
     header_color: document.getElementById('tpbl-header-color')?.value || '#2d2777',
-    body: document.getElementById('tpbl-body')?.value || '',
+    body: _tpGetBodyHTML(),
     cta_text: document.getElementById('tpbl-cta-text')?.value || '',
     cta_url: document.getElementById('tpbl-cta-url')?.value || '',
     footer: document.getElementById('tpbl-footer')?.value || '',
@@ -13930,7 +14013,8 @@ async function _tpBlastSend() {
   if (!subject) { showToast('Subject wajib diisi', 'error'); return; }
   const recipients = _tpBlastGetRecipients();
   if (!recipients.length) { showToast('Tidak ada penerima valid', 'error'); return; }
-  if (!document.getElementById('tpbl-body')?.value.trim()) { showToast('Isi email tidak boleh kosong', 'error'); return; }
+  const bodyHTML = _tpGetBodyHTML();
+  if (!bodyHTML || bodyHTML === '<p><br></p>') { showToast('Isi email tidak boleh kosong', 'error'); return; }
   const apiKey = localStorage.getItem('ccc_blast_api_key');
   if (!apiKey) { showToast('API Key belum diset — buka tab Settings', 'error'); return; }
   const scheduled = document.getElementById('tpbl-schedule')?.value;
