@@ -647,10 +647,10 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 /* Quill editor custom styling */
 #tpbl-quill-editor { min-height:160px; font-size:13px; background:var(--white); }
 #tpbl-quill-editor .ql-editor { min-height:160px; font-size:13px; line-height:1.6; }
-#tpbl-quill-editor .ql-editor p { margin:0 0 4px 0; }
+#tpbl-quill-editor .ql-editor p { margin:0; padding:0; line-height:1.6; }
 #bl-quill-editor { min-height:160px; font-size:13px; background:var(--white); }
 #bl-quill-editor .ql-editor { min-height:160px; font-size:13px; line-height:1.6; }
-#bl-quill-editor .ql-editor p { margin:0 0 4px 0; }
+#bl-quill-editor .ql-editor p { margin:0; padding:0; line-height:1.6; }
 .ql-toolbar.ql-snow { border:0.5px solid var(--border-md); border-radius:var(--radius) var(--radius) 0 0; background:var(--bg); }
 .ql-container.ql-snow { border:0.5px solid var(--border-md); border-top:none; border-radius:0 0 var(--radius) var(--radius); }
 </style>
@@ -13972,19 +13972,18 @@ function _tpBlastGetRecipients() {
 }
 
 function _tpSanitizeBodyForEmail(html, headerColor) {
-  // Fix paragraph spacing
-  html = html.replace(/<p>/g, '<p style="margin:0 0 6px 0;padding:0;">');
-  html = html.replace(/<p class="/g, '<p style="margin:0 0 6px 0;padding:0;" class="');
+  // Fix paragraph spacing - compact
+  html = html.replace(/<p><br><\/p>/g, ''); // hapus empty paragraph sepenuhnya
+  html = html.replace(/<p>/g, '<p style="margin:0;padding:0;line-height:1.6;">');
+  html = html.replace(/<p class="/g, '<p style="margin:0;padding:0;line-height:1.6;" class="');
   // Inject inline styles ke <a> tag supaya muncul di email client
   html = html.replace(/<a /g, `<a style="color:${headerColor||'#2d2777'};text-decoration:underline;font-weight:600;" `);
   // Inject inline styles ke <img> tag supaya responsive
   html = html.replace(/<img /g, '<img style="max-width:100%;height:auto;display:block;margin:8px 0;" ');
   // Wrap <ul>/<ol> dengan style
-  html = html.replace(/<ul>/g, '<ul style="padding-left:20px;margin:8px 0;">');
-  html = html.replace(/<ol>/g, '<ol style="padding-left:20px;margin:8px 0;">');
-  html = html.replace(/<li>/g, '<li style="margin-bottom:4px;">');
-  // Remove empty Quill paragraph
-  html = html.replace(/<p><br><\/p>/g, '<br>');
+  html = html.replace(/<ul>/g, '<ul style="padding-left:20px;margin:4px 0;">');
+  html = html.replace(/<ol>/g, '<ol style="padding-left:20px;margin:4px 0;">');
+  html = html.replace(/<li>/g, '<li style="margin-bottom:2px;">');
   return html;
 }
 
