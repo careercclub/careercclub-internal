@@ -2809,7 +2809,10 @@ function _blastComposeHTML() {
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">ISI EMAIL</label>
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">ISI EMAIL</label>
           <div id="bl-quill-editor"></div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:5px">Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi nama penerima. Gambar via URL: klik ikon gambar → paste URL.</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:5px;line-height:1.6">
+            Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi. &nbsp;|&nbsp;
+            <b>Cara attach gambar:</b> upload ke <a href="https://imgur.com" target="_blank" style="color:var(--purple-accent)">imgur.com</a> → klik <b>···</b> → <b>Get share links</b> → copy URL dari <b>BBCode</b> (format: <code style="background:var(--bg);padding:1px 4px;border-radius:3px">https://i.imgur.com/xxxxx.png</code>) → klik icon 🖼 di toolbar → paste URL.
+          </div>
         </div>
 
         <!-- CTA -->
@@ -2870,18 +2873,23 @@ var _blastQuill = null;
 
 function _blastInitQuill() {
   const el = document.getElementById('bl-quill-editor');
-  if (!el || !window.Quill) return;
+  if (!el) return;
+  if (!window.Quill) { setTimeout(_blastInitQuill, 200); return; }
+  if (_blastQuill) { _blastQuill = null; }
   _blastQuill = new Quill('#bl-quill-editor', {
     theme: 'snow',
     placeholder: 'Tulis isi email di sini... Gunakan {nama} untuk personalisasi.',
     modules: {
-      toolbar: [
-        ['bold','italic','underline','strike'],
-        [{ color: [] }, { background: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['link', 'image'],
-        ['clean']
-      ]
+      toolbar: {
+        container: [
+          ['bold','italic','underline','strike'],
+          [{ color: [] }, { background: [] }],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['link', 'image'],
+          ['clean']
+        ],
+        handlers: { image: () => _quillImageHandler(_blastQuill) }
+      }
     }
   });
 }
@@ -13834,7 +13842,10 @@ function _tpBlastComposeHTML() {
         <div style="margin-bottom:8px">
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">ISI EMAIL</label>
           <div id="tpbl-quill-editor"></div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:5px">Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi nama penerima. Gambar via URL: klik ikon gambar → paste URL.</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:5px;line-height:1.6">
+            Tip: gunakan <code style="background:var(--bg);padding:1px 4px;border-radius:3px">{nama}</code> untuk personalisasi. &nbsp;|&nbsp;
+            <b>Cara attach gambar:</b> upload ke <a href="https://imgur.com" target="_blank" style="color:var(--purple-accent)">imgur.com</a> → klik <b>···</b> → <b>Get share links</b> → copy URL dari <b>BBCode</b> (format: <code style="background:var(--bg);padding:1px 4px;border-radius:3px">https://i.imgur.com/xxxxx.png</code>) → klik icon 🖼 di toolbar → paste URL.
+          </div>
         </div>
         <div style="margin-bottom:8px">
           <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint);display:block;margin-bottom:4px">TOMBOL CTA (opsional)</label>
@@ -13857,20 +13868,33 @@ function _tpBlastComposeHTML() {
 
 var _tpQuill = null;
 
+function _quillImageHandler(quillInstance) {
+  const url = prompt('Paste URL gambar (gunakan Imgur untuk hasil terbaik):');
+  if (!url || !url.trim()) return; // user cancel — jangan corrupt state
+  const range = quillInstance.getSelection(true);
+  quillInstance.insertEmbed(range.index, 'image', url.trim());
+  quillInstance.setSelection(range.index + 1);
+}
+
 function _tpInitQuill() {
   const el = document.getElementById('tpbl-quill-editor');
-  if (!el || !window.Quill) return;
+  if (!el) return;
+  if (!window.Quill) { setTimeout(_tpInitQuill, 200); return; }
+  if (_tpQuill) { _tpQuill = null; } // reset instance lama
   _tpQuill = new Quill('#tpbl-quill-editor', {
     theme: 'snow',
     placeholder: 'Tulis isi email di sini... Gunakan {nama} untuk personalisasi.',
     modules: {
-      toolbar: [
-        ['bold','italic','underline','strike'],
-        [{ color: [] }, { background: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['link', 'image'],
-        ['clean']
-      ]
+      toolbar: {
+        container: [
+          ['bold','italic','underline','strike'],
+          [{ color: [] }, { background: [] }],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['link', 'image'],
+          ['clean']
+        ],
+        handlers: { image: () => _quillImageHandler(_tpQuill) }
+      }
     }
   });
 }
