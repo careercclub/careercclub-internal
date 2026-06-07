@@ -2250,8 +2250,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     evalContents = evalRows;
     buyers = buyerRows.map(_buyerRowToJS);
-    clData = contentLibRows.map(_clRowToJS);
-    _tpData = talentPoolRows.map(_tpRowToJS);
+    clData = contentLibRows.map(c => ({
+      id: c.id, jenis: c.jenis, platform: c.platform, link: c.link||'',
+      copywriting: c.copywriting||'', views: c.views||0, likes: c.likes||0,
+      comments: c.comments||0, shares: c.shares||0,
+      storage_paths: c.storage_paths||[], notes: c.notes||'',
+      labels: c.labels||[], created_at: c.created_at
+    }));
+    _tpData = talentPoolRows;
 
     // Meta Ads
     try {
