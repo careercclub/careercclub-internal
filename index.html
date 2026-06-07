@@ -764,9 +764,60 @@ body.pwa-mode .topbar * { color: #fff !important; }
 
 /* ── PWA MOBILE FIXES ───────────────────────────────────────────────────── */
 @media (max-width: 600px) {
-/* Fix 1: Stats 2 kolom — semua modul */
+/* Fix 1: Stats 2 kolom — semua modul (fallback, JS override handles inline styles) */
   .stats-grid, .pwa-stats-2col { grid-template-columns: repeat(2,1fr) !important; }
   .stats-strip-5 { grid-template-columns: repeat(2,1fr) !important; }
+
+  /* Fix 2: Filter dropdown styling */
+  .filter-row select, .pt-filter select,
+  .filter-row input[type="text"], .pt-filter input[type="text"],
+  select[id*="filter"], select[id*="srch"], input[id*="srch"],
+  select[onchange*="render"], select[onchange*="Render"],
+  select[onchange*="filter"], select[onchange*="Filter"] {
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 20px !important;
+    border: 1.5px solid var(--border) !important;
+    background: var(--white) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text) !important;
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
+  .filter-row, .pt-filter {
+    gap: 8px !important;
+  }
+  .filter-row select:focus, .pt-filter select:focus {
+    border-color: var(--purple-accent) !important;
+    outline: none !important;
+  }
+
+  /* Fix 3: Tables → card list in PWA mode */
+  body.pwa-mode .card table,
+  body.pwa-mode .card > div > table,
+  body.pwa-mode [id$="-wrap"] table,
+  body.pwa-mode [id$="table-wrap"] table { display: none !important; }
+  body.pwa-mode .pwa-card-list { display: flex !important; }
+  .pwa-card-list { display: none; flex-direction: column; gap: 8px; }
+  .pwa-row-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 12px 14px;
+    border: 0.5px solid var(--border);
+    cursor: pointer;
+  }
+  .pwa-row-card-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 8px; margin-bottom: 6px;
+  }
+  .pwa-row-card-title { font-size: 13px; font-weight: 600; flex: 1; line-height: 1.4; }
+  .pwa-row-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pwa-row-card-meta span { font-size: 11px; color: var(--text-muted); }
+  .pwa-row-card-actions { display: flex; gap: 10px; margin-top: 6px; padding-top: 6px; border-top: 0.5px solid var(--border); }
+  .pwa-row-card-actions a, .pwa-row-card-actions span { font-size: 11px; color: var(--purple-accent); font-weight: 500; cursor: pointer; }
+}
 
   /* Fix 2: Program event cards 1 kolom */
   .pwa-prog-grid { grid-template-columns: 1fr !important; }
@@ -2711,7 +2762,7 @@ function renderDashUpcoming() {
     }
     const pc=phaseColors[t.phase]||{bg:"var(--amber-bg)",fg:"var(--amber)"};
     const proj=projects.find(p=>_idEq(p.id,t.projectId));
-    html+="<div style=\"display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer\" onclick=\"switchPage('program')\">";
+    html+="<div style=\"display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer\" onclick=\"switchPage('project')\">";
     html+='<div style="width:8px;height:8px;border-radius:2px;background:'+pc.fg+';flex-shrink:0"></div>';
     html+='<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.title+'</div>';
     if(proj) html+='<div style="font-size:10px;color:var(--text-muted)">'+proj.nama+'</div>';
@@ -13916,15 +13967,26 @@ async function tpConfirmImport() {
   const btn = document.getElementById('tp-import-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Mengimport...'; }
   try {
-    // Insert batch 50 per call
-    const batchSize = 50;
-    for (let i = 0; i < _tpParsedRows.length; i += batchSize) {
-      await sb_insertTalentPool(_tpParsedRows.slice(i, i + batchSize));
+    // Filter out rows with empty email (upsert onConflict:'email' butuh email valid)
+    const validRows = _tpParsedRows.filter(r => r.email && r.email.trim() !== '');
+    const skipped = _tpParsedRows.length - validRows.length;
+
+    // Batch 20 per call untuk hindari 500 error
+    const batchSize = 20;
+    let success = 0;
+    for (let i = 0; i < validRows.length; i += batchSize) {
+      await sb_insertTalentPool(validRows.slice(i, i + batchSize));
+      success += Math.min(batchSize, validRows.length - i);
+      // Update progress
+      if (btn) btn.textContent = `Mengimport... ${success}/${validRows.length}`;
     }
     document.getElementById('tp-import-modal').remove();
     _tpData = await sb_loadTalentPool();
     renderTpList();
-    showToast(_tpParsedRows.length + ' data diproses (baru ditambah, lama diupdate) ✓');
+    const msg = skipped > 0
+      ? `${success} data diproses ✓ (${skipped} dilewati karena email kosong)`
+      : `${success} data diproses (baru ditambah, lama diupdate) ✓`;
+    showToast(msg);
   } catch(e) {
     showToast('Gagal import: ' + _sbErrInfo(e), 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
@@ -16571,6 +16633,16 @@ async function gcalCreateEvent(taskId) {
 
   if (isPWA) {
     document.body.classList.add('pwa-mode');
+    // Fix stats grid on initial load
+    setTimeout(_pwaFixStatsGrid, 500);
+    // Re-apply on any DOM changes (tabs, navigation)
+    const _obs = new MutationObserver(() => {
+      if (window.innerWidth <= 600) {
+        _pwaFixStatsGrid();
+        _pwaConvertAllTables();
+      }
+    });
+    _obs.observe(document.getElementById('mainContent') || document.body, { childList: true, subtree: false });
   }
 
   // Switch tab di bottom nav
@@ -16636,11 +16708,93 @@ async function gcalCreateEvent(taskId) {
     }, 100);
   };
 
-  // Patch switchPage to sync bottom nav active state
+  // Fix 3: Convert tables to card list on mobile PWA
+  function _pwaTableToCards(tableEl) {
+    if (!tableEl || window.innerWidth > 600) return;
+    const wrap = tableEl.parentElement;
+    // Don't convert if already converted
+    if (wrap.querySelector('.pwa-card-list')) return;
+
+    const headers = [...tableEl.querySelectorAll('thead th')].map(th => th.textContent.trim());
+    const rows = [...tableEl.querySelectorAll('tbody tr')];
+    if (!rows.length) return;
+
+    const cardList = document.createElement('div');
+    cardList.className = 'pwa-card-list';
+
+    rows.forEach(row => {
+      const cells = [...row.querySelectorAll('td')];
+      if (!cells.length) return;
+
+      const card = document.createElement('div');
+      card.className = 'pwa-row-card';
+
+      // Title = first meaningful text cell
+      const titleCell = cells.find(c => c.textContent.trim() && !c.querySelector('button, input, select'));
+      const titleIdx = titleCell ? cells.indexOf(titleCell) : 0;
+      const titleText = titleCell ? titleCell.textContent.trim() : '';
+      const titleColor = titleCell ? titleCell.style.color : '';
+
+      // Build card HTML
+      let metaParts = [];
+      cells.forEach((cell, i) => {
+        if (i === titleIdx) return;
+        const text = cell.textContent.trim();
+        if (!text || cell.querySelector('button:not([title])')) return;
+        const header = headers[i] || '';
+        if (header.toLowerCase().includes('aksi') || header === '') return;
+        if (text.length < 50) metaParts.push(text);
+      });
+
+      // Actions from buttons/links in row
+      const actionBtns = row.querySelectorAll('a[onclick], span[onclick], button:not(.btn-danger)');
+      const deleteBtns = row.querySelectorAll('.btn-danger, [onclick*="delete"], [onclick*="Delete"], [onclick*="hapus"], [onclick*="Hapus"]');
+
+      // onclick from row itself
+      const rowOnclick = row.getAttribute('onclick') || titleCell?.getAttribute('onclick') || '';
+
+      card.innerHTML = `
+        <div class="pwa-row-card-top">
+          <div class="pwa-row-card-title" style="color:${titleColor||'var(--text)'}">${titleText}</div>
+          ${deleteBtns.length ? `<button onclick="${deleteBtns[0].getAttribute('onclick')}" style="border:none;background:none;color:var(--red);font-size:16px;flex-shrink:0"><i class="ti ti-trash"></i></button>` : ''}
+        </div>
+        ${metaParts.length ? `<div class="pwa-row-card-meta">${metaParts.map(p=>`<span>${p}</span>`).join('<span style="color:var(--border)">·</span>')}</div>` : ''}
+      `;
+
+      if (rowOnclick || titleCell?.getAttribute('onclick')) {
+        card.setAttribute('onclick', rowOnclick || titleCell.getAttribute('onclick'));
+      }
+
+      cardList.appendChild(card);
+    });
+
+    wrap.appendChild(cardList);
+  }
+
+  function _pwaConvertAllTables() {
+    if (window.innerWidth > 600 || !document.body.classList.contains('pwa-mode')) return;
+    document.querySelectorAll('.card table, [id$="-wrap"] table, [id$="table-wrap"] table').forEach(t => {
+      _pwaTableToCards(t);
+    });
+  }
+
+  // Fix stats grid on initial load
+  function _pwaFixStatsGrid() {
+    if (window.innerWidth > 600) return;
+    document.querySelectorAll('.stats-grid, .stats-strip-5').forEach(el => {
+      el.style.setProperty('grid-template-columns', 'repeat(2,1fr)', 'important');
+    });
+  }
+
+  // Patch switchPage to fix stats after render
   const _origSwitchPage = window.switchPage;
   window.switchPage = function(page, el) {
     _origSwitchPage(page, el);
     if (!document.body.classList.contains('pwa-mode')) return;
+    // Fix stats grid after render
+    setTimeout(_pwaFixStatsGrid, 50);
+    // Fix tables to cards after render
+    setTimeout(_pwaConvertAllTables, 150);
     // Sync bottom nav
     const bottomPages = ['dashboard','project','contentlib','partner','orgpartner','design'];
     document.querySelectorAll('.pwa-nav-tab').forEach(t => t.classList.remove('active'));
