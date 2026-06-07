@@ -753,13 +753,44 @@ body.pwa-mode .main { margin-left: 0 !important; }
 body.pwa-mode .pwa-bottom-nav { display: flex; }
 body.pwa-mode .content { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }
 body.pwa-mode .topbar {
-  background: var(--purple) !important; color: white !important;
+  background: #2d2777 !important; color: #fff !important;
   padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px)) !important;
 }
-body.pwa-mode .topbar .page-title { color: white !important; font-size: 16px !important; font-weight: 700 !important; }
+body.pwa-mode .topbar .page-title { color: #fff !important; font-size: 16px !important; font-weight: 700 !important; }
 body.pwa-mode .topbar .notif-btn i { color: rgba(255,255,255,0.8) !important; }
-body.pwa-mode .topbar .notif-dot { border-color: var(--purple) !important; }
+body.pwa-mode .topbar .notif-dot { border-color: #2d2777 !important; }
 body.pwa-mode #pageDate { color: rgba(255,255,255,0.7) !important; }
+body.pwa-mode .topbar * { color: #fff !important; }
+
+/* ── PWA MOBILE FIXES ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+/* Fix 1: Stats 2 kolom — semua modul */
+  .stats-grid, .pwa-stats-2col { grid-template-columns: repeat(2,1fr) !important; }
+  .stats-strip-5 { grid-template-columns: repeat(2,1fr) !important; }
+
+  /* Fix 2: Program event cards 1 kolom */
+  .pwa-prog-grid { grid-template-columns: 1fr !important; }
+  .pwa-prog-grid > div[style*="grid-column"] { grid-column: 1 !important; }
+
+  /* Fix 3: Program task table — stack layout */
+  body.pwa-mode .mobile-table-wrap table thead tr th:nth-child(3),
+  body.pwa-mode .mobile-table-wrap table thead tr th:nth-child(5),
+  body.pwa-mode .mobile-table-wrap table thead tr th:nth-child(6) { display: none; }
+  body.pwa-mode .mobile-table-wrap table tbody tr td:nth-child(3),
+  body.pwa-mode .mobile-table-wrap table tbody tr td:nth-child(5),
+  body.pwa-mode .mobile-table-wrap table tbody tr td:nth-child(6) { display: none; }
+  body.pwa-mode .mobile-table-wrap table tbody tr td:nth-child(2) { 
+    max-width: 160px;
+  }
+  /* Show assignee inline in task title cell */
+  body.pwa-mode .mobile-table-wrap { overflow-x: hidden; }
+}
+
+/* Fix 5: Scroll to top button — naik di atas bottom nav */
+body.pwa-mode #scroll-top-btn {
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+  right: 16px !important;
+}
 
 /* ── CONTENT EVAL & META ADS SHARED ── */
 .btn-ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;border:none}
@@ -4890,7 +4921,7 @@ function partnershipOverviewHTML(){
   const camp=partners.filter(x=>x.type==="Campus").length;
   const tierA=partners.filter(x=>x.tier==="A").length;
   return `
-  <div class="stats-grid" style="grid-template-columns:repeat(5,1fr)">
+  <div class="stats-grid pwa-stats-2col" style="grid-template-columns:repeat(5,1fr)">
     <div class="stat-card"><div class="stat-label">Total Partner</div><div class="stat-val">${partners.length}</div><div class="stat-change" style="color:var(--text-muted)">${corp} corp · ${camp} campus</div></div>
     <div class="stat-card"><div class="stat-label">Closed Deal</div><div class="stat-val" style="color:var(--green)">${active}</div><div class="stat-change up">Berjalan</div></div>
     <div class="stat-card"><div class="stat-label">Negotiation</div><div class="stat-val" style="color:var(--amber)">${nego}</div><div class="stat-change" style="color:var(--amber)">Follow-up needed</div></div>
@@ -5448,7 +5479,7 @@ function opOverviewHTML(){
   const nego=orgPartners.filter(x=>x.status==="Negotiation").length;
   const strategic=orgPartners.filter(x=>x.tier==="Strategic").length;
   return `
-  <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+  <div class="stats-grid pwa-stats-2col" style="grid-template-columns:repeat(4,1fr)">
     <div class="stat-card"><div class="stat-label">Total Org Partner</div><div class="stat-val">${orgPartners.length}</div><div class="stat-change" style="color:var(--text-muted)">kampus & organisasi</div></div>
     <div class="stat-card"><div class="stat-label">Closed Deal</div><div class="stat-val" style="color:var(--green)">${closed}</div><div class="stat-change up">Berjalan</div></div>
     <div class="stat-card"><div class="stat-label">Negotiation</div><div class="stat-val" style="color:var(--amber)">${nego}</div><div class="stat-change" style="color:var(--amber)">Follow-up needed</div></div>
@@ -7305,7 +7336,7 @@ function projectOverviewHTML(){
         <button class="btn btn-primary btn-sm" onclick="openProjectModal(null)"><i class="ti ti-plus"></i> Event Baru</button>
       </div>
     </div>
-    <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+    <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px" class="pwa-prog-grid">
       ${filtered.map(p=>{
         const tasks=projectTasks.filter(t=>_idEq(t.projectId,p.id));
         const done=tasks.filter(t=>t.status==="Done").length;
@@ -16569,6 +16600,28 @@ async function gcalCreateEvent(taskId) {
   window.pwaCloseMore = function() {
     document.getElementById('pwaMoreOverlay').classList.remove('show');
   };
+
+  // Swipe down to close more sheet
+  setTimeout(function(){
+    const sheet = document.querySelector('.pwa-more-sheet');
+    if (!sheet) return;
+    let startY = 0, isDragging = false;
+    sheet.addEventListener('touchstart', function(e) {
+      startY = e.touches[0].clientY; isDragging = true;
+    }, { passive: true });
+    sheet.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0) sheet.style.transform = 'translateY(' + dy + 'px)';
+    }, { passive: true });
+    sheet.addEventListener('touchend', function(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      const dy = e.changedTouches[0].clientY - startY;
+      sheet.style.transform = '';
+      if (dy > 80) pwaCloseMore();
+    });
+  }, 500);
 
   // Navigate from more sheet
   window.pwaMoreNav = function(page) {
