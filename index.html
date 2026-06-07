@@ -13967,25 +13967,30 @@ async function tpConfirmImport() {
   const btn = document.getElementById('tp-import-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Mengimport...'; }
   try {
-    // Filter out rows with empty email (upsert onConflict:'email' butuh email valid)
+    // Filter rows dengan email valid
     const validRows = _tpParsedRows.filter(r => r.email && r.email.trim() !== '');
     const skipped = _tpParsedRows.length - validRows.length;
 
-    // Batch 20 per call untuk hindari 500 error
+    // Deduplikasi email dalam seluruh dataset (ambil yang terakhir)
+    const emailMap = new Map();
+    validRows.forEach(r => emailMap.set(r.email.trim().toLowerCase(), r));
+    const dedupedRows = [...emailMap.values()];
+
+    // Batch 20 per call
     const batchSize = 20;
     let success = 0;
-    for (let i = 0; i < validRows.length; i += batchSize) {
-      await sb_insertTalentPool(validRows.slice(i, i + batchSize));
-      success += Math.min(batchSize, validRows.length - i);
-      // Update progress
-      if (btn) btn.textContent = `Mengimport... ${success}/${validRows.length}`;
+    for (let i = 0; i < dedupedRows.length; i += batchSize) {
+      await sb_insertTalentPool(dedupedRows.slice(i, i + batchSize));
+      success += Math.min(batchSize, dedupedRows.length - i);
+      if (btn) btn.textContent = `Mengimport... ${success}/${dedupedRows.length}`;
     }
     document.getElementById('tp-import-modal').remove();
     _tpData = await sb_loadTalentPool();
     renderTpList();
-    const msg = skipped > 0
-      ? `${success} data diproses ✓ (${skipped} dilewati karena email kosong)`
-      : `${success} data diproses (baru ditambah, lama diupdate) ✓`;
+    const dupCount = validRows.length - dedupedRows.length;
+    const msg = `${success} data diproses ✓` +
+      (skipped > 0 ? ` · ${skipped} dilewati (email kosong)` : '') +
+      (dupCount > 0 ? ` · ${dupCount} duplikat digabung` : '');
     showToast(msg);
   } catch(e) {
     showToast('Gagal import: ' + _sbErrInfo(e), 'error');
@@ -15069,15 +15074,20 @@ async function initVoucher() {
     const rows = await sb_loadProducts();
     window._allProducts = rows.map(p => ({ id: String(p.id), nama: p.nama, harga: p.harga || 0 }));
   }
-  voucherData = (await sb_loadVouchers()).map(v => ({
-    id: v.id, nama_event: v.nama_event, tipe: v.tipe,
-    periode_mulai: v.periode_mulai, periode_selesai: v.periode_selesai,
-    kode: v.kode, diskon_persen: v.diskon_persen || 0,
-    maks_potongan: v.maks_potongan || null, min_transaksi: v.min_transaksi || 0,
-    kuota: v.kuota || null, terpakai: v.terpakai || 0,
-    product_ids: (v.product_ids || []).map(String), notes: v.notes || '',
-    created_at: v.created_at
-  }));
+  try {
+    voucherData = (await sb_loadVouchers()).map(v => ({
+      id: v.id, nama_event: v.nama_event, tipe: v.tipe,
+      periode_mulai: v.periode_mulai, periode_selesai: v.periode_selesai,
+      kode: v.kode, diskon_persen: v.diskon_persen || 0,
+      maks_potongan: v.maks_potongan || null, min_transaksi: v.min_transaksi || 0,
+      kuota: v.kuota || null, terpakai: v.terpakai || 0,
+      product_ids: (v.product_ids || []).map(String), notes: v.notes || '',
+      created_at: v.created_at
+    }));
+  } catch(e) {
+    console.warn('[Voucher] Tabel vouchers belum ada atau error:', e.message);
+    voucherData = [];
+  }
   renderVoucherTab();
 }
 
