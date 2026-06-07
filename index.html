@@ -674,6 +674,93 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
   .inline-edit { min-width:60px; }
 }
 
+/* ── PWA BOTTOM NAV ─────────────────────────────────────────────────────── */
+.pwa-bottom-nav {
+  display: none;
+  background: var(--white);
+  border-top: 0.5px solid var(--border);
+  align-items: stretch;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+  flex-shrink: 0;
+  box-shadow: 0 -4px 20px rgba(44,39,119,0.08);
+  z-index: 200;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+}
+.pwa-nav-tab {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 10px 2px 4px;
+  cursor: pointer; position: relative; gap: 3px;
+  border: none; background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pwa-nav-tab i { font-size: 22px; color: var(--text-hint); transition: color 0.15s; }
+.pwa-nav-tab span { font-size: 9px; color: var(--text-hint); font-weight: 500; transition: color 0.15s; white-space: nowrap; }
+.pwa-nav-tab.active i { color: var(--purple-accent); }
+.pwa-nav-tab.active span { color: var(--purple-accent); font-weight: 700; }
+.pwa-nav-tab.active::before {
+  content: '';
+  position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 28px; height: 3px;
+  background: var(--purple-accent);
+  border-radius: 0 0 4px 4px;
+}
+.pwa-nav-badge {
+  position: absolute; top: 6px; right: calc(50% - 16px);
+  background: #ff6b6b; color: white;
+  font-size: 9px; font-weight: 700;
+  min-width: 15px; height: 15px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px; border: 1.5px solid var(--white);
+}
+.pwa-more-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 500;
+  align-items: flex-end;
+}
+.pwa-more-overlay.show { display: flex; }
+.pwa-more-sheet {
+  background: var(--white); border-radius: 20px 20px 0 0;
+  width: 100%; padding: 0 16px;
+  padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 16px));
+  max-height: 75dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pwa-more-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 14px auto 16px;
+}
+.pwa-more-section-title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-muted); margin-bottom: 8px; margin-top: 16px; padding: 0 2px;
+}
+.pwa-more-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 4px; }
+.pwa-more-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 4px; border-radius: 12px; cursor: pointer;
+  background: var(--bg); border: none; -webkit-tap-highlight-color: transparent;
+}
+.pwa-more-item i { font-size: 22px; color: var(--purple-accent); }
+.pwa-more-item span { font-size: 10px; color: var(--text); font-weight: 500; text-align: center; line-height: 1.3; }
+body.pwa-mode .sidebar { display: none !important; }
+body.pwa-mode .sidebar-overlay { display: none !important; }
+body.pwa-mode .mobile-menu-btn { display: none !important; }
+body.pwa-mode .main { margin-left: 0 !important; }
+body.pwa-mode .pwa-bottom-nav { display: flex; }
+body.pwa-mode .content { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }
+body.pwa-mode .topbar {
+  background: var(--purple) !important; color: white !important;
+  padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px)) !important;
+}
+body.pwa-mode .topbar .page-title { color: white !important; font-size: 16px !important; font-weight: 700 !important; }
+body.pwa-mode .topbar .notif-btn i { color: rgba(255,255,255,0.8) !important; }
+body.pwa-mode .topbar .notif-dot { border-color: var(--purple) !important; }
+body.pwa-mode #pageDate { color: rgba(255,255,255,0.7) !important; }
+
 /* ── CONTENT EVAL & META ADS SHARED ── */
 .btn-ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;border:none}
 .btn-ig:hover{opacity:.9}
@@ -2061,21 +2148,55 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   console.log('[Supabase] Bootstrapping...');
   try {
-    // Master Ticket data (foundation)
-    tktDivisi = (await sb_loadDivisi()).map(d => ({ id: d.id, nama: d.nama, color: d.color || 'purple', email: d.email }));
-    tktPeople = (await sb_loadPeople()).map(p => ({
+    // ── BATCH 1: semua query independen jalan paralel ──────────────────────
+    const [
+      divisiRows, peopleRows, typesRows,
+      painPointRows, platRows, katRows,
+      ticketRows, taskRows, eventRows, linkTplRows,
+      partnerDealRows, partnerRows, outreachRows,
+      orgDealRows, orgPartnerRows, orgOutreachRows,
+      dealRows, prodRows, allPP, allPas,
+      evalRows,
+      buyerRows,
+      contentLibRows,
+      talentPoolRows,
+    ] = await Promise.all([
+      sb_loadDivisi(),
+      sb_loadPeople(),
+      sb_loadTypes(),
+      sb_loadPainPoints(),
+      sb_loadPPPlatforms(),
+      sb_loadPPCategories(),
+      sb_loadTickets(),
+      sb_loadTasks(),
+      sb_loadEvents(),
+      sb_loadLinkTemplates(),
+      sb_load('partner_deals', { order: 'created_at', ascending: false }),
+      sb_load('partners', { order: 'name', ascending: true }),
+      sb_load('partner_outreach', { order: 'created_at', ascending: false }),
+      sb_load('org_deals', { order: 'created_at', ascending: false }),
+      sb_load('org_partners', { order: 'name', ascending: true }),
+      sb_load('org_outreach', { order: 'created_at', ascending: false }),
+      sb_load('crm_deals', { order: 'created_at', ascending: false }),
+      sb_loadProducts(),
+      sb_load('product_pain_points', { order: 'created_at', ascending: true }),
+      sb_load('product_passion_points', { order: 'created_at', ascending: true }),
+      sb_loadEvalContents().catch(e => { console.error('[sb_load] eval →', _sbErrInfo(e)); return []; }),
+      sb_load('buyers', { order: 'created_at', ascending: false }).catch(() => []),
+      sb_loadContentLib().catch(() => []),
+      sb_loadTalentPool().catch(() => []),
+    ]);
+
+    // ── MAP DATA ────────────────────────────────────────────────────────────
+    tktDivisi = divisiRows.map(d => ({ id: d.id, nama: d.nama, color: d.color || 'purple', email: d.email }));
+    tktPeople = peopleRows.map(p => ({
       id: p.id, nama: p.nama, email: p.email,
       divisiId: p.divisi_id, level: p.level || 'Staff',
       color: (tktDivisi.find(d => d.id === p.divisi_id) || {}).color || 'purple'
     }));
-    tktTypes = (await sb_loadTypes()).map(t => ({ id: t.id, nama: t.nama, divisiId: t.divisi_id }));
+    tktTypes = typesRows.map(t => ({ id: t.id, nama: t.nama, divisiId: t.divisi_id }));
 
-    // Pain points
-    await sb_loadPainPoints();
-    const platRows = await sb_loadPPPlatforms();
-    const katRows = await sb_loadPPCategories();
     if (platRows.length) ppMasterPlatforms = platRows.map(p => p.nama);
-    // Re-render Master Data list kalau sudah dirender sebelumnya
     const platListEl = document.getElementById('pp-plat-list');
     if(platListEl) platListEl.innerHTML = ppMasterPlatforms.map((p,i)=>`
       <div class="master-row-item">
@@ -2085,13 +2206,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>`).join("");
     if (katRows.length) ppMasterKategori = katRows.map(k => k.nama);
-    window._ppPlatformsData = platRows;  // keep ID mapping for delete-by-id
+    window._ppPlatformsData = platRows;
     window._ppKategoriData = katRows;
 
-    // Tickets, tasks, events, partner deals (counts for sidebar badges)
-    tickets = await sb_loadTickets();
-    projectTasks = await sb_loadTasks();
-    projects = (await sb_loadEvents()).map(e => ({
+    tickets = ticketRows;
+    projectTasks = taskRows;
+    projects = eventRows.map(e => ({
       id: e.id, nama: e.nama, tanggal: e.tanggal, waktu: e.waktu || '',
       status: e.status || 'Planning', speaker: e.speaker || '', platform: e.platform || '',
       linkZoom: e.link_zoom || '', target: e.target || 0, deskripsi: e.deskripsi || '',
@@ -2099,11 +2219,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       capaian_peserta: e.capaian_peserta ?? null, notes_post: e.notes_post || '',
       links: e.links || []
     }));
-    eventLinkTemplates = (await sb_loadLinkTemplates()).map(t => ({
+    eventLinkTemplates = linkTplRows.map(t => ({
       id: t.id, jenis_program: t.jenis_program, label: t.label, url: t.url, urutan: t.urutan || 0
     }));
 
-    // Auto-fix: event yang Planning tapi ada task Done → update ke On Progress
+    // Auto-fix: event Planning tapi ada task Done → On Progress
     for (const proj of projects) {
       if (proj.status !== 'Planning') continue;
       const tasks = projectTasks.filter(t => _idEq(t.projectId, proj.id));
@@ -2113,38 +2233,31 @@ window.addEventListener('DOMContentLoaded', async () => {
         sb_updateEvent(proj.id, { status: 'On Progress' });
       }
     }
-    partnerDeals = (await sb_load('partner_deals', { order: 'created_at', ascending: false })).map(_pDealRowToJS);
-    partners = (await sb_load('partners', { order: 'name', ascending: true })).map(_partnerRowToJS);
-    outreachLog = (await sb_load('partner_outreach', { order: 'created_at', ascending: false })).map(_outreachRowToJS);
-    orgPartnerDeals = (await sb_load('org_deals', { order: 'created_at', ascending: false })).map(_opDealRowToJS);
-    orgPartners = (await sb_load('org_partners', { order: 'name', ascending: true })).map(_orgPartnerRowToJS);
-    orgOutreachLog = (await sb_load('org_outreach', { order: 'created_at', ascending: false })).map(_orgOutreachRowToJS);
-    deals = (await sb_load('crm_deals', { order: 'created_at', ascending: false })).map(_dealRowToJS);
 
-    // Products — load from Supabase, then fetch pain/passion points for each
-    try {
-      const prodRows = await sb_loadProducts();
-      // Load all pain & passion points in bulk (filter per product_id client-side)
-      const allPP = await sb_load('product_pain_points', { order: 'created_at', ascending: true });
-      const allPas = await sb_load('product_passion_points', { order: 'created_at', ascending: true });
-      products = prodRows.map(p => ({
-        ...p,
-        painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
-        passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
-      }));
-    } catch(e) { console.error('[sb_load] products ->', _sbErrInfo(e)); }
+    partnerDeals = partnerDealRows.map(_pDealRowToJS);
+    partners = partnerRows.map(_partnerRowToJS);
+    outreachLog = outreachRows.map(_outreachRowToJS);
+    orgPartnerDeals = orgDealRows.map(_opDealRowToJS);
+    orgPartners = orgPartnerRows.map(_orgPartnerRowToJS);
+    orgOutreachLog = orgOutreachRows.map(_orgOutreachRowToJS);
+    deals = dealRows.map(_dealRowToJS);
 
-    // Content Evaluation
-    try {
-      evalContents = await sb_loadEvalContents();
-    } catch (e) { console.error('[sb_load] content_evaluations →', _sbErrInfo(e)); }
+    products = prodRows.map(p => ({
+      ...p,
+      painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
+      passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
+    }));
 
-    // Meta Ads mirror (decisions persist; metrics live-sync from eval on module open)
+    evalContents = evalRows;
+    buyers = buyerRows.map(_buyerRowToJS);
+    clData = contentLibRows.map(_clRowToJS);
+    _tpData = talentPoolRows.map(_tpRowToJS);
+
+    // Meta Ads
     try {
       if (typeof sb_loadAdsAll === 'function') await sb_loadAdsAll();
     } catch (e) { console.error('[sb_load] ads_contents →', _sbErrInfo(e)); }
 
-    // Auto-login dinonaktifkan sementara — sistem login ditiadakan
     currentUser = null;
 
     // Backfill ticket_no untuk ticket lama yang belum punya nomor (null)
@@ -13446,7 +13559,7 @@ function _tpRenderTabRow() {
 
 async function initTalentPool() {
   _tpRenderTabRow();
-  _tpData = await sb_loadTalentPool();
+  if (!_tpData || !_tpData.length) _tpData = await sb_loadTalentPool();
   if (_tpTab === 'list') renderTpList();
   else if (_tpTab === 'analytics') renderTpAnalytics();
   else renderTpBlast();
@@ -15532,13 +15645,15 @@ function contentLibHTML() {
 }
 
 async function initContentLib() {
-  clData = (await sb_loadContentLib()).map(c => ({
-    id: c.id, jenis: c.jenis, platform: c.platform, link: c.link||'',
-    copywriting: c.copywriting||'', views: c.views||0, likes: c.likes||0,
-    comments: c.comments||0, shares: c.shares||0,
-    storage_paths: c.storage_paths||[], notes: c.notes||'',
-    labels: c.labels||[], created_at: c.created_at
-  }));
+  if (!clData || !clData.length) {
+    clData = (await sb_loadContentLib()).map(c => ({
+      id: c.id, jenis: c.jenis, platform: c.platform, link: c.link||'',
+      copywriting: c.copywriting||'', views: c.views||0, likes: c.likes||0,
+      comments: c.comments||0, shares: c.shares||0,
+      storage_paths: c.storage_paths||[], notes: c.notes||'',
+      labels: c.labels||[], created_at: c.created_at
+    }));
+  }
   clPopulateLabelFilter();
   clRenderGallery();
   document.removeEventListener('paste', clPasteHandler);
@@ -16350,5 +16465,133 @@ async function gcalCreateEvent(taskId) {
   };
 })();
 </script>
+
+<!-- ── PWA BOTTOM NAV ── -->
+<div class="pwa-bottom-nav" id="pwaBottomNav">
+  <button class="pwa-nav-tab active" id="pwatab-dashboard" onclick="pwaSwitchTab('dashboard',this)">
+    <i class="ti ti-home"></i><span>Home</span>
+  </button>
+  <button class="pwa-nav-tab" id="pwatab-project" onclick="pwaSwitchTab('project',this)">
+    <i class="ti ti-checklist"></i><span>Program</span>
+  </button>
+  <button class="pwa-nav-tab" id="pwatab-contentlib" onclick="pwaSwitchTab('contentlib',this)">
+    <i class="ti ti-bookmark"></i><span>Konten</span>
+  </button>
+  <button class="pwa-nav-tab" id="pwatab-partner" onclick="pwaSwitchTab('partner',this)">
+    <i class="ti ti-users-group"></i><span>B2B</span>
+  </button>
+  <button class="pwa-nav-tab" id="pwatab-orgpartner" onclick="pwaSwitchTab('orgpartner',this)">
+    <i class="ti ti-school"></i><span>Org</span>
+  </button>
+  <button class="pwa-nav-tab" id="pwatab-design" onclick="pwaSwitchTab('design',this)">
+    <i class="ti ti-palette"></i><span>Design</span>
+  </button>
+  <button class="pwa-nav-tab" id="pwatab-more" onclick="pwaOpenMore()">
+    <i class="ti ti-grid-dots"></i><span>Lainnya</span>
+  </button>
+</div>
+
+<!-- ── PWA MORE SHEET ── -->
+<div class="pwa-more-overlay" id="pwaMoreOverlay" onclick="pwaCloseMore()">
+  <div class="pwa-more-sheet" onclick="event.stopPropagation()">
+    <div class="pwa-more-handle"></div>
+    <div class="pwa-more-section-title">Marketing</div>
+    <div class="pwa-more-grid">
+      <button class="pwa-more-item" onclick="pwaMoreNav('content')"><i class="ti ti-calendar-event"></i><span>Content Planning</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('eval')"><i class="ti ti-chart-line"></i><span>Content Eval</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('ads')"><i class="ti ti-ad-2"></i><span>Meta Ads</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('igperf')"><i class="ti ti-brand-instagram"></i><span>Instagram</span></button>
+    </div>
+    <div class="pwa-more-grid">
+      <button class="pwa-more-item" onclick="pwaMoreNav('voucher')"><i class="ti ti-ticket"></i><span>Voucher</span></button>
+    </div>
+    <div class="pwa-more-section-title">Operations</div>
+    <div class="pwa-more-grid">
+      <button class="pwa-more-item" onclick="pwaMoreNav('crm')"><i class="ti ti-users"></i><span>CRM</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('talentpool')"><i class="ti ti-user-star"></i><span>Talent Pool</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('loker')"><i class="ti ti-briefcase"></i><span>Job Vacancy</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('tickets')"><i class="ti ti-ticket"></i><span>Tiket</span></button>
+    </div>
+    <div class="pwa-more-section-title">Intelligence</div>
+    <div class="pwa-more-grid">
+      <button class="pwa-more-item" onclick="pwaMoreNav('competitor')"><i class="ti ti-shield-search"></i><span>Competitor</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('painpoint')"><i class="ti ti-message-search"></i><span>Pain Point</span></button>
+    </div>
+    <div class="pwa-more-section-title">Internal</div>
+    <div class="pwa-more-grid">
+      <button class="pwa-more-item" onclick="pwaMoreNav('product')"><i class="ti ti-package"></i><span>Products</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('resources')"><i class="ti ti-key"></i><span>Resources</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('settings')"><i class="ti ti-settings"></i><span>Settings</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PWA MODE DETECTION & LOGIC ────────────────────────────────────────────
+(function(){
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+
+  if (isPWA) {
+    document.body.classList.add('pwa-mode');
+  }
+
+  // Switch tab di bottom nav
+  window.pwaSwitchTab = function(page, btn) {
+    // Update active state
+    document.querySelectorAll('.pwa-nav-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    // Navigate
+    const navItem = document.querySelector(`.nav-item[onclick*="switchPage('${page}'"]`);
+    switchPage(page, navItem);
+    // Scroll to top
+    setTimeout(() => {
+      const c = document.getElementById('mainContent');
+      if (c) c.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+  };
+
+  // Open more sheet
+  window.pwaOpenMore = function() {
+    document.getElementById('pwaMoreOverlay').classList.add('show');
+    // Mark more tab active
+    document.querySelectorAll('.pwa-nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('pwatab-more').classList.add('active');
+  };
+
+  // Close more sheet
+  window.pwaCloseMore = function() {
+    document.getElementById('pwaMoreOverlay').classList.remove('show');
+  };
+
+  // Navigate from more sheet
+  window.pwaMoreNav = function(page) {
+    pwaCloseMore();
+    // Deactivate bottom tabs (this page isn't in bottom nav)
+    document.querySelectorAll('.pwa-nav-tab').forEach(t => t.classList.remove('active'));
+    const navItem = document.querySelector(`.nav-item[onclick*="switchPage('${page}'"]`);
+    switchPage(page, navItem);
+    setTimeout(() => {
+      const c = document.getElementById('mainContent');
+      if (c) c.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+  };
+
+  // Patch switchPage to sync bottom nav active state
+  const _origSwitchPage = window.switchPage;
+  window.switchPage = function(page, el) {
+    _origSwitchPage(page, el);
+    if (!document.body.classList.contains('pwa-mode')) return;
+    // Sync bottom nav
+    const bottomPages = ['dashboard','project','contentlib','partner','orgpartner','design'];
+    document.querySelectorAll('.pwa-nav-tab').forEach(t => t.classList.remove('active'));
+    if (bottomPages.includes(page)) {
+      const tab = document.getElementById('pwatab-' + page);
+      if (tab) tab.classList.add('active');
+    }
+  };
+})();
+</script>
+
 </body>
 </html>
