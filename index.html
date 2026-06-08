@@ -8398,19 +8398,22 @@ async function fcFetchData() {
   if (btn) { btn.disabled = true; btn.textContent = 'Mengambil...'; }
   if (status) status.textContent = 'Menghubungi Google Sheets...';
 
-  // Try multiple CORS proxies
-  const proxies = [
+  // Google Sheets published CSV supports CORS - try direct first
+  const attempts = [
+    url,  // direct (Google sets Access-Control-Allow-Origin: *)
     `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
   ];
 
   let csv = null;
-  for (const proxy of proxies) {
+  for (const attempt of attempts) {
     try {
-      if (status) status.textContent = 'Mencoba ' + proxy.split('?')[0] + '...';
-      const res = await fetch(proxy, { signal: AbortSignal.timeout(10000) });
-      if (res.ok) { csv = await res.text(); break; }
+      if (status) status.textContent = attempt === url ? 'Menghubungi Google Sheets...' : 'Mencoba proxy...';
+      const res = await fetch(attempt, { signal: AbortSignal.timeout(12000) });
+      if (res.ok) { 
+        const text = await res.text();
+        if (text && text.includes(',')) { csv = text; break; }
+      }
     } catch(e) { continue; }
   }
 
