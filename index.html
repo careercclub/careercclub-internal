@@ -764,7 +764,9 @@ body.pwa-mode .topbar * { color: #fff !important; }
 
 /* ── PWA MOBILE FIXES ───────────────────────────────────────────────────── */
 @media (max-width: 600px) {
-/* Fix 1: Stats 2 kolom — semua modul (fallback, JS override handles inline styles) */
+  /* Fix 1: Stats 2 kolom — semua modul */
+  /* High specificity override untuk inline styles */
+  div.stats-grid[style] { grid-template-columns: repeat(2,1fr) !important; }
   .stats-grid, .pwa-stats-2col { grid-template-columns: repeat(2,1fr) !important; }
   .stats-strip-5 { grid-template-columns: repeat(2,1fr) !important; }
 
@@ -16820,6 +16822,15 @@ async function gcalCreateEvent(taskId) {
     const calEl=document.getElementById('dash-calendar');
     const upEl=document.getElementById('dash-upcoming');
     if (!calEl||!upEl) return;
+
+    // Hide desktop calendar layout, show compact version
+    const dashLayout = document.getElementById('dash-layout');
+    if (dashLayout) {
+      dashLayout.style.gridTemplateColumns = '1fr';
+      const rightPanel = dashLayout.children[1];
+      if (rightPanel) rightPanel.style.display = 'none';
+    }
+
     const today=new Date(); today.setHours(0,0,0,0);
     const days=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
     let calHtml='<div class="pwa-cal-strip">';
