@@ -921,6 +921,7 @@ body.pwa-mode .pwa-notion-show { display: flex !important; }
 }
 .pwa-cal-day.today { background: var(--purple); }
 .pwa-cal-day.has-event { background: var(--white); border: 0.5px solid var(--border); }
+.pwa-cal-day.normal { background: var(--white); opacity: 0.5; }
 .pwa-cal-day-name { font-size: 10px; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
 .pwa-cal-day.today .pwa-cal-day-name { color: rgba(255,255,255,0.75); }
 .pwa-cal-day-num { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3; }
@@ -2691,6 +2692,14 @@ function switchPage(page,el){
   else if(page==="igperf"){c.innerHTML=igPerfHTML();initIgPerf();}
   else if(page==="ads"){initAds();}
   else c.innerHTML=placeholderHTML(pageTitles[page]);
+  // Fix stats grid on mobile after every page render
+  if(window.innerWidth<=600){
+    [50,150,350].forEach(d=>setTimeout(()=>{
+      document.querySelectorAll('.stats-grid,.stats-strip-5').forEach(el=>{
+        el.style.setProperty('grid-template-columns','repeat(2,1fr)','important');
+      });
+    },d));
+  }
 }
 
 function dashboardHTML(){
@@ -6766,8 +6775,12 @@ function initProjectTab(tab){
   else if(tab==="tasks") c.innerHTML=projectTasksHTML();
   else if(tab==="history") c.innerHTML=projectHistoryHTML();
   else if(tab==="calendar") c.innerHTML=projectCalendarHTML();
-  // Fix stats grid on mobile
-  if(typeof _pwaFixStatsGrid==='function') setTimeout(_pwaFixStatsGrid, 50);
+  // Fix stats grid on mobile — multiple retries to beat inline styles
+  if(typeof _pwaFixStatsGrid==='function'){
+    _pwaFixStatsGrid();
+    setTimeout(_pwaFixStatsGrid, 50);
+    setTimeout(_pwaFixStatsGrid, 200);
+  }
 }
 
 // ── TAB 1: OVERVIEW ─────────────────────────────────────────
@@ -16814,7 +16827,8 @@ async function gcalCreateEvent(taskId) {
       const iso=toLocalDateISO(d);
       const isToday=i===0;
       const hasTasks=projectTasks.some(t=>t.deadline===iso&&t.status!=='Done');
-      calHtml+=`<div class="pwa-cal-day${isToday?' today':''}${hasTasks&&!isToday?' has-event':''}">
+      const cls = isToday ? 'today' : hasTasks ? 'has-event' : 'normal';
+      calHtml+=`<div class="pwa-cal-day ${cls}">
         <div class="pwa-cal-day-name" style="${hasTasks&&!isToday?'color:var(--purple-accent);font-weight:600':''}">${days[d.getDay()]}</div>
         <div class="pwa-cal-day-num">${d.getDate()}</div>
         ${hasTasks?`<div class="pwa-cal-dot" style="${isToday?'':'background:var(--purple-accent)'}"></div>`:'<div style="height:7px"></div>'}
