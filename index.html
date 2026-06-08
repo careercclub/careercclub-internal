@@ -8520,223 +8520,251 @@ function fcInitAnalytics() { if (_fcData.length) fcRenderCharts(_fcData); }
 function fcMapRow(r) {
   const get = (keywords) => {
     const key = Object.keys(r).find(k => keywords.some(kw => k.toLowerCase().includes(kw.toLowerCase())));
-    return key ? r[key] : '';
+    return key ? (r[key] || '').toString().trim() : '';
   };
-  const email = get(['email']).trim().toLowerCase();
-  const seri = get(['free class','seri yang']).trim();
+  const email = get(['email']).toLowerCase();
+  const seri  = get(['free class','seri yang','seri ']).trim();
   if (!email || !seri) return null;
-  // Tentukan dulu kolom yang sudah di-assign agar tidak ikut jadi rating
-  const _assignedKeys = new Set([
-    get(['email']) && Object.keys(r).find(k => k.toLowerCase().includes('email')),
-    Object.keys(r).find(k => ['free class','seri yang'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
-    Object.keys(r).find(k => k.toLowerCase().includes('nama')),
-    Object.keys(r).find(k => ['universitas','university'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
-    Object.keys(r).find(k => k.toLowerCase().includes('angkatan')),
-    Object.keys(r).find(k => k.toLowerCase().includes('timestamp')),
-    // Open-ended fields
-    Object.keys(r).find(k => ['sudah baik','hal apa yang sudah','baik dari'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
-    Object.keys(r).find(k => ['ditingkatkan','bisa ditingkatkan'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
-    Object.keys(r).find(k => ['topik','pelajari','ingin'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
-  ].filter(Boolean));
 
-  const ratingKeys = Object.keys(r).filter(k => {
-    if (_assignedKeys.has(k)) return false;
-    const raw = (r[k] || '').toString().trim();
-    // Harus berupa integer 1-5 saja (bukan float seperti 1.0 ok, tapi bukan "5/3/2026")
-    // Pastikan tidak mengandung karakter non-numerik selain titik desimal
-    if (!/^\d+(\.\d+)?$/.test(raw)) return false;
-    const v = parseFloat(raw);
-    return !isNaN(v) && v >= 1 && v <= 5;
+  // Mapping by exact column name snippet (robust, no positional)
+  const RATING_MAP = [
+    { key: 'materi_judul',    kw: ['sesuai dengan judul','sesuai dengan tema'] },
+    { key: 'materi_kebutuhan',kw: ['sesuai dengan kebutuhan'] },
+    { key: 'materi_mudah',    kw: ['mudah untuk saya pahami','mudah dipahami'] },
+    { key: 'materi_jawab',    kw: ['menjawab pertanyaan'] },
+    { key: 'nara_kuasai',     kw: ['menguasai materi'] },
+    { key: 'nara_jelas',      kw: ['menyampaikan materi'] },
+    { key: 'kualitas_teknis', kw: ['kualitas teknis','audio'] },
+    { key: 'waktu',           kw: ['waktu pelaksanaan'] },
+    { key: 'moderator',       kw: ['moderator'] },
+    { key: 'info_webinar',    kw: ['informasi webinar'] },
+    { key: 'kepuasan',        kw: ['puas dengan pelaksanaan'] },
+    { key: 'minat',           kw: ['berminat untuk mengikuti','berminat mengikuti'] },
+    { key: 'rekomendasi',     kw: ['merekomendasikan'] },
+  ];
+
+  const parseR = (val) => {
+    if (!val || val.toString().trim() === '') return null;
+    const v = parseFloat(val);
+    return (!isNaN(v) && v >= 1 && v <= 5) ? v : null;
+  };
+
+  const ratings = {};
+  RATING_MAP.forEach(({ key, kw }) => {
+    ratings[key] = parseR(get(kw));
   });
+
   return {
     email, seri,
-    nama: get(['nama']),
+    nama:        get(['nama']),
     universitas: get(['universitas','university']),
-    angkatan: get(['angkatan']),
-    timestamp: get(['timestamp']),
-    q1: parseFloat(r[ratingKeys[0]])||null, q2: parseFloat(r[ratingKeys[1]])||null,
-    q3: parseFloat(r[ratingKeys[2]])||null, q4: parseFloat(r[ratingKeys[3]])||null,
-    q5: parseFloat(r[ratingKeys[4]])||null, q6: parseFloat(r[ratingKeys[5]])||null,
-    q7: parseFloat(r[ratingKeys[6]])||null, q8: parseFloat(r[ratingKeys[7]])||null,
-    q9: parseFloat(r[ratingKeys[8]])||null, q10: parseFloat(r[ratingKeys[9]])||null,
-    q11: parseFloat(r[ratingKeys[10]])||null, q12: parseFloat(r[ratingKeys[11]])||null,
-    q13: parseFloat(r[ratingKeys[12]])||null,
-    hal_baik: get(['sudah baik','hal apa yang sudah','baik dari']),
-    ditingkatkan: get(['ditingkatkan','bisa ditingkatkan']),
+    angkatan:    get(['angkatan']),
+    timestamp:   get(['timestamp']),
+    ...ratings,
+    hal_baik:        get(['sudah baik','hal apa yang sudah','baik dari']),
+    ditingkatkan:    get(['ditingkatkan','bisa ditingkatkan']),
     topik_keinginan: get(['topik','pelajari','ingin']),
   };
 }
 
+// Label lengkap per rating key — urutan sama dengan RATING_MAP
+const FC_RATING_KEYS = [
+  { key: 'materi_judul',    label: 'Materi sesuai judul/tema webinar' },
+  { key: 'materi_kebutuhan',label: 'Materi sesuai kebutuhan saya' },
+  { key: 'materi_mudah',    label: 'Materi mudah dipahami' },
+  { key: 'materi_jawab',    label: 'Materi menjawab pertanyaan saya' },
+  { key: 'nara_kuasai',     label: 'Narasumber menguasai materi' },
+  { key: 'nara_jelas',      label: 'Narasumber menyampaikan materi dg jelas' },
+  { key: 'kualitas_teknis', label: 'Kualitas teknis (audio, video, koneksi)' },
+  { key: 'waktu',           label: 'Waktu pelaksanaan sesuai & efisien' },
+  { key: 'moderator',       label: 'Moderator membawakan sesi dg baik' },
+  { key: 'info_webinar',    label: 'Informasi webinar mudah didapatkan' },
+  { key: 'kepuasan',        label: 'Puas dengan pelaksanaan webinar' },
+  { key: 'minat',           label: 'Berminat ikut kegiatan CCC lagi' },
+  { key: 'rekomendasi',     label: 'Akan merekomendasikan ke rekan' },
+];
+
 function fcRenderCharts() {
   const el = document.getElementById('fc-content');
   if (!el) return;
-
   const data = _fcData;
+  if (!data || !data.length) {
+    el.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted)">
+      <i class="ti ti-chart-dots" style="font-size:36px;display:block;margin-bottom:10px"></i>
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Belum ada data</div>
+      <div style="font-size:11px">Upload file CSV dari Google Sheets</div></div>`;
+    return;
+  }
 
-  // Deteksi data kotor: kalau q1 punya nilai = 5 dan q2 = 4 semua sama, kemungkinan timestamp tersimpan
-  // Cara lebih reliable: cek apakah ada baris yang q1 bisa jadi timestamp (nilai 1-5 tapi semua baris q1=5)
-  const q1vals = data.map(r => r.q1).filter(v => v != null);
-  const allQ1are5 = q1vals.length > 0 && q1vals.every(v => v === 5);
-  const dirtyWarning = allQ1are5 && data.length > 0 ? `
-    <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#854f0b">
-      <b>⚠️ Data mungkin perlu di-reimport.</b> Terdeteksi kemungkinan mapping kolom bergeser (timestamp masuk ke slot rating).
-      Klik tombol 🗑️ untuk hapus data lama, lalu upload/import ulang CSV.
-    </div>` : '';
   const total = data.length;
+  const ratingColor = avg => avg >= 4.5 ? '#16a34a' : avg >= 4.0 ? '#7c6ff7' : avg >= 3.5 ? '#d97706' : '#dc2626';
+  const ratingBg    = avg => avg >= 4.5 ? '#dcfce7' : avg >= 4.0 ? '#ede9fe' : avg >= 3.5 ? '#fef3c7' : '#fee2e2';
 
-  // Detect rating columns (1-5 scale)
-  const sampleRow = data[0] || {};
-  const headers = Object.keys(sampleRow);
-  const ratingCols = headers.filter(h => {
-    const vals = data.map(r => parseFloat(r[h])).filter(v => !isNaN(v));
-    return vals.length > total * 0.5 && vals.every(v => v >= 1 && v <= 5);
-  });
+  // ── Hitung stats per rating key ──
+  const ratingStats = FC_RATING_KEYS.map(({ key, label }) => {
+    const vals = data.map(r => r[key]).filter(v => v != null);
+    if (!vals.length) return null;
+    const avg  = vals.reduce((a,b) => a+b, 0) / vals.length;
+    const dist = {1:0, 2:0, 3:0, 4:0, 5:0};
+    vals.forEach(v => { const k = Math.round(v); if (k>=1&&k<=5) dist[k]++; });
+    return { key, label, avg: Math.round(avg*100)/100, n: vals.length, dist };
+  }).filter(Boolean);
 
-  // Detect free class series column
-  const seriesCol = headers.find(h => h.toLowerCase().includes('free class') || h.toLowerCase().includes('seri'));
-  // Detect university col
-  const uniCol = headers.find(h => h.toLowerCase().includes('universitas') || h.toLowerCase().includes('university'));
+  // Urut dari avg terendah ke tertinggi
+  const sorted = [...ratingStats].sort((a,b) => a.avg - b.avg);
+  const overallAvg = ratingStats.reduce((s,r) => s+r.avg, 0) / ratingStats.length;
 
-  // Compute avg per rating col
-  const avgRatings = ratingCols.map(col => {
-    const vals = data.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
-    const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
-    const label = col.length > 45 ? col.slice(0, 45) + '...' : col;
-    return { col, label, avg: Math.round(avg * 10) / 10, n: vals.length };
-  });
-
-  // Series breakdown
+  // ── Series breakdown ──
   const seriesCount = {};
-  if (seriesCol) {
-    data.forEach(r => {
-      const s = (r[seriesCol] || 'Tidak diisi').trim() || 'Tidak diisi';
-      seriesCount[s] = (seriesCount[s] || 0) + 1;
-    });
-  }
+  data.forEach(r => {
+    const s = (r.seri || '').trim();
+    if (s) seriesCount[s] = (seriesCount[s] || 0) + 1;
+  });
 
-  // Top 10 universities
+  // ── Top Universitas ──
   const uniCount = {};
-  if (uniCol) {
-    data.forEach(r => {
-      const u = (r[uniCol] || '').trim().replace(/\bUniversitas\b/gi, 'Univ.');
-      if (u) uniCount[u] = (uniCount[u] || 0) + 1;
-    });
-  }
-  const topUnis = Object.entries(uniCount).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  data.forEach(r => {
+    const u = (r.universitas || '').trim()
+      .replace(/^universitas\s+/i, 'Univ. ')
+      .replace(/^university\s+/i, 'Univ. ');
+    if (u) uniCount[u] = (uniCount[u] || 0) + 1;
+  });
+  const topUnis = Object.entries(uniCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
 
-  // Overall NPS (kepuasan col)
-  const puasCol = ratingCols.find(h => h.toLowerCase().includes('puas') || h.toLowerCase().includes('overall'));
-  const rekCol = ratingCols.find(h => h.toLowerCase().includes('rekomen'));
-  const minatCol = ratingCols.find(h => h.toLowerCase().includes('minat'));
+  // ── Stacked bar per pertanyaan ──
+  const DIST_COLORS = { 1:'#ef4444', 2:'#f97316', 3:'#eab308', 4:'#7c6ff7', 5:'#16a34a' };
+  const stackedBarsHTML = sorted.map(r => {
+    const n = r.n;
+    const bars = [1,2,3,4,5].map(star => {
+      const pct = n ? (r.dist[star]/n*100) : 0;
+      return pct > 0
+        ? `<div title="${star}★: ${r.dist[star]} (${pct.toFixed(0)}%)"
+              style="width:${pct.toFixed(1)}%;background:${DIST_COLORS[star]};height:100%;min-width:${pct>0?2:0}px"></div>`
+        : '';
+    }).join('');
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:11px;color:var(--text);flex:1;padding-right:12px;line-height:1.3">${r.label}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${r.n < total ? `<span style="font-size:9px;color:var(--text-muted)">(n=${r.n})</span>` : ''}
+          <span style="font-size:12px;font-weight:700;color:${ratingColor(r.avg)};background:${ratingBg(r.avg)};padding:1px 7px;border-radius:10px">${r.avg.toFixed(2)}</span>
+        </div>
+      </div>
+      <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--bg)">${bars}</div>
+    </div>`;
+  }).join('');
 
-  const overallAvg = avgRatings.length ? (avgRatings.reduce((s,r) => s+r.avg, 0) / avgRatings.length) : 0;
+  // ── Legend stacked bar ──
+  const legendHTML = [3,4,5].map(s =>
+    `<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)">
+      <span style="width:10px;height:10px;border-radius:2px;background:${DIST_COLORS[s]};display:inline-block"></span>${s}★
+    </div>`).join('');
 
-  const ratingColor = (avg) => avg >= 4.5 ? '#3b6d11' : avg >= 4.0 ? '#7c6ff7' : avg >= 3.5 ? '#854f0b' : '#a32d2d';
-  const ratingBg = (avg) => avg >= 4.5 ? '#dcfce7' : avg >= 4.0 ? '#ede9fe' : avg >= 3.5 ? '#fef3c7' : '#fee2e2';
+  // ── Tabel responden ──
+  const tableRows = data.map(r => `<tr style="border-bottom:0.5px solid var(--border)">
+    <td style="padding:7px 10px;font-size:11px;color:var(--text-muted)">${r.email||'—'}</td>
+    <td style="padding:7px 10px;font-size:11px;font-weight:500">${r.nama||'—'}</td>
+    <td style="padding:7px 10px;font-size:11px">${(r.universitas||'').replace(/^universitas\s+/i,'Univ. ').replace(/^university\s+/i,'Univ. ')||'—'}</td>
+    <td style="padding:7px 10px;font-size:11px;text-align:center">${r.angkatan||'—'}</td>
+    <td style="padding:7px 10px;font-size:11px;text-align:center;white-space:nowrap">${(r.seri||'').replace(/free class series\s*/i,'FCS ')||'—'}</td>
+  </tr>`).join('');
+
+  // ── Open-ended helper ──
+  const isNoise = (s) => !s || /^[\s\-–—\.\/\\,]+$/.test(s) || s.trim().length < 3;
+  const openEndedHTML = (title, icon, iconColor, key) => {
+    const items = data
+      .map(r => ({ text: (r[key]||'').trim(), nama: r.nama||r.email||'—', seri: (r.seri||'').replace(/free class series\s*/i,'FCS ') }))
+      .filter(x => !isNoise(x.text));
+    if (!items.length) return '';
+    return `<div class="card" style="padding:16px 18px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        <i class="ti ti-${icon}" style="color:${iconColor};font-size:16px"></i>${title}
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted)">${items.length} jawaban</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${items.map(x => `<div style="background:var(--bg);border-left:3px solid ${iconColor};border-radius:0 6px 6px 0;padding:9px 12px">
+          <div style="font-size:12px;color:var(--text);line-height:1.5">${x.text}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px">${x.nama} · ${x.seri}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  };
 
   el.innerHTML = `
-    ${dirtyWarning}
     <!-- Summary Stats -->
     <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+      <div class="stat-card"><div class="stat-label">Total Responden</div><div class="stat-val">${total}</div></div>
       <div class="stat-card">
-        <div class="stat-label">Total Responden</div>
-        <div class="stat-val">${total}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Rata-rata Keseluruhan</div>
+        <div class="stat-label">Avg Keseluruhan</div>
         <div class="stat-val" style="color:${ratingColor(overallAvg)}">${overallAvg.toFixed(2)}</div>
         <div class="stat-change">dari 5.0</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Free Class Series</div>
-        <div class="stat-val">${Object.keys(seriesCount).length}</div>
-        <div class="stat-change">sesi</div>
-      </div>
+      <div class="stat-card"><div class="stat-label">Free Class Series</div><div class="stat-val">${Object.keys(seriesCount).length}</div><div class="stat-change">sesi</div></div>
     </div>
 
-    <!-- Rating per Aspek -->
+    <!-- Stacked Bar Rating -->
     <div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Rating per Aspek Evaluasi</div>
-      ${avgRatings.map(r => `
-        <div style="margin-bottom:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <div style="font-size:11px;color:var(--text);flex:1;padding-right:12px">${r.label}</div>
-            <div style="font-size:12px;font-weight:700;color:${ratingColor(r.avg)};flex-shrink:0">${r.avg}</div>
-          </div>
-          <div style="background:var(--bg);border-radius:4px;height:6px">
-            <div style="background:${ratingColor(r.avg)};width:${(r.avg/5*100).toFixed(1)}%;height:6px;border-radius:4px;transition:width 0.5s"></div>
-          </div>
-        </div>`).join('')}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:700">Rating per Aspek <span style="font-size:11px;font-weight:400;color:var(--text-muted)">— urut terendah ke tertinggi</span></div>
+        <div style="display:flex;align-items:center;gap:10px">${legendHTML}</div>
+      </div>
+      ${stackedBarsHTML}
     </div>
 
-    <!-- Series + University side by side -->
+    <!-- Responden per Series + Top Uni -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-      ${Object.keys(seriesCount).length ? `
-      <div class="card" style="padding:16px 18px">
+      ${Object.keys(seriesCount).length ? `<div class="card" style="padding:16px 18px">
         <div style="font-size:13px;font-weight:700;margin-bottom:12px">Responden per Series</div>
-        ${Object.entries(seriesCount).sort((a,b)=>b[1]-a[1]).map(([s,n]) => `
-          <div style="margin-bottom:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s}">${s.replace('Free Class Series','FCS')}</div>
+        ${Object.entries(seriesCount).sort((a,b)=>b[1]-a[1]).map(([s,n]) => {
+          const short = s.replace(/free class series\s*/i,'FCS ');
+          return `<div style="margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s}">${short}</div>
               <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
             </div>
-            <div style="background:var(--bg);border-radius:3px;height:4px">
-              <div style="background:var(--purple-accent);width:${(n/total*100).toFixed(1)}%;height:4px;border-radius:3px"></div>
-            </div>
-          </div>`).join('')}
+            <div style="background:var(--bg);border-radius:3px;height:6px"><div style="background:var(--purple-accent);width:${(n/total*100).toFixed(1)}%;height:6px;border-radius:3px"></div></div>
+          </div>`;
+        }).join('')}
       </div>` : '<div></div>'}
-
-      ${topUnis.length ? `
-      <div class="card" style="padding:16px 18px">
+      ${topUnis.length ? `<div class="card" style="padding:16px 18px">
         <div style="font-size:13px;font-weight:700;margin-bottom:12px">Top Universitas</div>
-        ${topUnis.map(([u, n]) => `
-          <div style="margin-bottom:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        ${topUnis.map(([u,n]) => `
+          <div style="margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u}</div>
               <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
             </div>
-            <div style="background:var(--bg);border-radius:3px;height:4px">
-              <div style="background:#3b6d11;width:${(n/total*100).toFixed(1)}%;height:4px;border-radius:3px"></div>
-            </div>
+            <div style="background:var(--bg);border-radius:3px;height:6px"><div style="background:#16a34a;width:${(n/total*100).toFixed(1)}%;height:6px;border-radius:3px"></div></div>
           </div>`).join('')}
       </div>` : '<div></div>'}
     </div>
 
-    <!-- Distribusi Rating per Aspek (1-5) -->
+    <!-- Tabel Responden -->
     <div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Distribusi Rating (per Aspek)</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Daftar Responden <span style="font-size:11px;font-weight:400;color:var(--text-muted)">${total} orang</span></div>
       <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
-          <thead>
-            <tr style="background:var(--bg)">
-              <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted)">Aspek</th>
-              ${[1,2,3,4,5].map(n => `<th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text-muted)">${n}⭐</th>`).join('')}
-              <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text-muted)">Avg</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${avgRatings.map(r => {
-              const dist = [1,2,3,4,5].map(n => {
-                const c = data.filter(row => parseFloat(row[r.col]) === n).length;
-                return { n, c, pct: total ? Math.round(c/total*100) : 0 };
-              });
-              return `<tr style="border-bottom:0.5px solid var(--border)">
-                <td style="padding:8px 10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.label}</td>
-                ${dist.map(d => `<td style="padding:8px 10px;text-align:center">
-                  <div style="font-size:11px;font-weight:${d.n===5?'600':'400'};color:${d.n>=4?'var(--green)':d.n===3?'var(--amber)':'var(--red)'}">${d.c}</div>
-                  <div style="font-size:9px;color:var(--text-muted)">${d.pct}%</div>
-                </td>`).join('')}
-                <td style="padding:8px 10px;text-align:center;font-weight:700;color:${ratingColor(r.avg)}">${r.avg}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg)">
+            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Email</th>
+            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Nama</th>
+            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Universitas</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)">Angkatan</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)">Series</th>
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
         </table>
       </div>
     </div>
 
-    <div style="font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px">${total} responden · Data dari Google Sheets</div>
+    <!-- Open-ended -->
+    ${openEndedHTML('Hal yang Sudah Baik', 'thumb-up', '#16a34a', 'hal_baik')}
+    ${openEndedHTML('Yang Perlu Ditingkatkan', 'alert-triangle', '#d97706', 'ditingkatkan')}
+    ${openEndedHTML('Topik yang Ingin Dipelajari', 'bulb', 'var(--purple-accent)', 'topik_keinginan')}
+
+    <div style="font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px">${total} responden · Analytics Free Class</div>
   `;
 }
+
 
 function daysUntil(iso){
   if(!iso) return null;
@@ -10601,7 +10629,13 @@ async function clDoSendFromDA(daId) {
   const link        = document.getElementById('cl-link')?.value.trim()||'';
   const copywriting = document.getElementById('cl-copy').value.trim();
   const views       = parseInt(document.getElementById('cl-views').value)||0;
-  const likes       = parseInt(document.getElementById('cl-likes').value)||0;
+  const likesRawDA  = document.getElementById('cl-likes').value;
+  if (likesRawDA === '' || likesRawDA === null || likesRawDA === undefined) {
+    showToast('Likes wajib diisi', 'error');
+    document.getElementById('cl-likes').focus();
+    return;
+  }
+  const likes       = parseInt(likesRawDA)||0;
   const comments    = parseInt(document.getElementById('cl-comments').value)||0;
   const shares      = parseInt(document.getElementById('cl-shares').value)||0;
   const notes       = document.getElementById('cl-notes').value.trim();
@@ -16667,7 +16701,13 @@ async function clDoUpload() {
   const link     = document.getElementById('cl-link').value.trim();
   const copywriting = document.getElementById('cl-copy').value.trim();
   const views    = parseInt(document.getElementById('cl-views').value)||0;
-  const likes    = parseInt(document.getElementById('cl-likes').value)||0;
+  const likesRaw = document.getElementById('cl-likes').value;
+  if (likesRaw === '' || likesRaw === null || likesRaw === undefined) {
+    showToast('Likes wajib diisi', 'error');
+    document.getElementById('cl-likes').focus();
+    return;
+  }
+  const likes    = parseInt(likesRaw)||0;
   const comments = parseInt(document.getElementById('cl-comments').value)||0;
   const shares   = parseInt(document.getElementById('cl-shares').value)||0;
   const notes    = document.getElementById('cl-notes').value.trim();
@@ -16839,12 +16879,20 @@ async function clSaveEdit(id) {
     link:        document.getElementById('cle-link').value.trim(),
     copywriting: document.getElementById('cle-copy').value.trim(),
     views:       parseInt(document.getElementById('cle-views').value)||0,
-    likes:       parseInt(document.getElementById('cle-likes').value)||0,
+  };
+  const likesRawEdit = document.getElementById('cle-likes').value;
+  if (likesRawEdit === '' || likesRawEdit === null || likesRawEdit === undefined) {
+    showToast('Likes wajib diisi', 'error');
+    document.getElementById('cle-likes').focus();
+    return;
+  }
+  Object.assign(updates, {
+    likes:       parseInt(likesRawEdit)||0,
     comments:    parseInt(document.getElementById('cle-comments').value)||0,
     shares:      parseInt(document.getElementById('cle-shares').value)||0,
     notes:       document.getElementById('cle-notes').value.trim(),
     labels:      window._clLabels || []
-  };
+  });
   const ok = await sb_updateContentLib(id, updates);
   if (!ok) { showToast('Gagal simpan', 'error'); return; }
   Object.assign(c, updates);
