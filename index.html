@@ -834,7 +834,34 @@ body.pwa-mode .topbar * { color: #fff !important; }
     max-width: 160px;
   }
   /* Show assignee inline in task title cell */
-  body.pwa-mode .mobile-table-wrap { overflow-x: hidden; }
+  /* IG Performance mobile */
+  body.pwa-mode #ig-weekly-avg-wrap { overflow-x: auto; }
+  body.pwa-mode #ig-snap-tbody tr td:nth-child(n+5) { display: none; }
+  body.pwa-mode .ig-chart-wrap { height: 160px !important; }
+  body.pwa-mode canvas[id*="ig-chart"] { max-height: 160px !important; }
+
+  /* Meta Ads mobile */
+  body.pwa-mode #ads-tab-body [style*="repeat(3,1fr)"],
+  body.pwa-mode #ads-tab-body [style*="repeat(4,1fr)"],
+  body.pwa-mode #ads-tab-body [style*="repeat(5,1fr)"] {
+    grid-template-columns: repeat(2,1fr) !important;
+  }
+
+  /* Competitor Intel mobile */
+  body.pwa-mode .ci-grid { grid-template-columns: 1fr !important; }
+  body.pwa-mode .ci-profile-card { padding: 12px !important; }
+  body.pwa-mode .ci-detail-grid { grid-template-columns: 1fr !important; }
+
+  /* Tab rows — scroll horizontal di mobile */
+  body.pwa-mode .tab-row {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.pwa-mode .tab-row .tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 }
 
 /* Fix 5: Scroll to top button — naik di atas bottom nav */
@@ -842,6 +869,79 @@ body.pwa-mode #scroll-top-btn {
   bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
   right: 16px !important;
 }
+
+/* ── NOTION-STYLE PWA OVERRIDES ─────────────────────────────────────────── */
+body.pwa-mode .pwa-notion-list { display: flex !important; flex-direction: column; gap: 0; }
+body.pwa-mode .pwa-notion-hide { display: none !important; }
+body.pwa-mode .pwa-notion-show { display: flex !important; }
+
+/* Notion row item */
+.pwa-notion-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 0.5px solid var(--border);
+  cursor: pointer; background: var(--white);
+}
+.pwa-notion-row:first-child { border-radius: 12px 12px 0 0; }
+.pwa-notion-row:last-child { border-bottom: none; border-radius: 0 0 12px 12px; }
+.pwa-notion-row:only-child { border-radius: 12px; }
+.pwa-notion-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--purple-light); display: flex; align-items: center;
+  justify-content: center; font-size: 11px; font-weight: 600;
+  color: var(--purple-mid); flex-shrink: 0;
+}
+.pwa-notion-main { flex: 1; min-width: 0; }
+.pwa-notion-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pwa-notion-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Search bar notion style */
+.pwa-search-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 0.5px solid var(--border);
+  border-radius: 10px; padding: 9px 12px; margin-bottom: 10px;
+  font-size: 13px; color: var(--text-muted);
+}
+
+/* Filter chips */
+.pwa-chips { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+.pwa-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  border: 0.5px solid var(--border); background: var(--white);
+  color: var(--text-muted); white-space: nowrap; flex-shrink: 0; cursor: pointer;
+}
+.pwa-chip.active { background: var(--purple); color: white; border-color: var(--purple); }
+
+/* Calendar strip */
+.pwa-cal-strip { display: flex; gap: 5px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
+.pwa-cal-day {
+  flex-shrink: 0; width: 42px; border-radius: 10px;
+  padding: 6px 4px 5px; text-align: center; cursor: pointer;
+}
+.pwa-cal-day.today { background: var(--purple); }
+.pwa-cal-day.has-event { background: var(--bg); }
+.pwa-cal-day-name { font-size: 10px; color: var(--text-muted); }
+.pwa-cal-day.today .pwa-cal-day-name { color: rgba(255,255,255,0.7); }
+.pwa-cal-day-num { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.pwa-cal-day.today .pwa-cal-day-num { color: white; }
+.pwa-cal-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--purple-accent); margin: 3px auto 0; }
+.pwa-cal-day.today .pwa-cal-dot { background: rgba(255,255,255,0.7); }
+
+/* Checklist */
+.pwa-check-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 14px; border-bottom: 0.5px solid var(--border);
+}
+.pwa-check-item:last-child { border-bottom: none; }
+.pwa-checkbox {
+  width: 18px; height: 18px; border-radius: 4px;
+  border: 1.5px solid var(--border); flex-shrink: 0; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pwa-checkbox.done { background: var(--purple-accent); border-color: var(--purple-accent); }
+.pwa-check-title { font-size: 13px; color: var(--text); flex: 1; line-height: 1.4; }
+.pwa-check-title.done { text-decoration: line-through; color: var(--text-muted); }
+.pwa-check-meta { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
 
 /* ── CONTENT EVAL & META ADS SHARED ── */
 .btn-ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;border:none}
@@ -5948,6 +6048,10 @@ function ppGetFiltered(){
 }
 
 function renderTaskList(projId){
+  // PWA mode → Notion checklist style
+  if (document.body.classList.contains('pwa-mode') && window.innerWidth <= 600) {
+    return _pwaRenderTaskList(projId);
+  }
   const tasks=getFilteredTasks(projId);
   if(tasks.length===0) return `<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-checklist-off" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada task di phase ini.</div></div>`;
 
@@ -16681,6 +16785,331 @@ async function gcalCreateEvent(taskId) {
   // Close more sheet
   window.pwaCloseMore = function() {
     document.getElementById('pwaMoreOverlay').classList.remove('show');
+  };
+
+  // ── NOTION-STYLE MOBILE RENDERS ──────────────────────────────────────────
+
+  function _pwaInitials(name) {
+    return (name||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+  }
+  function _pwaAvatarColor(name) {
+    const colors=[{bg:'#ede9fe',fg:'#5b21b6'},{bg:'#dcfce7',fg:'#166534'},{bg:'#dbeafe',fg:'#1e40af'},{bg:'#fef3c7',fg:'#92400e'},{bg:'#fce7f3',fg:'#9d174d'},{bg:'#d1fae5',fg:'#065f46'}];
+    return colors[(name||'').charCodeAt(0)%colors.length];
+  }
+
+  // 1. DASHBOARD — Calendar strip + checklist
+  function _pwaRenderDashboard() {
+    if (!document.body.classList.contains('pwa-mode')||window.innerWidth>600) return;
+    const calEl=document.getElementById('dash-calendar');
+    const upEl=document.getElementById('dash-upcoming');
+    if (!calEl||!upEl) return;
+    const today=new Date(); today.setHours(0,0,0,0);
+    const days=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+    let calHtml='<div class="pwa-cal-strip">';
+    for(let i=-1;i<=5;i++){
+      const d=new Date(today); d.setDate(d.getDate()+i);
+      const iso=toLocalDateISO(d);
+      const isToday=i===0;
+      const hasTasks=projectTasks.some(t=>t.deadline===iso&&t.status!=='Done');
+      calHtml+=`<div class="pwa-cal-day${isToday?' today':''}${hasTasks&&!isToday?' has-event':''}"><div class="pwa-cal-day-name">${days[d.getDay()]}</div><div class="pwa-cal-day-num">${d.getDate()}</div>${hasTasks?'<div class="pwa-cal-dot"></div>':''}</div>`;
+    }
+    calHtml+='</div>';
+    calEl.innerHTML=calHtml;
+    const future=new Date(today); future.setDate(future.getDate()+7);
+    const upcoming=projectTasks.filter(t=>{if(!t.deadline||t.status==='Done') return false; const d=new Date(t.deadline); d.setHours(0,0,0,0); return d>=today&&d<=future;}).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+    if(!upcoming.length){upEl.innerHTML='<div style="text-align:center;color:var(--text-hint);font-size:12px;padding:20px 0"><i class="ti ti-check" style="font-size:24px;display:block;margin-bottom:6px"></i>Tidak ada task dalam 7 hari</div>';return;}
+    const phaseColors={'Pre Event':'#059669','Hari H':'#dc2626','Post Event':'#2563eb'};
+    let lastDate='';
+    let html='<div style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">';
+    upcoming.slice(0,10).forEach(t=>{
+      if(t.deadline!==lastDate){const d=new Date(t.deadline);d.setHours(0,0,0,0);const isToday=d.getTime()===today.getTime();html+=`<div style="font-size:10px;color:var(--text-muted);padding:8px 14px 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:0.5px solid var(--border)">${isToday?'Hari ini':fmtDateShort(t.deadline)}</div>`;lastDate=t.deadline;}
+      const proj=projects.find(p=>_idEq(p.id,t.projectId));
+      const color=phaseColors[t.phase]||'#7c6ff7';
+      const isDone=t.status==='Done';
+      html+=`<div class="pwa-check-item" onclick="switchPage('project')"><div class="pwa-checkbox${isDone?' done':''}">${isDone?'<i class="ti ti-check" style="font-size:10px;color:white"></i>':''}</div><div style="flex:1;min-width:0"><div class="pwa-check-title${isDone?' done':''}">${t.title}</div><div class="pwa-check-meta">${proj?proj.nama+' · ':''}<span style="color:${color}">${t.phase}</span></div></div></div>`;
+    });
+    html+='</div>';
+    upEl.innerHTML=html;
+    const layout=document.getElementById('dash-layout');
+    if(layout) layout.style.gridTemplateColumns='1fr';
+  }
+
+  // 2. CRM — Notion DB list
+  function _pwaRenderCRM() {
+    if (!document.body.classList.contains('pwa-mode')||window.innerWidth>600) return;
+    const buyerWrap=document.getElementById('crm-buyers');
+    if (!buyerWrap||buyerWrap.querySelector('.pwa-tp-list')) return;
+    const tblWrap=buyerWrap.querySelector('div[style*="overflow-x"]');
+    if (!tblWrap) return;
+    const q=(document.getElementById('srch')||{}).value?.toLowerCase()||'';
+    let data=[...buyers];
+    if(q) data=data.filter(b=>(b.name||'').toLowerCase().includes(q)||(b.wa||'').includes(q)||(b.email||'').toLowerCase().includes(q));
+    let html='<div class="pwa-tp-list" style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">';
+    data.slice(0,50).forEach(b=>{
+      const col=_pwaAvatarColor(b.name);
+      const isBuyer=b.status?.includes('convert');
+      html+=`<div class="pwa-notion-row" onclick="openBuyerModal('${b.id}')"><div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(b.name)}</div><div class="pwa-notion-main"><div class="pwa-notion-title">${b.name}</div><div class="pwa-notion-sub">${b.klasifikasi||'—'} · ${b.industri||'—'}</div></div><div style="flex-shrink:0;font-size:10px;padding:3px 8px;border-radius:10px;background:${isBuyer?'#d1fae5':b.status==='Belum diblast'?'#fef3c7':'#f3f4f6'};color:${isBuyer?'#166534':b.status==='Belum diblast'?'#92400e':'#6b6b8a'};font-weight:500">${b.status?.includes('convert')?'Convert':b.status||'—'}</div></div>`;
+    });
+    html+=`</div><div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px">${buyers.length} buyers</div>`;
+    tblWrap.style.display='none';
+    const wrap=document.createElement('div'); wrap.innerHTML=html;
+    tblWrap.parentElement.insertBefore(wrap,tblWrap);
+  }
+
+  // 4. TALENT POOL — Search-first list
+  function _pwaRenderTalentPool() {
+    if (!document.body.classList.contains('pwa-mode')||window.innerWidth>600) return;
+    const content=document.getElementById('tp-content');
+    if (!content||content.querySelector('.pwa-tp-list')) return;
+    const tblWrap=content.querySelector('div[style*="overflow-x"]');
+    if (!tblWrap) return;
+    const q=(_tpFilter?.search||'').toLowerCase();
+    let data=_tpData||[];
+    if(q) data=data.filter(r=>(r.nama||'').toLowerCase().includes(q)||(r.email||'').toLowerCase().includes(q));
+    let html='<div class="pwa-tp-list" style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">';
+    data.slice(0,50).forEach(r=>{
+      const col=_pwaAvatarColor(r.nama);
+      const isBuyer=_tpIsBuyer?_tpIsBuyer(r):false;
+      const uni=(r.universitas||'—').slice(0,22);
+      html+=`<div class="pwa-notion-row"><div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(r.nama)}</div><div class="pwa-notion-main"><div class="pwa-notion-title">${r.nama||'—'}</div><div class="pwa-notion-sub">${uni} · ${r.tahun_lulus||'—'}</div></div><div style="flex-shrink:0;font-size:10px;padding:3px 8px;border-radius:10px;background:${isBuyer?'#d1fae5':'#fef3c7'};color:${isBuyer?'#166534':'#92400e'};font-weight:500">${isBuyer?'Sudah beli':'Belum beli'}</div></div>`;
+    });
+    html+=`</div><div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px">${(_tpData||[]).length} talent</div>`;
+    tblWrap.style.display='none';
+    const wrap=document.createElement('div'); wrap.innerHTML=html;
+    tblWrap.parentElement.insertBefore(wrap,tblWrap);
+  }
+
+  // Patch switchPage for notion renders
+  const _origSwitchNotion=window.switchPage;
+  window.switchPage=function(page,el){
+    _origSwitchNotion(page,el);
+    if(!document.body.classList.contains('pwa-mode')||window.innerWidth>600) return;
+    setTimeout(()=>{
+      if(page==='dashboard') _pwaRenderDashboard();
+      if(page==='crm') setTimeout(_pwaRenderCRM,300);
+      if(page==='talentpool') setTimeout(_pwaRenderTalentPool,300);
+      _pwaFixStatsGrid();
+      _pwaConvertAllTables();
+    },100);
+  };
+
+  // Run on initial PWA load
+  setTimeout(()=>{
+    if(!document.body.classList.contains('pwa-mode')||window.innerWidth>600) return;
+    _pwaRenderDashboard();
+    _pwaFixStatsGrid();
+  },700);
+
+  // 3. PROGRAM — Notion checklist task list
+  function _pwaRenderTaskList(projId) {
+    const tasks = getFilteredTasks(projId);
+    if (!tasks.length) return `<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-checklist-off" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada task.</div></div>`;
+
+    const grouped = {};
+    TASK_PHASE.forEach(ph => { grouped[ph] = tasks.filter(t => t.phase === ph); });
+    const phaseColors = {'Pre Event':'#059669','Hari H':'#dc2626','Post Event':'#2563eb'};
+
+    return Object.entries(grouped).map(([phase, tlist]) => {
+      if (!tlist.length) return '';
+      const doneCount = tlist.filter(t => t.status === 'Done').length;
+      const color = phaseColors[phase] || '#7c6ff7';
+      const pct = Math.round(doneCount/tlist.length*100);
+
+      let html = `<div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+        <div style="padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:600;color:${color}">${phase}</span>
+            <span style="font-size:11px;color:var(--text-muted)">${doneCount}/${tlist.length} done</span>
+          </div>
+          <div style="background:var(--border);border-radius:4px;height:3px">
+            <div style="background:${color};width:${pct}%;height:3px;border-radius:4px;transition:width 0.3s"></div>
+          </div>
+        </div>`;
+
+      tlist.forEach(t => {
+        const isDone = t.status === 'Done';
+        const assigneeIds = t.assigneeIds?.length ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+        const people = assigneeIds.map(id => getPersonById(id)).filter(p => p?.nama);
+        const assigneeName = people.map(p => p.nama.split(' ')[0]).join(', ') || '—';
+        const days = daysUntil(t.deadline);
+        const overdue = !isDone && days < 0;
+        const deadlineStr = t.deadline ? (overdue ? `Overdue ${-days}h` : days === 0 ? 'Hari ini' : `H-${days}`) : '—';
+        const deadlineColor = overdue ? 'var(--red)' : days === 0 ? 'var(--amber)' : 'var(--text-muted)';
+
+        html += `<div class="pwa-check-item" onclick="openTaskModal('${t.id}','${projId}')">
+          <div onclick="event.stopPropagation();toggleTaskDone('${t.id}')" class="pwa-checkbox${isDone?' done':''}">
+            ${isDone?'<i class="ti ti-check" style="font-size:10px;color:white"></i>':''}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="pwa-check-title${isDone?' done':''}">${t.title}</div>
+            <div class="pwa-check-meta">
+              ${assigneeName}
+              ${t.deadline?`<span style="margin-left:6px;color:${deadlineColor}">${deadlineStr}</span>`:''}
+            </div>
+          </div>
+          ${t.priority==='High'?`<span style="font-size:9px;color:#dc2626;flex-shrink:0">●</span>`:''}
+        </div>`;
+      });
+
+      html += '</div>';
+      return html;
+    }).join('');
+  }
+
+  // ── B2B & ORG PIPELINE — list grouped by stage on mobile ──
+  function _pwaPipelineList(items, statusList, dotMap, onClickFn, addFn) {
+    if (!items.length) return '<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Belum ada data</div>';
+    let html = '';
+    statusList.forEach(stage => {
+      const stageItems = items.filter(x => x.status === stage);
+      if (!stageItems.length) return;
+      const color = dotMap[stage] || '#7c6ff7';
+      html += `<div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:0 2px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+          <span style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.4px">${stage}</span>
+          <span style="font-size:11px;color:var(--text-muted)">${stageItems.length}</span>
+        </div>
+        <div style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">`;
+      stageItems.forEach(p => {
+        const col = _pwaAvatarColor(p.name||p.nama);
+        html += `<div class="pwa-notion-row" onclick="${onClickFn}('${p.id}')">
+          <div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(p.name||p.nama)}</div>
+          <div class="pwa-notion-main">
+            <div class="pwa-notion-title">${p.name||p.nama}</div>
+            <div class="pwa-notion-sub">${p.category||p.tier||'—'}${p.pic?' · '+p.pic:''}</div>
+          </div>
+          <i class="ti ti-chevron-right" style="font-size:14px;color:var(--text-hint)"></i>
+        </div>`;
+      });
+      html += `</div></div>`;
+    });
+    return html;
+  }
+
+  // Patch partnershipPipelineHTML
+  const _origPartnerPipelineHTML = window.partnershipPipelineHTML;
+  window.partnershipPipelineHTML = function() {
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return _origPartnerPipelineHTML();
+    const dotMap = {"Approached":"#6c63ff","Sales Meet":"#f59e0b","Negotiation":"#854f0b","Closed Deal":"#3b6d11","Closed Lost":"#e24b4a"};
+    return `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${partners.length} partner</div>` +
+      _pwaPipelineList(partners, PARTNER_STATUSES, dotMap, 'openPartnerModal', 'openPartnerModal');
+  };
+
+  // Patch opPipelineHTML
+  const _origOpPipelineHTML = window.opPipelineHTML;
+  window.opPipelineHTML = function() {
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return _origOpPipelineHTML();
+    const dotMap = {"Approached":"#6c63ff","Sales Meet":"#f59e0b","Negotiation":"#854f0b","Closed Deal":"#3b6d11","Closed Lost":"#e24b4a"};
+    return `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${orgPartners.length} org partner</div>` +
+      _pwaPipelineList(orgPartners, OP_STATUSES, dotMap, 'openOrgPartnerModal', 'openOrgPartnerModal');
+  };
+
+  // ── TICKETS — Notion list style on mobile ──
+  const _origRenderTickets = window.renderTickets;
+  window.renderTickets = function() {
+    _origRenderTickets();
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    const listEl = document.getElementById('tkt-list');
+    if (!listEl) return;
+    // Replace tkt-row grid with notion-style cards
+    const rows = listEl.querySelectorAll('.tkt-row');
+    if (!rows.length) return;
+    const cards = document.createElement('div');
+    cards.style.cssText = 'display:flex;flex-direction:column;gap:0;background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden';
+    rows.forEach(row => {
+      const titleEl = row.querySelector('.tkt-title-cell');
+      const subEl = row.querySelector('.tkt-sub');
+      const prioEl = row.querySelector('[class*="pill"]');
+      const statusEl = row.querySelectorAll('[class*="pill"]')[1];
+      const onclick = row.getAttribute('onclick');
+      const title = titleEl?.textContent || '—';
+      const sub = subEl?.textContent || '';
+      const prio = prioEl?.outerHTML || '';
+      const status = statusEl?.outerHTML || '';
+      const card = document.createElement('div');
+      card.className = 'pwa-notion-row';
+      card.setAttribute('onclick', onclick||'');
+      card.style.cssText = 'flex-direction:column;align-items:flex-start;gap:6px';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px">
+          <div style="font-size:13px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+          ${status}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${prio}
+          <span style="font-size:11px;color:var(--text-muted)">${sub}</span>
+        </div>`;
+      cards.appendChild(card);
+    });
+    listEl.innerHTML = '';
+    listEl.appendChild(cards);
+  };
+
+  // ── IG PERFORMANCE — compact on mobile ──
+  const _origShowIgTab = window.showIgTab;
+  window.showIgTab = function(tab) {
+    if (typeof _origShowIgTab === 'function') _origShowIgTab(tab);
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    setTimeout(() => {
+      // Chart height compact
+      document.querySelectorAll('.ig-chart-wrap, canvas[id*="ig-chart"]').forEach(el => {
+        el.style.height = '160px';
+        el.style.maxHeight = '160px';
+      });
+      // Weekly avg table — hide extra cols
+      const tbody = document.getElementById('ig-snap-tbody');
+      if (tbody) {
+        tbody.querySelectorAll('tr').forEach(row => {
+          [...row.children].forEach((td, i) => {
+            if (i >= 4) td.style.display = 'none';
+          });
+        });
+      }
+      // Stats grid fix
+      _pwaFixStatsGrid();
+    }, 300);
+  };
+
+  // ── META ADS — compact grid on mobile ──
+  const _origRenderAdsLibrary = window.renderAdsLibrary;
+  window.renderAdsLibrary = function(c) {
+    if (typeof _origRenderAdsLibrary === 'function') _origRenderAdsLibrary(c);
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    setTimeout(() => {
+      // Force ads grids to 2col
+      document.querySelectorAll('[style*="repeat(3,1fr)"], [style*="repeat(4,1fr)"], [style*="repeat(5,1fr)"]').forEach(el => {
+        if (el.closest('#ads-tab-body')) {
+          el.style.setProperty('grid-template-columns', 'repeat(2,1fr)', 'important');
+        }
+      });
+      _pwaFixStatsGrid();
+    }, 200);
+  };
+
+  // ── COMPETITOR INTEL — profile cards mobile ──
+  const _origCiRenderProfiles = window.ciRenderProfiles;
+  window.ciRenderProfiles = function() {
+    if (typeof _origCiRenderProfiles === 'function') _origCiRenderProfiles();
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    setTimeout(() => {
+      // CI profile grid → 1 col
+      const grid = document.querySelector('.ci-grid, [id="ci-tab-body"] .ci-grid');
+      if (grid) grid.style.setProperty('grid-template-columns', '1fr', 'important');
+      // Stats
+      _pwaFixStatsGrid();
+    }, 200);
+  };
+
+  // Also patch renderCiTab
+  const _origRenderCiTab = window.renderCiTab;
+  window.renderCiTab = function() {
+    if (typeof _origRenderCiTab === 'function') _origRenderCiTab();
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    setTimeout(() => {
+      _pwaFixStatsGrid();
+      _pwaConvertAllTables();
+    }, 250);
   };
 
   // Swipe down to close more sheet
