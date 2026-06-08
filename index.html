@@ -8582,52 +8582,29 @@ function projectTasksHTML(){
   };
 
   return `
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-    <div style="font-size:11px;color:var(--text-muted);font-weight:500">Event:</div>
-    <select onchange="window._pjmTasksJenisFilter=this.value;initProjectTab('tasks')" style="font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white)">
-      <option value="">Semua Jenis</option>
-      <option value="CCA" ${jenisFilter==="CCA"?"selected":""}>CCA</option>
-      <option value="Free Class Series" ${jenisFilter==="Free Class Series"?"selected":""}>Free Class</option>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    <select id="proj-select" onchange="activeProjectId=this.value;initProjectTab('tasks')" style="font-size:13px;flex:1;min-width:0;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--white)">
+      ${displayProjects.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?"selected":""}>${pr.nama}</option>`).join("")}
     </select>
-    <select id="proj-select" onchange="activeProjectId=this.value;initProjectTab('tasks')" style="font-size:12px;min-width:240px;flex:1">
-      ${displayProjects.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?"selected":""}>${pr.nama} — ${fmtDateShort(pr.tanggal)}</option>`).join("")}
-    </select>
-    <button class="btn btn-sm" onclick="openProjectModal('${p.id}')"><i class="ti ti-edit"></i> Edit Event</button>
-    <div style="display:flex;gap:5px;background:var(--bg);border-radius:8px;padding:3px">
-      <button onclick="projectTaskView='list';initProjectTab('tasks')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:none;cursor:pointer;background:${projectTaskView==='list'?'var(--white)':'transparent'};color:${projectTaskView==='list'?'var(--text)':'var(--text-muted)'};font-weight:${projectTaskView==='list'?'600':'400'}"><i class="ti ti-list"></i> List</button>
-      <button onclick="projectTaskView='kanban';initProjectTab('tasks')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:none;cursor:pointer;background:${projectTaskView==='kanban'?'var(--white)':'transparent'};color:${projectTaskView==='kanban'?'var(--text)':'var(--text-muted)'};font-weight:${projectTaskView==='kanban'?'600':'400'}"><i class="ti ti-layout-kanban"></i> Kanban</button>
-    </div>
-    <button class="btn btn-primary btn-sm" onclick="openTaskModal(null,'${p.id}')"><i class="ti ti-plus"></i> Task Baru</button>
+    <button class="btn btn-primary btn-sm" onclick="openTaskModal(null,'${p.id}')"><i class="ti ti-plus"></i> Task</button>
   </div>
 
-  <div class="card" style="margin-bottom:12px;padding:14px 16px">
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div style="font-size:14px;font-weight:700">${p.nama}</div>
-          ${p.jenis_program && jenisBadge[p.jenis_program] ? jenisBadge[p.jenis_program] : ''}
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap">
-          <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} ${p.waktu}</span>
-          <span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>
-          <span><i class="ti ti-device-laptop" style="font-size:11px"></i> ${p.platform}</span>
-          <span><i class="ti ti-users" style="font-size:11px"></i> ${
-            p.capaian_peserta != null
-              ? `${p.capaian_peserta} / ${p.target||'—'} peserta (${p.target ? Math.round(p.capaian_peserta/p.target*100) : '?'}%)`
-              : `Target ${p.target || p.targetPeserta || '—'} peserta`
-          }</span>
-        </div>
-      </div>
+  <div class="card" style="margin-bottom:10px;padding:12px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <div style="font-size:14px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nama}</div>
       ${projStatusPill(p.status)}
     </div>
+    <div style="font-size:11px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap">
+      <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} · ${p.waktu}</span>
+      <span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>
+    </div>
   </div>
 
-  ${renderEventLinks(p)}
-  <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">
-    <button onclick="projectActivePhase='all';initProjectTab('tasks')" style="padding:5px 12px;border-radius:20px;font-size:11px;border:0.5px solid ${projectActivePhase==='all'?'var(--purple-accent)':'var(--border)'};background:${projectActivePhase==='all'?'var(--purple-light)':'var(--white)'};color:${projectActivePhase==='all'?'var(--purple-mid)':'var(--text-muted)'};cursor:pointer;font-weight:${projectActivePhase==='all'?'600':'400'}">Semua Phase</button>
+  <div style="display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">
+    <button onclick="projectActivePhase='all';initProjectTab('tasks')" style="padding:5px 12px;border-radius:20px;font-size:11px;border:0.5px solid ${projectActivePhase==='all'?'var(--purple-accent)':'var(--border)'};background:${projectActivePhase==='all'?'var(--purple-light)':'var(--white)'};color:${projectActivePhase==='all'?'var(--purple-mid)':'var(--text-muted)'};cursor:pointer;white-space:nowrap;flex-shrink:0">Semua</button>
     ${TASK_PHASE.map(ph=>{
       const count=projectTasks.filter(t=>_idEq(t.projectId,p.id) && t.phase===ph).length;
-      return `<button onclick="projectActivePhase='${ph}';initProjectTab('tasks')" style="padding:5px 12px;border-radius:20px;font-size:11px;border:0.5px solid ${projectActivePhase===ph?'var(--purple-accent)':'var(--border)'};background:${projectActivePhase===ph?'var(--purple-light)':'var(--white)'};color:${projectActivePhase===ph?'var(--purple-mid)':'var(--text-muted)'};cursor:pointer;font-weight:${projectActivePhase===ph?'600':'400'}">${ph} (${count})</button>`;
+      return `<button onclick="projectActivePhase='${ph}';initProjectTab('tasks')" style="padding:5px 12px;border-radius:20px;font-size:11px;border:0.5px solid ${projectActivePhase===ph?'var(--purple-accent)':'var(--border)'};background:${projectActivePhase===ph?'var(--purple-light)':'var(--white)'};color:${projectActivePhase===ph?'var(--purple-mid)':'var(--text-muted)'};cursor:pointer;white-space:nowrap;flex-shrink:0">${ph} (${count})</button>`;
     }).join("")}
   </div>
 
