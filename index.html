@@ -16763,13 +16763,11 @@ async function gcalCreateEvent(taskId) {
 
   if (isPWA) {
     document.body.classList.add('pwa-mode');
-    // Fix stats grid on initial load
-    setTimeout(_pwaFixStatsGrid, 500);
-    // Re-apply on any DOM changes (tabs, navigation)
+    // Fix stats grid + render dashboard after all functions defined (at bottom of IIFE)
     const _obs = new MutationObserver(() => {
       if (window.innerWidth <= 600) {
-        _pwaFixStatsGrid();
-        _pwaConvertAllTables();
+        if (typeof _pwaFixStatsGrid === 'function') _pwaFixStatsGrid();
+        if (typeof _pwaConvertAllTables === 'function') _pwaConvertAllTables();
       }
     });
     _obs.observe(document.getElementById('mainContent') || document.body, { childList: true, subtree: false });
@@ -16914,12 +16912,13 @@ async function gcalCreateEvent(taskId) {
     },100);
   };
 
-  // Run on initial PWA load
-  setTimeout(()=>{
-    if(!document.body.classList.contains('pwa-mode')||window.innerWidth>600) return;
-    _pwaRenderDashboard();
-    _pwaFixStatsGrid();
-  },700);
+  // Run on initial PWA load — after all functions defined
+  if (isPWA) {
+    setTimeout(()=>{
+      _pwaRenderDashboard();
+      _pwaFixStatsGrid();
+    },700);
+  }
 
   // 3. PROGRAM — Notion checklist task list
   function _pwaRenderTaskList(projId) {
