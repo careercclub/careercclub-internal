@@ -8639,34 +8639,33 @@ function fcRenderCharts() {
   });
   const topUnis = Object.entries(uniCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
 
-  // ── Stacked bar per pertanyaan ──
+  // ── Cards per pertanyaan ──
   const DIST_COLORS = { 1:'#ef4444', 2:'#f97316', 3:'#eab308', 4:'#7c6ff7', 5:'#16a34a' };
-  const stackedBarsHTML = sorted.map(r => {
-    const n = r.n;
-    const bars = [1,2,3,4,5].map(star => {
-      const pct = n ? (r.dist[star]/n*100) : 0;
-      return pct > 0
-        ? `<div title="${star}★: ${r.dist[star]} (${pct.toFixed(0)}%)"
-              style="width:${pct.toFixed(1)}%;background:${DIST_COLORS[star]};height:100%;min-width:${pct>0?2:0}px"></div>`
-        : '';
+  const STAR_LABELS = { 1:'1★', 2:'2★', 3:'3★', 4:'4★', 5:'5★' };
+
+  const ratingCardsHTML = sorted.map(r => {
+    const distRow = [1,2,3,4,5].map(star => {
+      const count = r.dist[star] || 0;
+      const pct   = r.n ? Math.round(count/r.n*100) : 0;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+        <div style="font-size:9px;font-weight:600;color:${DIST_COLORS[star]}">${STAR_LABELS[star]}</div>
+        <div style="font-size:13px;font-weight:700;color:${count>0?DIST_COLORS[star]:'var(--text-muted)'}">${count}</div>
+        <div style="font-size:9px;color:var(--text-muted)">${pct}%</div>
+      </div>`;
     }).join('');
-    return `<div style="margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:11px;color:var(--text);flex:1;padding-right:12px;line-height:1.3">${r.label}</div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          ${r.n < total ? `<span style="font-size:9px;color:var(--text-muted)">(n=${r.n})</span>` : ''}
-          <span style="font-size:12px;font-weight:700;color:${ratingColor(r.avg)};background:${ratingBg(r.avg)};padding:1px 7px;border-radius:10px">${r.avg.toFixed(2)}</span>
-        </div>
+
+    return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="font-size:11px;font-weight:600;color:var(--text);line-height:1.4;flex:1">${r.label}</div>
+        ${r.n < total ? `<span style="font-size:9px;color:var(--text-muted);flex-shrink:0;margin-top:2px">n=${r.n}</span>` : ''}
       </div>
-      <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--bg)">${bars}</div>
+      <div style="text-align:center">
+        <div style="font-size:28px;font-weight:800;color:${ratingColor(r.avg)};line-height:1">${r.avg.toFixed(2)}</div>
+        <div style="font-size:9px;color:var(--text-muted);margin-top:2px">dari 5.0</div>
+      </div>
+      <div style="display:flex;gap:4px;padding-top:8px;border-top:0.5px solid var(--border)">${distRow}</div>
     </div>`;
   }).join('');
-
-  // ── Legend stacked bar ──
-  const legendHTML = [3,4,5].map(s =>
-    `<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)">
-      <span style="width:10px;height:10px;border-radius:2px;background:${DIST_COLORS[s]};display:inline-block"></span>${s}★
-    </div>`).join('');
 
   // ── Tabel responden ──
   const tableRows = data.map(r => `<tr style="border-bottom:0.5px solid var(--border)">
@@ -8710,13 +8709,12 @@ function fcRenderCharts() {
       <div class="stat-card"><div class="stat-label">Free Class Series</div><div class="stat-val">${Object.keys(seriesCount).length}</div><div class="stat-change">sesi</div></div>
     </div>
 
-    <!-- Stacked Bar Rating -->
+    <!-- Rating Cards -->
     <div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div style="font-size:13px;font-weight:700">Rating per Aspek <span style="font-size:11px;font-weight:400;color:var(--text-muted)">— urut terendah ke tertinggi</span></div>
-        <div style="display:flex;align-items:center;gap:10px">${legendHTML}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Rating per Aspek <span style="font-size:11px;font-weight:400;color:var(--text-muted)">— urut terendah ke tertinggi</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        ${ratingCardsHTML}
       </div>
-      ${stackedBarsHTML}
     </div>
 
     <!-- Responden per Series + Top Uni -->
