@@ -1151,7 +1151,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
     <div class="nav-section">
       <div class="nav-label">Intelligence</div>
       <div class="nav-item" onclick="switchPage('competitor',this)"><i class="ti ti-shield-search"></i> Competitor Intel</div>
-      <div class="nav-item" onclick="switchPage('painpoint',this)"><i class="ti ti-message-search"></i> Pain Point Mining</div>
+      <div class="nav-item" onclick="switchPage('painpoint',this)"><i class="ti ti-message-search"></i> Customer Knowledge</div>
     </div>
     <div class="nav-section">
       <div class="nav-label">Internal</div>
@@ -6043,12 +6043,12 @@ function showToast(msg){
 
 async function deletePP(pid,ppid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  if(!confirm("Hapus pain point ini?")) return;
+  if(!confirm("Hapus data ini?")) return;
   const ok = await sb_deleteProductPainPoint(ppid);
-  if(!ok){showToast("Gagal hapus pain point","error");return;}
+  if(!ok){showToast("Gagal hapus data","error");return;}
   p.painPoints=p.painPoints.filter(x=>String(x.id)!==String(ppid));
   document.getElementById("kb-section-content").innerHTML=renderKBSection("painpoints",p);
-  showToast("Pain point dihapus");
+  showToast("Data dihapus");
 }
 
 // ── BENEFITS ─────────────────────────────────────────────────
@@ -6138,7 +6138,7 @@ function settingsHTML(){
   <div class="tab-row">
     <div class="tab active" id="stab-master-produk" onclick="initSettingsTab('master-produk')"><i class="ti ti-package" style="font-size:12px"></i> Master Produk</div>
     <div class="tab" id="stab-master-ticket" onclick="initSettingsTab('master-ticket')"><i class="ti ti-ticket" style="font-size:12px"></i> Master Ticket</div>
-    <div class="tab" id="stab-pain-point" onclick="initSettingsTab('pain-point')"><i class="ti ti-message-search" style="font-size:12px"></i> Pain Point Master</div>
+    <div class="tab" id="stab-pain-point" onclick="initSettingsTab('pain-point')"><i class="ti ti-message-search" style="font-size:12px"></i> Customer Knowledge Master</div>
     <div class="tab" id="stab-menu" onclick="initSettingsTab('menu')"><i class="ti ti-layout-sidebar" style="font-size:12px"></i> Menu</div>
     <div class="tab" id="stab-link-templates" onclick="initSettingsTab('link-templates')"><i class="ti ti-link" style="font-size:12px"></i> Link Template</div>
     <div class="tab" id="stab-ci-lists" onclick="initSettingsTab('ci-lists')"><i class="ti ti-building-store" style="font-size:12px"></i> Competitor Intel</div>
@@ -6169,7 +6169,7 @@ function prodKBListHTML(){
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">
           <div style="background:var(--bg);border-radius:7px;padding:7px 8px;text-align:center">
             <div style="font-weight:700;color:${ppHigh>0?"var(--red)":"var(--text)"}">${_pp.length}</div>
-            <div style="color:var(--text-muted)">Pain Points</div>
+            <div style="color:var(--text-muted)">Customer Insights</div>
           </div>
           <div style="background:var(--pink-bg);border-radius:7px;padding:7px 8px;text-align:center">
             <div style="font-weight:700;color:var(--pink)">${_pas.length}</div>
@@ -6200,12 +6200,12 @@ function fmtDateShort(iso){
 
 async function addPainPoint(pid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  const newEntry={text:"Tulis pain point di sini...",severity:"Med",source:"Asumsi"};
+  const newEntry={text:"Tulis customer insight di sini...",severity:"Med",source:"Asumsi"};
   const saved = await sb_insertProductPainPoint(p.id, newEntry);
-  if(!saved||!saved.id){showToast("Gagal tambah pain point","error");return;}
+  if(!saved||!saved.id){showToast("Gagal tambah data","error");return;}
   p.painPoints.push({id:saved.id,...newEntry});
   document.getElementById("kb-section-content").innerHTML=renderKBSection("painpoints",p);
-  showToast("Pain point ditambahkan ✓");
+  showToast("Data ditambahkan ✓");
 }
 
 function updateAsset(pid,aid,field,val){
@@ -6348,7 +6348,7 @@ function prodKBDetailHTML(id){
   <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start">
     <div class="card" style="margin:0;padding:0;overflow:hidden;position:sticky;top:0">
       ${[
-        ["painpoints","ti-alert-circle","Pain Points",(p.painPoints||[]).length],
+        ["painpoints","ti-alert-circle","Customer Insights",(p.painPoints||[]).length],
         ["passionpoints","ti-heart","Passion Points",(p.passionPoints||[]).length],
         ["benefits","ti-star","Benefits",(p.benefits||[]).length],
         ["assets","ti-link","Aset Konten",(p.assets||[]).length],
@@ -6371,6 +6371,7 @@ function painPointHTML(){
   <div class="tab-row">
     <div class="tab active" id="pptab-dashboard" onclick="initPainPointTab('dashboard')"><i class="ti ti-chart-bar" style="font-size:12px"></i> Dashboard</div>
     <div class="tab" id="pptab-data" onclick="initPainPointTab('data')"><i class="ti ti-database" style="font-size:12px"></i> Database</div>
+    <div class="tab" id="pptab-freeclass" onclick="initPainPointTab('freeclass')"><i class="ti ti-chart-dots" style="font-size:12px"></i> Analytics Free Class</div>
   </div>
   <div id="pp-tab-content"></div>`;
 }
@@ -7025,7 +7026,7 @@ function ppSaveEntry(){
 function ppSettingsMasterHTML(){
   return `
   <div class="card">
-    <div style="font-size:13px;font-weight:600;margin-bottom:4px">Pain Point Mining — Master Data</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">Customer Knowledge — Master Data</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Kelola daftar platform dan kategori yang tersedia saat input data</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
@@ -7587,7 +7588,7 @@ function renderPainPoints(p){
   <div class="card" style="margin:0">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div>
-        <div style="font-size:13px;font-weight:600">Pain Points</div>
+        <div style="font-size:13px;font-weight:600">Customer Insights</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Masalah nyata yang dialami user terkait produk ini.</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="addPainPoint('${p.id}')"><i class="ti ti-plus"></i> Tambah</button>
@@ -7729,14 +7730,14 @@ async function savePP(){
       if(saved && saved.id){
         const idx = ppEntries.findIndex(e => e === pending);
         if(idx >= 0) ppEntries[idx].id = saved.id;
-        _sbToast('✓ Pain point tersimpan');
+        _sbToast('✓ Data tersimpan');
         if(typeof ppRerender === 'function') ppRerender();
       } else {
-        showToast('Gagal simpan pain point','error');
+        showToast('Gagal simpan data','error');
       }
     }catch(e){
       console.error('[savePP]', _sbErrInfo(e));
-      showToast('Gagal simpan pain point','error');
+      showToast('Gagal simpan data','error');
     }
   }
 }
@@ -8340,6 +8341,278 @@ function initPainPointTab(tab){
   if(tab==="dashboard") el.innerHTML=ppDashboardHTML();
   else if(tab==="data"){ el.innerHTML=ppDatabaseHTML(); initPPDatabaseFilter(); }
   else if(tab==="grouped") el.innerHTML=ppGroupedHTML();
+}
+
+function initPainPointTab(tab){
+  document.querySelectorAll("#mainContent .tab").forEach(function(t){t.classList.remove("active");});
+  var btn=document.getElementById("pptab-"+tab);
+  if(btn) btn.classList.add("active");
+  var el=document.getElementById("pp-tab-content");
+  if(!el) return;
+  if(tab==="dashboard") el.innerHTML=ppDashboardHTML();
+  else if(tab==="data"){ el.innerHTML=ppDatabaseHTML(); initPPDatabaseFilter(); }
+  else if(tab==="grouped") el.innerHTML=ppGroupedHTML();
+  else if(tab==="freeclass"){ el.innerHTML=fcAnalyticsHTML(); initFCAnalytics(); }
+}
+
+// ── ANALYTICS FREE CLASS ─────────────────────────────────────────────────
+var _fcData = [];
+var _fcImporting = false;
+
+function fcAnalyticsHTML() {
+  return `
+  <div class="card" style="margin-bottom:14px;padding:16px 18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div>
+        <div style="font-size:13px;font-weight:700">Analytics Free Class</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Import hasil Google Form evaluasi via Google Sheets → Share to Web (CSV)</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="fcOpenImport()"><i class="ti ti-upload"></i> Import Sheets</button>
+    </div>
+    <div id="fc-import-section" style="display:none">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <input type="text" id="fc-url-input" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" style="flex:1;min-width:200px;font-size:12px;padding:8px 12px;border:0.5px solid var(--border);border-radius:8px">
+        <button class="btn btn-sm" onclick="fcFetchData()" id="fc-fetch-btn"><i class="ti ti-download"></i> Ambil Data</button>
+        <button class="btn btn-sm" style="color:var(--text-muted)" onclick="document.getElementById('fc-import-section').style.display='none'">Batal</button>
+      </div>
+      <div id="fc-fetch-status" style="font-size:11px;color:var(--text-muted)"></div>
+    </div>
+  </div>
+  <div id="fc-content">
+    <div style="text-align:center;padding:48px;color:var(--text-muted)">
+      <i class="ti ti-chart-dots" style="font-size:36px;display:block;margin-bottom:10px"></i>
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Belum ada data</div>
+      <div style="font-size:11px">Klik "Import Sheets" untuk load data evaluasi</div>
+    </div>
+  </div>`;
+}
+
+function fcOpenImport() {
+  const sec = document.getElementById('fc-import-section');
+  if (sec) sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+}
+
+async function fcFetchData() {
+  const url = (document.getElementById('fc-url-input')?.value || '').trim();
+  if (!url) { showToast('Masukkan URL dulu', 'error'); return; }
+  const btn = document.getElementById('fc-fetch-btn');
+  const status = document.getElementById('fc-fetch-status');
+  if (btn) { btn.disabled = true; btn.textContent = 'Mengambil...'; }
+  if (status) status.textContent = 'Menghubungi Google Sheets...';
+  try {
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Gagal fetch: ' + res.status);
+    const csv = await res.text();
+    _fcData = fcParseCSV(csv);
+    if (!_fcData.length) throw new Error('Data kosong');
+    document.getElementById('fc-import-section').style.display = 'none';
+    fcRenderCharts();
+    showToast(`${_fcData.length} respons berhasil dimuat ✓`);
+  } catch(e) {
+    if (status) status.textContent = '❌ ' + e.message;
+    showToast('Gagal import: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Ambil Data'; }
+  }
+}
+
+function fcParseCSV(csv) {
+  const lines = csv.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  // Parse header
+  const headers = fcSplitCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = fcSplitCSVLine(lines[i]);
+    if (vals.length < 5) continue;
+    const row = {};
+    headers.forEach((h, j) => { row[h] = (vals[j] || '').trim(); });
+    rows.push(row);
+  }
+  return rows;
+}
+
+function fcSplitCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQuote = !inQuote; }
+    else if (c === ',' && !inQuote) { result.push(current); current = ''; }
+    else { current += c; }
+  }
+  result.push(current);
+  return result;
+}
+
+function fcInitAnalytics() {
+  if (_fcData.length) fcRenderCharts();
+}
+
+function initFCAnalytics() {
+  if (_fcData.length) fcRenderCharts();
+}
+
+function fcRenderCharts() {
+  const el = document.getElementById('fc-content');
+  if (!el) return;
+
+  const data = _fcData;
+  const total = data.length;
+
+  // Detect rating columns (1-5 scale)
+  const sampleRow = data[0] || {};
+  const headers = Object.keys(sampleRow);
+  const ratingCols = headers.filter(h => {
+    const vals = data.map(r => parseFloat(r[h])).filter(v => !isNaN(v));
+    return vals.length > total * 0.5 && vals.every(v => v >= 1 && v <= 5);
+  });
+
+  // Detect free class series column
+  const seriesCol = headers.find(h => h.toLowerCase().includes('free class') || h.toLowerCase().includes('seri'));
+  // Detect university col
+  const uniCol = headers.find(h => h.toLowerCase().includes('universitas') || h.toLowerCase().includes('university'));
+
+  // Compute avg per rating col
+  const avgRatings = ratingCols.map(col => {
+    const vals = data.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+    const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
+    const label = col.length > 45 ? col.slice(0, 45) + '...' : col;
+    return { col, label, avg: Math.round(avg * 10) / 10, n: vals.length };
+  });
+
+  // Series breakdown
+  const seriesCount = {};
+  if (seriesCol) {
+    data.forEach(r => {
+      const s = (r[seriesCol] || 'Tidak diisi').trim() || 'Tidak diisi';
+      seriesCount[s] = (seriesCount[s] || 0) + 1;
+    });
+  }
+
+  // Top 10 universities
+  const uniCount = {};
+  if (uniCol) {
+    data.forEach(r => {
+      const u = (r[uniCol] || '').trim().replace(/\bUniversitas\b/gi, 'Univ.');
+      if (u) uniCount[u] = (uniCount[u] || 0) + 1;
+    });
+  }
+  const topUnis = Object.entries(uniCount).sort((a,b) => b[1]-a[1]).slice(0, 10);
+
+  // Overall NPS (kepuasan col)
+  const puasCol = ratingCols.find(h => h.toLowerCase().includes('puas') || h.toLowerCase().includes('overall'));
+  const rekCol = ratingCols.find(h => h.toLowerCase().includes('rekomen'));
+  const minatCol = ratingCols.find(h => h.toLowerCase().includes('minat'));
+
+  const overallAvg = avgRatings.length ? (avgRatings.reduce((s,r) => s+r.avg, 0) / avgRatings.length) : 0;
+
+  const ratingColor = (avg) => avg >= 4.5 ? '#3b6d11' : avg >= 4.0 ? '#7c6ff7' : avg >= 3.5 ? '#854f0b' : '#a32d2d';
+  const ratingBg = (avg) => avg >= 4.5 ? '#dcfce7' : avg >= 4.0 ? '#ede9fe' : avg >= 3.5 ? '#fef3c7' : '#fee2e2';
+
+  el.innerHTML = `
+    <!-- Summary Stats -->
+    <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+      <div class="stat-card">
+        <div class="stat-label">Total Responden</div>
+        <div class="stat-val">${total}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rata-rata Keseluruhan</div>
+        <div class="stat-val" style="color:${ratingColor(overallAvg)}">${overallAvg.toFixed(2)}</div>
+        <div class="stat-change">dari 5.0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Free Class Series</div>
+        <div class="stat-val">${Object.keys(seriesCount).length}</div>
+        <div class="stat-change">sesi</div>
+      </div>
+    </div>
+
+    <!-- Rating per Aspek -->
+    <div class="card" style="margin-bottom:14px;padding:16px 18px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Rating per Aspek Evaluasi</div>
+      ${avgRatings.map(r => `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-size:11px;color:var(--text);flex:1;padding-right:12px">${r.label}</div>
+            <div style="font-size:12px;font-weight:700;color:${ratingColor(r.avg)};flex-shrink:0">${r.avg}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:4px;height:6px">
+            <div style="background:${ratingColor(r.avg)};width:${(r.avg/5*100).toFixed(1)}%;height:6px;border-radius:4px;transition:width 0.5s"></div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Series + University side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      ${Object.keys(seriesCount).length ? `
+      <div class="card" style="padding:16px 18px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Responden per Series</div>
+        ${Object.entries(seriesCount).sort((a,b)=>b[1]-a[1]).map(([s,n]) => `
+          <div style="margin-bottom:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s}">${s.replace('Free Class Series','FCS')}</div>
+              <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
+            </div>
+            <div style="background:var(--bg);border-radius:3px;height:4px">
+              <div style="background:var(--purple-accent);width:${(n/total*100).toFixed(1)}%;height:4px;border-radius:3px"></div>
+            </div>
+          </div>`).join('')}
+      </div>` : '<div></div>'}
+
+      ${topUnis.length ? `
+      <div class="card" style="padding:16px 18px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Top Universitas</div>
+        ${topUnis.map(([u, n]) => `
+          <div style="margin-bottom:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u}</div>
+              <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
+            </div>
+            <div style="background:var(--bg);border-radius:3px;height:4px">
+              <div style="background:#3b6d11;width:${(n/total*100).toFixed(1)}%;height:4px;border-radius:3px"></div>
+            </div>
+          </div>`).join('')}
+      </div>` : '<div></div>'}
+    </div>
+
+    <!-- Distribusi Rating per Aspek (1-5) -->
+    <div class="card" style="margin-bottom:14px;padding:16px 18px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Distribusi Rating (per Aspek)</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
+          <thead>
+            <tr style="background:var(--bg)">
+              <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted)">Aspek</th>
+              ${[1,2,3,4,5].map(n => `<th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text-muted)">${n}⭐</th>`).join('')}
+              <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text-muted)">Avg</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${avgRatings.map(r => {
+              const dist = [1,2,3,4,5].map(n => {
+                const c = data.filter(row => parseFloat(row[r.col]) === n).length;
+                return { n, c, pct: total ? Math.round(c/total*100) : 0 };
+              });
+              return `<tr style="border-bottom:0.5px solid var(--border)">
+                <td style="padding:8px 10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.label}</td>
+                ${dist.map(d => `<td style="padding:8px 10px;text-align:center">
+                  <div style="font-size:11px;font-weight:${d.n===5?'600':'400'};color:${d.n>=4?'var(--green)':d.n===3?'var(--amber)':'var(--red)'}">${d.c}</div>
+                  <div style="font-size:9px;color:var(--text-muted)">${d.pct}%</div>
+                </td>`).join('')}
+                <td style="padding:8px 10px;text-align:center;font-weight:700;color:${ratingColor(r.avg)}">${r.avg}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px">${total} responden · Data dari Google Sheets</div>
+  `;
 }
 
 function daysUntil(iso){
@@ -9032,7 +9305,7 @@ var menuSections = [
   ]},
   { label: "Intelligence", items: [
     { page: "competitor", label: "Competitor Intel" },
-    { page: "painpoint",  label: "Pain Point Mining" }
+    { page: "painpoint",  label: "Customer Knowledge" }
   ]},
   { label: "Internal",    items: [
     { page: "tickets",   label: "Tickets" },
@@ -14064,19 +14337,114 @@ async function tpFetchSheets() {
 
 async function tpConfirmImport() {
   if (!_tpParsedRows.length) return;
+
+  // ── DATA ANOMALY CHECK ──────────────────────────────────────
+  const currentYear = new Date().getFullYear();
+  const flaggedRows = [];
+  const cleanRows = [];
+
+  _tpParsedRows.forEach((r, i) => {
+    const row = i + 2;
+    const nama = r.nama || '—';
+    const rowFlags = [];
+
+    if (r.tahun_lulus) {
+      const y = parseInt(r.tahun_lulus);
+      if (String(r.tahun_lulus).length < 4)
+        rowFlags.push({ field: 'Tahun Lulus', nilai: r.tahun_lulus, masalah: 'Kurang dari 4 digit' });
+      else if (y < 2015 || y > currentYear + 7)
+        rowFlags.push({ field: 'Tahun Lulus', nilai: r.tahun_lulus, masalah: `Di luar range wajar (2015–${currentYear+7})` });
+    }
+    if (r.ipk) {
+      const ipkStr = String(r.ipk);
+      if (ipkStr.includes(','))
+        rowFlags.push({ field: 'IPK', nilai: r.ipk, masalah: 'Pakai koma, harusnya titik' });
+      else if (parseFloat(ipkStr) < 0 || parseFloat(ipkStr) > 4.0)
+        rowFlags.push({ field: 'IPK', nilai: r.ipk, masalah: 'Di luar range 0–4.0' });
+    }
+    if (r.wa) {
+      const wa = String(r.wa).replace(/\s/g,'');
+      if (wa.length < 9)
+        rowFlags.push({ field: 'No WA', nilai: r.wa, masalah: 'Terlalu pendek' });
+      else if (!wa.startsWith('08') && !wa.startsWith('+62') && !wa.startsWith('62'))
+        rowFlags.push({ field: 'No WA', nilai: r.wa, masalah: 'Bukan format 08/+62' });
+    }
+    if (r.email && !r.email.includes('@'))
+      rowFlags.push({ field: 'Email', nilai: r.email, masalah: 'Format tidak valid' });
+    if (r.nama && r.nama.trim().length <= 2)
+      rowFlags.push({ field: 'Nama', nilai: r.nama, masalah: 'Terlalu pendek' });
+
+    if (rowFlags.length > 0)
+      flaggedRows.push({ row, nama, flags: rowFlags });
+    else
+      cleanRows.push(r);
+  });
+
+  // Show flag popup if any anomalies, then import clean rows
+  if (flaggedRows.length > 0) {
+    const totalFlags = flaggedRows.reduce((s,r) => s + r.flags.length, 0);
+    const flagHTML = `
+      <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px" id="tp-flag-overlay">
+        <div style="background:var(--white);border-radius:16px;width:100%;max-width:580px;max-height:82vh;display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:12px">
+            <div style="width:38px;height:38px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="ti ti-alert-triangle" style="font-size:18px;color:#d97706"></i>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:700">${flaggedRows.length} baris dilewati karena anomali</div>
+              <div style="font-size:11px;color:var(--text-muted)">${cleanRows.length} baris bersih akan diimport · Benerin di Google Sheets lalu import ulang</div>
+            </div>
+          </div>
+          <div style="overflow-y:auto;padding:12px 20px;flex:1">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead>
+                <tr>
+                  <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);background:var(--bg);border-radius:6px 0 0 6px">Row</th>
+                  <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);background:var(--bg)">Nama</th>
+                  <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);background:var(--bg)">Field</th>
+                  <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);background:var(--bg)">Nilai</th>
+                  <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);background:var(--bg);border-radius:0 6px 6px 0">Masalah</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${flaggedRows.flatMap(r => r.flags.map((f, fi) => `
+                  <tr style="border-bottom:0.5px solid var(--border)">
+                    <td style="padding:7px 10px;color:var(--text-muted)">${fi===0?r.row:''}</td>
+                    <td style="padding:7px 10px;font-weight:500;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fi===0?r.nama:''}</td>
+                    <td style="padding:7px 10px"><span style="background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600">${f.field}</span></td>
+                    <td style="padding:7px 10px;color:var(--text-muted);font-size:11px;font-family:monospace">${f.nilai}</td>
+                    <td style="padding:7px 10px;color:#d97706;font-size:11px">${f.masalah}</td>
+                  </tr>`)).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:14px 20px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:11px;color:var(--text-muted)">${cleanRows.length} baris bersih siap diimport</div>
+            <div style="display:flex;gap:10px">
+              <button onclick="document.getElementById('tp-flag-overlay').remove()" style="padding:8px 18px;border-radius:8px;border:0.5px solid var(--border);background:var(--white);font-size:12px;cursor:pointer">Batal</button>
+              <button onclick="document.getElementById('tp-flag-overlay').remove();_tpDoImport(_tpCleanRows)" style="padding:8px 18px;border-radius:8px;border:none;background:var(--purple);color:white;font-size:12px;font-weight:600;cursor:pointer">Import ${cleanRows.length} Data Bersih</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    window._tpCleanRows = cleanRows;
+    document.body.insertAdjacentHTML('beforeend', flagHTML);
+    return;
+  }
+
+  await _tpDoImport(cleanRows.length ? cleanRows : _tpParsedRows);
+}
+
+async function _tpDoImport(rows) {
+  rows = rows || _tpParsedRows;
   const btn = document.getElementById('tp-import-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Mengimport...'; }
   try {
-    // Filter rows dengan email valid
-    const validRows = _tpParsedRows.filter(r => r.email && r.email.trim() !== '');
-    const skipped = _tpParsedRows.length - validRows.length;
-
-    // Deduplikasi email dalam seluruh dataset (ambil yang terakhir)
+    const validRows = rows.filter(r => r.email && r.email.trim() !== '');
+    const skipped = rows.length - validRows.length;
     const emailMap = new Map();
     validRows.forEach(r => emailMap.set(r.email.trim().toLowerCase(), r));
     const dedupedRows = [...emailMap.values()];
-
-    // Batch 20 per call
     const batchSize = 20;
     let success = 0;
     for (let i = 0; i < dedupedRows.length; i += batchSize) {
@@ -14084,11 +14452,12 @@ async function tpConfirmImport() {
       success += Math.min(batchSize, dedupedRows.length - i);
       if (btn) btn.textContent = `Mengimport... ${success}/${dedupedRows.length}`;
     }
-    document.getElementById('tp-import-modal').remove();
+    const modal = document.getElementById('tp-import-modal');
+    if (modal) modal.remove();
     _tpData = await sb_loadTalentPool();
     renderTpList();
     const dupCount = validRows.length - dedupedRows.length;
-    const msg = `${success} data diproses ✓` +
+    const msg = `${success} data diimport ✓` +
       (skipped > 0 ? ` · ${skipped} dilewati (email kosong)` : '') +
       (dupCount > 0 ? ` · ${dupCount} duplikat digabung` : '');
     showToast(msg);
@@ -14098,7 +14467,53 @@ async function tpConfirmImport() {
   }
 }
 
-// --- EMAIL BLAST TALENT POOL ---
+  _tpParsedRows.forEach((r, i) => {
+    const row = i + 2; // row number in sheet (1=header)
+    const nama = r.nama || '—';
+
+    // Tahun lulus — kurang 4 digit / di luar range
+    if (r.tahun_lulus) {
+      const y = parseInt(r.tahun_lulus);
+      if (String(r.tahun_lulus).length < 4) {
+        flags.push({ row, nama, field: 'Tahun Lulus', nilai: r.tahun_lulus, masalah: 'Kurang dari 4 digit — mungkin typo?' });
+      } else if (y < 2015 || y > currentYear + 7) {
+        flags.push({ row, nama, field: 'Tahun Lulus', nilai: r.tahun_lulus, masalah: `Di luar range wajar (2015–${currentYear+7})` });
+      }
+    }
+
+    // IPK — di luar 0–4.0 atau pakai koma
+    if (r.ipk) {
+      const ipkStr = String(r.ipk);
+      if (ipkStr.includes(',')) {
+        flags.push({ row, nama, field: 'IPK', nilai: r.ipk, masalah: 'Pakai koma — harusnya titik (contoh: 3.75)' });
+      } else {
+        const ipkNum = parseFloat(ipkStr);
+        if (ipkNum < 0 || ipkNum > 4.0) {
+          flags.push({ row, nama, field: 'IPK', nilai: r.ipk, masalah: 'Di luar range 0–4.0' });
+        }
+      }
+    }
+
+    // WA — format aneh
+    if (r.wa) {
+      const wa = String(r.wa).replace(/\s/g,'');
+      if (wa.length < 9) {
+        flags.push({ row, nama, field: 'No WA', nilai: r.wa, masalah: 'Terlalu pendek' });
+      } else if (!wa.startsWith('08') && !wa.startsWith('+62') && !wa.startsWith('62')) {
+        flags.push({ row, nama, field: 'No WA', nilai: r.wa, masalah: 'Format tidak dikenali (bukan 08xx/+62xx)' });
+      }
+    }
+
+    // Email — format invalid
+    if (r.email && !r.email.includes('@')) {
+      flags.push({ row, nama, field: 'Email', nilai: r.email, masalah: 'Format email tidak valid (tidak ada @)' });
+    }
+
+    // Nama — terlalu pendek
+    if (r.nama && r.nama.trim().length <= 2) {
+      flags.push({ row, nama, field: 'Nama', nilai: r.nama, masalah: 'Nama terlalu pendek' });
+    }
+  });
 var _tpBlastTab = 'compose';
 var _tpBlastTemplates = JSON.parse(localStorage.getItem('ccc_tp_blast_templates') || '[]');
 var _tpBlastLogs = JSON.parse(localStorage.getItem('ccc_tp_blast_logs') || '[]');
@@ -16724,7 +17139,7 @@ async function gcalCreateEvent(taskId) {
     <div class="pwa-more-section-title">Intelligence</div>
     <div class="pwa-more-grid">
       <button class="pwa-more-item" onclick="pwaMoreNav('competitor')"><i class="ti ti-shield-search"></i><span>Competitor</span></button>
-      <button class="pwa-more-item" onclick="pwaMoreNav('painpoint')"><i class="ti ti-message-search"></i><span>Pain Point</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('painpoint')"><i class="ti ti-message-search"></i><span>Customer Knowledge</span></button>
     </div>
     <div class="pwa-more-section-title">Internal</div>
     <div class="pwa-more-grid">
