@@ -8408,14 +8408,18 @@ async function fcHandleFile(input) {
     try {
       const rows = fcParseCSV(csv);
       if (!rows.length) throw new Error('File kosong atau format salah');
-      const mapped = rows.map(r => fcMapRow(r)).filter(r => r !== null);
+      const rawMapped = rows.map(r => fcMapRow(r)).filter(r => r !== null);
+      // Dedupe by email+seri (ambil yang terakhir)
+      const seenFC = new Map();
+      rawMapped.forEach(r => seenFC.set(r.email+'|'+r.seri, r));
+      const mapped = [...seenFC.values()];
       if (!mapped.length) throw new Error('Tidak ada baris valid');
       // Upsert batch
       const batchSize = 20;
       let saved = 0;
       for (let i = 0; i < mapped.length; i += batchSize) {
         const { error } = await _sb.from('free_class_eval')
-          .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: false });
+          .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: true });
         if (error) throw error;
         saved += Math.min(batchSize, mapped.length - i);
       }
@@ -8463,14 +8467,18 @@ async function fcFetchData() {
     if (!csv || !csv.includes(',')) throw new Error('Response bukan CSV');
     const rows = fcParseCSV(csv);
     if (!rows.length) throw new Error('Data kosong');
-    const mapped = rows.map(r => fcMapRow(r)).filter(r => r !== null);
+    const rawMapped = rows.map(r => fcMapRow(r)).filter(r => r !== null);
+    // Dedupe by email+seri (ambil yang terakhir)
+    const seenFC2 = new Map();
+    rawMapped.forEach(r => seenFC2.set(r.email+'|'+r.seri, r));
+    const mapped = [...seenFC2.values()];
     if (!mapped.length) throw new Error('Tidak ada baris valid');
     if (status) status.textContent = `Menyimpan ${mapped.length} baris...`;
     const batchSize = 20;
     let saved = 0;
     for (let i = 0; i < mapped.length; i += batchSize) {
       const { error } = await _sb.from('free_class_eval')
-        .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: false });
+        .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: true });
       if (error) throw error;
       saved += Math.min(batchSize, mapped.length - i);
     }
