@@ -16824,12 +16824,17 @@ async function gcalCreateEvent(taskId) {
     const upEl=document.getElementById('dash-upcoming');
     if (!calEl||!upEl) return;
 
-    // Hide desktop calendar layout, show compact version
+    // Stack layout vertically on mobile
     const dashLayout = document.getElementById('dash-layout');
     if (dashLayout) {
       dashLayout.style.gridTemplateColumns = '1fr';
+      dashLayout.style.gap = '12px';
+      // Show right panel (upcoming tasks) - make sure visible
       const rightPanel = dashLayout.children[1];
-      if (rightPanel) rightPanel.style.display = 'none';
+      if (rightPanel) {
+        rightPanel.style.display = 'block';
+        rightPanel.style.maxHeight = 'none';
+      }
     }
 
     const today=new Date(); today.setHours(0,0,0,0);
