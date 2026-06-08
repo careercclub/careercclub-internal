@@ -913,19 +913,20 @@ body.pwa-mode .pwa-notion-show { display: flex !important; }
 .pwa-chip.active { background: var(--purple); color: white; border-color: var(--purple); }
 
 /* Calendar strip */
-.pwa-cal-strip { display: flex; gap: 5px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
+.pwa-cal-strip { display: flex; gap: 4px; margin-bottom: 12px; }
 .pwa-cal-day {
-  flex-shrink: 0; width: 42px; border-radius: 10px;
-  padding: 6px 4px 5px; text-align: center; cursor: pointer;
+  flex: 1; border-radius: 12px;
+  padding: 7px 2px 5px; text-align: center; cursor: pointer;
+  transition: background 0.15s;
 }
 .pwa-cal-day.today { background: var(--purple); }
-.pwa-cal-day.has-event { background: var(--bg); }
-.pwa-cal-day-name { font-size: 10px; color: var(--text-muted); }
-.pwa-cal-day.today .pwa-cal-day-name { color: rgba(255,255,255,0.7); }
-.pwa-cal-day-num { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.pwa-cal-day.has-event { background: var(--white); border: 0.5px solid var(--border); }
+.pwa-cal-day-name { font-size: 10px; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
+.pwa-cal-day.today .pwa-cal-day-name { color: rgba(255,255,255,0.75); }
+.pwa-cal-day-num { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3; }
 .pwa-cal-day.today .pwa-cal-day-num { color: white; }
-.pwa-cal-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--purple-accent); margin: 3px auto 0; }
-.pwa-cal-day.today .pwa-cal-dot { background: rgba(255,255,255,0.7); }
+.pwa-cal-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--purple-accent); margin: 4px auto 0; }
+.pwa-cal-day.today .pwa-cal-dot { background: rgba(255,255,255,0.8); }
 
 /* Checklist */
 .pwa-check-item {
@@ -6765,6 +6766,8 @@ function initProjectTab(tab){
   else if(tab==="tasks") c.innerHTML=projectTasksHTML();
   else if(tab==="history") c.innerHTML=projectHistoryHTML();
   else if(tab==="calendar") c.innerHTML=projectCalendarHTML();
+  // Fix stats grid on mobile
+  if(typeof _pwaFixStatsGrid==='function') setTimeout(_pwaFixStatsGrid, 50);
 }
 
 // ── TAB 1: OVERVIEW ─────────────────────────────────────────
@@ -16806,12 +16809,16 @@ async function gcalCreateEvent(taskId) {
     const today=new Date(); today.setHours(0,0,0,0);
     const days=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
     let calHtml='<div class="pwa-cal-strip">';
-    for(let i=-1;i<=5;i++){
+    for(let i=0;i<=6;i++){
       const d=new Date(today); d.setDate(d.getDate()+i);
       const iso=toLocalDateISO(d);
       const isToday=i===0;
       const hasTasks=projectTasks.some(t=>t.deadline===iso&&t.status!=='Done');
-      calHtml+=`<div class="pwa-cal-day${isToday?' today':''}${hasTasks&&!isToday?' has-event':''}"><div class="pwa-cal-day-name">${days[d.getDay()]}</div><div class="pwa-cal-day-num">${d.getDate()}</div>${hasTasks?'<div class="pwa-cal-dot"></div>':''}</div>`;
+      calHtml+=`<div class="pwa-cal-day${isToday?' today':''}${hasTasks&&!isToday?' has-event':''}">
+        <div class="pwa-cal-day-name" style="${hasTasks&&!isToday?'color:var(--purple-accent);font-weight:600':''}">${days[d.getDay()]}</div>
+        <div class="pwa-cal-day-num">${d.getDate()}</div>
+        ${hasTasks?`<div class="pwa-cal-dot" style="${isToday?'':'background:var(--purple-accent)'}"></div>`:'<div style="height:7px"></div>'}
+      </div>`;
     }
     calHtml+='</div>';
     calEl.innerHTML=calHtml;
@@ -17111,6 +17118,18 @@ async function gcalCreateEvent(taskId) {
       _pwaConvertAllTables();
     }, 250);
   };
+
+  // Patch all tab init functions to fix stats grid on mobile
+  ['initPartnerTab','initOrgPartnerTab','initProdTab','initPainPointTab',
+   'switchEvalTab','switchCiTab','showIgTab','renderCiTab'].forEach(fnName => {
+    const orig = window[fnName];
+    if (typeof orig !== 'function') return;
+    window[fnName] = function() {
+      orig.apply(this, arguments);
+      if (typeof _pwaFixStatsGrid === 'function') setTimeout(_pwaFixStatsGrid, 80);
+      if (typeof _pwaConvertAllTables === 'function') setTimeout(_pwaConvertAllTables, 200);
+    };
+  });
 
   // Swipe down to close more sheet
   setTimeout(function(){
