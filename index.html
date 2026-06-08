@@ -2896,7 +2896,7 @@ function initDashboard() {
 
 function crmHTML(){
   return `
-  <div id="crm-stats" class="stats-grid" data-cols="5" style="grid-template-columns:repeat(5,1fr)""></div>
+  <div id="crm-stats" class="stats-grid" data-cols="5" style="grid-template-columns:repeat(5,1fr)"></div>
   <div class="card">
     <div class="tab-row">
       <div class="tab active" id="tab-btn-buyers" onclick="crmTab('buyers')">Data Buyers</div>
@@ -6386,7 +6386,7 @@ function ppDataHTML(){
   const cats={};filtered.forEach(e=>{cats[e.kategori]=(cats[e.kategori]||0)+1;});
   const topCat=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
   return `
-  <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"">
+  <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
     <div class="stat-card"><div class="stat-label">Total Entri</div><div class="stat-val">${ppEntries.length}</div></div>
     <div class="stat-card"><div class="stat-label">Kategori Unik</div><div class="stat-val">${Object.keys(cats).length}</div></div>
     <div class="stat-card"><div class="stat-label">Terbanyak</div><div class="stat-val" style="font-size:13px;line-height:1.4">${topCat?topCat[0]:"—"}</div></div>
@@ -6437,7 +6437,7 @@ function prodCatalogHTML(){
   const draft=products.filter(p=>p.status==="Draft").length;
   const totalRev=products.reduce((a,p)=>a+p.harga,0);
   return `
-  <div class="stats-grid" data-cols="4" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px"">
+  <div class="stats-grid" data-cols="4" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
     <div class="stat-card"><div class="stat-label">Total Produk</div><div class="stat-val">${products.length}</div></div>
     <div class="stat-card"><div class="stat-label">Live</div><div class="stat-val" style="color:var(--green)">${live}</div></div>
     <div class="stat-card"><div class="stat-label">Draft</div><div class="stat-val" style="color:var(--amber)">${draft}</div></div>
@@ -7489,7 +7489,7 @@ function projectOverviewHTML(){
   };
 
   return `
-  <div class="stats-grid" data-cols="4" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px"">
+  <div class="stats-grid" data-cols="4" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
     <div class="stat-card"><div class="stat-label">Total Event</div><div class="stat-val">${totalEvents}</div></div>
     <div class="stat-card"><div class="stat-label">On Progress</div><div class="stat-val" style="color:var(--amber)">${onProgress}</div></div>
     <div class="stat-card"><div class="stat-label">Planning</div><div class="stat-val" style="color:var(--blue)">${planning}</div></div>
@@ -12361,7 +12361,7 @@ function igDashboardHTML() {
     </div>`;
 
   return `
-  <div class="stats-grid" data-cols="5" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px"">
+  <div class="stats-grid" data-cols="5" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
     ${statCard('ti-users', 'Followers', igBaseline.toLocaleString(), igBaselineDate ? `per ${igFmtDate(igBaselineDate)}` : (latest ? `per ${igFmtDate(latest.weekStart)}` : ''))}
     ${statCard('ti-eye', 'Reach', totalReach30.toLocaleString(), '30 hari terakhir', '#3b82f6')}
     ${statCard('ti-heart', 'Interactions', totalInteractions30.toLocaleString(), '30 hari terakhir', '#ec4899')}
@@ -12847,7 +12847,7 @@ function ciOverviewHTML() {
   const highThreat = ciProfiles.filter(p => p.threat_level === 'high').length;
 
   return `
-  <div class="stats-grid" data-cols="5" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px"">
+  <div class="stats-grid" data-cols="5" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
     <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div></div>
     <div class="stat-card"><div class="stat-label">Direct</div><div class="stat-val" style="color:var(--red)">${direct}</div></div>
     <div class="stat-card"><div class="stat-label">Indirect</div><div class="stat-val" style="color:var(--amber)">${indirect}</div></div>
@@ -13804,7 +13804,7 @@ function renderTpList() {
   const tiers = [...new Set(_tpData.map(r=>r.campus_tier).filter(Boolean))].sort();
 
   c.innerHTML = `
-  <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"">
+  <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
     <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div></div>
     <div class="stat-card"><div class="stat-label">Sudah Beli</div><div class="stat-val" style="color:var(--green)">${sudahBeli}</div></div>
     <div class="stat-card"><div class="stat-label">Belum Beli</div><div class="stat-val" style="color:var(--amber)">${belumBeli}</div></div>
