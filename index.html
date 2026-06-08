@@ -8364,322 +8364,18 @@ function fcAnalyticsHTML() {
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
       <div>
         <div style="font-size:13px;font-weight:700">Analytics Free Class</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Import dari Google Sheets → File → Share → Publish to web → CSV</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Upload file CSV dari Google Sheets atau import via URL</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="fcOpenImport()"><i class="ti ti-upload"></i> Import Sheets</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:var(--purple);color:white;font-size:12px;font-weight:600;cursor:pointer">
+          <i class="ti ti-upload"></i> Upload CSV
+          <input type="file" accept=".csv" style="display:none" onchange="fcHandleFile(this)">
+        </label>
+        <button class="btn btn-sm" onclick="fcOpenImport()"><i class="ti ti-link"></i> Import URL</button>
+      </div>
     </div>
     <div id="fc-import-section" style="display:none">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-        <input type="text" id="fc-url-input" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" style="flex:1;min-width:200px;font-size:12px;padding:8px 12px;border:0.5px solid var(--border);border-radius:8px">
-        <button class="btn btn-sm" onclick="fcFetchData()" id="fc-fetch-btn"><i class="ti ti-download"></i> Ambil Data</button>
-        <button class="btn btn-sm" style="color:var(--text-muted)" onclick="document.getElementById('fc-import-section').style.display='none'">Batal</button>
-      </div>
-      <div id="fc-fetch-status" style="font-size:11px;color:var(--text-muted)"></div>
-    </div>
-  </div>
-  <div id="fc-content">
-    <div style="text-align:center;padding:48px;color:var(--text-muted)">
-      <i class="ti ti-chart-dots" style="font-size:36px;display:block;margin-bottom:10px"></i>
-      <div style="font-size:13px;font-weight:500;margin-bottom:4px">Memuat data...</div>
-    </div>
-  </div>`;
-}
-
-function fcOpenImport() {
-  const sec = document.getElementById('fc-import-section');
-  if (sec) sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
-}
-
-async function fcFetchData() {
-  const url = (document.getElementById('fc-url-input')?.value || '').trim();
-  if (!url) { showToast('Masukkan URL dulu', 'error'); return; }
-  const btn = document.getElementById('fc-fetch-btn');
-  const status = document.getElementById('fc-fetch-status');
-  if (btn) { btn.disabled = true; btn.textContent = 'Mengambil...'; }
-  if (status) status.textContent = 'Menghubungi Google Sheets...';
-
-  // Google Sheets published CSV supports CORS - try direct first
-  const attempts = [
-    url,  // direct (Google sets Access-Control-Allow-Origin: *)
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  ];
-
-  let csv = null;
-  for (const attempt of attempts) {
-    try {
-      if (status) status.textContent = attempt === url ? 'Menghubungi Google Sheets...' : 'Mencoba proxy...';
-      const res = await fetch(attempt, { signal: AbortSignal.timeout(12000) });
-      if (res.ok) { 
-        const text = await res.text();
-        if (text && text.includes(',')) { csv = text; break; }
-      }
-    } catch(e) { continue; }
-  }
-
-  if (!csv) {
-    if (status) status.textContent = '❌ Semua proxy gagal. Pastikan URL publish CSV sudah benar.';
-    if (btn) { btn.disabled = false; btn.textContent = 'Ambil Data'; }
-    showToast('Gagal ambil data dari Google Sheets', 'error');
-    return;
-  }
-
-  try {
-    const rows = fcParseCSV(csv);
-    if (!rows.length) throw new Error('Data kosong');
-    if (status) status.textContent = `Menyimpan ${rows.length} baris ke database...`;
-
-    // Map ke Supabase columns
-    const mapped = rows.map(r => fcMapRow(r)).filter(r => r !== null);
-    if (!mapped.length) throw new Error('Tidak ada baris valid');
-
-    // Upsert batch 20
-    const batchSize = 20;
-    let saved = 0;
-    for (let i = 0; i < mapped.length; i += batchSize) {
-      const batch = mapped.slice(i, i + batchSize);
-      const { error } = await _sb.from('free_class_eval')
-        .upsert(batch, { onConflict: 'email,seri', ignoreDuplicates: false });
-      if (error) throw error;
-      saved += batch.length;
-      if (status) status.textContent = `Menyimpan... ${saved}/${mapped.length}`;
-    }
-
-    document.getElementById('fc-import-section').style.display = 'none';
-    await fcLoadAndRender();
-    showToast(`${saved} data berhasil disimpan ✓`);
-  } catch(e) {
-    if (status) status.textContent = '❌ ' + (e.message || e);
-    showToast('Gagal simpan: ' + (e.message || e), 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Ambil Data'; }
-  }
-}
-
-function fcMapRow(r) {
-  // Detect columns by partial key match
-  const get = (keywords) => {
-    const key = Object.keys(r).find(k => keywords.some(kw => k.toLowerCase().includes(kw.toLowerCase())));
-    return key ? r[key] : '';
-  };
-  const email = get(['email']).trim().toLowerCase();
-  const seri = get(['free class','seri yang']).trim();
-  if (!email || !seri) return null;
-
-  const ratingKeys = Object.keys(r).filter(k => {
-    const v = parseFloat(r[k]);
-    return !isNaN(v) && v >= 1 && v <= 5 &&
-      !k.toLowerCase().includes('timestamp') &&
-      !k.toLowerCase().includes('angkatan');
-  });
-
-  return {
-    email,
-    nama: get(['nama']),
-    universitas: get(['universitas','university']),
-    angkatan: get(['angkatan']),
-    seri,
-    timestamp: get(['timestamp']),
-    q1: parseFloat(r[ratingKeys[0]]) || null,
-    q2: parseFloat(r[ratingKeys[1]]) || null,
-    q3: parseFloat(r[ratingKeys[2]]) || null,
-    q4: parseFloat(r[ratingKeys[3]]) || null,
-    q5: parseFloat(r[ratingKeys[4]]) || null,
-    q6: parseFloat(r[ratingKeys[5]]) || null,
-    q7: parseFloat(r[ratingKeys[6]]) || null,
-    q8: parseFloat(r[ratingKeys[7]]) || null,
-    q9: parseFloat(r[ratingKeys[8]]) || null,
-    q10: parseFloat(r[ratingKeys[9]]) || null,
-    q11: parseFloat(r[ratingKeys[10]]) || null,
-    q12: parseFloat(r[ratingKeys[11]]) || null,
-    q13: parseFloat(r[ratingKeys[12]]) || null,
-    hal_baik: get(['sudah baik','hal apa yang sudah','baik dari']),
-    ditingkatkan: get(['ditingkatkan','bisa ditingkatkan','tingkatkan']),
-    topik_keinginan: get(['topik','pelajari','ingin']),
-  };
-}
-
-function fcParseCSV(csv) {
-  const lines = csv.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-  const headers = fcSplitCSVLine(lines[0]);
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const vals = fcSplitCSVLine(lines[i]);
-    if (vals.length < 5) continue;
-    const row = {};
-    headers.forEach((h, j) => { row[h.trim()] = (vals[j] || '').trim(); });
-    rows.push(row);
-  }
-  return rows;
-}
-
-function fcSplitCSVLine(line) {
-  const result = []; let current = ''; let inQuote = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') { inQuote = !inQuote; }
-    else if (c === ',' && !inQuote) { result.push(current); current = ''; }
-    else { current += c; }
-  }
-  result.push(current);
-  return result;
-}
-
-async function fcLoadAndRender() {
-  const { data, error } = await _sb.from('free_class_eval').select('*').order('created_at', { ascending: false });
-  if (error || !data?.length) {
-    document.getElementById('fc-content').innerHTML = `
-      <div style="text-align:center;padding:48px;color:var(--text-muted)">
-        <i class="ti ti-chart-dots" style="font-size:36px;display:block;margin-bottom:10px"></i>
-        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Belum ada data</div>
-        <div style="font-size:11px">Klik "Import Sheets" untuk load data evaluasi</div>
-      </div>`;
-    return;
-  }
-  _fcData = data;
-  fcRenderCharts(data);
-}
-
-async function initFCAnalytics() {
-  await fcLoadAndRender();
-}
-
-function fcRenderCharts(data) {
-  const el = document.getElementById('fc-content');
-  if (!el || !data?.length) return;
-  const total = data.length;
-
-  // Rating columns
-  const qLabels = [
-    'Materi sesuai judul/tema','Materi sesuai kebutuhan','Materi mudah dipahami',
-    'Materi menjawab pertanyaan','Narasumber menguasai materi','Narasumber menyampaikan dengan jelas',
-    'Kualitas teknis (audio/video)','Waktu efisien','Moderator membawakan dengan baik',
-    'Informasi mudah didapat','Kepuasan keseluruhan','Minat ikut kegiatan lagi','Akan merekomendasikan'
-  ];
-  const qKeys = ['q1','q2','q3','q4','q5','q6','q7','q8','q9','q10','q11','q12','q13'];
-
-  const avgRatings = qKeys.map((k, i) => {
-    const vals = data.map(r => parseFloat(r[k])).filter(v => !isNaN(v) && v > 0);
-    const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
-    return { key: k, label: qLabels[i], avg: Math.round(avg*10)/10, n: vals.length };
-  }).filter(r => r.n > 0);
-
-  // Series breakdown
-  const seriesCount = {};
-  data.forEach(r => {
-    const s = (r.seri||'Tidak diisi').trim() || 'Tidak diisi';
-    seriesCount[s] = (seriesCount[s]||0) + 1;
-  });
-
-  // Top unis
-  const uniCount = {};
-  data.forEach(r => {
-    const u = (r.universitas||'').trim();
-    if (u) uniCount[u] = (uniCount[u]||0) + 1;
-  });
-  const topUnis = Object.entries(uniCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
-
-  const overallAvg = avgRatings.length ? avgRatings.reduce((s,r)=>s+r.avg,0)/avgRatings.length : 0;
-  const rc = (avg) => avg>=4.5?'#3b6d11':avg>=4.0?'#7c6ff7':avg>=3.5?'#854f0b':'#a32d2d';
-
-  el.innerHTML = `
-    <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
-      <div class="stat-card"><div class="stat-label">Total Responden</div><div class="stat-val">${total}</div></div>
-      <div class="stat-card"><div class="stat-label">Rata-rata Keseluruhan</div><div class="stat-val" style="color:${rc(overallAvg)}">${overallAvg.toFixed(2)}</div><div class="stat-change">dari 5.0</div></div>
-      <div class="stat-card"><div class="stat-label">Free Class Series</div><div class="stat-val">${Object.keys(seriesCount).length}</div><div class="stat-change">sesi</div></div>
-    </div>
-
-    <div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Rating per Aspek Evaluasi</div>
-      ${avgRatings.map(r => `
-        <div style="margin-bottom:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <div style="font-size:11px;color:var(--text);flex:1;padding-right:12px">${r.label}</div>
-            <div style="font-size:12px;font-weight:700;color:${rc(r.avg)}">${r.avg}</div>
-          </div>
-          <div style="background:var(--bg);border-radius:4px;height:6px">
-            <div style="background:${rc(r.avg)};width:${(r.avg/5*100).toFixed(1)}%;height:6px;border-radius:4px"></div>
-          </div>
-        </div>`).join('')}
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-      <div class="card" style="padding:16px 18px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Responden per Series</div>
-        ${Object.entries(seriesCount).sort((a,b)=>b[1]-a[1]).map(([s,n]) => `
-          <div style="margin-bottom:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s}">${s.replace('Free Class Series','FCS')}</div>
-              <div style="font-size:11px;font-weight:600">${n}</div>
-            </div>
-            <div style="background:var(--bg);border-radius:3px;height:4px">
-              <div style="background:var(--purple-accent);width:${(n/total*100).toFixed(1)}%;height:4px;border-radius:3px"></div>
-            </div>
-          </div>`).join('')}
-      </div>
-
-      <div class="card" style="padding:16px 18px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Top Universitas</div>
-        ${topUnis.map(([u,n]) => `
-          <div style="margin-bottom:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u}</div>
-              <div style="font-size:11px;font-weight:600">${n}</div>
-            </div>
-            <div style="background:var(--bg);border-radius:3px;height:4px">
-              <div style="background:#3b6d11;width:${(n/total*100).toFixed(1)}%;height:4px;border-radius:3px"></div>
-            </div>
-          </div>`).join('')}
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Distribusi Rating per Aspek</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
-          <thead>
-            <tr style="background:var(--bg)">
-              <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted)">Aspek</th>
-              ${[1,2,3,4,5].map(n=>`<th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text-muted)">${n}⭐</th>`).join('')}
-              <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--text-muted)">Avg</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${avgRatings.map(r => {
-              const dist = [1,2,3,4,5].map(n => {
-                const c = data.filter(row => parseFloat(row[r.key])===n).length;
-                return { n, c, pct: Math.round(c/total*100) };
-              });
-              return `<tr style="border-bottom:0.5px solid var(--border)">
-                <td style="padding:8px 10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.label}</td>
-                ${dist.map(d=>`<td style="padding:8px 10px;text-align:center">
-                  <div style="font-weight:${d.n>=4?'600':'400'};color:${d.n>=4?'var(--green)':d.n===3?'var(--amber)':'var(--red)'}">${d.c}</div>
-                  <div style="font-size:9px;color:var(--text-muted)">${d.pct}%</div>
-                </td>`).join('')}
-                <td style="padding:8px 10px;text-align:center;font-weight:700;color:${rc(r.avg)}">${r.avg}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div style="font-size:11px;color:var(--text-muted);text-align:right">${total} responden · Data dari Supabase</div>
-  `;
-}
-var _fcImporting = false;
-
-function fcAnalyticsHTML() {
-  return `
-  <div class="card" style="margin-bottom:14px;padding:16px 18px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      <div>
-        <div style="font-size:13px;font-weight:700">Analytics Free Class</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Import hasil Google Form evaluasi via Google Sheets → Share to Web (CSV)</div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="fcOpenImport()"><i class="ti ti-upload"></i> Import Sheets</button>
-    </div>
-    <div id="fc-import-section" style="display:none">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Publish Google Sheets → File → Share → Publish to web → CSV → copy URL</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <input type="text" id="fc-url-input" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" style="flex:1;min-width:200px;font-size:12px;padding:8px 12px;border:0.5px solid var(--border);border-radius:8px">
         <button class="btn btn-sm" onclick="fcFetchData()" id="fc-fetch-btn"><i class="ti ti-download"></i> Ambil Data</button>
@@ -8692,7 +8388,7 @@ function fcAnalyticsHTML() {
     <div style="text-align:center;padding:48px;color:var(--text-muted)">
       <i class="ti ti-chart-dots" style="font-size:36px;display:block;margin-bottom:10px"></i>
       <div style="font-size:13px;font-weight:500;margin-bottom:4px">Belum ada data</div>
-      <div style="font-size:11px">Klik "Import Sheets" untuk load data evaluasi</div>
+      <div style="font-size:11px">Upload file CSV dari Google Sheets</div>
     </div>
   </div>`;
 }
@@ -8700,6 +8396,57 @@ function fcAnalyticsHTML() {
 function fcOpenImport() {
   const sec = document.getElementById('fc-import-section');
   if (sec) sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+}
+
+async function fcHandleFile(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  showToast('Membaca file...');
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const csv = e.target.result;
+    try {
+      const rows = fcParseCSV(csv);
+      if (!rows.length) throw new Error('File kosong atau format salah');
+      const mapped = rows.map(r => fcMapRow(r)).filter(r => r !== null);
+      if (!mapped.length) throw new Error('Tidak ada baris valid');
+      // Upsert batch
+      const batchSize = 20;
+      let saved = 0;
+      for (let i = 0; i < mapped.length; i += batchSize) {
+        const { error } = await _sb.from('free_class_eval')
+          .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: false });
+        if (error) throw error;
+        saved += Math.min(batchSize, mapped.length - i);
+      }
+      await fcLoadAndRender();
+      showToast(`${saved} data berhasil disimpan ✓`);
+    } catch(e) {
+      showToast('Gagal: ' + (e.message || e), 'error');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+async function fcLoadAndRender() {
+  const { data, error } = await _sb.from('free_class_eval').select('*').order('created_at', { ascending: false });
+  if (error || !data?.length) {
+    const el = document.getElementById('fc-content');
+    if (el) el.innerHTML = `
+      <div style="text-align:center;padding:48px;color:var(--text-muted)">
+        <i class="ti ti-chart-dots" style="font-size:36px;display:block;margin-bottom:10px"></i>
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Belum ada data</div>
+        <div style="font-size:11px">Upload file CSV dari Google Sheets</div>
+      </div>`;
+    return;
+  }
+  _fcData = data;
+  fcRenderCharts(data);
+}
+
+async function initFCAnalytics() {
+  await fcLoadAndRender();
 }
 
 async function fcFetchData() {
@@ -8710,15 +8457,26 @@ async function fcFetchData() {
   if (btn) { btn.disabled = true; btn.textContent = 'Mengambil...'; }
   if (status) status.textContent = 'Menghubungi Google Sheets...';
   try {
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('Gagal fetch: ' + res.status);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const csv = await res.text();
-    _fcData = fcParseCSV(csv);
-    if (!_fcData.length) throw new Error('Data kosong');
+    if (!csv || !csv.includes(',')) throw new Error('Response bukan CSV');
+    const rows = fcParseCSV(csv);
+    if (!rows.length) throw new Error('Data kosong');
+    const mapped = rows.map(r => fcMapRow(r)).filter(r => r !== null);
+    if (!mapped.length) throw new Error('Tidak ada baris valid');
+    if (status) status.textContent = `Menyimpan ${mapped.length} baris...`;
+    const batchSize = 20;
+    let saved = 0;
+    for (let i = 0; i < mapped.length; i += batchSize) {
+      const { error } = await _sb.from('free_class_eval')
+        .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: false });
+      if (error) throw error;
+      saved += Math.min(batchSize, mapped.length - i);
+    }
     document.getElementById('fc-import-section').style.display = 'none';
-    fcRenderCharts();
-    showToast(`${_fcData.length} respons berhasil dimuat ✓`);
+    await fcLoadAndRender();
+    showToast(`${saved} data berhasil disimpan ✓`);
   } catch(e) {
     if (status) status.textContent = '❌ ' + e.message;
     showToast('Gagal import: ' + e.message, 'error');
@@ -8757,12 +8515,38 @@ function fcSplitCSVLine(line) {
   return result;
 }
 
-function fcInitAnalytics() {
-  if (_fcData.length) fcRenderCharts();
-}
+function fcInitAnalytics() { if (_fcData.length) fcRenderCharts(_fcData); }
 
-function initFCAnalytics() {
-  if (_fcData.length) fcRenderCharts();
+function fcMapRow(r) {
+  const get = (keywords) => {
+    const key = Object.keys(r).find(k => keywords.some(kw => k.toLowerCase().includes(kw.toLowerCase())));
+    return key ? r[key] : '';
+  };
+  const email = get(['email']).trim().toLowerCase();
+  const seri = get(['free class','seri yang']).trim();
+  if (!email || !seri) return null;
+  const ratingKeys = Object.keys(r).filter(k => {
+    const v = parseFloat(r[k]);
+    return !isNaN(v) && v >= 1 && v <= 5 &&
+      !k.toLowerCase().includes('timestamp') && !k.toLowerCase().includes('angkatan');
+  });
+  return {
+    email, seri,
+    nama: get(['nama']),
+    universitas: get(['universitas','university']),
+    angkatan: get(['angkatan']),
+    timestamp: get(['timestamp']),
+    q1: parseFloat(r[ratingKeys[0]])||null, q2: parseFloat(r[ratingKeys[1]])||null,
+    q3: parseFloat(r[ratingKeys[2]])||null, q4: parseFloat(r[ratingKeys[3]])||null,
+    q5: parseFloat(r[ratingKeys[4]])||null, q6: parseFloat(r[ratingKeys[5]])||null,
+    q7: parseFloat(r[ratingKeys[6]])||null, q8: parseFloat(r[ratingKeys[7]])||null,
+    q9: parseFloat(r[ratingKeys[8]])||null, q10: parseFloat(r[ratingKeys[9]])||null,
+    q11: parseFloat(r[ratingKeys[10]])||null, q12: parseFloat(r[ratingKeys[11]])||null,
+    q13: parseFloat(r[ratingKeys[12]])||null,
+    hal_baik: get(['sudah baik','hal apa yang sudah','baik dari']),
+    ditingkatkan: get(['ditingkatkan','bisa ditingkatkan']),
+    topik_keinginan: get(['topik','pelajari','ingin']),
+  };
 }
 
 function fcRenderCharts() {
