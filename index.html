@@ -16758,12 +16758,15 @@ async function gcalCreateEvent(taskId) {
 <script>
 // ── PWA MODE DETECTION & LOGIC ────────────────────────────────────────────
 (function(){
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
+  const isMobile = window.innerWidth <= 600;
+
+  // Aktifkan pwa-mode untuk standalone ATAU mobile browser
+  const isPWA = isStandalone || isMobile;
 
   if (isPWA) {
     document.body.classList.add('pwa-mode');
-    // Fix stats grid + render dashboard after all functions defined (at bottom of IIFE)
     const _obs = new MutationObserver(() => {
       if (window.innerWidth <= 600) {
         if (typeof _pwaFixStatsGrid === 'function') _pwaFixStatsGrid();
