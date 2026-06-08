@@ -8525,10 +8525,28 @@ function fcMapRow(r) {
   const email = get(['email']).trim().toLowerCase();
   const seri = get(['free class','seri yang']).trim();
   if (!email || !seri) return null;
+  // Tentukan dulu kolom yang sudah di-assign agar tidak ikut jadi rating
+  const _assignedKeys = new Set([
+    get(['email']) && Object.keys(r).find(k => k.toLowerCase().includes('email')),
+    Object.keys(r).find(k => ['free class','seri yang'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
+    Object.keys(r).find(k => k.toLowerCase().includes('nama')),
+    Object.keys(r).find(k => ['universitas','university'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
+    Object.keys(r).find(k => k.toLowerCase().includes('angkatan')),
+    Object.keys(r).find(k => k.toLowerCase().includes('timestamp')),
+    // Open-ended fields
+    Object.keys(r).find(k => ['sudah baik','hal apa yang sudah','baik dari'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
+    Object.keys(r).find(k => ['ditingkatkan','bisa ditingkatkan'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
+    Object.keys(r).find(k => ['topik','pelajari','ingin'].some(kw => k.toLowerCase().includes(kw.toLowerCase()))),
+  ].filter(Boolean));
+
   const ratingKeys = Object.keys(r).filter(k => {
-    const v = parseFloat(r[k]);
-    return !isNaN(v) && v >= 1 && v <= 5 &&
-      !k.toLowerCase().includes('timestamp') && !k.toLowerCase().includes('angkatan');
+    if (_assignedKeys.has(k)) return false;
+    const raw = (r[k] || '').toString().trim();
+    // Harus berupa integer 1-5 saja (bukan float seperti 1.0 ok, tapi bukan "5/3/2026")
+    // Pastikan tidak mengandung karakter non-numerik selain titik desimal
+    if (!/^\d+(\.\d+)?$/.test(raw)) return false;
+    const v = parseFloat(raw);
+    return !isNaN(v) && v >= 1 && v <= 5;
   });
   return {
     email, seri,
@@ -8554,6 +8572,16 @@ function fcRenderCharts() {
   if (!el) return;
 
   const data = _fcData;
+
+  // Deteksi data kotor: kalau q1 punya nilai = 5 dan q2 = 4 semua sama, kemungkinan timestamp tersimpan
+  // Cara lebih reliable: cek apakah ada baris yang q1 bisa jadi timestamp (nilai 1-5 tapi semua baris q1=5)
+  const q1vals = data.map(r => r.q1).filter(v => v != null);
+  const allQ1are5 = q1vals.length > 0 && q1vals.every(v => v === 5);
+  const dirtyWarning = allQ1are5 && data.length > 0 ? `
+    <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#854f0b">
+      <b>⚠️ Data mungkin perlu di-reimport.</b> Terdeteksi kemungkinan mapping kolom bergeser (timestamp masuk ke slot rating).
+      Klik tombol 🗑️ untuk hapus data lama, lalu upload/import ulang CSV.
+    </div>` : '';
   const total = data.length;
 
   // Detect rating columns (1-5 scale)
@@ -8607,6 +8635,7 @@ function fcRenderCharts() {
   const ratingBg = (avg) => avg >= 4.5 ? '#dcfce7' : avg >= 4.0 ? '#ede9fe' : avg >= 3.5 ? '#fef3c7' : '#fee2e2';
 
   el.innerHTML = `
+    ${dirtyWarning}
     <!-- Summary Stats -->
     <div class="stats-grid" data-cols="3" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
       <div class="stat-card">
