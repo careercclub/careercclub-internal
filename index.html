@@ -96,6 +96,26 @@ html,body,.app,.main,.sidebar,.content,.modal-body,.pipeline-wrap,.pipeline-card
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .topbar{background:var(--white);padding:12px 22px;padding-top:max(12px, env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border);flex-shrink:0}
 .page-title{font-size:15px;font-weight:600}
+.cl-dd-wrap{position:relative}
+
+/* ── GLOBAL FILTER BAR PATTERN ─────────────────────────────── */
+.filter-bar{display:flex;align-items:center;gap:6px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-bar select,.filter-bar input[type=text],.filter-bar input:not([type]){flex-shrink:0;padding:5px 10px;border:0.5px solid var(--border-md);border-radius:20px;font-size:12px;background:var(--white);color:var(--text);cursor:pointer;white-space:nowrap;height:32px;max-width:140px}
+.filter-bar select:focus,.filter-bar input:focus{outline:none;border-color:var(--purple-mid)}
+.filter-bar .filter-bar-btn{flex-shrink:0;display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;height:32px;white-space:nowrap;border:0.5px solid var(--border-md);background:var(--white);color:var(--text)}
+.filter-bar .filter-bar-btn.primary{background:var(--purple-dark);color:#fff;border-color:var(--purple-dark)}
+.filter-bar .filter-bar-spacer{flex:1;flex-shrink:0;min-width:8px}
+.cl-dd-trigger{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);background:var(--white);cursor:pointer;font-size:12px;color:var(--text-muted);user-select:none}
+.cl-dd-trigger:hover{border-color:var(--purple-mid)}
+.cl-dd-list{position:absolute;left:0;right:0;top:calc(100% + 3px);background:var(--white);border:0.5px solid var(--border-md);border-radius:var(--radius);z-index:9999;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);max-height:220px;overflow-y:auto}
+.cl-dd-item{padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px}
+.cl-dd-item:hover{background:var(--bg)}
+.cl-dd-new-trigger{padding:8px 12px;font-size:12px;color:var(--purple-mid);cursor:pointer;display:flex;align-items:center;gap:8px;border-top:0.5px solid var(--border);font-weight:500}
+.cl-dd-new-trigger:hover{background:var(--bg)}
+.cl-dd-new-row{padding:7px 10px;display:flex;gap:6px;align-items:center;border-top:0.5px solid var(--border)}
+.cl-dd-new-row input{flex:1;padding:5px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);color:var(--text)}
+.cl-dd-new-row button{padding:5px 10px;border-radius:var(--radius);border:0.5px solid var(--purple-mid);background:var(--purple-light);color:var(--purple-dark);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
 .notif-btn{width:32px;height:32px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
 .notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;background:#e24b4a;border-radius:50%;border:1.5px solid var(--white)}
 .content{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0;padding:18px 22px;background:var(--bg)}
@@ -575,8 +595,7 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
   .tp-chart-card { padding:12px !important; }
 
   /* ── CONTENT LIBRARY ── */
-  .cl-filter { flex-direction:column; gap:7px; }
-  .cl-filter > * { width:100% !important; }
+
   .cl-grid { grid-template-columns: repeat(2,1fr) !important; gap:8px; }
   .cl-card-img { height:120px !important; }
   #gcal-modal-overlay { padding:8px !important; }
@@ -586,8 +605,6 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
   #cl-gallery > div { grid-template-columns: repeat(2,1fr) !important; gap:8px !important; }
 
   /* ── GRAPHIC DESIGN ── */
-  .da-filter { flex-direction:column; gap:7px; }
-  .da-filter > * { width:100% !important; }
   .da-gallery { grid-template-columns: repeat(2,1fr) !important; gap:8px; }
   .da-card-img { height:110px !important; }
   .da-modal { width:96vw !important; max-height:90vh; }
@@ -1495,15 +1512,15 @@ window.lokerHTML = function lokerHTML() {
 
     <!-- LIST -->
     <div id="view-list" style="display:none">
-      <div class="filter-row">
-        <input class="search-box" id="searchInput" placeholder="Cari perusahaan atau program..." oninput="renderTable()">
-        <select class="filter-select" id="filterIndustry" onchange="renderTable()"><option value="">Semua Industri</option></select>
-        <select class="filter-select" id="filterMonth" onchange="renderTable()">
-          <option value="">Semua Bulan</option>
-          <option value="1">Januari</option><option value="2">Februari</option><option value="3">Maret</option><option value="4">April</option><option value="5">Mei</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">Agustus</option><option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
+      <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="Cari perusahaan..." oninput="renderTable()" style="max-width:160px">
+        <select id="filterIndustry" onchange="renderTable()"><option value="">Industri</option></select>
+        <select id="filterMonth" onchange="renderTable()">
+          <option value="">Bulan</option>
+          <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
         </select>
-        <select class="filter-select" id="filterYear" onchange="renderTable()">
-          <option value="">Semua Tahun</option>
+        <select id="filterYear" onchange="renderTable()">
+          <option value="">Tahun</option>
         </select>
       </div>
       <div class="table-wrap">
@@ -1981,6 +1998,7 @@ async function sb_loadPainPoints() {
     comment: d.komentar || '', // alias
     source_url: d.source_url || '',
     notes: d.notes || '',
+    labels: Array.isArray(d.labels) ? d.labels : (d.labels ? [d.labels] : []),
     tanggal: d.created_at
   }));
   if (typeof renderPP === 'function') renderPP();
@@ -1995,7 +2013,8 @@ async function sb_savePainPoint(entry) {
     username: entry.username || '',
     komentar: entry.komentar || entry.comment || '',
     source_url: entry.source_url || '',
-    notes: entry.notes || ''
+    notes: entry.notes || '',
+    labels: entry.labels || []
   });
 }
 
@@ -2008,7 +2027,8 @@ async function sb_updatePainPoint(id, entry) {
     username: entry.username || '',
     komentar: entry.komentar || entry.comment || '',
     source_url: entry.source_url || '',
-    notes: entry.notes || ''
+    notes: entry.notes || '',
+    labels: entry.labels || []
   });
 }
 
@@ -3157,15 +3177,15 @@ function crmHTML(){
       <div class="tab" id="tab-btn-import" onclick="crmTab('import')">Import</div>
     </div>
     <div id="crm-buyers">
-      <div class="filter-row">
-        <input type="text" id="srch" placeholder="Cari nama / WA / email..." oninput="renderBuyers()">
-        <select id="f-klas" onchange="renderBuyers()"><option value="">Semua klasifikasi</option>${KLASIFIKASI_LIST.map(k=>`<option>${k}</option>`).join("")}</select>
-        <select id="f-industri" onchange="renderBuyers()"><option value="">Semua industri</option></select>
-        <select id="f-tahap" onchange="renderBuyers()"><option value="">Semua tahap</option></select>
-        <select id="f-status" onchange="renderBuyers()"><option value="">Semua status blast</option><option>Belum diblast</option><option>Diblast</option><option>Sedang di-upsell</option><option>Sedang di-downsell</option><option>Sedang di-cross sell</option><option>Sudah convert — Upsell</option><option>Sudah convert — Downsell</option><option>Sudah convert — Cross sell</option></select>
-        <select id="f-pool" onchange="renderBuyers()"><option value="">Semua talent pool</option><option value="yes">Sudah isi pool</option><option value="no">Belum isi pool</option></select>
-        <select id="f-payment" onchange="renderBuyers()"><option value="">Semua payment</option><option value="SUCCESS">SUCCESS</option><option value="PENDING">PENDING</option><option value="FAILED">FAILED</option><option value="none">Belum ada status</option></select>
-        <button class="btn" onclick="clearCRMFilters()"><i class="ti ti-refresh"></i> Reset</button>
+      <div class="filter-bar">
+        <input type="text" id="srch" placeholder="Cari nama..." oninput="renderBuyers()" style="max-width:140px">
+        <select id="f-klas" onchange="renderBuyers()"><option value="">Klasifikasi</option>${KLASIFIKASI_LIST.map(k=>`<option>${k}</option>`).join("")}</select>
+        <select id="f-industri" onchange="renderBuyers()"><option value="">Industri</option></select>
+        <select id="f-tahap" onchange="renderBuyers()"><option value="">Tahap</option></select>
+        <select id="f-status" onchange="renderBuyers()"><option value="">Status blast</option><option>Belum diblast</option><option>Diblast</option><option>Sedang di-upsell</option><option>Sedang di-downsell</option><option>Sedang di-cross sell</option><option>Sudah convert — Upsell</option><option>Sudah convert — Downsell</option><option>Sudah convert — Cross sell</option></select>
+        <select id="f-pool" onchange="renderBuyers()"><option value="">Talent pool</option><option value="yes">Sudah isi pool</option><option value="no">Belum isi pool</option></select>
+        <select id="f-payment" onchange="renderBuyers()"><option value="">Payment</option><option value="SUCCESS">SUCCESS</option><option value="PENDING">PENDING</option><option value="FAILED">FAILED</option><option value="none">Belum ada status</option></select>
+        <button class="filter-bar-btn" onclick="clearCRMFilters()"><i class="ti ti-refresh" style="font-size:13px"></i></button>
       </div>
       <div class="action-bar" id="crm-action-bar" style="display:none">
         <span id="sel-count">0 dipilih</span>
@@ -6669,6 +6689,10 @@ function ppDataHTML(){
       <label class="form-label">Kategori *</label>
       <select class="form-input" id="pp-kategori">${ppMasterKategori.map(k=>`<option>${k}</option>`).join("")}</select>
     </div>
+    <div style="margin-bottom:10px">
+      <label class="form-label">Labels</label>
+      ${ppDDWidget('new',[])}
+    </div>
     <button class="btn btn-primary" onclick="ppSaveEntry()"><i class="ti ti-plus"></i> Simpan</button>
   </div>
   <div class="card">
@@ -7274,7 +7298,9 @@ function ppSaveEntry(){
   const bulan=document.getElementById("pp-bulan")?.value;
   const kategori=document.getElementById("pp-kategori")?.value;
   if(!comment){showToast("Komentar wajib diisi","error");return;}
-  const newEntry = {id:Date.now(),comment,platform,bulan,kategori,komentar:comment};
+  const labelEl=document.getElementById('pp-dd-picked-new');
+  const labels=labelEl?JSON.parse(labelEl.value||'[]'):[];
+  const newEntry = {id:Date.now(),comment,platform,bulan,kategori,komentar:comment,labels};
   ppEntries.unshift(newEntry);
   window._lastPPAdded = newEntry;
   savePP();
@@ -8408,6 +8434,7 @@ function ppDatabaseHTML(){
           + '<select id="pp-edit-kat-'+eid+'" style="width:100%;height:30px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:6px;font-size:11px">'+katOpts+'</select></div>'
           + '</div>'
           + '<div style="display:flex;gap:6px;margin-top:4px">'
+          + '<div style="margin-bottom:8px"><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px">Labels</label>'+ppDDWidget('edit-'+eid, e.labels||[])+'</div>'\
           + '<button onclick="ppSaveEdit(\''+eid+'\')" style="padding:4px 12px;background:var(--purple-accent);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer"><i class="ti ti-check"></i> Simpan</button>'
           + '<button onclick="ppCancelEdit(\''+eid+'\')" style="padding:4px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">Batal</button>'
           + '</div></div>'
@@ -8422,6 +8449,7 @@ function ppDatabaseHTML(){
           + '<td style="padding:10px 12px;font-size:12px;color:var(--text-muted);white-space:nowrap;width:10%">'+(e.bulan||'')+'</td>'
           // Kategori
           + '<td style="padding:10px 12px;width:16%"><span style="font-size:11px;background:var(--purple-light);color:var(--purple-mid);border-radius:20px;padding:2px 9px;white-space:nowrap">'+(e.kategori||'')+'</span></td>'
+          + '<td style="padding:10px 12px;width:18%"><div style="display:flex;flex-wrap:wrap;gap:3px">'+(e.labels&&e.labels.length?ppLabelBadges(e.labels):'<span style="font-size:11px;color:var(--text-muted)">—</span>')+'</div></td>'\
           // Aksi
           + '<td style="padding:10px 12px;text-align:center;width:7%"><button onclick="ppDeleteEntry(\''+eid+'\')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px"><i class="ti ti-trash"></i></button></td>'
           + '</tr>';
@@ -8438,12 +8466,13 @@ function ppDatabaseHTML(){
     + '</div>'
     + '<div style="background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">'
     + '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'
-    + '<colgroup><col style="width:55%"><col style="width:12%"><col style="width:10%"><col style="width:16%"><col style="width:7%"></colgroup>'
+    + '<colgroup><col style="width:42%"><col style="width:11%"><col style="width:9%"><col style="width:13%"><col style="width:18%"><col style="width:7%"></colgroup>'
     + '<thead><tr style="background:var(--bg);border-bottom:0.5px solid var(--border-md)">'
     + '<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint)">Komentar / Diskusi</th>'
     + '<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint)">Platform</th>'
     + '<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint)">Bulan</th>'
     + '<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint)">Kategori</th>'
+    + '<th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint)">Labels</th>'
     + '<th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-hint)">Aksi</th>'
     + '</thead><tbody>' + rows + '</tbody>'
     + '</table></div>'
@@ -8492,6 +8521,8 @@ async function ppSaveEdit(id){
   var newPlat = (document.getElementById('pp-edit-plat-'+id)||{}).value||'';
   var newBulan = (document.getElementById('pp-edit-bulan-'+id)||{}).value||'';
   var newKat = (document.getElementById('pp-edit-kat-'+id)||{}).value||'';
+  var labelEl = document.getElementById('pp-dd-picked-edit-'+id);
+  var newLabels = labelEl ? JSON.parse(labelEl.value||'[]') : null;
   var entry = (ppEntries||[]).find(function(e){ return String(e.id) === String(id); });
   if(entry){
     entry.comment = newText;
@@ -8499,6 +8530,7 @@ async function ppSaveEdit(id){
     if(newPlat) entry.platform = newPlat;
     if(newBulan) entry.bulan = newBulan;
     if(newKat) entry.kategori = newKat;
+    if(newLabels !== null) entry.labels = newLabels;
     if(typeof id === 'string' && id.length > 20){
       const ok = await sb_updatePainPoint(id, entry);
       if(!ok){ showToast('Gagal update entri','error'); return; }
@@ -8905,27 +8937,31 @@ function fcRenderCharts() {
   const DIST_COLORS = { 1:'#ef4444', 2:'#f97316', 3:'#eab308', 4:'#7c6ff7', 5:'#16a34a' };
   const STAR_LABELS = { 1:'1★', 2:'2★', 3:'3★', 4:'4★', 5:'5★' };
 
-  const ratingCardsHTML = sorted.map(r => {
-    const distRow = [1,2,3,4,5].map(star => {
+  // ── Bar list per aspek ──
+  const maxAvg = sorted.length ? sorted[sorted.length-1].avg : 5;
+  const ratingCardsHTML = sorted.map((r, idx) => {
+    const barPct = (r.avg / 5 * 100).toFixed(1);
+    // Distribusi bintang inline — highlight 1★2★3★ kalau ada
+    const distPills = [1,2,3,4,5].map(star => {
       const count = r.dist[star] || 0;
-      const pct   = r.n ? Math.round(count/r.n*100) : 0;
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
-        <div style="font-size:9px;font-weight:600;color:${DIST_COLORS[star]}">${STAR_LABELS[star]}</div>
-        <div style="font-size:13px;font-weight:700;color:${count>0?DIST_COLORS[star]:'var(--text-muted)'}">${count}</div>
-        <div style="font-size:9px;color:var(--text-muted)">${pct}%</div>
-      </div>`;
+      const isLow = star <= 3 && count > 0;
+      const isMid = star === 4 && count > 0;
+      const color = isLow ? DIST_COLORS[1] : isMid ? DIST_COLORS[4] : DIST_COLORS[5];
+      const bg    = isLow ? '#fee2e2' : isMid ? '#ede9fe' : '#dcfce7';
+      const weight = isLow ? '700' : '500';
+      return `<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:${count>0?bg:'var(--bg)'};color:${count>0?color:'var(--text-muted)'};font-weight:${weight};white-space:nowrap">${star}★ ${count}</span>`;
     }).join('');
 
-    return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-        <div style="font-size:11px;font-weight:600;color:var(--text);line-height:1.4;flex:1">${r.label}</div>
-        ${r.n < total ? `<span style="font-size:9px;color:var(--text-muted);flex-shrink:0;margin-top:2px">n=${r.n}</span>` : ''}
+    const isLast = idx === sorted.length - 1;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:${isLast?'none':'0.5px solid var(--border)'}">
+      <div style="font-size:12px;color:var(--text);flex:0 0 220px;line-height:1.3">${r.label}${r.n < total ? ` <span style="font-size:9px;color:var(--text-muted)">(n=${r.n})</span>` : ''}</div>
+      <div style="flex:1;min-width:80px">
+        <div style="background:var(--bg);border-radius:4px;height:7px">
+          <div style="width:${barPct}%;height:7px;border-radius:4px;background:${ratingColor(r.avg)}"></div>
+        </div>
       </div>
-      <div style="text-align:center">
-        <div style="font-size:28px;font-weight:800;color:${ratingColor(r.avg)};line-height:1">${r.avg.toFixed(2)}</div>
-        <div style="font-size:9px;color:var(--text-muted);margin-top:2px">dari 5.0</div>
-      </div>
-      <div style="display:flex;gap:4px;padding-top:8px;border-top:0.5px solid var(--border)">${distRow}</div>
+      <div style="font-size:14px;font-weight:700;color:${ratingColor(r.avg)};flex:0 0 38px;text-align:right">${r.avg.toFixed(2)}</div>
+      <div style="display:flex;gap:4px;flex:0 0 auto">${distPills}</div>
     </div>`;
   }).join('');
 
@@ -8939,7 +8975,15 @@ function fcRenderCharts() {
   </tr>`).join('');
 
   // ── Open-ended helper ──
-  const isNoise = (s) => !s || /^[\s\-–—\.\/\\,]+$/.test(s) || s.trim().length < 3;
+  const _noisePatterns = /^(sudah\s*baik|sudah\s*oke|udah\s*oke|udah\s*baik|tidak\s*ada|belum\s*ada|tidak\s*ada\s*yang.*|ga\s*ada|gak\s*ada|ngga\s*ada|gada|blm\s*ada|tdk\s*ada|good|oke|ok|baik|sudah\s*cukup|cukup\s*baik|cukup|bagus|mantap|mantep|keren|great|good\s*job|-)$/i;
+  const isNoise = (s) => {
+    if (!s) return true;
+    const t = s.trim();
+    if (t.length < 4) return true;
+    if (/^[\s\-–—\.\/\\,!?]+$/.test(t)) return true;
+    if (_noisePatterns.test(t)) return true;
+    return false;
+  };
   const openEndedHTML = (title, icon, iconColor, key) => {
     const items = data
       .map(r => ({ text: (r[key]||'').trim(), nama: r.nama||r.email||'—', seri: (r.seri||'').replace(/free class series\s*/i,'FCS ') }))
@@ -8971,12 +9015,17 @@ function fcRenderCharts() {
       <div class="stat-card"><div class="stat-label">Free Class Series</div><div class="stat-val">${Object.keys(seriesCount).length}</div><div class="stat-change">sesi</div></div>
     </div>
 
-    <!-- Rating Cards -->
+    <!-- Rating Bar List -->
     <div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:14px">Rating per Aspek <span style="font-size:11px;font-weight:400;color:var(--text-muted)">— urut terendah ke tertinggi</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-        ${ratingCardsHTML}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:700">Rating per Aspek <span style="font-size:11px;font-weight:400;color:var(--text-muted)">— urut terendah ke tertinggi</span></div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:10px">
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#fee2e2;display:inline-block"></span><span style="color:var(--text-muted)">1-3★ ada isian</span></span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#ede9fe;display:inline-block"></span><span style="color:var(--text-muted)">4★</span></span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#dcfce7;display:inline-block"></span><span style="color:var(--text-muted)">5★</span></span>
+        </div>
       </div>
+      ${ratingCardsHTML}
     </div>
 
     <!-- Responden per Series + Top Uni -->
@@ -9007,27 +9056,54 @@ function fcRenderCharts() {
       </div>` : '<div></div>'}
     </div>
 
-    <!-- Tabel Responden -->
-    <div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Daftar Responden <span style="font-size:11px;font-weight:400;color:var(--text-muted)">${total} orang</span></div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead><tr style="background:var(--bg)">
-            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Email</th>
-            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Nama</th>
-            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Universitas</th>
-            <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)">Angkatan</th>
-            <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)">Series</th>
-          </tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Persebaran Angkatan -->
+    ${(() => {
+      const angkatanCount = {};
+      data.forEach(r => { const a = (r.angkatan||'').toString().trim(); if(a) angkatanCount[a] = (angkatanCount[a]||0)+1; });
+      const sorted = Object.entries(angkatanCount).sort((a,b)=>a[0].localeCompare(b[0]));
+      if (!sorted.length) return '';
+      const maxN = Math.max(...sorted.map(([,n])=>n));
+      return `<div class="card" style="padding:16px 18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Persebaran Angkatan</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:80px;margin-bottom:8px">
+          ${sorted.map(([yr,n]) => `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted)">${n}</div>
+              <div style="width:100%;background:var(--purple-accent);border-radius:3px 3px 0 0;height:${Math.max(4,Math.round(n/maxN*56))}px"></div>
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px">
+          ${sorted.map(([yr]) => `<div style="flex:1;text-align:center;font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${yr}</div>`).join('')}
+        </div>
+      </div>`;
+    })()}
 
     <!-- Open-ended -->
     ${openEndedHTML('Hal yang Sudah Baik', 'thumb-up', '#16a34a', 'hal_baik')}
     ${openEndedHTML('Yang Perlu Ditingkatkan', 'alert-triangle', '#d97706', 'ditingkatkan')}
     ${openEndedHTML('Topik yang Ingin Dipelajari', 'bulb', 'var(--purple-accent)', 'topik_keinginan')}
+
+    <!-- Tabel Responden — collapsible -->
+    <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
+      <div onclick="const b=document.getElementById('fc-resp-body');const i=document.getElementById('fc-resp-icon');const open=b.style.display!=='none';b.style.display=open?'none':'block';i.style.transform=open?'rotate(0)':'rotate(180deg)'" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;user-select:none">
+        <div style="font-size:13px;font-weight:700">Daftar Responden <span style="font-size:11px;font-weight:400;color:var(--text-muted)">${total} orang</span></div>
+        <i id="fc-resp-icon" class="ti ti-chevron-down" style="font-size:16px;color:var(--text-muted);transition:transform .2s"></i>
+      </div>
+      <div id="fc-resp-body" style="display:none;padding:0 18px 14px">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg)">
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Email</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Nama</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted)">Universitas</th>
+              <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)">Angkatan</th>
+              <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted)">Series</th>
+            </tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <div style="font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px">${total} responden · Analytics Free Class</div>
   `;
@@ -9157,6 +9233,116 @@ function renderChangelog(p){
   </div>`;
 }
 
+// PP label badge colors
+const PP_LABEL_COLORS = [
+  {bg:'#EEEDFE',color:'#3C3489'},{bg:'#dcfce7',color:'#166534'},
+  {bg:'#fef3c7',color:'#92400e'},{bg:'#fee2e2',color:'#991b1b'},
+  {bg:'#e0f2fe',color:'#075985'},{bg:'#fce7f3',color:'#9d174d'},
+  {bg:'#f3e8ff',color:'#6b21a8'},{bg:'#ecfccb',color:'#365314'},
+];
+function ppLabelColor(lbl) {
+  let h = 0; for (let i=0;i<lbl.length;i++) h=(h*31+lbl.charCodeAt(i))>>>0;
+  return PP_LABEL_COLORS[h % PP_LABEL_COLORS.length];
+}
+function ppLabelBadges(labels) {
+  if (!labels || !labels.length) return '';
+  return labels.map(l => {
+    const c = ppLabelColor(l);
+    return `<span style="font-size:10px;padding:1px 8px;border-radius:20px;font-weight:500;background:${c.bg};color:${c.color};white-space:nowrap">${l}</span>`;
+  }).join('');
+}
+
+// PP label dropdown state (per entry edit & new form)
+var _ppLabels = [];
+function ppDDOpen(containerId) {
+  const list = document.getElementById('pp-dd-list-'+containerId);
+  if (!list) return;
+  ppDDRenderItems(containerId);
+  list.style.display = 'block';
+  document.getElementById('pp-dd-new-row-'+containerId).style.display = 'none';
+  document.getElementById('pp-dd-new-trigger-'+containerId).style.display = 'flex';
+  setTimeout(() => document.addEventListener('click', function h(e){
+    const wrap = document.getElementById('pp-dd-wrap-'+containerId);
+    if (wrap && !wrap.contains(e.target)) { list.style.display='none'; }
+    else document.addEventListener('click', h, {once:true});
+  }, {once:true}), 10);
+}
+function ppDDRenderItems(cid) {
+  const el = document.getElementById('pp-dd-items-'+cid);
+  if (!el) return;
+  const all = [...new Set((ppEntries||[]).flatMap(e=>e.labels||[]))].sort();
+  const user = (window._ppUserLabels||[]).filter(l=>!all.includes(l));
+  const pool = [...all,...user];
+  const picked = JSON.parse(document.getElementById('pp-dd-picked-'+cid)?.value||'[]');
+  const available = pool.filter(l=>!picked.includes(l));
+  el.innerHTML = available.length
+    ? available.map(l=>`<div class="cl-dd-item" onclick="ppDDPick('${cid}','${l.replace(/'/g,"\'")}')"><i class="ti ti-tag" style="font-size:12px;color:var(--text-muted)"></i>${l}</div>`).join('')
+    : `<div style="padding:10px 12px;font-size:12px;color:var(--text-muted)">Semua label dipilih / belum ada</div>`;
+}
+function ppDDPick(cid, val) {
+  const hiddenEl = document.getElementById('pp-dd-picked-'+cid);
+  const chipsEl  = document.getElementById('pp-dd-chips-'+cid);
+  if (!hiddenEl||!chipsEl) return;
+  const picked = JSON.parse(hiddenEl.value||'[]');
+  if (!picked.includes(val)) { picked.push(val); hiddenEl.value = JSON.stringify(picked); }
+  ppDDRenderChips(cid);
+  document.getElementById('pp-dd-list-'+cid).style.display='none';
+}
+function ppDDRemove(cid, val) {
+  const hiddenEl = document.getElementById('pp-dd-picked-'+cid);
+  if (!hiddenEl) return;
+  const picked = JSON.parse(hiddenEl.value||'[]').filter(l=>l!==val);
+  hiddenEl.value = JSON.stringify(picked);
+  ppDDRenderChips(cid);
+}
+function ppDDRenderChips(cid) {
+  const hiddenEl = document.getElementById('pp-dd-picked-'+cid);
+  const chipsEl  = document.getElementById('pp-dd-chips-'+cid);
+  if (!hiddenEl||!chipsEl) return;
+  const picked = JSON.parse(hiddenEl.value||'[]');
+  chipsEl.innerHTML = picked.map(l=>{
+    const c = ppLabelColor(l);
+    return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;background:${c.bg};color:${c.color}">${l}<button onclick="ppDDRemove('${cid}','${l.replace(/'/g,"\'")}');event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0;font-size:13px;line-height:1;color:${c.color}">×</button></span>`;
+  }).join('');
+}
+function ppDDShowNew(cid) {
+  document.getElementById('pp-dd-new-trigger-'+cid).style.display='none';
+  document.getElementById('pp-dd-new-row-'+cid).style.display='flex';
+  setTimeout(()=>{ const i=document.getElementById('pp-dd-new-input-'+cid); if(i)i.focus();},30);
+}
+function ppDDConfirmNew(cid) {
+  const inp = document.getElementById('pp-dd-new-input-'+cid);
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (!val) return;
+  if (!window._ppUserLabels) window._ppUserLabels=[];
+  if (!window._ppUserLabels.includes(val)) window._ppUserLabels.push(val);
+  ppDDPick(cid, val);
+  inp.value='';
+  document.getElementById('pp-dd-list-'+cid).style.display='none';
+}
+function ppDDWidget(cid, initLabels) {
+  const initVal = JSON.stringify(initLabels||[]);
+  return `<div id="pp-dd-wrap-${cid}" class="cl-dd-wrap">
+    <input type="hidden" id="pp-dd-picked-${cid}" value='${initVal}'>
+    <div id="pp-dd-chips-${cid}" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">${ppLabelBadges(initLabels||[]).replace(/span>/g,'span onclick="void(0)">').replace(/<\/span>/g,'</span>')}</div>
+    <div class="cl-dd-trigger" onclick="ppDDOpen('${cid}')">
+      <span style="font-size:12px">Label...</span>
+      <i class="ti ti-chevron-down" style="font-size:13px"></i>
+    </div>
+    <div class="cl-dd-list" id="pp-dd-list-${cid}" style="display:none">
+      <div id="pp-dd-items-${cid}"></div>
+      <div class="cl-dd-new-trigger" id="pp-dd-new-trigger-${cid}" onclick="ppDDShowNew('${cid}')">
+        <i class="ti ti-plus" style="font-size:13px"></i>Buat label baru
+      </div>
+      <div class="cl-dd-new-row" id="pp-dd-new-row-${cid}" style="display:none">
+        <input id="pp-dd-new-input-${cid}" placeholder="Nama label baru..." onkeydown="if(event.key==='Enter'){event.preventDefault();ppDDConfirmNew('${cid}')}">
+        <button onclick="ppDDConfirmNew('${cid}')">Tambah</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function ppEntryRow(e){
   const platIcon=e.platform==="TikTok"?"brand-tiktok":e.platform==="Instagram"?"brand-instagram":"brand-twitter";
   return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)">
@@ -9166,6 +9352,7 @@ function ppEntryRow(e){
         <span class="pill pill-gray"><i class="ti ti-${platIcon}" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>${e.platform}</span>
         <span class="pill pill-gray"><i class="ti ti-calendar" style="font-size:10px;vertical-align:-1px;margin-right:2px"></i>${e.bulan}</span>
         <span class="pill pill-purple">${e.kategori}</span>
+        ${ppLabelBadges(e.labels||[])}
       </div>
     </div>
     <button class="btn btn-sm btn-danger" onclick="ppDelete('${e.id}')" style="flex-shrink:0;padding:3px 8px"><i class="ti ti-trash"></i></button>
@@ -10680,19 +10867,18 @@ var _daSubTab = 'references'; // 'references' | 'assets'
 
 function designHTML(){
   return `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-    <div class="tab-row" style="margin:0">
-      <div class="tab ${_daSubTab==='references'?'active':''}" onclick="_daSwitchTab('references')"><i class="ti ti-photo" style="font-size:12px"></i> Design References</div>
-      <div class="tab ${_daSubTab==='assets'?'active':''}" onclick="_daSwitchTab('assets')"><i class="ti ti-files" style="font-size:12px"></i> Design Assets</div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <select id="da-filter-kat" onchange="daRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
-        <option value="">Semua Kategori</option>
-      </select>
-      <button onclick="daOpenUploadModal()" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
-        <i class="ti ti-upload" style="font-size:14px"></i> Upload
-      </button>
-    </div>
+  <div class="tab-row" style="margin-bottom:10px">
+    <div class="tab ${_daSubTab==='references'?'active':''}" onclick="_daSwitchTab('references')"><i class="ti ti-photo" style="font-size:12px"></i> Design References</div>
+    <div class="tab ${_daSubTab==='assets'?'active':''}" onclick="_daSwitchTab('assets')"><i class="ti ti-files" style="font-size:12px"></i> Design Assets</div>
+  </div>
+  <div class="filter-bar">
+    <select id="da-filter-kat" onchange="daRenderGallery()">
+      <option value="">Kategori</option>
+    </select>
+    <div class="filter-bar-spacer"></div>
+    <button onclick="daOpenUploadModal()" class="filter-bar-btn primary">
+      <i class="ti ti-upload" style="font-size:13px"></i> Upload
+    </button>
   </div>
   <div id="da-gallery"></div>`;
 }
@@ -10876,12 +11062,21 @@ function daSendToContentLib(id) {
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABEL <span style="color:#e53e3e">*</span></label>
         <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
-        <div style="display:flex;gap:6px">
-          <select id="cl-label-input" style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);color:var(--text)">
-            <option value="">-- Pilih label --</option>
-            ${allLabels.map(l=>`<option value="${l}">${l}</option>`).join('')}
-          </select>
-          <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
+        <div class="cl-dd-wrap">
+          <div class="cl-dd-trigger" onclick="clDDOpen()">
+            <span style="font-size:12px">Pilih atau buat label...</span>
+            <i class="ti ti-chevron-down" style="font-size:13px" aria-hidden="true"></i>
+          </div>
+          <div class="cl-dd-list" id="cl-dd-list" style="display:none">
+            <div id="cl-dd-items"></div>
+            <div class="cl-dd-new-trigger" id="cl-dd-new-trigger" onclick="clDDShowNew()">
+              <i class="ti ti-plus" style="font-size:13px" aria-hidden="true"></i>Buat label baru
+            </div>
+            <div class="cl-dd-new-row" id="cl-dd-new-row" style="display:none">
+              <input id="cl-dd-new-input" placeholder="Nama label baru..." onkeydown="if(event.key==='Enter'){event.preventDefault();clDDConfirmNew()}">
+              <button onclick="clDDConfirmNew()">Tambah</button>
+            </div>
+          </div>
         </div>
       </div>
       <div>
@@ -14498,26 +14693,27 @@ function renderTpList() {
     <div class="stat-card"><div class="stat-label">Belum Beli</div><div class="stat-val" style="color:var(--amber)">${belumBeli}</div></div>
   </div>
 
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-    <input id="tp-search" class="form-input" placeholder="Cari nama / email / WA..." value="${_tpFilter.search}" oninput="_tpFilter.search=this.value;renderTpList()" style="flex:1;min-width:200px;font-size:12px">
-    <select class="form-input" style="font-size:12px;width:auto" onchange="_tpFilter.pipeline=this.value;renderTpList()">
-      <option value="">Semua Pipeline</option>
+  <div class="filter-bar">
+    <input id="tp-search" type="text" placeholder="Cari nama / WA..." value="${_tpFilter.search}" oninput="_tpFilter.search=this.value;renderTpList()">
+    <select onchange="_tpFilter.pipeline=this.value;renderTpList()">
+      <option value="">Pipeline</option>
       <option value="beli" ${_tpFilter.pipeline==='beli'?'selected':''}>Sudah Beli</option>
       <option value="belum" ${_tpFilter.pipeline==='belum'?'selected':''}>Belum Beli</option>
     </select>
-    <select class="form-input" style="font-size:12px;width:auto" onchange="_tpFilter.status=this.value;renderTpList()">
-      <option value="">Semua Status</option>
+    <select onchange="_tpFilter.status=this.value;renderTpList()">
+      <option value="">Status</option>
       ${statuses.map(s=>`<option value="${s}" ${_tpFilter.status===s?'selected':''}>${s}</option>`).join('')}
     </select>
-    <select class="form-input" style="font-size:12px;width:auto" onchange="_tpFilter.sumber=this.value;renderTpList()">
-      <option value="">Semua Sumber</option>
+    <select onchange="_tpFilter.sumber=this.value;renderTpList()">
+      <option value="">Sumber</option>
       ${sumbers.map(s=>`<option value="${s}" ${_tpFilter.sumber===s?'selected':''}>${s}</option>`).join('')}
     </select>
-    <select class="form-input" style="font-size:12px;width:auto" onchange="_tpFilter.campus_tier=this.value;renderTpList()">
-      <option value="">Semua Tier</option>
+    <select onchange="_tpFilter.campus_tier=this.value;renderTpList()">
+      <option value="">Tier</option>
       ${tiers.map(t=>`<option value="${t}" ${_tpFilter.campus_tier===t?'selected':''}>${t}</option>`).join('')}
     </select>
-    <button onclick="tpOpenImport()" class="btn" style="font-size:12px"><i class="ti ti-upload"></i> Import CSV</button>
+    <div class="filter-bar-spacer"></div>
+    <button onclick="tpOpenImport()" class="filter-bar-btn primary"><i class="ti ti-upload" style="font-size:13px"></i> Import</button>
   </div>
 
   <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${filtered.length} dari ${total} data</div>
@@ -16678,29 +16874,32 @@ const CL_PLATFORM_ICON = {
 
 function contentLibHTML() {
   return `
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-    <h2 style="font-size:18px;font-weight:700;margin:0">Content Library</h2>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="cl-filter-platform" onchange="clUpdateSortOptions();clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
-        <option value="">Semua Platform</option>
+  <div style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <h2 style="font-size:18px;font-weight:700;margin:0">Content Library</h2>
+    </div>
+    <div class="filter-bar">
+      <select id="cl-filter-platform" onchange="clUpdateSortOptions();clRenderGallery()">
+        <option value="">Platform</option>
         ${CL_PLATFORM.map(p => `<option value="${p}">${p}</option>`).join('')}
       </select>
-      <select id="cl-filter-jenis" onchange="clUpdateSortOptions();clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
-        <option value="">Semua Jenis</option>
+      <select id="cl-filter-jenis" onchange="clUpdateSortOptions();clRenderGallery()">
+        <option value="">Jenis</option>
         ${CL_JENIS.map(j => `<option value="${j}">${j}</option>`).join('')}
       </select>
-      <select id="cl-filter-label" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
-        <option value="">Semua Label</option>
+      <select id="cl-filter-label" onchange="clRenderGallery()">
+        <option value="">Label</option>
       </select>
-      <select id="cl-sort" onchange="clRenderGallery()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)">
-        <option value="">Urutkan...</option>
+      <select id="cl-sort" onchange="clRenderGallery()">
+        <option value="">Urutkan</option>
         <option value="views">↓ Views</option>
         <option value="likes">↓ Likes</option>
         <option value="comments">↓ Comments</option>
         <option value="shares">↓ Shares</option>
       </select>
-      <button onclick="clOpenUploadModal()" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
-        <i class="ti ti-plus" style="font-size:14px"></i> Tambah
+      <div class="filter-bar-spacer"></div>
+      <button onclick="clOpenUploadModal()" class="filter-bar-btn primary">
+        <i class="ti ti-plus" style="font-size:13px"></i> Tambah
       </button>
     </div>
   </div>
@@ -16884,10 +17083,21 @@ function clOpenUploadModal(prefillFile) {
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS (opsional)</label>
         <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
-        <div style="display:flex;gap:6px">
-          <input id="cl-label-input" list="cl-label-suggestions-new" placeholder="Ketik atau pilih label..." style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
-          <datalist id="cl-label-suggestions-new">${[...new Set(clData.flatMap(c=>c.labels||[]))].sort().map(l=>`<option value="${l}">`).join('')}</datalist>
-          <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
+        <div class="cl-dd-wrap">
+          <div class="cl-dd-trigger" onclick="clDDOpen()">
+            <span style="font-size:12px">Pilih atau buat label...</span>
+            <i class="ti ti-chevron-down" style="font-size:13px" aria-hidden="true"></i>
+          </div>
+          <div class="cl-dd-list" id="cl-dd-list" style="display:none">
+            <div id="cl-dd-items"></div>
+            <div class="cl-dd-new-trigger" id="cl-dd-new-trigger" onclick="clDDShowNew()">
+              <i class="ti ti-plus" style="font-size:13px" aria-hidden="true"></i>Buat label baru
+            </div>
+            <div class="cl-dd-new-row" id="cl-dd-new-row" style="display:none">
+              <input id="cl-dd-new-input" placeholder="Nama label baru..." onkeydown="if(event.key==='Enter'){event.preventDefault();clDDConfirmNew()}">
+              <button onclick="clDDConfirmNew()">Tambah</button>
+            </div>
+          </div>
         </div>
       </div>
       <div>
@@ -16957,24 +17167,91 @@ function linkInputRefresh(id) {
   btn.style.display = val ? 'flex' : 'none';
 }
 
-function clAddLabel() {
-  const input = document.getElementById('cl-label-input');
-  if (!input) return;
-  const val = input.value.trim();
-  if (!val) return;
+function clAddLabel() { clDDConfirmNew(); }
+
+function clAddLabelVal(val) {
+  if (!val || !val.trim()) return;
   if (!window._clLabels) window._clLabels = [];
-  if (window._clLabels.includes(val)) { input.value=''; return; }
-  window._clLabels.push(val);
-  input.value = '';
+  if (window._clLabels.includes(val.trim())) return;
+  window._clLabels.push(val.trim());
   clRenderLabelChips();
+  clDDRenderItems();
 }
 
 function clRenderLabelChips() {
   const el = document.getElementById('cl-label-chips');
   if (!el) return;
-  const labels = window._clLabels || [];
-  el.innerHTML = labels.map((l,i) => `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--purple-light);color:var(--purple-mid);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${l}<button onclick="window._clLabels.splice(${i},1);clRenderLabelChips()" style="background:none;border:none;cursor:pointer;padding:0;color:var(--purple-mid);font-size:12px;line-height:1">×</button></span>`).join('');
+  el.innerHTML = (window._clLabels||[]).map((l,i) =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--purple-light);color:var(--purple-mid);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${l}<button onclick="window._clLabels.splice(${i},1);clRenderLabelChips();clDDRenderItems()" style="background:none;border:none;cursor:pointer;padding:0;color:var(--purple-mid);font-size:12px;line-height:1">×</button></span>`
+  ).join('');
 }
+
+// ── Custom label dropdown ────────────────────────────────────────
+function clDDOpen() {
+  const list = document.getElementById('cl-dd-list');
+  if (!list) return;
+  clDDRenderItems();
+  list.style.display = 'block';
+  document.getElementById('cl-dd-new-row') && (document.getElementById('cl-dd-new-row').style.display = 'none');
+  document.getElementById('cl-dd-new-trigger') && (document.getElementById('cl-dd-new-trigger').style.display = 'flex');
+  // tutup kalau klik di luar
+  setTimeout(() => {
+    document.addEventListener('click', clDDOutsideClick, { once: true });
+  }, 10);
+}
+
+function clDDOutsideClick(e) {
+  const wrap = document.querySelector('.cl-dd-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const list = document.getElementById('cl-dd-list');
+    if (list) list.style.display = 'none';
+  } else {
+    document.addEventListener('click', clDDOutsideClick, { once: true });
+  }
+}
+
+function clDDRenderItems() {
+  const el = document.getElementById('cl-dd-items');
+  if (!el) return;
+  // allLabels dari clData + label baru yang dibuat user
+  const existing = [...new Set((clData||[]).flatMap(c=>c.labels||[]))].sort();
+  const userAdded = (window._clAllLabels||[]).filter(l=>!existing.includes(l));
+  const pool = [...existing, ...userAdded];
+  const picked = window._clLabels || [];
+  const available = pool.filter(l => !picked.includes(l));
+  el.innerHTML = available.length
+    ? available.map(l => `<div class="cl-dd-item" onclick="clDDPick('${l.replace(/'/g,"\'")}')"><i class="ti ti-tag" style="font-size:12px;color:var(--text-muted)" aria-hidden="true"></i>${l}</div>`).join('')
+    : `<div style="padding:10px 12px;font-size:12px;color:var(--text-muted)">Semua label sudah dipilih</div>`;
+}
+
+function clDDPick(val) {
+  clAddLabelVal(val);
+  const list = document.getElementById('cl-dd-list');
+  if (list) list.style.display = 'none';
+}
+
+function clDDShowNew() {
+  document.getElementById('cl-dd-new-trigger').style.display = 'none';
+  document.getElementById('cl-dd-new-row').style.display = 'flex';
+  setTimeout(() => {
+    const inp = document.getElementById('cl-dd-new-input');
+    if (inp) inp.focus();
+  }, 30);
+}
+
+function clDDConfirmNew() {
+  const inp = document.getElementById('cl-dd-new-input');
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (!val) return;
+  if (!window._clAllLabels) window._clAllLabels = [];
+  if (!window._clAllLabels.includes(val)) window._clAllLabels.push(val);
+  clAddLabelVal(val);
+  inp.value = '';
+  const list = document.getElementById('cl-dd-list');
+  if (list) list.style.display = 'none';
+}
+// ── End custom label dropdown ────────────────────────────────────
 
 async function clDoUpload() {
   const platform = document.getElementById('cl-platform').value;
@@ -17060,12 +17337,12 @@ function clRenderPreviewModal(c) {
           <span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:1px 7px;border-radius:10px;white-space:nowrap">${c.jenis}</span>
         </div>
       </div>
-      <div style="display:flex;gap:5px;flex-shrink:0;align-items:center">
-        ${c.link?`<a href="${c.link}" target="_blank" class="btn btn-sm" style="padding:5px 9px;display:flex;align-items:center;gap:5px" title="Buka link"><i class="ti ti-external-link" style="font-size:14px"></i><span style="font-size:11px">Buka Link</span></a>`:''}
-        <button onclick="clOpenEditModal('${c.id}')" class="btn btn-sm" style="padding:5px 9px;display:flex;align-items:center;gap:5px" title="Edit"><i class="ti ti-edit" style="font-size:14px"></i><span style="font-size:11px">Edit</span></button>
-        <button onclick="clOpenAddImageModal('${c.id}')" class="btn btn-sm" style="padding:5px 9px;display:flex;align-items:center;gap:5px" title="Tambah gambar"><i class="ti ti-photo-plus" style="font-size:14px"></i><span style="font-size:11px">Tambah Gambar</span></button>
-        <button onclick="clConfirmDelete('${c.id}')" class="btn btn-sm" style="padding:5px 9px;color:var(--red)" title="Hapus"><i class="ti ti-trash" style="font-size:14px"></i></button>
-        <button onclick="gcalCloseModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:5px;display:flex;align-items:center;margin-left:2px"><i class="ti ti-x" style="font-size:18px"></i></button>
+      <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+        ${c.link?`<a href="${c.link}" target="_blank" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--border-md);background:var(--white);cursor:pointer;text-decoration:none;color:var(--text);min-width:48px" title="Buka Link"><i class="ti ti-external-link" style="font-size:16px;color:var(--purple-mid)"></i><span style="font-size:9px;color:var(--text-muted);white-space:nowrap">Buka</span></a>`:''}
+        <button onclick="clOpenEditModal('${c.id}')" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--border-md);background:var(--white);cursor:pointer;min-width:48px" title="Edit"><i class="ti ti-edit" style="font-size:16px;color:var(--purple-mid)"></i><span style="font-size:9px;color:var(--text-muted)">Edit</span></button>
+        <button onclick="clOpenAddImageModal('${c.id}')" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--border-md);background:var(--white);cursor:pointer;min-width:48px" title="Tambah Gambar"><i class="ti ti-photo-plus" style="font-size:16px;color:var(--purple-mid)"></i><span style="font-size:9px;color:var(--text-muted)">Gambar</span></button>
+        <button onclick="clConfirmDelete('${c.id}')" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--border-md);background:var(--white);cursor:pointer;min-width:48px" title="Hapus"><i class="ti ti-trash" style="font-size:16px;color:var(--red)"></i><span style="font-size:9px;color:var(--red)">Hapus</span></button>
+        <button onclick="gcalCloseModal()" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:8px;border:0.5px solid var(--border-md);background:var(--white);cursor:pointer;min-width:36px"><i class="ti ti-x" style="font-size:16px;color:var(--text-muted)"></i></button>
       </div>
     </div>
     <div style="overflow-y:auto;flex:1">
@@ -17143,10 +17420,21 @@ function clOpenEditModal(id) {
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS</label>
         <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
-        <div style="display:flex;gap:6px">
-          <input id="cl-label-input" list="cl-label-suggestions" placeholder="Ketik atau pilih label..." style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
-          <datalist id="cl-label-suggestions">${allLabels.map(l=>`<option value="${l}">`).join('')}</datalist>
-          <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
+        <div class="cl-dd-wrap">
+          <div class="cl-dd-trigger" onclick="clDDOpen()">
+            <span style="font-size:12px">Pilih atau buat label...</span>
+            <i class="ti ti-chevron-down" style="font-size:13px" aria-hidden="true"></i>
+          </div>
+          <div class="cl-dd-list" id="cl-dd-list" style="display:none">
+            <div id="cl-dd-items"></div>
+            <div class="cl-dd-new-trigger" id="cl-dd-new-trigger" onclick="clDDShowNew()">
+              <i class="ti ti-plus" style="font-size:13px" aria-hidden="true"></i>Buat label baru
+            </div>
+            <div class="cl-dd-new-row" id="cl-dd-new-row" style="display:none">
+              <input id="cl-dd-new-input" placeholder="Nama label baru..." onkeydown="if(event.key==='Enter'){event.preventDefault();clDDConfirmNew()}">
+              <button onclick="clDDConfirmNew()">Tambah</button>
+            </div>
+          </div>
         </div>
       </div>
       <div>
