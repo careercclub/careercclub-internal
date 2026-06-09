@@ -8434,7 +8434,7 @@ function ppDatabaseHTML(){
           + '<select id="pp-edit-kat-'+eid+'" style="width:100%;height:30px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:6px;font-size:11px">'+katOpts+'</select></div>'
           + '</div>'
           + '<div style="display:flex;gap:6px;margin-top:4px">'
-          + '<div style="margin-bottom:8px"><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px">Labels</label>'+ppDDWidget('edit-'+eid, e.labels||[])+'</div>'\
+          + '<div style="margin-bottom:8px"><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px">Labels</label>'+ppDDWidget('edit-'+eid, e.labels||[])+'</div>'
           + '<button onclick="ppSaveEdit(\''+eid+'\')" style="padding:4px 12px;background:var(--purple-accent);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer"><i class="ti ti-check"></i> Simpan</button>'
           + '<button onclick="ppCancelEdit(\''+eid+'\')" style="padding:4px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">Batal</button>'
           + '</div></div>'
@@ -18287,21 +18287,7 @@ async function gcalCreateEvent(taskId) {
     if (statsGrid) { const div = document.createElement('div'); div.innerHTML = html; statsGrid.after(div); }
   }
 
-  // Patch switchPage for notion renders
-  const _origSwitchNotion=window.switchPage;
-  window.switchPage=function(page,el){
-    _origSwitchNotion(page,el);
-    if(!document.body.classList.contains('pwa-mode')||window.innerWidth>600) return;
-    setTimeout(()=>{
-      if(page==='dashboard') _pwaRenderDashboard();
-      if(page==='crm') setTimeout(_pwaRenderCRM,300);
-      if(page==='talentpool') setTimeout(_pwaRenderTalentPool,300);
-      if(page==='partner') setTimeout(_pwaRenderB2B,300);
-      if(page==='orgpartner') setTimeout(_pwaRenderOrg,300);
-      _pwaFixStatsGrid();
-      _pwaConvertAllTables();
-    },100);
-  };
+
 
   // Run on initial PWA load — after all functions defined
   if (isPWA) {
@@ -18648,22 +18634,30 @@ async function gcalCreateEvent(taskId) {
     });
   }
 
-  // Patch switchPage to fix stats after render
+  // Patch switchPage — merged: notion renders + stats fix + nav sync
   const _origSwitchPage = window.switchPage;
   window.switchPage = function(page, el) {
+    if (typeof _origSwitchPage !== 'function') return;
     _origSwitchPage(page, el);
-    if (!document.body.classList.contains('pwa-mode')) return;
-    // Fix stats grid after render
-    setTimeout(_pwaFixStatsGrid, 50);
-    // Fix tables to cards after render
-    setTimeout(_pwaConvertAllTables, 150);
-    // Sync bottom nav
-    const bottomPages = ['dashboard','project','contentlib','partner','orgpartner','design'];
-    document.querySelectorAll('.pwa-nav-tab').forEach(t => t.classList.remove('active'));
-    if (bottomPages.includes(page)) {
-      const tab = document.getElementById('pwatab-' + page);
-      if (tab) tab.classList.add('active');
-    }
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    // Notion list renders
+    setTimeout(() => {
+      if (page === 'dashboard')   _pwaRenderDashboard();
+      if (page === 'crm')         setTimeout(_pwaRenderCRM, 300);
+      if (page === 'talentpool')  setTimeout(_pwaRenderTalentPool, 300);
+      if (page === 'partner')     setTimeout(_pwaRenderB2B, 300);
+      if (page === 'orgpartner')  setTimeout(_pwaRenderOrg, 300);
+      // Stats + tables
+      _pwaFixStatsGrid();
+      _pwaConvertAllTables();
+      // Sync bottom nav
+      const bottomPages = ['dashboard','project','contentlib','partner','orgpartner','design'];
+      document.querySelectorAll('.pwa-nav-tab').forEach(t => t.classList.remove('active'));
+      if (bottomPages.includes(page)) {
+        const tab = document.getElementById('pwatab-' + page);
+        if (tab) tab.classList.add('active');
+      }
+    }, 100);
   };
 })();
 </script>
