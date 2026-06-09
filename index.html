@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>CCC Internal Dashboard</title>
 
 <!-- PWA iOS -->
@@ -367,7 +367,7 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
 #loker-page .stat-val{ font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1; margin-bottom: 6px; }
 #loker-page .stat-change{ font-size: 11px; display: flex; align-items: center; gap: 4px; color: #888; }
 #loker-page .section-label{ font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
-#loker-page .cards-grid{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+#loker-page .cards-grid{ display: block; margin-bottom: 20px; }
 #loker-page .dash-card{ background: #fff; border-radius: 14px; padding: 16px; border: 0.5px solid #e5e3f5; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 10px; }
 #loker-page .dash-card:hover{ border-color: #7c6ff7; transform: translateY(-2px); box-shadow: 0 4px 20px rgba(124,111,247,0.1); }
 #loker-page .card-top{ display: flex; align-items: flex-start; justify-content: space-between; }
@@ -505,7 +505,7 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
   #loker-page .dash-greeting { font-size: 16px; }
 
   /* Cards grid */
-  #loker-page .cards-grid { grid-template-columns: 1fr !important; }
+  #loker-page .cards-grid { display: block !important; }
 
   /* Charts */
   #loker-page .charts-row { grid-template-columns: 1fr !important; }
@@ -581,6 +581,9 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
   .cl-card-img { height:120px !important; }
   #gcal-modal-overlay { padding:8px !important; }
   #gcal-modal-overlay > div { width:96vw !important; max-height:90vh; }
+
+  /* ── CONTENT LIBRARY ── */
+  #cl-gallery > div { grid-template-columns: repeat(2,1fr) !important; gap:8px !important; }
 
   /* ── GRAPHIC DESIGN ── */
   .da-filter { flex-direction:column; gap:7px; }
@@ -757,7 +760,7 @@ body.pwa-mode .topbar {
   padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px)) !important;
 }
 body.pwa-mode .topbar .page-title { color: #fff !important; font-size: 16px !important; font-weight: 700 !important; }
-body.pwa-mode .topbar .notif-btn i { color: rgba(255,255,255,0.8) !important; }
+body.pwa-mode .topbar .notif-btn i { color: var(--text-muted) !important; }
 body.pwa-mode .topbar .notif-dot { border-color: #2d2777 !important; }
 body.pwa-mode #pageDate { color: rgba(255,255,255,0.7) !important; }
 body.pwa-mode .topbar * { color: #fff !important; }
@@ -825,6 +828,10 @@ body.pwa-mode .topbar * { color: #fff !important; }
   /* Fix 2: Program event cards 1 kolom */
   .pwa-prog-grid { grid-template-columns: 1fr !important; }
   .pwa-prog-grid > div[style*="grid-column"] { grid-column: 1 !important; }
+
+  /* Fix: Tab Events — sembunyikan stats grid, tunjukkan event header */
+  body.pwa-mode.pwa-proj-tasks .stats-grid { display: none !important; }
+  body.pwa-mode.pwa-proj-tasks .pwa-events-header { display: flex !important; }
 
   /* Fix 3: Program task table — stack layout */
   body.pwa-mode .mobile-table-wrap table thead tr th:nth-child(3),
@@ -1178,7 +1185,19 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
         <div id="pageTitle" class="page-title">Dashboard</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <div class="notif-btn"><i class="ti ti-bell" style="font-size:15px;color:var(--text-muted)"></i><div class="notif-dot"></div></div>
+        <div style="position:relative">
+          <div class="notif-btn" id="notif-bell-btn" onclick="notifToggle()" style="cursor:pointer;position:relative">
+            <i class="ti ti-bell" style="font-size:15px;color:var(--text-muted)"></i>
+            <div class="notif-dot" id="notif-badge" style="display:none;position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#e53e3e;border-radius:50%;border:2px solid var(--white)"></div>
+          </div>
+          <div id="notif-panel" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:340px;background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9998;overflow:hidden">
+            <div style="padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:13px;font-weight:700">Aktivitas Terbaru</div>
+              <button onclick="notifMarkRead()" style="font-size:10px;color:var(--purple-accent);background:none;border:none;cursor:pointer;font-weight:600">Tandai semua dibaca</button>
+            </div>
+            <div id="notif-list" style="max-height:400px;overflow-y:auto"></div>
+          </div>
+        </div>
         <div style="font-size:12px;color:var(--text-muted)">May 2026</div>
       </div>
     </div>
@@ -1454,8 +1473,6 @@ window.lokerHTML = function lokerHTML() {
         <div class="stat-card"><div class="stat-label">Industri Terbanyak</div><div class="stat-val" id="s-topind" style="font-size:14px;padding-top:4px">—</div><div class="stat-change" id="s-topind-sub">—</div></div>
         <div class="stat-card"><div class="stat-label">Buka Bulan Ini</div><div class="stat-val" id="s-thismonth">0</div><div class="stat-change"><i class="ti ti-calendar" style="font-size:12px"></i> bulan berjalan</div></div>
       </div>
-      <div class="section-label">Ringkasan per Kategori</div>
-      <div class="cards-grid" id="industryCards"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px">
         <div class="section-label" style="margin-bottom:0">Tren Bulanan</div>
         <select id="dashYearFilter" class="filter-select" onchange="renderDashboard()" style="min-width:90px;height:28px;font-size:11px;color:var(--text);background:var(--white);border:0.5px solid var(--border-md);border-radius:8px;padding:0 8px"></select>
@@ -1472,6 +1489,8 @@ window.lokerHTML = function lokerHTML() {
           <div class="chart-wrap"><canvas id="chartIndustry"></canvas></div>
         </div>
       </div>
+      <div class="section-label" style="margin-top:16px">Ringkasan per Kategori</div>
+      <div class="cards-grid" id="industryCards"></div>
     </div>
 
     <!-- LIST -->
@@ -1687,11 +1706,228 @@ async function sb_load(table, opts = {}) {
   }
 }
 
+// ─── ACTIVITY LOG & NOTIFICATION SYSTEM ──────────────────────────
+
+// Mapping table Supabase → nama modul yang tampil di notif
+const _ACT_MODULE_MAP = {
+  tickets:                    'Tickets',
+  tasks:                      'Tasks',
+  crm_leads:                  'CRM',
+  crm_contacts:               'CRM',
+  events:                     'Program/Events',
+  event_tasks:                'Program/Events',
+  talent_pool:                'Talent Pool',
+  content_library:            'Content Library',
+  design_assets:              'Graphic Design',
+  content_eval:               'Content Evaluation',
+  pain_points:                'Customer Knowledge',
+  pain_point_platforms:       'Customer Knowledge',
+  pain_point_categories:      'Customer Knowledge',
+  free_class_eval:            'Customer Knowledge',
+  mt_vacancies:               'MT Vacancies',
+  b2b_partners:               'B2B Partnership',
+  b2b_deals:                  'B2B Partnership',
+  org_partners:               'Org Partnership',
+  org_deals:                  'Org Partnership',
+  competitor_products:        'Competitor Intel',
+  competitor_product_prices:  'Competitor Intel',
+  competitor_snapshots:       'Competitor Intel',
+  competitor_flags:           'Competitor Intel',
+  ig_snapshots:               'Instagram',
+  ig_baselines:               'Instagram',
+  ig_targets:                 'Instagram',
+  resources:                  'Resources',
+  vouchers:                   'Voucher',
+  products:                   'Products',
+};
+
+// Tabel yang di-skip dari activity log (terlalu noisy / system tables)
+const _ACT_SKIP_TABLES = new Set([
+  'activity_log', 'mt_industries', 'mt_companies',
+  'divisi', 'people', 'ticket_types',
+]);
+
+var _notifLastSeen = parseInt(localStorage.getItem('notif_last_seen') || '0');
+var _notifItems = [];
+
+async function logActivity(action, table, detail) {
+  // Fire-and-forget — tidak boleh throw ke caller
+  try {
+    if (!_sb) return;
+    if (_ACT_SKIP_TABLES.has(table)) return;
+    const module = _ACT_MODULE_MAP[table] || table;
+    const userName = (currentUser && currentUser.nama) ? currentUser.nama : 'System';
+    const { error } = await _sb.from('activity_log').insert([{
+      user_name: userName,
+      module,
+      action,
+      detail: (detail || '').substring(0, 120),
+    }]);
+    if (error) { console.warn('[logActivity] insert error:', error.message); return; }
+    // Update in-memory list & badge tanpa reload penuh
+    _notifItems.unshift({
+      user_name: userName, module, action,
+      detail: (detail || '').substring(0, 120),
+      created_at: new Date().toISOString(),
+    });
+    if (_notifItems.length > 30) _notifItems = _notifItems.slice(0, 30);
+    notifCheckNew();
+    // Re-render kalau panel sedang terbuka
+    const panel = document.getElementById('notif-panel');
+    if (panel && panel.style.display !== 'none') notifRender();
+  } catch(e) {
+    console.warn('[logActivity] unexpected error:', e);
+    // Swallow — jangan ganggu flow utama
+  }
+}
+
+function _notifTimeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60)   return s + ' detik lalu';
+  const m = Math.floor(s / 60);
+  if (m < 60)   return m + ' menit lalu';
+  const h = Math.floor(m / 60);
+  if (h < 24)   return h + ' jam lalu';
+  const d = Math.floor(h / 24);
+  if (d < 7)    return d + ' hari lalu';
+  // Lebih dari seminggu → tampil tanggal+jam
+  const dt = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
+
+function _notifModuleIcon(module) {
+  const map = {
+    'Tickets':           'ti-ticket',
+    'Tasks':             'ti-checkup-list',
+    'CRM':               'ti-users',
+    'Program/Events':    'ti-calendar-event',
+    'Talent Pool':       'ti-user-search',
+    'Content Library':   'ti-photo',
+    'Graphic Design':    'ti-brush',
+    'Content Evaluation':'ti-chart-bar',
+    'Customer Knowledge':'ti-bulb',
+    'MT Vacancies':      'ti-briefcase',
+    'B2B Partnership':   'ti-building',
+    'Org Partnership':   'ti-school',
+    'Competitor Intel':  'ti-spy',
+    'Instagram':         'ti-brand-instagram',
+    'Resources':         'ti-folder',
+    'Voucher':           'ti-tag',
+    'Products':          'ti-box',
+  };
+  return map[module] || 'ti-activity';
+}
+
+function _notifActionColor(action) {
+  if (action === 'Tambah') return '#16a34a';
+  if (action === 'Hapus')  return '#dc2626';
+  if (action === 'Update') return '#7c6ff7';
+  if (action === 'Import') return '#d97706';
+  return 'var(--text-muted)';
+}
+
+async function notifLoad() {
+  try {
+    if (!_sb) return;
+    const { data, error } = await _sb.from('activity_log')
+      .select('*').order('created_at', { ascending: false }).limit(30);
+    if (error) { console.warn('[notifLoad] query error:', error.message); return; }
+    _notifItems = data || [];
+    notifRender();
+    notifCheckNew();
+  } catch(e) {
+    console.warn('[notifLoad] unexpected error:', e);
+    // Swallow — jangan ganggu bootstrap
+  }
+}
+
+function notifRender() {
+  const el = document.getElementById('notif-list');
+  if (!el) return;
+  if (!_notifItems.length) {
+    el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--text-muted);font-size:12px">
+      <i class="ti ti-bell-off" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada aktivitas</div>`;
+    return;
+  }
+  el.innerHTML = _notifItems.map(item => {
+    const ts = new Date(item.created_at).getTime();
+    const isNew = ts > _notifLastSeen;
+    const icon  = _notifModuleIcon(item.module);
+    const color = _notifActionColor(item.action);
+    // Format tanggal + jam lengkap
+    const dt = new Date(item.created_at);
+    const pad = n => String(n).padStart(2,'0');
+    const fullTime = `${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    return `<div style="display:flex;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);${isNew?'background:var(--purple-light)':''}">
+      <div style="width:30px;height:30px;border-radius:8px;background:${isNew?'var(--purple-accent)':'var(--bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+        <i class="ti ${icon}" style="font-size:14px;color:${isNew?'#fff':'var(--text-muted)'}"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span style="font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.4px">${item.action}</span>
+          <span style="font-size:10px;color:var(--text-muted)">${item.module}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.detail||'—'}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+          <span style="font-size:10px;color:var(--text-muted)">${item.user_name||'System'}</span>
+          <span style="font-size:9px;color:var(--text-muted)">·</span>
+          <span style="font-size:10px;color:var(--text-muted)" title="${fullTime}">${_notifTimeAgo(item.created_at)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function notifCheckNew() {
+  const el = document.getElementById('notif-badge');
+  if (!el) return;
+  const hasNew = _notifItems.some(i => new Date(i.created_at).getTime() > _notifLastSeen);
+  el.style.display = hasNew ? 'block' : 'none';
+}
+
+function notifToggle() {
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+  } else {
+    panel.style.display = 'block';
+    notifLoad(); // refresh setiap buka
+  }
+}
+
+function notifMarkRead() {
+  _notifLastSeen = Date.now();
+  localStorage.setItem('notif_last_seen', _notifLastSeen);
+  notifCheckNew();
+  notifRender();
+}
+
+// Tutup panel kalau klik di luar
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('notif-panel');
+  const btn   = document.getElementById('notif-bell-btn');
+  if (!panel || panel.style.display === 'none') return;
+  if (!panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+
+// ─── END ACTIVITY LOG SYSTEM ──────────────────────────────────────
+
 async function sb_insert(table, payload) {
   try {
     const { data, error } = await _sb.from(table).insert([payload]).select();
     if (error) throw error;
-    return data && data[0];
+    const result = data && data[0];
+    // Log activity
+    const detail = payload.nama || payload.title || payload.judul || payload.nama_lengkap ||
+                   payload.email || payload.name || payload.konten_id || '';
+    logActivity('Tambah', table, detail ? String(detail).substring(0,80) : '');
+    return result;
   } catch (err) {
     console.error('[sb_insert] ' + table + ' → ' + _sbErrInfo(err) + ' | payload=' + JSON.stringify(payload));
     _sbToast('Gagal simpan ke ' + table, true);
@@ -1703,6 +1939,10 @@ async function sb_update(table, id, updates) {
   try {
     const { error } = await _sb.from(table).update(updates).eq('id', id);
     if (error) throw error;
+    // Log activity
+    const detail = updates.nama || updates.title || updates.judul || updates.nama_lengkap ||
+                   updates.email || updates.name || '';
+    logActivity('Update', table, detail ? String(detail).substring(0,80) : '');
     return true;
   } catch (err) {
     console.error('[sb_update] ' + table + ' → ' + _sbErrInfo(err) + ' | id=' + id + ' | updates=' + JSON.stringify(updates));
@@ -1715,6 +1955,8 @@ async function sb_delete(table, id) {
   try {
     const { error } = await _sb.from(table).delete().eq('id', id);
     if (error) throw error;
+    // Log activity
+    logActivity('Hapus', table, 'ID: ' + String(id).substring(0,36));
     return true;
   } catch (err) {
     console.error('[sb_delete] ' + table + ' → ' + _sbErrInfo(err) + ' | id=' + id);
@@ -2308,6 +2550,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Global ESC key handler — tutup modal yang sedang terbuka
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    // 0. Notif panel — tutup dulu kalau terbuka
+    const notifPanel = document.getElementById('notif-panel');
+    if (notifPanel && notifPanel.style.display !== 'none') {
+      notifPanel.style.display = 'none';
+      return;
+    }
     // 1. Modal dinamis (.modal-overlay) yang di-append ke body → remove()
     const dynamicModal = document.querySelector('.modal-overlay:not([id])');
     if (dynamicModal) { dynamicModal.remove(); return; }
@@ -2486,6 +2734,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       painpoints: ppEntries.length, evalContents: evalContents.length
     });
     _sbToast('✓ Data loaded from Supabase');
+    notifLoad(); // Load activity log untuk badge
   } catch (err) {
     console.error('[Supabase] Bootstrap error:', err);
     _sbToast('Bootstrap error — cek console', true);
@@ -2613,6 +2862,7 @@ function initPartnerTab(tab){
   else if(tab==="pipeline") c.innerHTML=partnershipPipelineHTML();
   else if(tab==="deals"){c.innerHTML=partnershipDealsHTML();renderPartnerDeals();}
   else if(tab==="outreach"){c.innerHTML=partnershipOutreachHTML();renderOutreachLog();}
+  if(document.body.classList.contains('pwa-mode')&&window.innerWidth<=600){if(typeof _pwaRenderB2B==='function')setTimeout(_pwaRenderB2B,100);if(typeof _pwaFixStatsGrid==='function')setTimeout(_pwaFixStatsGrid,100);}
 }
 function toggleSidebar() {
   const sidebar  = document.getElementById('sidebar');
@@ -5637,6 +5887,11 @@ function initOrgPartnerTab(tab){
   else if(tab==="pipeline") c.innerHTML=opPipelineHTML();
   else if(tab==="deals"){c.innerHTML=opDealsHTML();renderOrgPartnerDeals();}
   else if(tab==="outreach"){c.innerHTML=opOutreachHTML();renderOrgOutreachLog();}
+  // PWA Notion render
+  if(document.body.classList.contains('pwa-mode') && window.innerWidth<=600){
+    if(typeof _pwaRenderOrg==='function') setTimeout(_pwaRenderOrg,100);
+    if(typeof _pwaFixStatsGrid==='function') setTimeout(_pwaFixStatsGrid,100);
+  }
 }
 
 // ── OVERVIEW ──
@@ -6776,6 +7031,9 @@ function initProjectTab(tab){
   document.querySelectorAll("#mainContent .tab").forEach(t=>t.classList.remove("active"));
   const btn=document.getElementById("projtab-"+tab);
   if(btn) btn.classList.add("active");
+  // PWA: set body class biar CSS tau tab mana yang aktif
+  document.body.classList.remove('pwa-proj-overview','pwa-proj-tasks','pwa-proj-history','pwa-proj-calendar');
+  document.body.classList.add('pwa-proj-' + tab);
   const c=document.getElementById("project-tab-content");
   if(tab==="overview") c.innerHTML=projectOverviewHTML();
   else if(tab==="tasks") c.innerHTML=projectTasksHTML();
@@ -8427,6 +8685,7 @@ async function fcHandleFile(input) {
       }
       await fcLoadAndRender();
       showToast(`${saved} data berhasil disimpan ✓`);
+      logActivity('Import', 'free_class_eval', `${saved} responden diimport`);
     } catch(e) {
       showToast('Gagal: ' + (e.message || e), 'error');
     }
@@ -8487,6 +8746,7 @@ async function fcFetchData() {
     document.getElementById('fc-import-section').style.display = 'none';
     await fcLoadAndRender();
     showToast(`${saved} data berhasil disimpan ✓`);
+    logActivity('Import', 'free_class_eval', `${saved} responden diimport via URL`);
   } catch(e) {
     if (status) status.textContent = '❌ ' + e.message;
     showToast('Gagal import: ' + e.message, 'error');
@@ -9014,6 +9274,15 @@ function projectTasksHTML(){
   };
 
   return `
+  <!-- PWA Events header — visible di mobile aja -->
+  <div class="pwa-events-header" style="display:none;align-items:center;gap:8px;margin-bottom:12px;background:var(--purple-dark);border-radius:12px;padding:12px 14px">
+    <i class="ti ti-checklist" style="font-size:18px;color:rgba(255,255,255,0.8)"></i>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:500;margin-bottom:1px">TASKS EVENT</div>
+      <div style="font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nama}</div>
+    </div>
+    <span style="font-size:11px;color:rgba(255,255,255,0.7)">${projectTasks.filter(t=>_idEq(t.projectId,p.id)).length} task</span>
+  </div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
     <select id="proj-select" onchange="activeProjectId=this.value;initProjectTab('tasks')" style="font-size:13px;flex:1;min-width:0;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--white)">
       ${displayProjects.map(pr=>`<option value="${pr.id}" ${pr.id===p.id?"selected":""}>${pr.nama}</option>`).join("")}
@@ -10595,24 +10864,23 @@ function daSendToContentLib(id) {
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN</label>
         ${linkInputHTML("cl-link", a.link||"", "https://...")}
       </div>
-      <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
-        <textarea id="cl-copy" rows="3" placeholder="Paste caption atau copywriting..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit"></textarea>
-      </div>
+
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
-          ${[['cl-views','👁','Views'],['cl-likes','❤️','Likes'],['cl-comments','💬','Comments'],['cl-shares','🔁','Shares']].map(([eid,icon,lbl])=>
-            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">${icon} ${lbl}</label><input id="${eid}" type="number" min="0" placeholder="0" style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
+          ${[['cl-views','👁','Views'],['cl-likes','❤️','Likes (wajib)'],['cl-comments','💬','Comments'],['cl-shares','🔁','Shares']].map(([eid,icon,lbl])=>
+            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;${eid==='cl-likes'?'color:#e53e3e;font-weight:700':''}">${icon} ${lbl}</label><input id="${eid}" type="number" min="0" placeholder="0" style="width:100%;padding:6px 8px;border:0.5px solid ${eid==='cl-likes'?'#e53e3e':'var(--border-md)'};border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
           ).join('')}
         </div>
       </div>
       <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS (opsional)</label>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABEL <span style="color:#e53e3e">*</span></label>
         <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
         <div style="display:flex;gap:6px">
-          <input id="cl-label-input" list="cl-label-sug" placeholder="Ketik atau pilih label..." style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onkeydown="if(event.key==='Enter'){event.preventDefault();clAddLabel()}">
-          <datalist id="cl-label-sug">${allLabels.map(l=>`<option value="${l}">`).join('')}</datalist>
+          <select id="cl-label-input" style="flex:1;padding:6px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);color:var(--text)">
+            <option value="">-- Pilih label --</option>
+            ${allLabels.map(l=>`<option value="${l}">${l}</option>`).join('')}
+          </select>
           <button onclick="clAddLabel()" class="btn btn-sm" style="font-size:11px">+ Add</button>
         </div>
       </div>
@@ -10643,6 +10911,11 @@ async function clDoSendFromDA(daId) {
     document.getElementById('cl-likes').focus();
     return;
   }
+  if (!link) {
+    showToast('Link konten wajib diisi', 'error');
+    document.getElementById('cl-link').focus();
+    return;
+  }
   const likes       = parseInt(likesRawDA)||0;
   const comments    = parseInt(document.getElementById('cl-comments').value)||0;
   const shares      = parseInt(document.getElementById('cl-shares').value)||0;
@@ -10652,6 +10925,11 @@ async function clDoSendFromDA(daId) {
   const labels      = labelEls.length
     ? [...labelEls].map(el => el.childNodes[0]?.textContent?.trim()).filter(Boolean)
     : (window._clLabels || []);
+  if (!labels.length) {
+    showToast('Label wajib diisi', 'error');
+    document.getElementById('cl-label-input').focus();
+    return;
+  }
   const btn = document.getElementById('cl-upload-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
@@ -11241,31 +11519,26 @@ async function daConfirmDelete(id) {
 
     const cardContainer = document.getElementById('industryCards');
     const indEntries = Object.entries(ic).sort((a,b)=>b[1]-a[1]);
+    const maxCount = indEntries.length ? indEntries[0][1] : 1;
     cardContainer.innerHTML = indEntries.length === 0 ?
-      '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888">Belum ada data. Tambahkan loker MT pertama!</div>' :
-      indEntries.map(([ind, count]) => {
-        const icon = IND_ICONS[ind] || 'ti-category';
+      '<div style="text-align:center;padding:40px;color:#888">Belum ada data. Tambahkan loker MT pertama!</div>' :
+      '<div style="background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">' +
+      indEntries.map(([ind, count], idx) => {
         const uniqueCompanies = [...icCompanies[ind]];
-        // Buka bulan ini: dedupe by company juga
         const companiesOpenThisMonth = new Set(data.filter(d=>d.industry===ind && d.months && d.months.includes(now.getMonth()+1)).map(d=>d.company));
         const thisMonthCount = companiesOpenThisMonth.size;
-        const statusLabel = thisMonthCount > 0 ? 'Buka Bulan Ini' : 'Tidak Ada Bulan Ini';
-        const statusClass = thisMonthCount > 0 ? 'pill-green' : 'pill-amber';
-        return `<div class="dash-card" onclick="filterByIndustry('${ind}')">
-          <div class="card-top">
-            <div class="card-icon ic-purple"><i class="ti ${icon}"></i></div>
-            <span class="status-pill ${statusClass}">${statusLabel}</span>
+        const barPct = Math.round(count / maxCount * 100);
+        const hasBuka = thisMonthCount > 0;
+        return `<div onclick="filterByIndustry('${ind}')" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:${idx<indEntries.length-1?'0.5px solid var(--border)':'none'};cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+          <span style="font-size:13px;font-weight:500;color:var(--text);min-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ind}">${ind}</span>
+          <div style="flex:1;background:var(--bg);border-radius:4px;height:6px;min-width:60px">
+            <div style="width:${barPct}%;height:6px;border-radius:4px;background:#7c6ff7"></div>
           </div>
-          <div>
-            <div class="card-title">${ind}</div>
-            <div class="card-desc" style="margin-top:4px">${uniqueCompanies.slice(0,3).join(', ')}${uniqueCompanies.length>3?' +lainnya':''}</div>
-          </div>
-          <div class="card-footer">
-            <div class="card-count"><strong>${count}</strong> perusahaan · <strong>${thisMonthCount}</strong> buka bulan ini</div>
-            <i class="ti ti-arrow-right card-arrow"></i>
-          </div>
+          <span style="font-size:12px;color:var(--text-muted);min-width:26px;text-align:right">${count}</span>
+          <span style="font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500;flex-shrink:0;background:${hasBuka?'#eaf3de':'#f1efe8'};color:${hasBuka?'#3b6d11':'#5f5e5a'}">${hasBuka?thisMonthCount+' buka':'0 buka'}</span>
+          <i class="ti ti-chevron-right" style="font-size:13px;color:var(--text-muted);flex-shrink:0"></i>
         </div>`;
-      }).join('');
+      }).join('') + '</div>';
 
     if(chartMonthly) chartMonthly.destroy();
     // Populate year dropdown
@@ -14626,6 +14899,7 @@ async function _tpDoImport(rows) {
       (skipped > 0 ? ` · ${skipped} dilewati (email kosong)` : '') +
       (dupCount > 0 ? ` · ${dupCount} duplikat digabung` : '');
     showToast(msg);
+    logActivity('Import', 'talent_pool', `${success} data diimport ke Talent Pool`);
   } catch(e) {
     showToast('Gagal import: ' + _sbErrInfo(e), 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
@@ -16593,12 +16867,11 @@ function clOpenUploadModal(prefillFile) {
         </div>
       </div>
       <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN (opsional)</label>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN</label>
         ${linkInputHTML("cl-link", "", "https://...")}
       </div>
       <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
-        <textarea id="cl-copy" rows="3" placeholder="Paste caption atau copywriting yang mau diambil..." style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit"></textarea>
+
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
@@ -16715,6 +16988,12 @@ async function clDoUpload() {
     document.getElementById('cl-likes').focus();
     return;
   }
+  const clLink = document.getElementById('cl-link')?.value.trim()||'';
+  if (!clLink) {
+    showToast('Link konten wajib diisi', 'error');
+    document.getElementById('cl-link').focus();
+    return;
+  }
   const likes    = parseInt(likesRaw)||0;
   const comments = parseInt(document.getElementById('cl-comments').value)||0;
   const shares   = parseInt(document.getElementById('cl-shares').value)||0;
@@ -16724,6 +17003,11 @@ async function clDoUpload() {
   const labels   = labelEls.length
     ? [...labelEls].map(el => el.childNodes[0]?.textContent?.trim()).filter(Boolean)
     : (window._clLabels || []);
+  if (!labels.length) {
+    showToast('Label wajib diisi', 'error');
+    document.getElementById('cl-label-input').focus();
+    return;
+  }
   const files    = window._clFiles || [];
 
   const btn = document.getElementById('cl-upload-btn');
@@ -16744,6 +17028,7 @@ async function clDoUpload() {
   if (!saved) { showToast('Gagal simpan', 'error'); if(btn){btn.disabled=false;btn.textContent='Simpan';} return; }
 
   clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
+  logActivity('Tambah', 'content_library', `${row.jenis||''} · ${row.platform||''} · ${(row.link||'').substring(0,50)}`);
   gcalCloseModal();
   clPopulateLabelFilter();
   clRenderGallery();
@@ -16845,8 +17130,7 @@ function clOpenEditModal(id) {
         ${linkInputHTML("cle-link", c.link, "https://...")}
       </div>
       <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING / CAPTION</label>
-        <textarea id="cle-copy" rows="3" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit">${c.copywriting}</textarea>
+
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
@@ -16904,6 +17188,7 @@ async function clSaveEdit(id) {
   const ok = await sb_updateContentLib(id, updates);
   if (!ok) { showToast('Gagal simpan', 'error'); return; }
   Object.assign(c, updates);
+  logActivity('Update', 'content_library', `${updates.jenis||c.jenis||''} · ${(updates.link||c.link||'').substring(0,50)}`);
   clPopulateLabelFilter();
   clRenderGallery();
   clRenderPreviewModal(c);
@@ -17020,8 +17305,10 @@ async function clConfirmDelete(id) {
   const c = clData.find(x => _idEq(x.id, id));
   if (!c) return;
   for (const p of (c.storage_paths||[])) await sb_deleteDesignFile(p);
+  const delItem = clData.find(x => _idEq(x.id, id));
   await sb_deleteContentLib(id);
   clData = clData.filter(x => !_idEq(x.id, id));
+  logActivity('Hapus', 'content_library', delItem ? `${delItem.jenis||''} · ${(delItem.link||'').substring(0,50)}` : '');
   gcalCloseModal();
   clRenderGallery();
   showToast('Konten dihapus ✓');
@@ -17494,6 +17781,224 @@ async function gcalCreateEvent(taskId) {
     tblWrap.parentElement.insertBefore(wrap,tblWrap);
   }
 
+  // ── B2B PARTNERSHIP — Notion list per tab ───────────────────────
+  function _pwaRenderB2B() {
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    const tab = document.querySelector('#mainContent .tab.active');
+    const activeTab = tab ? tab.id.replace('ptab-','') : 'overview';
+    if (activeTab === 'overview') _pwaRenderB2BOverview();
+    else if (activeTab === 'master') _pwaRenderB2BMaster();
+    else if (activeTab === 'pipeline') _pwaRenderB2BPipeline();
+  }
+
+  function _pwaRenderB2BOverview() {
+    // Sembunyikan tabel, inject notion list di bawah stats
+    const tables = document.querySelectorAll('#mainContent table');
+    tables.forEach(t => { const wrap = t.closest('div[style*="overflow"]'); if (wrap) wrap.style.display = 'none'; });
+    const card = document.querySelector('#mainContent .card');
+    if (!card || card.querySelector('.pwa-notion-list')) return;
+    const STATUS_COLOR = { 'Closed Deal':'#16a34a','Negotiation':'#d97706','Sales Meet':'#7c6ff7','Approached':'#3b82f6','Closed Lost':'#dc2626' };
+    const list = document.createElement('div');
+    list.className = 'pwa-notion-list';
+    list.style.cssText = 'background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden;margin-top:8px';
+    const sorted = [...partners].sort((a,b) => {
+      const order = ['Negotiation','Sales Meet','Approached','Closed Deal','Closed Lost'];
+      return order.indexOf(a.status) - order.indexOf(b.status);
+    });
+    sorted.slice(0,20).forEach(p => {
+      const col = _pwaAvatarColor(p.name);
+      const sc = STATUS_COLOR[p.status] || '#6b7280';
+      const row = document.createElement('div');
+      row.className = 'pwa-notion-row';
+      row.onclick = () => openPartnerModal(p.id);
+      row.innerHTML = `
+        <div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(p.name)}</div>
+        <div class="pwa-notion-main">
+          <div class="pwa-notion-title">${p.name}</div>
+          <div class="pwa-notion-sub">${p.type} · ${p.pic||'—'} · ${p.industri||'—'}</div>
+        </div>
+        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+          <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc};font-weight:600">${p.status}</span>
+          <span style="font-size:9px;color:var(--text-muted)">Tier ${p.tier||'—'}</span>
+        </div>`;
+      list.appendChild(row);
+    });
+    if (!sorted.length) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px">Belum ada partner</div>';
+    card.appendChild(list);
+  }
+
+  function _pwaRenderB2BMaster() {
+    const wrap = document.querySelector('#mainContent div[style*="overflow-x"]');
+    if (!wrap || wrap.querySelector('.pwa-notion-list')) return;
+    const STATUS_COLOR = { 'Closed Deal':'#16a34a','Negotiation':'#d97706','Sales Meet':'#7c6ff7','Approached':'#3b82f6','Closed Lost':'#dc2626' };
+    let html = '<div class="pwa-notion-list" style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">';
+    const sorted = [...partners].sort((a,b) => a.name.localeCompare(b.name));
+    sorted.forEach(p => {
+      const col = _pwaAvatarColor(p.name);
+      const sc = STATUS_COLOR[p.status] || '#6b7280';
+      html += `<div class="pwa-notion-row" onclick="openPartnerModal('${p.id}')">
+        <div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(p.name)}</div>
+        <div class="pwa-notion-main">
+          <div class="pwa-notion-title">${p.name}</div>
+          <div class="pwa-notion-sub">${p.pic||'—'} · ${p.pos||'—'}</div>
+        </div>
+        <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc};font-weight:600;flex-shrink:0">${p.status}</span>
+      </div>`;
+    });
+    html += '</div>';
+    wrap.style.display = 'none';
+    const div = document.createElement('div'); div.innerHTML = html;
+    wrap.parentElement.insertBefore(div, wrap);
+  }
+
+  function _pwaRenderB2BPipeline() {
+    // Pipeline: group by status sebagai section header
+    const content = document.getElementById('mainContent');
+    if (!content || content.querySelector('.pwa-pipeline-list')) return;
+    const kanban = content.querySelector('.kanban-board, [style*="kanban"], div[style*="overflow-x"][style*="gap"]');
+    if (kanban) kanban.style.display = 'none';
+    const STATUS_ORDER = ['Approached','Sales Meet','Negotiation','Closed Deal','Closed Lost'];
+    const STATUS_COLOR = { 'Closed Deal':'#16a34a','Negotiation':'#d97706','Sales Meet':'#7c6ff7','Approached':'#3b82f6','Closed Lost':'#dc2626' };
+    let html = '<div class="pwa-pipeline-list" style="margin-top:8px">';
+    STATUS_ORDER.forEach(status => {
+      const items = partners.filter(p => p.status === status);
+      if (!items.length) return;
+      const sc = STATUS_COLOR[status];
+      html += `<div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:0 2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${sc};display:inline-block;flex-shrink:0"></span>
+          <span style="font-size:11px;font-weight:700;color:${sc};text-transform:uppercase;letter-spacing:.5px">${status}</span>
+          <span style="font-size:10px;color:var(--text-muted)">${items.length} partner</span>
+        </div>
+        <div style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">
+          ${items.map(p => {
+            const col = _pwaAvatarColor(p.name);
+            return `<div class="pwa-notion-row" onclick="openPartnerModal('${p.id}')">
+              <div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(p.name)}</div>
+              <div class="pwa-notion-main">
+                <div class="pwa-notion-title">${p.name}</div>
+                <div class="pwa-notion-sub">${p.type} · Tier ${p.tier||'—'}</div>
+              </div>
+              ${p.lastContact ? `<span style="font-size:9px;color:var(--text-muted);flex-shrink:0">${p.lastContact}</span>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    const statsGrid = content.querySelector('.stats-grid');
+    const insertAfter = statsGrid || content.firstElementChild;
+    if (insertAfter) {
+      const div = document.createElement('div'); div.innerHTML = html;
+      insertAfter.after(div);
+    }
+  }
+
+  // ── ORG PARTNERSHIP — Notion list ────────────────────────────────
+  function _pwaRenderOrg() {
+    if (!document.body.classList.contains('pwa-mode') || window.innerWidth > 600) return;
+    const tab = document.querySelector('#mainContent .tab.active');
+    const activeTab = tab ? tab.id.replace('optab-','') : 'overview';
+    if (activeTab === 'overview') _pwaRenderOrgOverview();
+    else if (activeTab === 'master') _pwaRenderOrgMaster();
+    else if (activeTab === 'pipeline') _pwaRenderOrgPipeline();
+  }
+
+  function _pwaRenderOrgOverview() {
+    const tables = document.querySelectorAll('#mainContent table');
+    tables.forEach(t => { const wrap = t.closest('div[style*="overflow"]'); if (wrap) wrap.style.display = 'none'; });
+    const card = document.querySelector('#mainContent .card');
+    if (!card || card.querySelector('.pwa-notion-list')) return;
+    const STATUS_COLOR = { 'Closed Deal':'#16a34a','Negotiation':'#d97706','Sales Meet':'#7c6ff7','Approached':'#3b82f6','Closed Lost':'#dc2626' };
+    const list = document.createElement('div');
+    list.className = 'pwa-notion-list';
+    list.style.cssText = 'background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden;margin-top:8px';
+    const sorted = [...orgPartners].sort((a,b) => {
+      const order = ['Negotiation','Sales Meet','Approached','Closed Deal','Closed Lost'];
+      return order.indexOf(a.status) - order.indexOf(b.status);
+    });
+    sorted.slice(0,20).forEach(p => {
+      const col = _pwaAvatarColor(p.name);
+      const sc = STATUS_COLOR[p.status] || '#6b7280';
+      const row = document.createElement('div');
+      row.className = 'pwa-notion-row';
+      row.onclick = () => openOrgPartnerModal(p.id);
+      row.innerHTML = `
+        <div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(p.name)}</div>
+        <div class="pwa-notion-main">
+          <div class="pwa-notion-title">${p.name}</div>
+          <div class="pwa-notion-sub">${p.category||'—'} · ${p.pic||'—'}</div>
+        </div>
+        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+          <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc};font-weight:600">${p.status}</span>
+          <span style="font-size:9px;color:var(--text-muted)">${p.tier||'—'}</span>
+        </div>`;
+      list.appendChild(row);
+    });
+    if (!sorted.length) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px">Belum ada partner</div>';
+    card.appendChild(list);
+  }
+
+  function _pwaRenderOrgMaster() {
+    const wrap = document.querySelector('#mainContent div[style*="overflow-x"]');
+    if (!wrap || wrap.querySelector('.pwa-notion-list')) return;
+    const STATUS_COLOR = { 'Closed Deal':'#16a34a','Negotiation':'#d97706','Sales Meet':'#7c6ff7','Approached':'#3b82f6','Closed Lost':'#dc2626' };
+    let html = '<div class="pwa-notion-list" style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">';
+    [...orgPartners].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
+      const col = _pwaAvatarColor(p.name);
+      const sc = STATUS_COLOR[p.status] || '#6b7280';
+      html += `<div class="pwa-notion-row" onclick="openOrgPartnerModal('${p.id}')">
+        <div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(p.name)}</div>
+        <div class="pwa-notion-main">
+          <div class="pwa-notion-title">${p.name}</div>
+          <div class="pwa-notion-sub">${p.category||'—'} · ${p.pic||'—'}</div>
+        </div>
+        <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${sc}20;color:${sc};font-weight:600;flex-shrink:0">${p.status}</span>
+      </div>`;
+    });
+    html += '</div>';
+    wrap.style.display = 'none';
+    const div = document.createElement('div'); div.innerHTML = html;
+    wrap.parentElement.insertBefore(div, wrap);
+  }
+
+  function _pwaRenderOrgPipeline() {
+    const content = document.getElementById('mainContent');
+    if (!content || content.querySelector('.pwa-pipeline-list')) return;
+    const kanban = content.querySelector('[style*="overflow-x"][style*="gap"]');
+    if (kanban) kanban.style.display = 'none';
+    const STATUS_ORDER = ['Approached','Sales Meet','Negotiation','Closed Deal','Closed Lost'];
+    const STATUS_COLOR = { 'Closed Deal':'#16a34a','Negotiation':'#d97706','Sales Meet':'#7c6ff7','Approached':'#3b82f6','Closed Lost':'#dc2626' };
+    let html = '<div class="pwa-pipeline-list" style="margin-top:8px">';
+    STATUS_ORDER.forEach(status => {
+      const items = orgPartners.filter(p => p.status === status);
+      if (!items.length) return;
+      const sc = STATUS_COLOR[status];
+      html += `<div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:0 2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${sc};display:inline-block;flex-shrink:0"></span>
+          <span style="font-size:11px;font-weight:700;color:${sc};text-transform:uppercase;letter-spacing:.5px">${status}</span>
+          <span style="font-size:10px;color:var(--text-muted)">${items.length} partner</span>
+        </div>
+        <div style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">
+          ${items.map(p => {
+            const col = _pwaAvatarColor(p.name);
+            return `<div class="pwa-notion-row" onclick="openOrgPartnerModal('${p.id}')">
+              <div class="pwa-notion-avatar" style="background:${col.bg};color:${col.fg}">${_pwaInitials(p.name)}</div>
+              <div class="pwa-notion-main">
+                <div class="pwa-notion-title">${p.name}</div>
+                <div class="pwa-notion-sub">${p.category||'—'} · ${p.tier||'—'}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    const statsGrid = content.querySelector('.stats-grid');
+    if (statsGrid) { const div = document.createElement('div'); div.innerHTML = html; statsGrid.after(div); }
+  }
+
   // Patch switchPage for notion renders
   const _origSwitchNotion=window.switchPage;
   window.switchPage=function(page,el){
@@ -17503,6 +18008,8 @@ async function gcalCreateEvent(taskId) {
       if(page==='dashboard') _pwaRenderDashboard();
       if(page==='crm') setTimeout(_pwaRenderCRM,300);
       if(page==='talentpool') setTimeout(_pwaRenderTalentPool,300);
+      if(page==='partner') setTimeout(_pwaRenderB2B,300);
+      if(page==='orgpartner') setTimeout(_pwaRenderOrg,300);
       _pwaFixStatsGrid();
       _pwaConvertAllTables();
     },100);
