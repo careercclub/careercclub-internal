@@ -8390,8 +8390,10 @@ function ppDatabaseHTML(){
   var _plat = ppFilterPlatform||'';
   var _month = ppFilterMonth||'';
   var _cat = ppFilterKategori||'';
+  var _label = ppFilterLabel||'';
   var filtered = (ppEntries||[]).filter(function(e){
-    return (!_plat||e.platform===_plat) && (!_month||e.bulan===_month) && (!_cat||e.kategori===_cat);
+    return (!_plat||e.platform===_plat) && (!_month||e.bulan===_month) && (!_cat||e.kategori===_cat)
+      && (!_label||(e.labels&&e.labels.includes(_label)));
   });
   var platforms = [...new Set((ppEntries||[]).map(function(e){return e.platform;}))].filter(Boolean);
   var categories = [...new Set((ppEntries||[]).map(function(e){return e.kategori;}))].filter(Boolean);
@@ -8400,6 +8402,8 @@ function ppDatabaseHTML(){
   var pfOpts = '<option value="">Semua Platform</option>' + platforms.map(function(p){return '<option>'+p+'</option>';}).join('');
   var mnOpts = '<option value="">Semua Bulan</option>' + months.map(function(m){return '<option>'+m+'</option>';}).join('');
   var ctOpts = '<option value="">Semua Kategori</option>' + categories.map(function(k){return '<option>'+k+'</option>';}).join('');
+  var allPPLabels = [...new Set((ppEntries||[]).flatMap(e=>e.labels||[]))].sort();
+  var lbOpts = '<option value="">Semua Label</option>' + allPPLabels.map(function(l){return '<option>'+l+'</option>';}).join('');
 
   var rows = filtered.length === 0
     ? '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);font-size:12px"><i class="ti ti-database-off" style="font-size:28px;display:block;margin-bottom:8px"></i>Belum ada data</td></tr>'
@@ -8461,6 +8465,7 @@ function ppDatabaseHTML(){
     + '<select id="pp-db-plat" onchange="reRenderPPDatabase()" style="height:32px;padding:0 10px;font-size:12px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--white)">'+pfOpts+'</select>'
     + '<select id="pp-db-month" onchange="reRenderPPDatabase()" style="height:32px;padding:0 10px;font-size:12px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--white)">'+mnOpts+'</select>'
     + '<select id="pp-db-cat" onchange="reRenderPPDatabase()" style="height:32px;padding:0 10px;font-size:12px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--white)">'+ctOpts+'</select>'
+    + '<select id="pp-db-label" onchange="reRenderPPDatabase()" style="height:32px;padding:0 10px;font-size:12px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--white)">'+lbOpts+'</select>'
     + '</div>'
     + '<button class="btn btn-primary btn-sm" onclick="openPPForm()"><i class="ti ti-plus"></i> Tambah Data</button>'
     + '</div>'
@@ -8545,9 +8550,11 @@ function reRenderPPDatabase(){
   var plat = document.getElementById('pp-db-plat');
   var month = document.getElementById('pp-db-month');
   var cat = document.getElementById('pp-db-cat');
+  var label = document.getElementById('pp-db-label');
   if(plat) ppFilterPlatform = plat.value;
   if(month) ppFilterMonth = month.value;
   if(cat) ppFilterKategori = cat.value;
+  if(label) ppFilterLabel = label.value;
   var el = document.getElementById('pp-tab-content');
   if(el){ el.innerHTML = ppDatabaseHTML(); initPPDatabaseFilter(); }
 }
@@ -8557,9 +8564,11 @@ function initPPDatabaseFilter(){
   var plat = document.getElementById('pp-db-plat');
   var month = document.getElementById('pp-db-month');
   var cat = document.getElementById('pp-db-cat');
+  var label = document.getElementById('pp-db-label');
   if(plat && ppFilterPlatform) plat.value = ppFilterPlatform;
   if(month && ppFilterMonth) month.value = ppFilterMonth;
   if(cat && ppFilterKategori) cat.value = ppFilterKategori;
+  if(label && ppFilterLabel) label.value = ppFilterLabel;
 }
 
 function openPPForm(){
@@ -8585,7 +8594,7 @@ function openPPForm(){
     + ppMasterKategori.map(function(k){return '<option>'+k+'</option>';}).join('') + '</select></div>'
     + '</div>'
     + '<div style="display:flex;gap:8px">'
-    + '<button class="btn btn-primary btn-sm" onclick="submitPPForm()"><i class="ti ti-check"></i> Simpan</button>'
+    + '<div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Labels</label>'    + ppDDWidget('pf', []) + '</div>'    + '<button class="btn btn-primary btn-sm" onclick="submitPPForm()"><i class="ti ti-check"></i> Simpan</button>'
     + '<button class="btn btn-sm" onclick="ppCloseAddForm()">Batal</button>'
     + '</div></div>';
   container.insertAdjacentHTML('afterbegin', formHTML);
@@ -8602,7 +8611,9 @@ function submitPPForm(){
   var bulan = (document.getElementById('pf-bulan')||{}).value||'';
   var kategori = (document.getElementById('pf-kategori')||{}).value||'';
   if(!comment.trim()){ showToast('Komentar wajib diisi','error'); return; }
-  const newPPEntry = {id:Date.now(), comment, platform, bulan, kategori, komentar:comment};
+  var labelEl = document.getElementById('pp-dd-picked-pf');
+  var labels = labelEl ? JSON.parse(labelEl.value||'[]') : [];
+  const newPPEntry = {id:Date.now(), comment, platform, bulan, kategori, komentar:comment, labels};
   ppEntries.unshift(newPPEntry);
   window._lastPPAdded = newPPEntry;
   savePP();
@@ -9197,7 +9208,7 @@ async function deleteProjectEvent(id){
 
 const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
-var ppFilterPlatform=""; var ppFilterMonth=""; var ppFilterKategori="";
+var ppFilterPlatform=""; var ppFilterMonth=""; var ppFilterKategori=""; var ppFilterLabel="";
 
 function renderChangelog(p){
   return `
