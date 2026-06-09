@@ -8722,7 +8722,7 @@ async function fcHandleFile(input) {
       let saved = 0;
       for (let i = 0; i < mapped.length; i += batchSize) {
         const { error } = await _sb.from('free_class_eval')
-          .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: true });
+          .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: false });
         if (error) throw error;
         saved += Math.min(batchSize, mapped.length - i);
       }
@@ -8782,7 +8782,7 @@ async function fcFetchData() {
     let saved = 0;
     for (let i = 0; i < mapped.length; i += batchSize) {
       const { error } = await _sb.from('free_class_eval')
-        .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: true });
+        .upsert(mapped.slice(i, i + batchSize), { onConflict: 'email,seri', ignoreDuplicates: false });
       if (error) throw error;
       saved += Math.min(batchSize, mapped.length - i);
     }
