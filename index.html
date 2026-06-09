@@ -96,7 +96,7 @@ html,body,.app,.main,.sidebar,.content,.modal-body,.pipeline-wrap,.pipeline-card
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .topbar{background:var(--white);padding:12px 22px;padding-top:max(12px, env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border);flex-shrink:0}
 .page-title{font-size:15px;font-weight:600}
-.cl-dd-wrap{position:relative}
+.cl-dd-wrap{position:relative;overflow:visible}
 
 /* ── GLOBAL FILTER BAR PATTERN ─────────────────────────────── */
 .filter-bar{display:flex;align-items:center;gap:6px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
@@ -108,7 +108,7 @@ html,body,.app,.main,.sidebar,.content,.modal-body,.pipeline-wrap,.pipeline-card
 .filter-bar .filter-bar-spacer{flex:1;flex-shrink:0;min-width:8px}
 .cl-dd-trigger{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);background:var(--white);cursor:pointer;font-size:12px;color:var(--text-muted);user-select:none}
 .cl-dd-trigger:hover{border-color:var(--purple-mid)}
-.cl-dd-list{position:absolute;left:0;right:0;top:calc(100% + 3px);background:var(--white);border:0.5px solid var(--border-md);border-radius:var(--radius);z-index:9999;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);max-height:220px;overflow-y:auto}
+.cl-dd-list{position:absolute;left:0;right:auto;min-width:220px;top:calc(100% + 3px);background:var(--white);border:0.5px solid var(--border-md);border-radius:var(--radius);z-index:99999;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto}
 .cl-dd-item{padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px}
 .cl-dd-item:hover{background:var(--bg)}
 .cl-dd-new-trigger{padding:8px 12px;font-size:12px;color:var(--purple-mid);cursor:pointer;display:flex;align-items:center;gap:8px;border-top:0.5px solid var(--border);font-weight:500}
@@ -9028,53 +9028,48 @@ function fcRenderCharts() {
       ${ratingCardsHTML}
     </div>
 
-    <!-- Responden per Series + Top Uni -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-      ${Object.keys(seriesCount).length ? `<div class="card" style="padding:16px 18px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Responden per Series</div>
-        ${Object.entries(seriesCount).sort((a,b)=>b[1]-a[1]).map(([s,n]) => {
-          const short = s.replace(/free class series\s*/i,'FCS ');
-          return `<div style="margin-bottom:10px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s}">${short}</div>
-              <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
-            </div>
-            <div style="background:var(--bg);border-radius:3px;height:6px"><div style="background:var(--purple-accent);width:${(n/total*100).toFixed(1)}%;height:6px;border-radius:3px"></div></div>
-          </div>`;
-        }).join('')}
-      </div>` : '<div></div>'}
-      ${topUnis.length ? `<div class="card" style="padding:16px 18px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Top Universitas</div>
-        ${topUnis.map(([u,n]) => `
-          <div style="margin-bottom:10px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u}</div>
-              <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
-            </div>
-            <div style="background:var(--bg);border-radius:3px;height:6px"><div style="background:#16a34a;width:${(n/total*100).toFixed(1)}%;height:6px;border-radius:3px"></div></div>
-          </div>`).join('')}
-      </div>` : '<div></div>'}
-    </div>
-
-    <!-- Persebaran Angkatan -->
+    <!-- Responden per Series + Top Uni + Angkatan — 3 kolom -->
     ${(() => {
       const angkatanCount = {};
       data.forEach(r => { const a = (r.angkatan||'').toString().trim(); if(a) angkatanCount[a] = (angkatanCount[a]||0)+1; });
-      const sorted = Object.entries(angkatanCount).sort((a,b)=>a[0].localeCompare(b[0]));
-      if (!sorted.length) return '';
-      const maxN = Math.max(...sorted.map(([,n])=>n));
-      return `<div class="card" style="padding:16px 18px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Persebaran Angkatan</div>
-        <div style="display:flex;align-items:flex-end;gap:6px;height:80px;margin-bottom:8px">
-          ${sorted.map(([yr,n]) => `
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-              <div style="font-size:10px;font-weight:600;color:var(--text-muted)">${n}</div>
-              <div style="width:100%;background:var(--purple-accent);border-radius:3px 3px 0 0;height:${Math.max(4,Math.round(n/maxN*56))}px"></div>
+      const angkatanSorted = Object.entries(angkatanCount).sort((a,b)=>a[0].localeCompare(b[0]));
+      const maxAng = angkatanSorted.length ? Math.max(...angkatanSorted.map(([,n])=>n)) : 1;
+      return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+        ${Object.keys(seriesCount).length ? `<div class="card" style="padding:16px 18px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">Responden per Series</div>
+          ${Object.entries(seriesCount).sort((a,b)=>b[1]-a[1]).map(([s,n]) => {
+            const short = s.replace(/free class series\s*/i,'FCS ');
+            return `<div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s}">${short}</div>
+                <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
+              </div>
+              <div style="background:var(--bg);border-radius:3px;height:6px"><div style="background:var(--purple-accent);width:${(n/total*100).toFixed(1)}%;height:6px;border-radius:3px"></div></div>
+            </div>`;
+          }).join('')}
+        </div>` : '<div></div>'}
+        ${topUnis.length ? `<div class="card" style="padding:16px 18px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">Top Universitas</div>
+          ${topUnis.map(([u,n]) => `
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <div style="font-size:11px;flex:1;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u}</div>
+                <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
+              </div>
+              <div style="background:var(--bg);border-radius:3px;height:6px"><div style="background:#16a34a;width:${(n/total*100).toFixed(1)}%;height:6px;border-radius:3px"></div></div>
             </div>`).join('')}
-        </div>
-        <div style="display:flex;gap:6px">
-          ${sorted.map(([yr]) => `<div style="flex:1;text-align:center;font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${yr}</div>`).join('')}
-        </div>
+        </div>` : '<div></div>'}
+        ${angkatanSorted.length ? `<div class="card" style="padding:16px 18px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">Persebaran Angkatan</div>
+          ${angkatanSorted.map(([yr,n]) => `
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <div style="font-size:11px;flex:1;padding-right:8px">${yr}</div>
+                <div style="font-size:11px;font-weight:600;flex-shrink:0">${n}</div>
+              </div>
+              <div style="background:var(--bg);border-radius:3px;height:6px"><div style="background:#7c6ff7;width:${(n/maxAng*100).toFixed(1)}%;height:6px;border-radius:3px"></div></div>
+            </div>`).join('')}
+        </div>` : '<div></div>'}
       </div>`;
     })()}
 
@@ -9256,15 +9251,23 @@ function ppLabelBadges(labels) {
 var _ppLabels = [];
 function ppDDOpen(containerId) {
   const list = document.getElementById('pp-dd-list-'+containerId);
-  if (!list) return;
+  const wrap = document.getElementById('pp-dd-wrap-'+containerId);
+  if (!list || !wrap) return;
   ppDDRenderItems(containerId);
+  // Posisi fixed berdasarkan trigger element supaya ga terpotong overflow parent
+  const rect = wrap.getBoundingClientRect();
+  list.style.position = 'fixed';
+  list.style.top  = (rect.bottom + 3) + 'px';
+  list.style.left = rect.left + 'px';
+  list.style.right = 'auto';
+  list.style.width = Math.max(220, rect.width) + 'px';
   list.style.display = 'block';
   document.getElementById('pp-dd-new-row-'+containerId).style.display = 'none';
   document.getElementById('pp-dd-new-trigger-'+containerId).style.display = 'flex';
   setTimeout(() => document.addEventListener('click', function h(e){
-    const wrap = document.getElementById('pp-dd-wrap-'+containerId);
-    if (wrap && !wrap.contains(e.target)) { list.style.display='none'; }
-    else document.addEventListener('click', h, {once:true});
+    if (wrap && !wrap.contains(e.target) && !list.contains(e.target)) {
+      list.style.display='none';
+    } else document.addEventListener('click', h, {once:true});
   }, {once:true}), 10);
 }
 function ppDDRenderItems(cid) {
@@ -17189,12 +17192,21 @@ function clRenderLabelChips() {
 // ── Custom label dropdown ────────────────────────────────────────
 function clDDOpen() {
   const list = document.getElementById('cl-dd-list');
+  const wrap = document.querySelector('.cl-dd-wrap');
   if (!list) return;
   clDDRenderItems();
+  // Fixed positioning supaya ga terpotong overflow parent
+  if (wrap) {
+    const rect = wrap.getBoundingClientRect();
+    list.style.position = 'fixed';
+    list.style.top  = (rect.bottom + 3) + 'px';
+    list.style.left = rect.left + 'px';
+    list.style.right = 'auto';
+    list.style.width = Math.max(220, rect.width) + 'px';
+  }
   list.style.display = 'block';
   document.getElementById('cl-dd-new-row') && (document.getElementById('cl-dd-new-row').style.display = 'none');
   document.getElementById('cl-dd-new-trigger') && (document.getElementById('cl-dd-new-trigger').style.display = 'flex');
-  // tutup kalau klik di luar
   setTimeout(() => {
     document.addEventListener('click', clDDOutsideClick, { once: true });
   }, 10);
