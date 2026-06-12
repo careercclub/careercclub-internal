@@ -10992,7 +10992,7 @@ function daRenderGallery() {
       <div style="font-size:13px;font-weight:700">${kat}</div>
       <span style="font-size:10px;color:var(--text-muted)">${items.length} item</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+    <div class="da-gallery" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
       ${items.map(a => {
         const thumbUrl = a.storage_paths.length ? sb_designPublicUrl(a.storage_paths[0]) : '';
         const count = a.storage_paths.length;
