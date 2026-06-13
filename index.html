@@ -1371,13 +1371,17 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 </div>
 
 <!-- TICKET DETAIL MODAL -->
-<div id="tkt-detail-modal" style="display:none" class="modal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+<div id="tkt-detail-modal" style="display:none" class="modal-overlay">
   <div class="tkt-modal">
-    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border)">
-      <div class="modal-title" style="font-size:14px;font-weight:700" id="tkt-detail-title">Ticket Detail</div>
-      <button class="btn btn-sm" onclick="closeTktDetail()"><i class="ti ti-x"></i></button>
+    <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid var(--border);gap:12px;flex-shrink:0">
+      <div style="min-width:0">
+        <div class="modal-title" style="font-size:14px;font-weight:700;margin-bottom:6px" id="tkt-detail-title">Ticket Detail</div>
+        <div id="tkt-detail-tags" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+      </div>
+      <button class="btn btn-sm" onclick="closeTktDetail()" style="flex-shrink:0;margin-top:2px"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-body" style="padding:16px 20px" id="tkt-detail-body"></div>
+    <div id="tkt-detail-body" style="flex:1;overflow-y:auto;padding:0"></div>
+    <div id="tkt-detail-footer" style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:0.5px solid var(--border);flex-shrink:0;gap:8px"></div>
   </div>
 </div>
 
@@ -2185,6 +2189,24 @@ async function sb_insertProductBundle(bundleId, itemId) {
 }
 async function sb_deleteProductBundle(id) { return await sb_delete('product_bundles', id); }
 
+async function sb_loadAllSubProducts() {
+  return await sb_load('sub_products', { order: 'created_at', ascending: true }).catch(() => []);
+}
+async function sb_loadAllSubProductLinks() {
+  return await sb_load('sub_product_links', { order: 'created_at', ascending: true }).catch(() => []);
+}
+async function sb_insertSubProduct(productId, data) {
+  return await sb_insert('sub_products', { product_id: productId, name: data.name || '', harga: data.harga || 0 });
+}
+async function sb_updateSubProduct(id, data) {
+  return await sb_update('sub_products', id, { name: data.name || '', harga: data.harga || 0 });
+}
+async function sb_deleteSubProduct(id) { return await sb_delete('sub_products', id); }
+async function sb_insertSubProductLink(subProductId, data) {
+  return await sb_insert('sub_product_links', { sub_product_id: subProductId, label: data.label || '', url: data.url || '' });
+}
+async function sb_deleteSubProductLink(id) { return await sb_delete('sub_product_links', id); }
+
 // MT VACANCIES — full schema: company, program, industry, roles(jsonb), selection,
 // links(jsonb), deadline, status, notes, input_date, gpa, edu, majors(jsonb),
 // placement(jsonb), other_req, duration, months(jsonb), year, open_date,
@@ -2328,6 +2350,7 @@ function _tktRowToJS(d) {
     tipeId: d.type_id || null,
     divisiId: d.divisi_id || null,
     assignedToId: d.assigned_to_id || null,
+    assignedToIds: Array.isArray(d.assigned_to_ids) ? d.assigned_to_ids : (d.assigned_to_id ? [d.assigned_to_id] : []),
     requesterId: d.requester_id || null,
     deadline: d.due_date || '',
     linkedTaskId: d.related_task_id || null,
@@ -2350,7 +2373,8 @@ function _tktJSToRow(t) {
     priority: t.prioritas || 'Med',
     type_id: t.tipeId || null,
     divisi_id: t.divisiId || null,
-    assigned_to_id: t.assignedToId || null,
+    assigned_to_id: (t.assignedToIds && t.assignedToIds[0]) || t.assignedToId || null,
+    assigned_to_ids: t.assignedToIds || (t.assignedToId ? [t.assignedToId] : []),
     requester_id: t.requesterId || null,
     due_date: t.deadline || null,
     related_task_id: t.linkedTaskId || null,
@@ -2381,6 +2405,24 @@ async function sb_loadEvents() {
 }
 async function sb_saveEvent(e) { return await sb_insert('events', e); }
 async function sb_updateEvent(id, updates) { return await sb_update('events', id, updates); }
+async function sb_loadAllRundown() {
+  return await sb_load('event_rundown', { order: 'urutan', ascending: true }).catch(() => []);
+}
+async function sb_insertRundownRow(eventId, data) {
+  return await sb_insert('event_rundown', {
+    event_id: eventId, waktu: data.waktu||null, durasi: data.durasi||0,
+    activity: data.activity||'', keterangan: data.keterangan||'',
+    link: data.link||'', cue_mc: data.cue_mc||'', urutan: data.urutan||0
+  });
+}
+async function sb_updateRundownRow(id, data) {
+  return await sb_update('event_rundown', id, {
+    waktu: data.waktu||null, durasi: data.durasi||0,
+    activity: data.activity||'', keterangan: data.keterangan||'',
+    link: data.link||'', cue_mc: data.cue_mc||'', urutan: data.urutan||0
+  });
+}
+async function sb_deleteRundownRow(id) { return await sb_delete('event_rundown', id); }
 async function sb_deleteEvent(id) { return await sb_delete('events', id); }
 
 async function sb_loadLinkTemplates() {
@@ -2673,6 +2715,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       orgDealRows, orgPartnerRows, orgOutreachRows,
       dealRows, prodRows, allPP, allPas,
       allProdFeatures, klasifikasiRows, bundleRows,
+      allSubProds, allSubProdLinks,
+      allRundownRows,
       evalRows,
       buyerRows,
       contentLibRows,
@@ -2701,6 +2745,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       sb_load('product_features', { order: 'created_at', ascending: true }).catch(() => []),
       sb_loadProductKlasifikasi().catch(() => []),
       sb_loadProductBundles().catch(() => []),
+      sb_loadAllSubProducts(),
+      sb_loadAllSubProductLinks(),
+      sb_loadAllRundown(),
       sb_loadEvalContents().catch(e => { console.error('[sb_load] eval →', _sbErrInfo(e)); return []; }),
       sb_load('buyers', { order: 'created_at', ascending: false }).catch(() => []),
       sb_loadContentLib().catch(() => []),
@@ -2737,7 +2784,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       linkZoom: e.link_zoom || '', target: e.target || 0, deskripsi: e.deskripsi || '',
       jenis_program: e.jenis_program || '',
       capaian_peserta: e.capaian_peserta ?? null, notes_post: e.notes_post || '',
-      links: e.links || []
+      links: e.links || [],
+      rundown: allRundownRows.filter(r=>String(r.event_id)===String(e.id)).map(r=>({
+        id:r.id, waktu:r.waktu||'', durasi:parseInt(r.durasi)||0,
+        activity:r.activity||'', keterangan:r.keterangan||'',
+        link:r.link||'', cue_mc:r.cue_mc||'', urutan:parseInt(r.urutan)||0,
+      })).sort((a,b)=>a.urutan-b.urutan),
     }));
     eventLinkTemplates = linkTplRows.map(t => ({
       id: t.id, jenis_program: t.jenis_program, label: t.label, url: t.url, urutan: t.urutan || 0
@@ -2768,6 +2820,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
       features: allProdFeatures.filter(r => String(r.product_id) === String(p.id)).map(d => ({ id: d.id, name: d.name || '', description: d.description || '' })),
       bundleItems: bundleRows.filter(r => String(r.bundle_id) === String(p.id)).map(r => ({ recordId: r.id, itemId: String(r.item_id) })),
+      subProducts: allSubProds.filter(r => String(r.product_id) === String(p.id)).map(sp => ({
+        id: sp.id, name: sp.name || '', harga: parseInt(sp.harga) || 0,
+        links: allSubProdLinks.filter(l => String(l.sub_product_id) === String(sp.id)).map(l => ({ id: l.id, label: l.label || '', url: l.url || '' })),
+      })),
     }));
 
     // Load klasifikasi from Supabase; fall back to localStorage if table empty
@@ -4673,9 +4729,17 @@ let activeTktId=null;
 function openTktDetail(id){
   activeTktId=id;
   const t=tickets.find(x=>_idEq(x.id,id));if(!t) return;
-  const person=getPersonById(t.assignedToId);
-  const div=person.divisiId?getDivisiById(person.divisiId):{nama:"—",color:"purple"};
-  const requester=getPersonById(t.requesterId);
+  const assigneeIds=t.assignedToIds&&t.assignedToIds.length?t.assignedToIds:(t.assignedToId?[t.assignedToId]:[]);
+  const primaryPerson=getPersonById(assigneeIds[0]||null);
+  const div=primaryPerson.divisiId?getDivisiById(primaryPerson.divisiId):{nama:"—",color:"purple"};
+
+  // Header tags
+  document.getElementById("tkt-detail-title").textContent=`${fmtTktNo(t)} — ${t.judul}`;
+  document.getElementById("tkt-detail-tags").innerHTML=
+    `${tktStatusPill(t.status)} ${tktPrioPill(t.prioritas)}<span class="pill ic-${divColor(div.color)}" style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600">${div.nama}</span><span class="pill pill-gray">${getTypeById(t.tipeId).nama}</span>`;
+
+  // Multi-assignee state
+  window._tktDetailAssigneeIds=[...assigneeIds];
 
   const filesHTML=t.files.length===0?"":t.files.map(f=>`
     <div class="tkt-attachment">
@@ -4686,25 +4750,18 @@ function openTktDetail(id){
   const linksHTML=t.links.length===0?"":t.links.map(l=>`
     <div class="tkt-link-item"><i class="ti ti-link" style="font-size:13px;color:var(--purple-accent);flex-shrink:0"></i><a href="${l}" target="_blank">${l}</a></div>`).join("");
 
-  const ccHTML=t.cc.length===0?`<span style="font-size:12px;color:var(--text-hint)">—</span>`:t.cc.map(e=>`<span class="cc-tag">${e}</span>`).join("");
-
   const komHTML=t.komentar.length===0?`<div style="font-size:12px;color:var(--text-muted)">Belum ada komentar</div>`:
     t.komentar.map(k=>{
       const init=k.user.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
       return`<div class="tkt-comment"><div class="tkt-comment-av">${init}</div><div class="tkt-comment-body"><div class="tkt-comment-meta">${k.user} · ${k.time}</div><div class="tkt-comment-text">${k.text}</div></div></div>`;
     }).join("");
 
-  document.getElementById("tkt-detail-modal").style.display="flex";
+  // Body: 2-column layout
   document.getElementById("tkt-detail-body").innerHTML=`
-    <div class="tkt-detail-grid">
-      <div class="tkt-detail-main">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          ${tktStatusPill(t.status)} ${tktPrioPill(t.prioritas)}
-          <span class="pill ic-${divColor(div.color)}" style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600">${div.nama}</span>
-          <span class="pill pill-gray">${getTypeById(t.tipeId).nama}</span>
-          ${levelBadge(person.level)}
-        </div>
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px">${t.judul}</div>
+    <div style="display:grid;grid-template-columns:1fr 210px;gap:0;min-height:0">
+      <!-- LEFT: judul, desc, lampiran, komentar -->
+      <div style="padding:16px 20px;border-right:0.5px solid var(--border)">
+        <div style="font-size:15px;font-weight:700;margin-bottom:12px;line-height:1.4">${t.judul}</div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:6px">Deskripsi</div>
         <div class="tkt-desc-box">${t.deskripsi||"—"}</div>
         ${(filesHTML||linksHTML)?`
@@ -4717,49 +4774,110 @@ function openTktDetail(id){
           <button class="btn btn-primary btn-sm" onclick="addTktComment('${t.id}')"><i class="ti ti-send"></i></button>
         </div>
       </div>
-      <div class="tkt-detail-side">
+      <!-- RIGHT: editable fields -->
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
         <div class="tkt-side-block">
           <div class="tkt-side-label">Status</div>
-          <select style="width:100%;height:30px;font-size:12px;border:0.5px solid var(--border-md);border-radius:7px;font-family:'DM Sans',sans-serif" onchange="updateTktStatus('${t.id}',this.value)">
+          <select id="tkt-edit-status" style="width:100%;height:30px;font-size:12px;border:0.5px solid var(--border-md);border-radius:7px;font-family:'DM Sans',sans-serif">
             ${tktStatusList.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
           </select>
         </div>
         <div class="tkt-side-block">
-          <div class="tkt-side-label">Requester</div>
-          <div class="tkt-side-val">${requester.nama}</div>
-          <div style="font-size:10px;color:var(--text-muted)">${requester.email}</div>
+          <div class="tkt-side-label">Prioritas</div>
+          <select id="tkt-edit-prio" style="width:100%;height:30px;font-size:12px;border:0.5px solid var(--border-md);border-radius:7px;font-family:'DM Sans',sans-serif">
+            ${["High","Med","Low"].map(s=>`<option ${s===t.prioritas?"selected":""}>${s}</option>`).join("")}
+          </select>
         </div>
         <div class="tkt-side-block">
-          <div class="tkt-side-label">Divisi</div>
-          <div class="tkt-side-val">${div.nama}</div>
-          <div style="font-size:10px;color:var(--text-muted)">${person.email}</div>
+          <div class="tkt-side-label">Deadline</div>
+          <input id="tkt-edit-deadline" type="date" value="${t.deadline||''}" style="width:100%;height:30px;padding:0 8px;font-size:12px;border:0.5px solid var(--border-md);border-radius:7px;font-family:'DM Sans',sans-serif">
         </div>
         <div class="tkt-side-block">
-          <div class="tkt-side-label">Ditugaskan ke</div>
-          <div style="display:flex;align-items:center;gap:7px;margin-top:2px">
-            <div class="avatar" style="width:26px;height:26px;font-size:10px;background:var(--ic-${divColor(person.color)},var(--purple-accent))">${personInitials(person.nama)}</div>
-            <div><div class="tkt-side-val">${person.nama}</div><div style="font-size:10px;color:var(--text-muted)">${div.nama} · ${levelBadge(person.level)}</div></div>
-          </div>
-        </div>
-        <div class="tkt-side-block">
-          <div class="tkt-side-label">CC</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">${ccHTML}</div>
+          <div class="tkt-side-label">Assignee</div>
+          <select id="tkt-assignee-add" onchange="tktDetailAddAssignee(this.value);this.value=''" style="width:100%;font-size:11px;padding:5px 6px;border:0.5px solid var(--border-md);border-radius:var(--radius);background:var(--bg);margin-bottom:6px">
+            <option value="">+ Tambah assignee...</option>
+            ${tktPeople.map(p=>`<option value="${p.id}">${p.nama}</option>`).join("")}
+          </select>
+          <div id="tkt-assignee-chips" style="display:flex;flex-wrap:wrap;gap:4px"></div>
         </div>
         <div class="tkt-side-block">
           <div class="tkt-side-label">Tanggal dibuat</div>
           <div class="tkt-side-val">${t.tanggal}</div>
         </div>
-        <button class="btn btn-primary btn-sm" style="width:100%" onclick="sendTktEmail('${t.id}')"><i class="ti ti-mail"></i> Kirim via Email</button>
-        <button class="btn btn-sm btn-danger" style="width:100%" onclick="deleteTkt('${t.id}')"><i class="ti ti-trash"></i> Hapus Ticket</button>
       </div>
     </div>`;
-  document.getElementById("tkt-detail-title").textContent=`${fmtTktNo(t)} — ${t.judul}`;
+
+  // Footer
+  document.getElementById("tkt-detail-footer").innerHTML=`
+    <button class="btn btn-sm btn-danger" onclick="deleteTkt('${t.id}')"><i class="ti ti-trash"></i> Hapus</button>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="gcalAddTicket('${t.id}')"><i class="ti ti-brand-google" style="color:#4285F4"></i> Google Calendar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveTktDetail('${t.id}')"><i class="ti ti-check"></i> Simpan</button>
+    </div>`;
+
+  tktDetailRenderAssigneeChips();
+  document.getElementById("tkt-detail-modal").style.display="flex";
 }
 
 function closeTktDetail(){
   document.getElementById("tkt-detail-modal").style.display="none";
   activeTktId=null;
 }
+
+function tktDetailRenderAssigneeChips(){
+  const el=document.getElementById('tkt-assignee-chips');
+  if(!el) return;
+  const ids=window._tktDetailAssigneeIds||[];
+  if(!ids.length){el.innerHTML='<span style="font-size:11px;color:var(--text-hint);font-style:italic">Belum ada assignee</span>';return;}
+  el.innerHTML=ids.map(id=>{
+    const p=getPersonById(id);if(!p) return '';
+    const initials=p.nama.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    return `<div style="display:inline-flex;align-items:center;gap:4px;background:var(--purple-light);border-radius:20px;padding:3px 8px 3px 5px;font-size:11px;font-weight:600;color:var(--purple-mid)">
+      <div style="width:16px;height:16px;border-radius:50%;background:var(--purple-accent);color:#fff;font-size:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+      ${p.nama}
+      <button onclick="tktDetailRemoveAssignee('${id}')" style="background:none;border:none;cursor:pointer;padding:0;margin-left:2px;color:var(--purple-mid);font-size:11px;line-height:1">×</button>
+    </div>`;
+  }).join('');
+}
+
+function tktDetailAddAssignee(id){
+  if(!id) return;
+  if(!window._tktDetailAssigneeIds) window._tktDetailAssigneeIds=[];
+  if(window._tktDetailAssigneeIds.includes(id)) return;
+  window._tktDetailAssigneeIds.push(id);
+  tktDetailRenderAssigneeChips();
+}
+
+function tktDetailRemoveAssignee(id){
+  if(!window._tktDetailAssigneeIds) return;
+  window._tktDetailAssigneeIds=window._tktDetailAssigneeIds.filter(x=>x!==id);
+  tktDetailRenderAssigneeChips();
+}
+
+async function saveTktDetail(id){
+  const t=tickets.find(x=>_idEq(x.id,id));if(!t) return;
+  const newStatus=document.getElementById('tkt-edit-status').value;
+  const oldStatus=t.status;
+  t.status=newStatus;
+  t.prioritas=document.getElementById('tkt-edit-prio').value;
+  t.deadline=document.getElementById('tkt-edit-deadline').value;
+  t.assignedToIds=window._tktDetailAssigneeIds||[];
+  t.assignedToId=t.assignedToIds[0]||null;
+  const ok=await sb_updateTicket(id,t);
+  if(!ok){showToast('Gagal simpan','error');return;}
+  // 2-way sync task status
+  if(newStatus!==oldStatus&&t.linkedTaskId){
+    const task=projectTasks.find(x=>_idEq(x.id,t.linkedTaskId));
+    if(task){
+      const mapped=(typeof TKT_TO_TASK_STATUS!=='undefined'&&TKT_TO_TASK_STATUS[newStatus])||null;
+      if(mapped&&task.status!==mapped){task.status=mapped;await sb_updateTask(task.id,task);}
+    }
+  }
+  closeTktDetail();
+  renderTickets();
+  showToast('Ticket disimpan ✓');
+}
+
 // helper: build full CC list for a ticket (divisi email + cc list + requester)
 function buildEmailRecipients(t){
   const person=getPersonById(t.assignedToId);
@@ -4908,6 +5026,108 @@ function sendTktEmail(id){
   );
   window.open('https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(toEmail) + (ccEmails ? '&cc=' + encodeURIComponent(ccEmails) : '') + '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
   showToast(`Email disiapkan ke ${person.email}`);
+}
+
+function gcalAddTicket(tktId){
+  if(!gcalInit()) return;
+  gcalPendingTaskId=tktId;
+  window._gcalMode='ticket';
+  if(gcalAccessToken){
+    _gcalOpenTicketModal(tktId);
+  } else {
+    gcalTokenClient.callback=resp=>{
+      if(resp.error){showToast('Login Google gagal: '+resp.error,'error');return;}
+      gcalAccessToken=resp.access_token;
+      if(window._gcalMode==='ticket'&&gcalPendingTaskId) _gcalOpenTicketModal(gcalPendingTaskId);
+      else if(gcalPendingTaskId) _gcalOpenModal(gcalPendingTaskId);
+    };
+    gcalTokenClient.requestAccessToken();
+  }
+}
+
+function _gcalOpenTicketModal(tktId){
+  const t=tickets.find(x=>_idEq(x.id,tktId));
+  if(!t){showToast('Ticket tidak ditemukan','error');return;}
+  const person=getPersonById(t.assignedToId);
+  const requester=getPersonById(t.requesterId);
+  const dateVal=t.deadline?t.deadline.substring(0,10):new Date().toISOString().substring(0,10);
+  const startDt=dateVal+'T09:00';
+  const endDt=dateVal+'T10:00';
+  const allPeople=(window.tktPeople||[]).filter(p=>p.email&&p.id!==t.assignedToId&&p.id!==t.requesterId);
+  const modal=document.getElementById('gcal-modal');
+  modal.style.display='flex';
+  modal.innerHTML=`
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.18);position:relative">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <i class="ti ti-brand-google" style="font-size:20px;color:#4285F4"></i>
+      <div style="font-size:15px;font-weight:700">Add Ticket to Google Calendar</div>
+      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUDUL EVENT</label>
+        <input id="gcal-title" value="[${fmtTktNo(t)}] ${t.judul}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">MULAI</label>
+          <input id="gcal-start" type="datetime-local" value="${startDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">SELESAI</label>
+          <input id="gcal-end" type="datetime-local" value="${endDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">DESKRIPSI</label>
+        <textarea id="gcal-desc" rows="3" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical">${t.deskripsi||''}</textarea>
+      </div>
+      ${person&&person.email?`<div style="background:var(--purple-light);border-radius:var(--radius);padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px">ASSIGNEE & REQUESTER</div>
+        ${person.email?`<div style="font-size:12px;margin-bottom:3px"><i class="ti ti-user-check" style="font-size:12px;color:var(--purple-accent)"></i> ${person.nama} <span style="color:var(--text-muted)">(${person.email})</span></div>`:''}
+        ${requester&&requester.email&&requester.email!==person.email?`<div style="font-size:12px"><i class="ti ti-user" style="font-size:12px;color:var(--purple-accent)"></i> ${requester.nama} <span style="color:var(--text-muted)">(${requester.email})</span></div>`:''}
+      </div>`:''}
+      ${allPeople.length>0?`<div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px">CC TAMBAHAN</label>
+        <div style="display:flex;flex-direction:column;gap:6px;max-height:120px;overflow-y:auto">
+          ${allPeople.map(p=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+            <input type="checkbox" class="gcal-cc" value="${p.email}" data-name="${p.nama}" style="width:14px;height:14px">
+            <span>${p.nama} <span style="color:var(--text-muted)">${p.email}</span></span>
+          </label>`).join('')}
+        </div>
+      </div>`:''}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
+      <button onclick="gcalCreateTicketEvent('${tktId}')" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-calendar-plus" style="font-size:14px"></i> Buat Event
+      </button>
+    </div>
+  </div>`;
+}
+
+async function gcalCreateTicketEvent(tktId){
+  if(!gcalAccessToken){showToast('Belum login Google','error');return;}
+  const title=document.getElementById('gcal-title').value.trim();
+  const startRaw=document.getElementById('gcal-start').value;
+  const endRaw=document.getElementById('gcal-end').value;
+  const desc=document.getElementById('gcal-desc').value.trim();
+  if(!title||!startRaw||!endRaw){showToast('Judul & waktu wajib diisi','error');return;}
+  const t=tickets.find(x=>_idEq(x.id,tktId));
+  const person=getPersonById(t?t.assignedToId:null);
+  const requester=getPersonById(t?t.requesterId:null);
+  const attendees=[];
+  if(person&&person.email) attendees.push({email:person.email,displayName:person.nama});
+  if(requester&&requester.email&&requester.email!==person.email) attendees.push({email:requester.email,displayName:requester.nama});
+  document.querySelectorAll('.gcal-cc:checked').forEach(cb=>attendees.push({email:cb.value,displayName:cb.dataset.name}));
+  const toISO=s=>new Date(s).toISOString();
+  const body={summary:title,description:desc,start:{dateTime:toISO(startRaw),timeZone:'Asia/Jakarta'},end:{dateTime:toISO(endRaw),timeZone:'Asia/Jakarta'},attendees};
+  try{
+    const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all',{method:'POST',headers:{'Authorization':'Bearer '+gcalAccessToken,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok) throw new Error((await res.json()).error?.message||'API error');
+    gcalCloseModal();
+    showToast('Event dibuat di Google Calendar ✓');
+  }catch(e){showToast('Gagal buat event: '+e.message,'error');}
 }
 
 // ── NEW TICKET FORM ───────────────────────────────
@@ -6659,10 +6879,123 @@ function renderKBSection(section,p){
   if(section==="passionpoints") return renderPassionPoints(p);
   if(section==="benefits") return renderBenefits(p);
   if(section==="features") return renderProductFeatures(p);
+  if(section==="subproducts") return renderSubProducts(p);
   if(section==="assets") return renderAssets(p);
   if(section==="changelog") return renderChangelog(p);
   if(section==="feedback") return renderFeedback(p);
   return "";
+}
+
+function renderSubProducts(p){
+  const sps=p.subProducts||[];
+  return `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:600">Sub-produk (${sps.length})</div>
+    <button class="btn btn-primary btn-sm" onclick="openSubProductModal('${p.id}',null)"><i class="ti ti-plus"></i> Tambah Sub-produk</button>
+  </div>
+  ${sps.length===0?`<div style="text-align:center;padding:32px 0;color:var(--text-muted);font-size:13px">Belum ada sub-produk. Klik "+ Tambah" untuk menambahkan.</div>`:''}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+    ${sps.map(sp=>`
+      <div class="card" style="padding:14px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:600;line-height:1.3">${sp.name}</div>
+          <button onclick="openSubProductModal('${p.id}','${sp.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px 4px;flex-shrink:0"><i class="ti ti-pencil"></i></button>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--purple-mid);margin-bottom:10px">Rp ${sp.harga.toLocaleString('id-ID')}</div>
+        ${sp.links&&sp.links.length?`
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${sp.links.map(l=>`<a href="${l.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--purple-light);color:var(--purple-mid);border-radius:20px;font-size:11px;font-weight:500;text-decoration:none;border:0.5px solid var(--purple-accent)"><i class="ti ti-external-link" style="font-size:10px"></i>${l.label||l.url}</a>`).join('')}
+        </div>`:`<div style="font-size:11px;color:var(--text-hint)">Belum ada shortlink</div>`}
+      </div>`).join('')}
+  </div>`;
+}
+
+let _spLinks=[];
+
+function openSubProductModal(pid,spid){
+  const p=products.find(x=>String(x.id)===String(pid));
+  const sp=spid?(p&&(p.subProducts||[]).find(x=>String(x.id)===String(spid))):null;
+  _spLinks=sp?sp.links.map(l=>({...l})):[{id:null,label:'',url:''}];
+  const m=document.getElementById('subprod-modal');
+  document.getElementById('spm-title').textContent=sp?'Edit Sub-produk':'Tambah Sub-produk';
+  document.getElementById('spm-name').value=sp?sp.name:'';
+  document.getElementById('spm-harga').value=sp?sp.harga:'';
+  document.getElementById('spm-delete-btn').style.display=sp?'inline-flex':'none';
+  if(sp) document.getElementById('spm-delete-btn').onclick=()=>deleteSubProduct(pid,spid);
+  m.dataset.pid=pid;
+  m.dataset.spid=spid||'';
+  m.style.display='flex';
+  _renderSpLinks();
+}
+
+function closeSubProductModal(){
+  document.getElementById('subprod-modal').style.display='none';
+  _spLinks=[];
+}
+
+function _renderSpLinks(){
+  document.getElementById('spm-links').innerHTML=_spLinks.map((l,i)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+      <input class="cust-field-input" placeholder="Label (mis: Landing Page)" value="${l.label||''}" oninput="_spLinks[${i}].label=this.value" style="flex:1;min-width:0">
+      <input class="cust-field-input" placeholder="https://..." value="${l.url||''}" oninput="_spLinks[${i}].url=this.value" style="flex:2;min-width:0">
+      <button onclick="_spLinks.splice(${i},1);_renderSpLinks()" style="background:none;border:none;cursor:pointer;color:var(--red);padding:4px;flex-shrink:0"><i class="ti ti-trash" style="font-size:14px"></i></button>
+    </div>`).join('')+
+    `<button onclick="_spLinks.push({id:null,label:'',url:''});_renderSpLinks()" class="btn btn-sm" style="margin-top:4px"><i class="ti ti-plus"></i> Tambah Link</button>`;
+}
+
+async function saveSubProductModal(){
+  const m=document.getElementById('subprod-modal');
+  const pid=m.dataset.pid;
+  const spid=m.dataset.spid||'';
+  const name=document.getElementById('spm-name').value.trim();
+  const harga=parseInt(document.getElementById('spm-harga').value)||0;
+  if(!name){showToast('Nama sub-produk wajib diisi');return;}
+  const p=products.find(x=>String(x.id)===String(pid));
+  if(!p) return;
+
+  let targetSpId=spid;
+  if(spid){
+    await sb_updateSubProduct(spid,{name,harga});
+    const sp=p.subProducts.find(x=>String(x.id)===String(spid));
+    if(sp){sp.name=name;sp.harga=harga;}
+  } else {
+    const row=await sb_insertSubProduct(pid,{name,harga});
+    if(!row||!row.id){showToast('Gagal simpan sub-produk','error');return;}
+    targetSpId=row.id;
+    p.subProducts.push({id:targetSpId,name,harga,links:[]});
+  }
+
+  const sp=p.subProducts.find(x=>String(x.id)===String(targetSpId));
+  if(sp){
+    const toDelete=(sp.links||[]).filter(l=>l.id&&!_spLinks.find(nl=>nl.id&&String(nl.id)===String(l.id)));
+    for(const l of toDelete) await sb_deleteSubProductLink(l.id);
+    const newLinks=[];
+    for(const l of _spLinks){
+      if(!l.url.trim()) continue;
+      if(l.id){
+        newLinks.push(l);
+      } else {
+        const row=await sb_insertSubProductLink(targetSpId,{label:l.label,url:l.url});
+        if(row&&row.id) newLinks.push({id:row.id,label:l.label,url:l.url});
+      }
+    }
+    sp.links=newLinks;
+  }
+
+  closeSubProductModal();
+  document.getElementById('kb-section-content').innerHTML=renderKBSection('subproducts',p);
+  showToast(spid?'Sub-produk diperbarui':'Sub-produk ditambahkan');
+}
+
+async function deleteSubProduct(pid,spid){
+  if(!confirm('Hapus sub-produk ini?')) return;
+  const ok=await sb_deleteSubProduct(spid);
+  if(!ok){showToast('Gagal hapus','error');return;}
+  const p=products.find(x=>String(x.id)===String(pid));
+  if(p) p.subProducts=(p.subProducts||[]).filter(x=>String(x.id)!==String(spid));
+  closeSubProductModal();
+  document.getElementById('kb-section-content').innerHTML=renderKBSection('subproducts',p);
+  showToast('Sub-produk dihapus');
 }
 
 // ── PAIN POINTS ───────────────────────────────────────────────
@@ -7727,6 +8060,7 @@ function prodRightPanelHTML(id){
     ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
     ['benefits','ti-star','Benefits',(p.benefits||[]).length],
     ['features','ti-settings-2','Product Features',(p.features||[]).length],
+    ['subproducts','ti-package','Sub-produk',(p.subProducts||[]).length],
     ['assets','ti-link','Aset Konten',(p.assets||[]).length],
     ['changelog','ti-history','Changelog',(p.changelog||[]).length],
     ['feedback','ti-message','Feedback',(p.feedbacks||[]).length],
@@ -10200,9 +10534,151 @@ function projectTasksHTML(){
   </div>
 
   ${projectTaskView==="list" ? renderTaskList(p.id) : renderTaskKanban(p.id)}
+  ${renderRundownSection(p.id)}
   `;
 }
 
+
+// ── RUNDOWN ──────────────────────────────────────────────────
+
+function _addMinsToTime(timeStr, mins){
+  if(!timeStr) return '';
+  const parts=timeStr.split(':').map(Number);
+  const total=(parts[0]||0)*60+(parts[1]||0)+mins;
+  return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+}
+
+function renderRundownSection(projId){
+  const proj=projects.find(p=>_idEq(p.id,projId));
+  if(!proj) return '';
+  const rows=(proj.rundown||[]).slice().sort((a,b)=>a.urutan-b.urutan);
+  let runningTime=proj.waktu||'';
+  const rowsWithTime=rows.map((r,i)=>{
+    const displayTime=runningTime;
+    runningTime=_addMinsToTime(runningTime,r.durasi);
+    return {...r,_displayTime:displayTime};
+  });
+  return `
+  <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:13px;font-weight:600">Rundown (${rows.length} item)</div>
+      <button class="btn btn-primary btn-sm" onclick="openRundownRowModal('${projId}',null)"><i class="ti ti-plus"></i> Tambah</button>
+    </div>
+    ${rows.length===0?`<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px">Belum ada rundown. Klik "+ Tambah" untuk mulai.</div>`:`
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--bg)">
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);white-space:nowrap;border-bottom:0.5px solid var(--border)">Waktu</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);white-space:nowrap;border-bottom:0.5px solid var(--border)">Durasi</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Activity</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Keterangan</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Link</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Cue MC</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border);white-space:nowrap">Urutan</th>
+            <th style="padding:8px 10px;border-bottom:0.5px solid var(--border)"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsWithTime.map((r,i)=>`
+          <tr style="border-bottom:0.5px solid var(--border);background:${i%2===0?'var(--white)':'var(--bg)'}">
+            <td style="padding:8px 10px;font-weight:600;color:var(--purple-mid);white-space:nowrap">${r._displayTime||'—'}</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--text-muted);white-space:nowrap">${r.durasi?r.durasi+' min':'—'}</td>
+            <td style="padding:8px 10px;font-weight:500;max-width:200px">${r.activity||'—'}</td>
+            <td style="padding:8px 10px;color:var(--text-muted);max-width:160px">${r.keterangan||'—'}</td>
+            <td style="padding:8px 10px;max-width:120px">${r.link?`<a href="${r.link}" target="_blank" style="color:var(--purple-accent);font-size:11px;word-break:break-all"><i class="ti ti-external-link" style="font-size:10px"></i> Link</a>`:'—'}</td>
+            <td style="padding:8px 10px;color:var(--text-muted);max-width:160px;font-style:${r.cue_mc?'normal':'italic'}">${r.cue_mc||'—'}</td>
+            <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+              ${i>0?`<button onclick="moveRundownRow('${projId}','${r.id}',-1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--text-muted)"><i class="ti ti-chevron-up" style="font-size:12px"></i></button>`:'<span style="width:24px;display:inline-block"></span>'}
+              ${i<rows.length-1?`<button onclick="moveRundownRow('${projId}','${r.id}',1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--text-muted)"><i class="ti ti-chevron-down" style="font-size:12px"></i></button>`:'<span style="width:24px;display:inline-block"></span>'}
+            </td>
+            <td style="padding:8px 10px;white-space:nowrap">
+              <button onclick="openRundownRowModal('${projId}','${r.id}')" style="background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--text-muted)"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+              <button onclick="deleteRundownRow('${projId}','${r.id}')" style="background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--red)"><i class="ti ti-trash" style="font-size:13px"></i></button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  </div>`;
+}
+
+function openRundownRowModal(projId, rowId){
+  const proj=projects.find(p=>_idEq(p.id,projId));if(!proj) return;
+  const r=rowId?(proj.rundown||[]).find(x=>String(x.id)===String(rowId)):null;
+  const modal=document.getElementById('rundown-row-modal');
+  document.getElementById('rrm-title').textContent=r?'Edit Row Rundown':'Tambah Row Rundown';
+  document.getElementById('rrm-durasi').value=r?r.durasi:'';
+  document.getElementById('rrm-activity').value=r?r.activity:'';
+  document.getElementById('rrm-keterangan').value=r?r.keterangan:'';
+  document.getElementById('rrm-link').value=r?r.link:'';
+  document.getElementById('rrm-cue-mc').value=r?r.cue_mc:'';
+  document.getElementById('rrm-delete-btn').style.display=r?'inline-flex':'none';
+  if(r) document.getElementById('rrm-delete-btn').onclick=()=>deleteRundownRow(projId,rowId);
+  modal.dataset.projId=projId;
+  modal.dataset.rowId=rowId||'';
+  modal.style.display='flex';
+}
+
+function closeRundownRowModal(){
+  document.getElementById('rundown-row-modal').style.display='none';
+}
+
+async function saveRundownRow(){
+  const modal=document.getElementById('rundown-row-modal');
+  const projId=modal.dataset.projId;
+  const rowId=modal.dataset.rowId||'';
+  const proj=projects.find(p=>_idEq(p.id,projId));if(!proj) return;
+  const data={
+    durasi:parseInt(document.getElementById('rrm-durasi').value)||0,
+    activity:document.getElementById('rrm-activity').value.trim(),
+    keterangan:document.getElementById('rrm-keterangan').value.trim(),
+    link:document.getElementById('rrm-link').value.trim(),
+    cue_mc:document.getElementById('rrm-cue-mc').value.trim(),
+  };
+  if(!data.activity){showToast('Activity wajib diisi');return;}
+  if(rowId){
+    const r=(proj.rundown||[]).find(x=>String(x.id)===String(rowId));
+    if(r){Object.assign(r,data);data.urutan=r.urutan;}
+    await sb_updateRundownRow(rowId,{...data,urutan:r?r.urutan:0});
+  } else {
+    const maxUrutan=Math.max(-1,...(proj.rundown||[]).map(r=>r.urutan));
+    data.urutan=maxUrutan+1;
+    const row=await sb_insertRundownRow(projId,data);
+    if(!row||!row.id){showToast('Gagal simpan','error');return;}
+    if(!proj.rundown) proj.rundown=[];
+    proj.rundown.push({id:row.id,...data});
+  }
+  closeRundownRowModal();
+  document.getElementById('project-tab-content').innerHTML=projectTasksHTML();
+  showToast(rowId?'Row diperbarui':'Row ditambahkan');
+}
+
+async function deleteRundownRow(projId,rowId){
+  if(!confirm('Hapus row ini?')) return;
+  const ok=await sb_deleteRundownRow(rowId);
+  if(!ok){showToast('Gagal hapus','error');return;}
+  const proj=projects.find(p=>_idEq(p.id,projId));
+  if(proj) proj.rundown=(proj.rundown||[]).filter(r=>String(r.id)!==String(rowId));
+  closeRundownRowModal();
+  document.getElementById('project-tab-content').innerHTML=projectTasksHTML();
+  showToast('Row dihapus');
+}
+
+async function moveRundownRow(projId,rowId,direction){
+  const proj=projects.find(p=>_idEq(p.id,projId));if(!proj) return;
+  const rows=(proj.rundown||[]).slice().sort((a,b)=>a.urutan-b.urutan);
+  const idx=rows.findIndex(r=>String(r.id)===String(rowId));
+  const targetIdx=idx+direction;
+  if(targetIdx<0||targetIdx>=rows.length) return;
+  const tmp=rows[idx].urutan;rows[idx].urutan=rows[targetIdx].urutan;rows[targetIdx].urutan=tmp;
+  proj.rundown=rows;
+  await Promise.all([
+    sb_updateRundownRow(rows[idx].id,rows[idx]),
+    sb_updateRundownRow(rows[targetIdx].id,rows[targetIdx]),
+  ]);
+  document.getElementById('project-tab-content').innerHTML=projectTasksHTML();
+}
 
 // ── EVENT LINKS ─────────────────────────────────────────────
 function renderEventLinks(proj) {
@@ -10476,6 +10952,12 @@ function renderMonthlyCalendar(){
     if(!eventsByDate[p.tanggal]) eventsByDate[p.tanggal]=[];
     eventsByDate[p.tanggal].push({type:"event",data:p});
   });
+  (typeof tickets!=='undefined'?tickets:[]).forEach(t=>{
+    if(!t.deadline||t.status==='Done') return;
+    const dateISO=t.deadline.substring(0,10);
+    if(!eventsByDate[dateISO]) eventsByDate[dateISO]=[];
+    eventsByDate[dateISO].push({type:"ticket",data:t});
+  });
 
   // Build grid cells (including padding from prev/next month)
   const cells=[];
@@ -10507,10 +10989,10 @@ function renderMonthlyCalendar(){
       <button class="btn btn-sm" onclick="changeCalMonth(1)" style="padding:4px 8px"><i class="ti ti-chevron-right"></i></button>
       <button class="btn btn-sm" onclick="goToToday()" style="font-size:11px">Hari ini</button>
     </div>
-    <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text-muted)">
+    <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text-muted);flex-wrap:wrap">
       <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--purple-accent)"></span> Event
       <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--amber);margin-left:6px"></span> Deadline task
-      <button class="btn btn-sm" onclick="alert('Mock: Sync semua deadline ke Google Calendar')" style="margin-left:12px"><i class="ti ti-brand-google"></i> Sync</button>
+      <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#0e7490;margin-left:6px"></span> Ticket
     </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
@@ -10532,6 +11014,10 @@ function renderMonthlyCalendar(){
             if(it.type==="event"){
               const p=it.data;
               return `<div onclick="event.stopPropagation();openProjectModal('${p.id}')" title="${p.nama} - ${p.waktu}" style="background:var(--purple-accent);color:#fff;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-broadcast" style="font-size:9px"></i> ${p.waktu} ${p.nama.replace(/Free Class: /,"")}</div>`;
+            } else if(it.type==="ticket"){
+              const t=it.data;
+              const person=getPersonById(t.assignedToId);
+              return `<div onclick="event.stopPropagation();openTktDetail('${t.id}')" title="${fmtTktNo(t)} - ${t.judul}" style="background:#cffafe;color:#0e7490;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-ticket" style="font-size:9px"></i> ${t.judul}</div>`;
             } else {
               const t=it.data;
               const person=getPersonById(t.assigneeId);
@@ -10580,6 +11066,20 @@ function renderMonthlyCalendar(){
             <i class="ti ti-broadcast" style="color:var(--purple-mid);font-size:14px"></i>
             <div style="flex:1;font-size:12px;font-weight:500;color:var(--purple-mid)">${p.nama}</div>
             ${projStatusPill(p.status)}
+          </div>`;
+        } else if(it.type==="ticket"){
+          const t=it.data;
+          const person=getPersonById(t.assignedToId);
+          return `<div onclick="openTktDetail('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#cffafe;border-radius:8px;margin-bottom:6px;cursor:pointer;border-left:3px solid #0e7490">
+            <div style="width:42px;text-align:center;flex-shrink:0">
+              <div style="font-size:10px;color:#0e7490;font-weight:600">${fmtDateShort(it.date)}</div>
+            </div>
+            <i class="ti ti-ticket" style="color:#0e7490;font-size:14px;flex-shrink:0"></i>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:500;color:#0e7490;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtTktNo(t)} — ${t.judul}</div>
+              <div style="font-size:10px;color:#0891b2">${person.nama} · Deadline</div>
+            </div>
+            ${tktStatusPill(t.status)}
           </div>`;
         } else {
           const t=it.data;
@@ -13294,6 +13794,35 @@ async function daConfirmDelete(id) {
   </div>
 </div>
 
+<!-- Sub-produk Modal -->
+<div id="subprod-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeSubProductModal()">
+  <div style="background:var(--white);border-radius:var(--radius-lg);width:92%;max-width:500px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:14px;font-weight:700" id="spm-title">Tambah Sub-produk</div>
+      <button class="btn btn-sm" onclick="closeSubProductModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:16px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
+      <div class="cust-field editable">
+        <div class="cust-field-label">Nama Sub-produk</div>
+        <input class="cust-field-input" id="spm-name" placeholder="contoh: Kelas Rekaman Studio">
+      </div>
+      <div class="cust-field editable">
+        <div class="cust-field-label">Harga (Rp)</div>
+        <input class="cust-field-input" id="spm-harga" type="number" placeholder="299000">
+      </div>
+      <div>
+        <div class="cust-field-label" style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Shortlinks</div>
+        <div id="spm-links"></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
+      <button class="btn btn-danger btn-sm" id="spm-delete-btn" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>
+      <button class="btn btn-sm" onclick="closeSubProductModal()">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveSubProductModal()"><i class="ti ti-check"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
 <div id="task-modal" style="display:none" class="modal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--white);border-radius:var(--radius-lg);width:92%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
     <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border)">
@@ -13364,6 +13893,45 @@ async function daConfirmDelete(id) {
       <button class="btn btn-danger btn-sm" id="tm-delete-btn" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>
       <button class="btn btn-sm" onclick="closeTaskModal()">Batal</button>
       <button class="btn btn-primary btn-sm" onclick="saveTaskModal()"><i class="ti ti-check"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rundown Row Modal -->
+<div id="rundown-row-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeRundownRowModal()">
+  <div style="background:var(--white);border-radius:var(--radius-lg);width:92%;max-width:500px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:14px;font-weight:700" id="rrm-title">Tambah Row Rundown</div>
+      <button class="btn btn-sm" onclick="closeRundownRowModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:16px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="cust-field editable" style="grid-column:1/-1">
+          <div class="cust-field-label">Activity *</div>
+          <input class="cust-field-input" id="rrm-activity" placeholder="contoh: Opening, Materi, Q&A...">
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Durasi (menit)</div>
+          <input class="cust-field-input" id="rrm-durasi" type="number" placeholder="10">
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Link</div>
+          <input class="cust-field-input" id="rrm-link" placeholder="https://...">
+        </div>
+        <div class="cust-field editable" style="grid-column:1/-1">
+          <div class="cust-field-label">Keterangan</div>
+          <textarea class="cust-field-input" id="rrm-keterangan" rows="2" style="resize:vertical" placeholder="Detail tambahan..."></textarea>
+        </div>
+        <div class="cust-field editable" style="grid-column:1/-1">
+          <div class="cust-field-label">Cue MC</div>
+          <textarea class="cust-field-input" id="rrm-cue-mc" rows="2" style="resize:vertical" placeholder="Teks untuk MC..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
+      <button class="btn btn-danger btn-sm" id="rrm-delete-btn" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>
+      <button class="btn btn-sm" onclick="closeRundownRowModal()">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveRundownRow()"><i class="ti ti-check"></i> Simpan</button>
     </div>
   </div>
 </div>
@@ -14601,7 +15169,7 @@ function ciRenderProfiles() {
       const platforms = Array.isArray(p.platforms) ? p.platforms.filter(x=>x&&x.trim()) : [];
       return `<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:0;height:100%">
         <!-- Header -->
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;flex-shrink:0">
           <div style="display:flex;align-items:center;gap:10px">
             ${_ciAvatar(p, 40)}
             <div>
@@ -14615,44 +15183,47 @@ function ciRenderProfiles() {
           </div>
         </div>
 
-        <!-- Kategori + Threat -->
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
-          ${_ciCatPill(p.category)}
+        <!-- Body: flex:1 so footer always sticks to bottom -->
+        <div style="flex:1;display:flex;flex-direction:column">
+          <!-- Kategori + Threat -->
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+            ${_ciCatPill(p.category)}
+          </div>
+
+          <!-- Platform -->
+          ${platforms.length ? `<div style="margin-bottom:10px">
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Platform</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+              ${platforms.map(pl => `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid)">${pl}</span>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <!-- Niche -->
+          ${p.niche ? `<div style="margin-bottom:10px">
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Niche</div>
+            <div style="font-size:11px;color:var(--text)">${p.niche}</div>
+          </div>` : ''}
+
+          <!-- Target Audience -->
+          ${p.target_audience ? `<div style="margin-bottom:10px">
+            <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Target Audience</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+              ${p.target_audience.split('|').map(t=>t.trim()).filter(Boolean).map(t=>`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--bg);color:var(--text);border:0.5px solid var(--border-md)">${t}</span>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <!-- Notes -->
+          ${p.notes ? `<div style="font-size:11px;color:var(--text-muted);padding:7px 9px;background:var(--bg);border-radius:6px;margin-bottom:10px;line-height:1.5;border-left:3px solid var(--border-md)">${p.notes}</div>` : ''}
+
+          <!-- Followers + Threat -->
+          ${(p.followers && Object.keys(typeof p.followers==='string'?JSON.parse(p.followers):p.followers).length) || p.threat_level ? `<div style="margin-top:auto;padding:8px 10px;background:var(--bg);border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            ${p.threat_level ? _ciThreatPill(p.threat_level) : ''}
+            ${Object.entries(typeof p.followers==='string'?JSON.parse(p.followers||'{}'):(p.followers||{})).map(([k,v]) => `<span style="font-size:11px;font-weight:600;color:var(--purple-mid)"><span style="color:var(--text-muted);font-weight:400">${k}</span> ${fmtN(v)}</span>`).join('')}
+          </div>` : ''}
         </div>
 
-        <!-- Platform -->
-        ${platforms.length ? `<div style="margin-bottom:10px">
-          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Platform</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${platforms.map(pl => `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--purple-light);color:var(--purple-mid)">${pl}</span>`).join('')}
-          </div>
-        </div>` : ''}
-
-        <!-- Niche -->
-        ${p.niche ? `<div style="margin-bottom:10px">
-          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Niche</div>
-          <div style="font-size:11px;color:var(--text)">${p.niche}</div>
-        </div>` : ''}
-
-        <!-- Target Audience -->
-        ${p.target_audience ? `<div style="margin-bottom:10px">
-          <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Target Audience</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${p.target_audience.split('|').map(t=>t.trim()).filter(Boolean).map(t=>`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--bg);color:var(--text);border:0.5px solid var(--border-md)">${t}</span>`).join('')}
-          </div>
-        </div>` : ''}
-
-        <!-- Notes -->
-        ${p.notes ? `<div style="font-size:11px;color:var(--text-muted);padding:7px 9px;background:var(--bg);border-radius:6px;margin-bottom:10px;line-height:1.5;border-left:3px solid var(--border-md)">${p.notes}</div>` : ''}
-
-        <!-- Followers + Threat -->
-        ${(p.followers && Object.keys(typeof p.followers==='string'?JSON.parse(p.followers):p.followers).length) || p.threat_level ? `<div style="margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          ${p.threat_level ? _ciThreatPill(p.threat_level) : ''}
-          ${Object.entries(typeof p.followers==='string'?JSON.parse(p.followers||'{}'):(p.followers||{})).map(([k,v]) => `<span style="font-size:11px;font-weight:600;color:var(--purple-mid)"><span style="color:var(--text-muted);font-weight:400">${k}</span> ${fmtN(v)}</span>`).join('')}
-        </div>` : ''}
-
         <!-- Footer -->
-        <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:auto;padding-top:10px;border-top:0.5px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
           <div style="display:flex;gap:5px">
             <button onclick="openCiProfileModal('${p.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-pencil" style="font-size:11px"></i> Edit</button>
           </div>
