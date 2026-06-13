@@ -2066,7 +2066,7 @@ async function sb_savePPCategory(nama, color) { return await sb_insert('pain_poi
 async function sb_deletePPCategory(id) { return await sb_delete('pain_point_categories', id); }
 
 
-// PRODUCTS — schema: id, nama, kategori, harga, status, deskripsi, link, cover_url
+// PRODUCTS — schema: id, nama, kategori, harga, status, deskripsi, link, cover_url, type
 async function sb_loadProducts() {
   const rows = await sb_load('products', { order: 'created_at', ascending: true });
   return rows.map(d => ({
@@ -2075,6 +2075,7 @@ async function sb_loadProducts() {
     klasifikasi: d.kategori || '',
     harga: parseFloat(d.harga) || 0,
     status: d.status || 'Active',
+    type: d.type || 'satuan',
     desc: d.deskripsi || '',
     landingUrl: d.link || '',
     cover_url: d.cover_url || '',
@@ -2088,6 +2089,7 @@ async function sb_insertProduct(data) {
     kategori: data.klasifikasi || '',
     harga: data.harga || 0,
     status: data.status || 'Draft',
+    type: data.type || 'satuan',
     deskripsi: data.desc || '',
     link: data.landingUrl || '',
     cover_url: data.cover_url || ''
@@ -2099,6 +2101,7 @@ async function sb_updateProduct(id, data) {
     kategori: data.klasifikasi || '',
     harga: data.harga || 0,
     status: data.status || 'Draft',
+    type: data.type || 'satuan',
     deskripsi: data.desc || '',
     link: data.landingUrl || '',
     cover_url: data.cover_url || ''
@@ -2172,6 +2175,15 @@ async function sb_insertProductKlasifikasi(name) {
   return await sb_insert('product_klasifikasi', { name });
 }
 async function sb_deleteProductKlasifikasi(id) { return await sb_delete('product_klasifikasi', id); }
+
+// PRODUCT BUNDLES — schema: id, bundle_id, item_id, created_at
+async function sb_loadProductBundles() {
+  return await sb_load('product_bundles', { order: 'created_at', ascending: true });
+}
+async function sb_insertProductBundle(bundleId, itemId) {
+  return await sb_insert('product_bundles', { bundle_id: bundleId, item_id: itemId });
+}
+async function sb_deleteProductBundle(id) { return await sb_delete('product_bundles', id); }
 
 // MT VACANCIES — full schema: company, program, industry, roles(jsonb), selection,
 // links(jsonb), deadline, status, notes, input_date, gpa, edu, majors(jsonb),
@@ -2660,7 +2672,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       partnerDealRows, partnerRows, outreachRows,
       orgDealRows, orgPartnerRows, orgOutreachRows,
       dealRows, prodRows, allPP, allPas,
-      allProdFeatures, klasifikasiRows,
+      allProdFeatures, klasifikasiRows, bundleRows,
       evalRows,
       buyerRows,
       contentLibRows,
@@ -2688,6 +2700,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       sb_load('product_passion_points', { order: 'created_at', ascending: true }),
       sb_load('product_features', { order: 'created_at', ascending: true }).catch(() => []),
       sb_loadProductKlasifikasi().catch(() => []),
+      sb_loadProductBundles().catch(() => []),
       sb_loadEvalContents().catch(e => { console.error('[sb_load] eval →', _sbErrInfo(e)); return []; }),
       sb_load('buyers', { order: 'created_at', ascending: false }).catch(() => []),
       sb_loadContentLib().catch(() => []),
@@ -2754,6 +2767,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
       passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
       features: allProdFeatures.filter(r => String(r.product_id) === String(p.id)).map(d => ({ id: d.id, name: d.name || '', description: d.description || '' })),
+      bundleItems: bundleRows.filter(r => String(r.bundle_id) === String(p.id)).map(r => ({ recordId: r.id, itemId: String(r.item_id) })),
     }));
 
     // Load klasifikasi from Supabase; fall back to localStorage if table empty
@@ -4637,9 +4651,10 @@ function renderTickets(){
     const div=person.divisiId?getDivisiById(person.divisiId):{nama:"—",color:"purple"};
     const att=t.files.length+t.links.length;
     const cc=t.cc.length;
-    return `<div class="tkt-row" onclick="openTktDetail('${t.id}')">
+    const isDone=t.status==="Done";
+    return `<div class="tkt-row" onclick="openTktDetail('${t.id}')" style="${isDone?'opacity:0.45':''}">
       <div class="tkt-id-cell">${fmtTktNo(t)}</div>
-      <div><div class="tkt-title-cell">${t.judul}</div><div class="tkt-sub">${getTypeById(t.tipeId).nama}${att>0?` · <i class="ti ti-paperclip" style="font-size:10px"></i> ${att}`:""}${cc>0?` · <i class="ti ti-users" style="font-size:10px"></i> CC ${cc}`:""}</div></div>
+      <div><div class="tkt-title-cell" style="${isDone?'text-decoration:line-through':''}">${t.judul}</div><div class="tkt-sub">${getTypeById(t.tipeId).nama}${att>0?` · <i class="ti ti-paperclip" style="font-size:10px"></i> ${att}`:""}${cc>0?` · <i class="ti ti-users" style="font-size:10px"></i> CC ${cc}`:""}</div></div>
       <div><span class="pill ic-${divColor(div.color)}" style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600">${div.nama}</span></div>
       <div>${tktPrioPill(t.prioritas)}</div>
       <div>${tktStatusPill(t.status)}</div>
@@ -6563,7 +6578,83 @@ function updateCL(pid,cid,field,val){
   if(c) c[field]=val;
 }
 
+function getBundleSourceItems(p){
+  return (p.bundleItems||[]).map(b=>products.find(x=>String(x.id)===String(b.itemId))).filter(Boolean);
+}
+
+function getKBEntries(prod,section){
+  if(section==='painpoints') return prod.painPoints||[];
+  if(section==='passionpoints') return prod.passionPoints||[];
+  if(section==='benefits') return prod.benefits||[];
+  if(section==='features') return prod.features||[];
+  if(section==='assets') return prod.assets||[];
+  if(section==='changelog') return prod.changelog||[];
+  if(section==='feedback') return prod.feedbacks||[];
+  return [];
+}
+
+function getBundleKBCount(bundleProd,section){
+  return getBundleSourceItems(bundleProd).reduce((s,x)=>s+getKBEntries(x,section).length,0);
+}
+
+function getBundleMergedKB(bundleProd,section){
+  return getBundleSourceItems(bundleProd).map(src=>({src,entries:getKBEntries(src,section)})).filter(g=>g.entries.length>0);
+}
+
+function renderBundleKBSection(section,bundleProd){
+  const groups=getBundleMergedKB(bundleProd,section);
+  if(groups.length===0){
+    return `<div style="text-align:center;padding:32px 0;color:var(--text-muted);font-size:13px">Tidak ada data pada KB section ini dari produk-produk dalam bundle.</div>`;
+  }
+  return groups.map(({src,entries})=>`
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:600;color:var(--purple-mid);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;padding:4px 8px;background:var(--purple-light);border-radius:var(--radius);display:inline-block">
+        <i class="ti ti-package" style="font-size:10px;margin-right:4px"></i>${src.nama}
+      </div>
+      ${entries.map(e=>{
+        if(section==='painpoints'||section==='passionpoints'){
+          const sev=e.severity||'Med';
+          const sevColor=sev==='High'?'var(--red)':sev==='Low'?'var(--green)':'var(--yellow)';
+          return `<div style="padding:8px 10px;background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:6px;font-size:12px">
+            <div style="display:flex;align-items:flex-start;gap:8px">
+              <span style="color:${sevColor};font-size:10px;font-weight:700;margin-top:1px;flex-shrink:0">${sev}</span>
+              <div style="flex:1">${e.text}</div>
+            </div>
+            ${e.source?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">Sumber: ${e.source}</div>`:''}
+          </div>`;
+        }
+        if(section==='benefits'||section==='features'){
+          return `<div style="padding:8px 10px;background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:6px;font-size:12px">
+            <div style="font-weight:500;margin-bottom:2px">${e.name||''}</div>
+            ${e.description?`<div style="color:var(--text-muted);font-size:11px">${e.description}</div>`:''}
+          </div>`;
+        }
+        if(section==='assets'){
+          return `<div style="padding:8px 10px;background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:6px;font-size:12px">
+            <div style="font-weight:500">${e.title||e.url||''}</div>
+            ${e.url?`<div style="font-size:11px"><a href="${e.url}" target="_blank" style="color:var(--purple-mid)">${e.url}</a></div>`:''}
+          </div>`;
+        }
+        if(section==='changelog'){
+          return `<div style="padding:8px 10px;background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:6px;font-size:12px">
+            <div style="font-weight:500;margin-bottom:2px">${e.title||e.version||''}</div>
+            ${e.date?`<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">${e.date}</div>`:''}
+            ${e.description||e.text?`<div style="color:var(--text-muted);font-size:11px">${e.description||e.text}</div>`:''}
+          </div>`;
+        }
+        if(section==='feedback'){
+          return `<div style="padding:8px 10px;background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:6px;font-size:12px">
+            <div style="font-weight:500;margin-bottom:2px">${e.name||e.source||''}</div>
+            ${e.text||e.feedback?`<div style="color:var(--text-muted);font-size:11px">"${e.text||e.feedback}"</div>`:''}
+          </div>`;
+        }
+        return '';
+      }).join('')}
+    </div>`).join('');
+}
+
 function renderKBSection(section,p){
+  if((p.type||'satuan')==='bundling') return renderBundleKBSection(section,p);
   if(section==="painpoints") return renderPainPoints(p);
   if(section==="passionpoints") return renderPassionPoints(p);
   if(section==="benefits") return renderBenefits(p);
@@ -6990,6 +7081,7 @@ let products = [];
 
 let activeProdId = null;
 let activeKBSection = "painpoints";
+let prodTypeFilter = "all";
 
 const PROD_STATUS = ["Draft","Pre-launch","Live","Archived"];
 const PROD_SEVERITY = ["High","Med","Low"];
@@ -7466,6 +7558,7 @@ async function saveProdModal(){
     status:document.getElementById("pm-status").value,
     desc:document.getElementById("pm-desc").value,
     landingUrl:document.getElementById("pm-url").value,
+    type:'satuan',
   };
   if(!data.nama){showToast("Nama produk wajib diisi","error");return;}
   if(id){
@@ -7488,10 +7581,32 @@ async function saveProdModal(){
   if(id) _refreshProdRightPanel(id);
 }
 
+function _getFilteredProducts(){
+  if(prodTypeFilter==='satuan') return products.filter(p=>(p.type||'satuan')==='satuan');
+  if(prodTypeFilter==='bundling') return products.filter(p=>(p.type||'satuan')==='bundling');
+  return products;
+}
+
+function setProdTypeFilter(f){
+  prodTypeFilter=f;
+  ['all','satuan','bundling'].forEach(v=>{
+    const el=document.getElementById('prod-filter-'+v);
+    if(!el) return;
+    el.style.borderBottomColor=v===f?'var(--purple-accent)':'transparent';
+    el.style.color=v===f?'var(--purple-mid)':'var(--text-muted)';
+    el.style.fontWeight=v===f?'600':'400';
+  });
+  _refreshProdListPanel();
+}
+
 function _refreshProdListPanel(){
   const el=document.getElementById('prod-list-inner');
   if(!el) return;
-  el.innerHTML=products.map(p=>prodListItemHTML(p,String(p.id)===String(activeProdId))).join('');
+  const filtered=_getFilteredProducts();
+  el.innerHTML=(filtered.length
+    ? filtered.map(p=>prodListItemHTML(p,String(p.id)===String(activeProdId))).join('')
+    : `<div style="padding:20px 14px;text-align:center;color:var(--text-hint);font-size:12px"><i class="ti ti-package" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada produk</div>`
+  );
   const header=document.querySelector('#prod-left-panel div:first-child div:first-child');
   if(header) header.textContent=`Produk (${products.length})`;
 }
@@ -7541,16 +7656,24 @@ function renderTaskKanban(projId){
 // ── TAB 3: CALENDAR ─────────────────────────────────────────
 
 function productHTML(){
+  const filtered=_getFilteredProducts();
   return `
   <div id="prod-email-wrap" style="display:flex;height:calc(100vh - 53px);overflow:hidden;background:var(--white)">
-    <div id="prod-left-panel" style="width:260px;flex-shrink:0;border-right:0.5px solid var(--border);overflow-y:auto;background:var(--white);display:flex;flex-direction:column">
-      <div style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--white);position:sticky;top:0;z-index:2">
+    <div id="prod-left-panel" style="width:260px;flex-shrink:0;border-right:0.5px solid var(--border);background:var(--white);display:flex;flex-direction:column">
+      <div style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--white)">
         <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px">Produk (${products.length})</div>
-        <button class="btn btn-primary btn-sm" onclick="openProdModal(null)" style="padding:3px 8px;font-size:11px"><i class="ti ti-plus"></i> Baru</button>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" onclick="openProdModal(null)" style="padding:3px 8px;font-size:11px;white-space:nowrap"><i class="ti ti-plus"></i> Satuan</button>
+          <button class="btn btn-primary btn-sm" onclick="openBundlingModal(null)" style="padding:3px 8px;font-size:11px;white-space:nowrap"><i class="ti ti-package"></i> Bundle</button>
+        </div>
       </div>
-      <div id="prod-list-inner" style="flex:1">
-        ${products.map(p=>prodListItemHTML(p,activeProdId&&String(p.id)===String(activeProdId))).join('')}
-        ${products.length===0?`<div style="padding:20px 14px;text-align:center;color:var(--text-hint);font-size:12px"><i class="ti ti-package" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada produk</div>`:''}
+      <div style="display:flex;border-bottom:0.5px solid var(--border);flex-shrink:0">
+        ${[['all','Semua'],['satuan','Satuan'],['bundling','Bundling']].map(([v,l])=>`
+          <div onclick="setProdTypeFilter('${v}')" id="prod-filter-${v}" style="flex:1;text-align:center;padding:7px 4px;font-size:11px;cursor:pointer;border-bottom:2px solid ${prodTypeFilter===v?'var(--purple-accent)':'transparent'};color:${prodTypeFilter===v?'var(--purple-mid)':'var(--text-muted)'};font-weight:${prodTypeFilter===v?'600':'400'};transition:all .15s">${l}</div>`).join('')}
+      </div>
+      <div id="prod-list-inner" style="flex:1;overflow-y:auto">
+        ${filtered.map(p=>prodListItemHTML(p,activeProdId&&String(p.id)===String(activeProdId))).join('')}
+        ${filtered.length===0?`<div style="padding:20px 14px;text-align:center;color:var(--text-hint);font-size:12px"><i class="ti ti-package" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada produk</div>`:''}
       </div>
     </div>
     <div id="prod-right-panel" style="flex:1;overflow-y:auto;min-width:0;background:var(--bg)">
@@ -7561,16 +7684,20 @@ function productHTML(){
 
 function initProductPage(){
   if(!activeProdId&&products.length>0) activeProdId=String(products[0].id);
-  const leftInner=document.getElementById('prod-list-inner');
-  if(leftInner) leftInner.innerHTML=products.map(p=>prodListItemHTML(p,String(p.id)===String(activeProdId))).join('');
+  _refreshProdListPanel();
   const rightPanel=document.getElementById('prod-right-panel');
   if(rightPanel) rightPanel.innerHTML=activeProdId?prodRightPanelHTML(activeProdId):prodEmptyStateHTML();
 }
 
 function prodListItemHTML(p,isActive){
+  const isBundling=(p.type||'satuan')==='bundling';
+  const itemCount=(p.bundleItems||[]).length;
+  const badges=isBundling
+    ?`<span class="pill pill-purple">Bundling</span><span style="font-size:10px;color:var(--text-muted)">${itemCount} produk</span>`
+    :`${prodStatusPill(p.status)}${klasPill(p.klasifikasi)}`;
   return `<div class="prod-list-item${isActive?' active':''}" onclick="selectProduct('${p.id}')" data-pid="${p.id}" style="padding:10px 14px;cursor:pointer;border-left:3px solid ${isActive?'var(--purple-accent)':'transparent'};background:${isActive?'var(--purple-light)':'transparent'};transition:all .15s;border-bottom:0.5px solid var(--border)">
     <div style="font-size:12px;font-weight:${isActive?'600':'500'};color:${isActive?'var(--purple-mid)':'var(--text)'};margin-bottom:4px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nama}</div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:3px">${prodStatusPill(p.status)}${klasPill(p.klasifikasi)}</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:3px;align-items:center">${badges}</div>
     <div style="font-size:11px;color:var(--text-muted)">Rp ${p.harga.toLocaleString('id-ID')}</div>
   </div>`;
 }
@@ -7593,6 +7720,8 @@ function selectProduct(id){
 function prodRightPanelHTML(id){
   const p=products.find(x=>String(x.id)===String(id));
   if(!p) return prodEmptyStateHTML();
+  const isBundling=(p.type||'satuan')==='bundling';
+  if(isBundling) return bundlingRightPanelHTML(p);
   const kbSections=[
     ['painpoints','ti-alert-circle','Customer Insights',(p.painPoints||[]).length],
     ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
@@ -7630,6 +7759,79 @@ function prodRightPanelHTML(id){
     </div>
   </div>
   <div id="kb-section-content" style="padding:16px 20px">
+    ${renderKBSection(activeKBSection,p)}
+  </div>`;
+}
+
+function bundlingRightPanelHTML(p){
+  const items=(p.bundleItems||[]).map(b=>products.find(x=>String(x.id)===String(b.itemId))).filter(Boolean);
+  const subtotal=items.reduce((s,x)=>s+x.harga,0);
+  const discountPct=subtotal>0&&p.harga<subtotal?Math.round((subtotal-p.harga)/subtotal*100):0;
+  const kbSections=[
+    ['painpoints','ti-alert-circle','Customer Insights',getBundleKBCount(p,'painpoints')],
+    ['passionpoints','ti-heart','Passion Points',getBundleKBCount(p,'passionpoints')],
+    ['benefits','ti-star','Benefits',getBundleKBCount(p,'benefits')],
+    ['features','ti-settings-2','Product Features',getBundleKBCount(p,'features')],
+    ['assets','ti-link','Aset Konten',getBundleKBCount(p,'assets')],
+    ['changelog','ti-history','Changelog',getBundleKBCount(p,'changelog')],
+    ['feedback','ti-message','Feedback',getBundleKBCount(p,'feedback')],
+  ];
+  return `
+  <div style="background:var(--white);padding:16px 20px;border-bottom:0.5px solid var(--border)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div style="min-width:0">
+        <div style="font-size:16px;font-weight:700;margin-bottom:7px;line-height:1.3">${p.nama}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${prodStatusPill(p.status)}
+          <span class="pill pill-purple">Bundling</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text)">Rp ${p.harga.toLocaleString('id-ID')}</span>
+          ${discountPct>0?`<span class="pill pill-green">Hemat ${discountPct}%</span>`:''}
+        </div>
+        ${p.desc?`<div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-top:8px">${p.desc}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-sm" onclick="openBundlingModal('${p.id}')"><i class="ti ti-edit"></i> Edit</button>
+        <button class="btn btn-sm" onclick="exportSingleProductJSON('${p.id}')"><i class="ti ti-download"></i> Export KB</button>
+      </div>
+    </div>
+  </div>
+  <!-- Bundle Contents -->
+  <div style="padding:16px 20px;background:var(--bg)">
+    <div class="card" style="margin:0 0 14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">Isi Bundling (${items.length} produk)</div>
+      ${items.length===0?`<div style="font-size:12px;color:var(--text-muted)">Belum ada produk dalam bundle ini.</div>`:''}
+      ${items.map(x=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:12px">
+          <div>
+            <div style="font-weight:500">${x.nama}</div>
+            <div style="margin-top:2px">${klasPill(x.klasifikasi)}</div>
+          </div>
+          <div style="font-weight:600;color:var(--text-muted)">Rp ${x.harga.toLocaleString('id-ID')}</div>
+        </div>`).join('')}
+      ${items.length>0?`
+        <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;font-size:12px">
+          <span style="color:var(--text-muted)">Subtotal satuan</span>
+          <span style="font-weight:600">Rp ${subtotal.toLocaleString('id-ID')}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:6px;font-size:13px">
+          <span style="font-weight:600">Harga bundling</span>
+          <span style="font-weight:700;color:var(--purple-mid)">Rp ${p.harga.toLocaleString('id-ID')}</span>
+        </div>
+        ${discountPct>0?`<div style="margin-top:8px;padding:7px 10px;background:var(--green-bg);border-radius:var(--radius);font-size:12px;color:var(--green);font-weight:600">Hemat ${discountPct}% · Rp ${(subtotal-p.harga).toLocaleString('id-ID')} lebih murah dari beli satuan</div>`:''}
+      `:''}
+    </div>
+  </div>
+  <!-- KB Tabs (merged from all included products) -->
+  <div style="background:var(--white);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border);overflow-x:auto">
+    <div style="display:flex;padding:0 4px;gap:0;white-space:nowrap">
+      ${kbSections.map(([key,icon,label,count])=>`
+        <div onclick="switchKBSection('${key}','${p.id}')" id="kbmenu-${key}" style="display:flex;align-items:center;gap:5px;padding:10px 12px;cursor:pointer;font-size:12px;border-bottom:2px solid ${activeKBSection===key?'var(--purple-accent)':'transparent'};color:${activeKBSection===key?'var(--purple-mid)':'var(--text-muted)'};font-weight:${activeKBSection===key?'600':'400'};transition:all .15s;flex-shrink:0">
+          <i class="ti ${icon}" style="font-size:12px"></i>${label}
+          <span style="background:var(--bg);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--text)">${count}</span>
+        </div>`).join('')}
+    </div>
+  </div>
+  <div id="kb-section-content" style="padding:16px 20px;background:var(--bg)">
     ${renderKBSection(activeKBSection,p)}
   </div>`;
 }
@@ -7958,6 +8160,103 @@ function openProdModal(id){
   document.getElementById("prod-delete-btn").onclick=()=>deleteProd(id);
   document.getElementById("prod-modal").dataset.editId=id||"";
   document.getElementById("prod-modal").style.display="flex";
+}
+
+function openBundlingModal(id){
+  const p=id?products.find(x=>String(x.id)===String(id)&&(x.type||'satuan')==='bundling'):null;
+  const satuanProducts=products.filter(x=>(x.type||'satuan')==='satuan');
+  document.getElementById('bm-title').textContent=p?'Edit Bundle':'Bundle Baru';
+  document.getElementById('bm-nama').value=p?p.nama:'';
+  document.getElementById('bm-harga').value=p?p.harga:'';
+  document.getElementById('bm-status').value=p?p.status:'Active';
+  document.getElementById('bm-desc').value=p?p.desc:'';
+  const selectedIds=p?(p.bundleItems||[]).map(b=>String(b.itemId)):[];
+  document.getElementById('bm-product-list').innerHTML=satuanProducts.map(x=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius);cursor:pointer;font-size:12px;border:0.5px solid var(--border);margin-bottom:5px;background:var(--white)">
+      <input type="checkbox" value="${x.id}" ${selectedIds.includes(String(x.id))?'checked':''} onchange="updateBundlingCalc()">
+      <div style="flex:1">
+        <span style="font-weight:500">${x.nama}</span>
+        ${klasPill(x.klasifikasi)}
+      </div>
+      <span style="font-size:11px;color:var(--text-muted);font-weight:600">Rp ${x.harga.toLocaleString('id-ID')}</span>
+    </label>`).join('');
+  document.getElementById('bm-delete-btn').style.display=p?'inline-flex':'none';
+  document.getElementById('bm-delete-btn').onclick=()=>deleteBundlingProduct(id);
+  document.getElementById('bundling-modal').dataset.editId=id||'';
+  document.getElementById('bundling-modal').style.display='flex';
+  updateBundlingCalc();
+}
+
+function closeBundlingModal(){
+  document.getElementById('bundling-modal').style.display='none';
+}
+
+function updateBundlingCalc(){
+  const checked=[...document.querySelectorAll('#bm-product-list input[type=checkbox]:checked')].map(el=>el.value);
+  const subtotal=products.filter(x=>checked.includes(String(x.id))).reduce((s,x)=>s+x.harga,0);
+  const harga=parseFloat(document.getElementById('bm-harga').value)||0;
+  const pct=subtotal>0&&harga>0&&harga<subtotal?Math.round((subtotal-harga)/subtotal*100):0;
+  document.getElementById('bm-subtotal').textContent=`Rp ${subtotal.toLocaleString('id-ID')}`;
+  document.getElementById('bm-discount').textContent=pct>0?`Hemat ${pct}%`:'';
+  document.getElementById('bm-discount').style.display=pct>0?'inline-block':'none';
+}
+
+async function saveBundlingModal(){
+  const modal=document.getElementById('bundling-modal');
+  const editId=modal.dataset.editId||'';
+  const nama=document.getElementById('bm-nama').value.trim();
+  if(!nama){showToast('Nama bundle wajib diisi');return;}
+  const harga=parseFloat(document.getElementById('bm-harga').value)||0;
+  const status=document.getElementById('bm-status').value;
+  const desc=document.getElementById('bm-desc').value.trim();
+  const checkedIds=[...document.querySelectorAll('#bm-product-list input[type=checkbox]:checked')].map(el=>el.value);
+  const data={nama,harga,status,desc,type:'bundling',klasifikasi:'',landingUrl:''};
+  let bundleId=editId;
+  if(editId){
+    const ok=await sb_updateProduct(editId,data);
+    if(!ok){showToast('Gagal update bundle');return;}
+    const idx=products.findIndex(x=>String(x.id)===String(editId));
+    if(idx>=0){products[idx]={...products[idx],...data};}
+  } else {
+    const row=await sb_insertProduct(data);
+    if(!row||!row.id){showToast('Gagal simpan bundle');return;}
+    bundleId=row.id;
+    products.push({id:bundleId,...data,painPoints:[],passionPoints:[],benefits:[],assets:[],changelog:[],feedbacks:[],features:[],bundleItems:[]});
+  }
+  // Sync bundle items: delete old, insert new
+  const existing=editId?products.find(x=>String(x.id)===String(editId)):null;
+  const oldItems=existing?(existing.bundleItems||[]):[];
+  for(const old of oldItems){
+    await sb_deleteProductBundle(old.recordId);
+  }
+  const newBundleItems=[];
+  for(const itemId of checkedIds){
+    const row=await sb_insertProductBundle(bundleId,itemId);
+    if(row&&row.id) newBundleItems.push({recordId:row.id,itemId:String(itemId)});
+  }
+  const bp=products.find(x=>String(x.id)===String(bundleId));
+  if(bp){Object.assign(bp,data);bp.bundleItems=newBundleItems;}
+  activeProdId=String(bundleId);
+  closeBundlingModal();
+  _refreshProdListPanel();
+  document.getElementById('prod-right-panel').innerHTML=prodRightPanelHTML(bundleId);
+  showToast(editId?'Bundle diperbarui':'Bundle dibuat');
+}
+
+async function deleteBundlingProduct(id){
+  if(!confirm('Hapus bundle ini?')) return;
+  const p=products.find(x=>String(x.id)===String(id));
+  if(p){
+    for(const b of (p.bundleItems||[])) await sb_deleteProductBundle(b.recordId);
+  }
+  const ok=await sb_delete('products',id);
+  if(!ok){showToast('Gagal hapus bundle');return;}
+  products=products.filter(x=>String(x.id)!==String(id));
+  activeProdId=products.length?String(products[0].id):null;
+  closeBundlingModal();
+  _refreshProdListPanel();
+  document.getElementById('prod-right-panel').innerHTML=activeProdId?prodRightPanelHTML(activeProdId):prodEmptyStateHTML();
+  showToast('Bundle dihapus');
 }
 
 function syncTicketToTask(tkt){
@@ -12942,6 +13241,55 @@ async function daConfirmDelete(id) {
       <button class="btn btn-danger btn-sm" id="prod-delete-btn" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus Produk</button>
       <button class="btn btn-sm" onclick="closeProdModal()">Batal</button>
       <button class="btn btn-primary btn-sm" onclick="saveProdModal()"><i class="ti ti-check"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bundling Modal -->
+<div id="bundling-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeBundlingModal()">
+  <div style="background:var(--white);border-radius:var(--radius-lg);width:92%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:14px;font-weight:700" id="bm-title">Bundle Baru</div>
+      <button class="btn btn-sm" onclick="closeBundlingModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:16px 20px;overflow-y:auto;flex:1">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="cust-field editable" style="grid-column:1/-1">
+          <div class="cust-field-label">Nama Bundle</div>
+          <input class="cust-field-input" id="bm-nama" placeholder="contoh: CCC Starter Pack">
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Harga Bundle (Rp)</div>
+          <input class="cust-field-input" id="bm-harga" type="number" placeholder="499000" oninput="updateBundlingCalc()">
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Status</div>
+          <select id="bm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
+            <option>Active</option><option>Draft</option><option>Archived</option>
+          </select>
+        </div>
+        <div class="cust-field editable" style="grid-column:1/-1">
+          <div class="cust-field-label">Deskripsi</div>
+          <textarea id="bm-desc" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Deskripsikan bundle ini..."></textarea>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">Pilih Produk Satuan</div>
+      <div id="bm-product-list"></div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);font-size:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Subtotal satuan</span>
+          <span id="bm-subtotal" style="font-weight:600">Rp 0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="color:var(--text-muted)">Diskon</span>
+          <span id="bm-discount" class="pill pill-green" style="display:none"></span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
+      <button class="btn btn-danger btn-sm" id="bm-delete-btn" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus Bundle</button>
+      <button class="btn btn-sm" onclick="closeBundlingModal()">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveBundlingModal()"><i class="ti ti-check"></i> Simpan</button>
     </div>
   </div>
 </div>
