@@ -76,6 +76,10 @@ html,body,.app,.main,.sidebar,.content,.modal-body,.pipeline-wrap,.pipeline-card
   .res-kat-card .res-item > div:nth-child(3){width:100%;padding-left:38px}
   /* Overflow text fix */
   .res-item a{word-break:break-all}
+  /* Products email layout — left panel collapses on mobile */
+  #prod-email-wrap{flex-direction:column;height:auto!important}
+  #prod-left-panel{width:100%!important;max-height:200px;border-right:none!important;border-bottom:0.5px solid var(--border)}
+  #prod-right-panel{min-height:300px}
 }
 .mobile-menu-btn{display:none;width:32px;height:32px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .sidebar-logo{padding:0;border-bottom:0.5px solid rgba(255,255,255,0.1)}
@@ -2140,6 +2144,35 @@ async function sb_updateProductPassionPoint(id, data) {
 }
 async function sb_deleteProductPassionPoint(id) { return await sb_delete('product_passion_points', id); }
 
+// PRODUCT FEATURES — schema: id, product_id, name, description, created_at
+async function sb_loadProductFeatures(productId) {
+  const rows = await sb_load('product_features', { order: 'created_at', ascending: true });
+  return rows.filter(r => String(r.product_id) === String(productId)).map(d => ({
+    id: d.id, name: d.name || '', description: d.description || ''
+  }));
+}
+async function sb_insertProductFeature(productId, data) {
+  return await sb_insert('product_features', {
+    product_id: productId, name: data.name || '', description: data.description || ''
+  });
+}
+async function sb_updateProductFeature(id, data) {
+  return await sb_update('product_features', id, {
+    name: data.name || '', description: data.description || ''
+  });
+}
+async function sb_deleteProductFeature(id) { return await sb_delete('product_features', id); }
+
+// PRODUCT KLASIFIKASI — schema: id, name, created_at
+async function sb_loadProductKlasifikasi() {
+  const rows = await sb_load('product_klasifikasi', { order: 'created_at', ascending: true });
+  return rows.map(r => ({ id: r.id, name: r.name || '' }));
+}
+async function sb_insertProductKlasifikasi(name) {
+  return await sb_insert('product_klasifikasi', { name });
+}
+async function sb_deleteProductKlasifikasi(id) { return await sb_delete('product_klasifikasi', id); }
+
 // MT VACANCIES — full schema: company, program, industry, roles(jsonb), selection,
 // links(jsonb), deadline, status, notes, input_date, gpa, edu, majors(jsonb),
 // placement(jsonb), other_req, duration, months(jsonb), year, open_date,
@@ -2627,6 +2660,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       partnerDealRows, partnerRows, outreachRows,
       orgDealRows, orgPartnerRows, orgOutreachRows,
       dealRows, prodRows, allPP, allPas,
+      allProdFeatures, klasifikasiRows,
       evalRows,
       buyerRows,
       contentLibRows,
@@ -2652,6 +2686,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       sb_loadProducts(),
       sb_load('product_pain_points', { order: 'created_at', ascending: true }),
       sb_load('product_passion_points', { order: 'created_at', ascending: true }),
+      sb_load('product_features', { order: 'created_at', ascending: true }).catch(() => []),
+      sb_loadProductKlasifikasi().catch(() => []),
       sb_loadEvalContents().catch(e => { console.error('[sb_load] eval →', _sbErrInfo(e)); return []; }),
       sb_load('buyers', { order: 'created_at', ascending: false }).catch(() => []),
       sb_loadContentLib().catch(() => []),
@@ -2717,7 +2753,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       ...p,
       painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
       passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
+      features: allProdFeatures.filter(r => String(r.product_id) === String(p.id)).map(d => ({ id: d.id, name: d.name || '', description: d.description || '' })),
     }));
+
+    // Load klasifikasi from Supabase; fall back to localStorage if table empty
+    if (klasifikasiRows.length) {
+      window._klasifikasiData = klasifikasiRows;
+      const names = klasifikasiRows.map(r => r.name);
+      if (!names.includes('Belum Diklasifikasi')) names.push('Belum Diklasifikasi');
+      KLASIFIKASI_LIST.length = 0;
+      names.forEach(n => KLASIFIKASI_LIST.push(n));
+    } else {
+      window._klasifikasiData = [];
+    }
 
     evalContents = evalRows;
     buyers = buyerRows.map(_buyerRowToJS);
@@ -2931,6 +2979,9 @@ function toggleSidebar() {
 })();
 
 function switchPage(page,el){
+  // Reset content padding/overflow when leaving product page
+  const _c=document.getElementById('mainContent');
+  if(_c){_c.style.removeProperty('padding');_c.style.removeProperty('overflow');}
   // Close mobile sidebar kalau lagi open
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebar-overlay');
@@ -2968,7 +3019,7 @@ function switchPage(page,el){
   else if(page==="orgpartner"){c.innerHTML=orgPartnerHTML();initOrgPartnerTab("overview");}
   else if(page==="loker"){c.innerHTML=lokerHTML();setTimeout(()=>window.dispatchEvent(new CustomEvent("initLoker")),100);}
   else if(page==="settings"){c.innerHTML=settingsHTML();initSettingsTab("master-produk");}
-  else if(page==="product"){c.innerHTML=productHTML();initProdTab("catalog");}
+  else if(page==="product"){c.style.setProperty('padding','0','important');c.style.setProperty('overflow','hidden','important');c.innerHTML=productHTML();initProductPage();}
   else if(page==="project"){c.innerHTML=projectHTML();initProjectTab("overview");}
   else if(page==="competitor"){c.innerHTML=competitorHTML();initCompetitor();}
   else if(page==="resources"){c.innerHTML=resourcesHTML();initResources();}
@@ -6516,6 +6567,7 @@ function renderKBSection(section,p){
   if(section==="painpoints") return renderPainPoints(p);
   if(section==="passionpoints") return renderPassionPoints(p);
   if(section==="benefits") return renderBenefits(p);
+  if(section==="features") return renderProductFeatures(p);
   if(section==="assets") return renderAssets(p);
   if(section==="changelog") return renderChangelog(p);
   if(section==="feedback") return renderFeedback(p);
@@ -7058,12 +7110,9 @@ function updatePP(pid,ppid,field,val){
 }
 
 function initProdTab(tab){
-  document.querySelectorAll("#mainContent .tab").forEach(t=>t.classList.remove("active"));
-  const btn=document.getElementById("prodtab-"+tab);
-  if(btn) btn.classList.add("active");
-  const c=document.getElementById("prod-tab-content");
-  if(tab==="catalog") c.innerHTML=prodCatalogHTML();
-  else if(tab==="kb") c.innerHTML=prodKBListHTML();
+  // Legacy shim — new layout uses initProductPage / selectProduct
+  _refreshProdListPanel();
+  _refreshProdRightPanel(activeProdId);
 }
 
 // ── TAB 1: CATALOG ───────────────────────────────────────────
@@ -7410,14 +7459,11 @@ function prodStatusPill(s){
 
 async function saveProdModal(){
   const id=document.getElementById("prod-modal").dataset.editId;
-  const existingProd=id?products.find(x=>String(x.id)===String(id)):null;
   const data={
     nama:document.getElementById("pm-nama").value.trim(),
     harga:parseInt(document.getElementById("pm-harga").value)||0,
     klasifikasi:document.getElementById("pm-klas").value,
     status:document.getElementById("pm-status").value,
-    launchDate:document.getElementById("pm-launch").value||'',
-    owner:(existingProd&&existingProd.owner)||'Tim Product',
     desc:document.getElementById("pm-desc").value,
     landingUrl:document.getElementById("pm-url").value,
   };
@@ -7432,12 +7478,27 @@ async function saveProdModal(){
   } else {
     const saved = await sb_insertProduct(data);
     if(saved && saved.id){
-      products.push({...saved,...data,id:saved.id,painPoints:[],passionPoints:[],benefits:[],assets:[],changelog:[],feedbacks:[]});
+      activeProdId=String(saved.id);
+      products.push({...saved,...data,id:saved.id,painPoints:[],passionPoints:[],benefits:[],features:[],assets:[],changelog:[],feedbacks:[]});
       showToast("Produk baru ditambahkan ✓");
     } else { showToast("Gagal simpan produk","error"); return; }
   }
   closeProdModal();
-  initProdTab("catalog");
+  _refreshProdListPanel();
+  if(id) _refreshProdRightPanel(id);
+}
+
+function _refreshProdListPanel(){
+  const el=document.getElementById('prod-list-inner');
+  if(!el) return;
+  el.innerHTML=products.map(p=>prodListItemHTML(p,String(p.id)===String(activeProdId))).join('');
+  const header=document.querySelector('#prod-left-panel div:first-child div:first-child');
+  if(header) header.textContent=`Produk (${products.length})`;
+}
+
+function _refreshProdRightPanel(id){
+  const el=document.getElementById('prod-right-panel');
+  if(el) el.innerHTML=id?prodRightPanelHTML(id):prodEmptyStateHTML();
 }
 
 function renderTaskKanban(projId){
@@ -7481,23 +7542,114 @@ function renderTaskKanban(projId){
 
 function productHTML(){
   return `
-  <div class="tab-row">
-    <div class="tab active" id="prodtab-catalog" onclick="initProdTab('catalog')"><i class="ti ti-package" style="font-size:12px"></i> Catalog</div>
-    <div class="tab" id="prodtab-kb" onclick="initProdTab('kb')"><i class="ti ti-books" style="font-size:12px"></i> Knowledge Base</div>
+  <div id="prod-email-wrap" style="display:flex;height:calc(100vh - 53px);overflow:hidden;background:var(--white)">
+    <div id="prod-left-panel" style="width:260px;flex-shrink:0;border-right:0.5px solid var(--border);overflow-y:auto;background:var(--white);display:flex;flex-direction:column">
+      <div style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--white);position:sticky;top:0;z-index:2">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px">Produk (${products.length})</div>
+        <button class="btn btn-primary btn-sm" onclick="openProdModal(null)" style="padding:3px 8px;font-size:11px"><i class="ti ti-plus"></i> Baru</button>
+      </div>
+      <div id="prod-list-inner" style="flex:1">
+        ${products.map(p=>prodListItemHTML(p,activeProdId&&String(p.id)===String(activeProdId))).join('')}
+        ${products.length===0?`<div style="padding:20px 14px;text-align:center;color:var(--text-hint);font-size:12px"><i class="ti ti-package" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada produk</div>`:''}
+      </div>
+    </div>
+    <div id="prod-right-panel" style="flex:1;overflow-y:auto;min-width:0;background:var(--bg)">
+      ${activeProdId?prodRightPanelHTML(activeProdId):prodEmptyStateHTML()}
+    </div>
+  </div>`;
+}
+
+function initProductPage(){
+  if(!activeProdId&&products.length>0) activeProdId=String(products[0].id);
+  const leftInner=document.getElementById('prod-list-inner');
+  if(leftInner) leftInner.innerHTML=products.map(p=>prodListItemHTML(p,String(p.id)===String(activeProdId))).join('');
+  const rightPanel=document.getElementById('prod-right-panel');
+  if(rightPanel) rightPanel.innerHTML=activeProdId?prodRightPanelHTML(activeProdId):prodEmptyStateHTML();
+}
+
+function prodListItemHTML(p,isActive){
+  return `<div class="prod-list-item${isActive?' active':''}" onclick="selectProduct('${p.id}')" data-pid="${p.id}" style="padding:10px 14px;cursor:pointer;border-left:3px solid ${isActive?'var(--purple-accent)':'transparent'};background:${isActive?'var(--purple-light)':'transparent'};transition:all .15s;border-bottom:0.5px solid var(--border)">
+    <div style="font-size:12px;font-weight:${isActive?'600':'500'};color:${isActive?'var(--purple-mid)':'var(--text)'};margin-bottom:4px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nama}</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:3px">${prodStatusPill(p.status)}${klasPill(p.klasifikasi)}</div>
+    <div style="font-size:11px;color:var(--text-muted)">Rp ${p.harga.toLocaleString('id-ID')}</div>
+  </div>`;
+}
+
+function selectProduct(id){
+  activeProdId=String(id);
+  activeKBSection='painpoints';
+  document.querySelectorAll('.prod-list-item').forEach(el=>{
+    const isActive=el.dataset.pid===activeProdId;
+    el.style.borderLeftColor=isActive?'var(--purple-accent)':'transparent';
+    el.style.background=isActive?'var(--purple-light)':'transparent';
+    const nameEl=el.querySelector('div');
+    if(nameEl){nameEl.style.fontWeight=isActive?'600':'500';nameEl.style.color=isActive?'var(--purple-mid)':'var(--text)';}
+    if(isActive) el.classList.add('active'); else el.classList.remove('active');
+  });
+  const rightPanel=document.getElementById('prod-right-panel');
+  if(rightPanel) rightPanel.innerHTML=prodRightPanelHTML(id);
+}
+
+function prodRightPanelHTML(id){
+  const p=products.find(x=>String(x.id)===String(id));
+  if(!p) return prodEmptyStateHTML();
+  const kbSections=[
+    ['painpoints','ti-alert-circle','Customer Insights',(p.painPoints||[]).length],
+    ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
+    ['benefits','ti-star','Benefits',(p.benefits||[]).length],
+    ['features','ti-settings-2','Product Features',(p.features||[]).length],
+    ['assets','ti-link','Aset Konten',(p.assets||[]).length],
+    ['changelog','ti-history','Changelog',(p.changelog||[]).length],
+    ['feedback','ti-message','Feedback',(p.feedbacks||[]).length],
+  ];
+  return `
+  <div style="background:var(--white);padding:16px 20px;border-bottom:0.5px solid var(--border)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div style="min-width:0">
+        <div style="font-size:16px;font-weight:700;margin-bottom:7px;line-height:1.3">${p.nama}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${prodStatusPill(p.status)}
+          ${klasPill(p.klasifikasi)}
+          <span style="font-size:12px;font-weight:600;color:var(--text)">Rp ${p.harga.toLocaleString('id-ID')}</span>
+        </div>
+        ${p.desc?`<div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-top:8px">${p.desc}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-sm" onclick="openProdModal('${p.id}')"><i class="ti ti-edit"></i> Edit</button>
+        <button class="btn btn-sm" onclick="exportSingleProductJSON('${p.id}')"><i class="ti ti-download"></i> Export KB</button>
+      </div>
+    </div>
   </div>
-  <div id="prod-tab-content"></div>`;
+  <div style="background:var(--white);border-bottom:0.5px solid var(--border);overflow-x:auto">
+    <div style="display:flex;padding:0 4px;gap:0;white-space:nowrap">
+      ${kbSections.map(([key,icon,label,count])=>`
+        <div onclick="switchKBSection('${key}','${id}')" id="kbmenu-${key}" style="display:flex;align-items:center;gap:5px;padding:10px 12px;cursor:pointer;font-size:12px;border-bottom:2px solid ${activeKBSection===key?'var(--purple-accent)':'transparent'};color:${activeKBSection===key?'var(--purple-mid)':'var(--text-muted)'};font-weight:${activeKBSection===key?'600':'400'};transition:all .15s;flex-shrink:0">
+          <i class="ti ${icon}" style="font-size:12px"></i>${label}
+          <span style="background:var(--bg);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--text)">${count}</span>
+        </div>`).join('')}
+    </div>
+  </div>
+  <div id="kb-section-content" style="padding:16px 20px">
+    ${renderKBSection(activeKBSection,p)}
+  </div>`;
+}
+
+function prodEmptyStateHTML(){
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">
+    <i class="ti ti-package" style="font-size:40px;margin-bottom:12px;color:var(--text-hint)"></i>
+    <div style="font-size:14px;font-weight:500;margin-bottom:6px">Pilih produk</div>
+    <div style="font-size:12px">Klik produk di panel kiri untuk melihat detail & KB</div>
+  </div>`;
 }
 
 function switchKBSection(section,id){
   activeKBSection=section;
   const p=products.find(x=>String(x.id)===String(id));
   if(!p) return;
-  // update menu highlight
-  ["painpoints","passionpoints","benefits","assets","changelog","feedback"].forEach(k=>{
+  ["painpoints","passionpoints","benefits","features","assets","changelog","feedback"].forEach(k=>{
     const el=document.getElementById("kbmenu-"+k);
     if(!el) return;
-    el.style.borderLeftColor=k===section?"var(--purple-accent)":"transparent";
-    el.style.background=k===section?"var(--purple-light)":"transparent";
+    el.style.borderBottomColor=k===section?"var(--purple-accent)":"transparent";
     el.style.color=k===section?"var(--purple-mid)":"var(--text-muted)";
     el.style.fontWeight=k===section?"600":"400";
   });
@@ -7581,6 +7733,121 @@ function renderBenefits(p){
       </div>
     </div>`).join("")}
   </div>`;
+}
+
+function renderProductFeatures(p){
+  const feats=p.features||[];
+  return `
+  <div class="card" style="margin:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div>
+        <div style="font-size:13px;font-weight:600">Product Features</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Fitur-fitur utama produk. Dipakai untuk pitch deck, sales, & konten.</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addProductFeature('${p.id}')"><i class="ti ti-plus"></i> Tambah</button>
+    </div>
+    ${feats.length===0?`<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12px"><i class="ti ti-settings-2" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada fitur terdokumentasi.</div>`:""}
+    ${feats.map((f,i)=>`
+    <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--purple-light);color:var(--purple-mid);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <input style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0;margin-bottom:4px;outline:none" value="${(f.name||'').replace(/"/g,'&quot;')}" placeholder="Nama fitur..." onchange="updateProductFeature('${p.id}','${f.id}','name',this.value)" onblur="saveProductFeatureRow('${p.id}','${f.id}')">
+          <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text-muted);resize:none;line-height:1.5;padding:0;outline:none" rows="2" placeholder="Deskripsi singkat fitur..." onchange="updateProductFeature('${p.id}','${f.id}','description',this.value)" onblur="saveProductFeatureRow('${p.id}','${f.id}')">${f.description||''}</textarea>
+        </div>
+        <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:10px;flex-shrink:0" onclick="deleteProductFeature('${p.id}','${f.id}')"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`).join("")}
+  </div>`;
+}
+
+async function addProductFeature(pid){
+  const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
+  const newEntry={name:"Nama fitur baru...",description:""};
+  const saved=await sb_insertProductFeature(p.id,newEntry);
+  if(!saved||!saved.id){showToast("Gagal tambah fitur","error");return;}
+  p.features=p.features||[];
+  p.features.push({id:saved.id,...newEntry});
+  document.getElementById("kb-section-content").innerHTML=renderKBSection("features",p);
+  _refreshProdKBCount(pid,'features',p.features.length);
+  showToast("Fitur ditambahkan ✓");
+}
+
+function updateProductFeature(pid,fid,field,val){
+  const p=products.find(x=>String(x.id)===String(pid));
+  const f=p&&(p.features||[]).find(x=>String(x.id)===String(fid));
+  if(f) f[field]=val;
+}
+
+async function saveProductFeatureRow(pid,fid){
+  const p=products.find(x=>String(x.id)===String(pid));
+  const f=p&&(p.features||[]).find(x=>String(x.id)===String(fid));
+  if(!f) return;
+  await sb_updateProductFeature(fid,f);
+}
+
+async function deleteProductFeature(pid,fid){
+  if(!confirm("Hapus fitur ini?")) return;
+  const ok=await sb_deleteProductFeature(fid);
+  if(!ok){showToast("Gagal hapus fitur","error");return;}
+  const p=products.find(x=>String(x.id)===String(pid));
+  if(p){
+    p.features=(p.features||[]).filter(x=>String(x.id)!==String(fid));
+    document.getElementById("kb-section-content").innerHTML=renderKBSection("features",p);
+    _refreshProdKBCount(pid,'features',p.features.length);
+  }
+  showToast("Fitur dihapus");
+}
+
+function _refreshProdKBCount(pid,section,count){
+  const el=document.getElementById('kbmenu-'+section);
+  if(!el) return;
+  const badge=el.querySelector('span');
+  if(badge) badge.textContent=count;
+}
+
+async function exportSingleProductJSON(id){
+  const p=products.find(x=>String(x.id)===String(id));
+  if(!p){showToast("Produk tidak ditemukan","error");return;}
+  const btn=document.querySelector(`[onclick="exportSingleProductJSON('${id}')"]`);
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> ...';}
+  try{
+    const [allPP,allPas,allFeat]=await Promise.all([
+      sb_load('product_pain_points',{order:'created_at',ascending:true}),
+      sb_load('product_passion_points',{order:'created_at',ascending:true}),
+      sb_load('product_features',{order:'created_at',ascending:true}),
+    ]);
+    const data={
+      nama:p.nama,
+      klasifikasi:p.klasifikasi,
+      status:p.status,
+      harga:p.harga,
+      deskripsi:p.desc||'',
+      customer_insights:allPP
+        .filter(r=>String(r.product_id)===String(p.id))
+        .map(d=>({text:d.text||'',severity:d.severity||'Med',source:d.source||''})),
+      passion_points:allPas
+        .filter(r=>String(r.product_id)===String(p.id))
+        .map(d=>({text:d.text||'',severity:d.severity||'Med',source:d.source||''})),
+      benefits:(p.benefits||[]).map(b=>({text:b.text||'',segment:b.segment||'',evidence:b.evidence||''})),
+      product_features:allFeat
+        .filter(r=>String(r.product_id)===String(p.id))
+        .map(d=>({name:d.name||'',description:d.description||''})),
+    };
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`kb_${p.nama.replace(/[^a-zA-Z0-9]/g,'_').toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Export berhasil ✓');
+  }catch(e){
+    showToast('Export gagal','error');
+    console.error('[exportSingleProductJSON]',e);
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-download"></i> Export KB';}
+  }
 }
 
 function addAsset(pid){
@@ -7685,7 +7952,6 @@ function openProdModal(id){
   klasSelect.innerHTML=KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi").map(k=>`<option>${k}</option>`).join("");
   klasSelect.value=p?p.klasifikasi:(KLASIFIKASI_LIST[0]||"");
   document.getElementById("pm-status").value=p?p.status:"Draft";
-  document.getElementById("pm-launch").value=p?p.launchDate:"";
   document.getElementById("pm-desc").value=p?p.desc:"";
   document.getElementById("pm-url").value=p?p.landingUrl:"";
   document.getElementById("prod-delete-btn").style.display=p?"inline-flex":"none";
@@ -7742,9 +8008,11 @@ async function deleteProd(id){
   const ok = await sb_deleteProduct(id);
   if(!ok){ showToast("Gagal hapus produk","error"); return; }
   products=products.filter(x=>String(x.id)!==String(id));
+  if(String(activeProdId)===String(id)) activeProdId=products.length?String(products[0].id):null;
   closeProdModal();
   showToast("Produk dihapus");
-  initProdTab("catalog");
+  _refreshProdListPanel();
+  _refreshProdRightPanel(activeProdId);
 }
 
 
@@ -7801,11 +8069,7 @@ function renderDuplicateTaskList(){
 }
 
 function openKBDetail(id){
-  activeProdId=id;
-  activeKBSection="painpoints";
-  document.querySelector("#prodtab-kb").click();
-  const c=document.getElementById("prod-tab-content");
-  c.innerHTML=prodKBDetailHTML(id);
+  selectProduct(id);
 }
 
 async function ppDeleteKategori(i){
@@ -8149,6 +8413,7 @@ function klasifikasiSettingsHTML(){
       ${KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi").map((k,i)=>`
         <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:var(--radius)">
           <span style="flex:1;font-size:12px">${k}</span>
+          ${klasPill(k)}
           <button onclick="deleteKlasifikasi(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:12px"><i class="ti ti-x"></i></button>
         </div>`).join('')}
     </div>
@@ -8163,29 +8428,39 @@ function klasifikasiSettingsHTML(){
 function renderKlasList(){
   const el = document.getElementById('klas-list');
   if(!el) return;
-  el.innerHTML = KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi").map((k,i)=>`
+  const list = KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi");
+  el.innerHTML = list.map((k,i)=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:var(--radius)">
       <span style="flex:1;font-size:12px">${k}</span>
+      ${klasPill(k)}
       <button onclick="deleteKlasifikasi(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:12px"><i class="ti ti-x"></i></button>
     </div>`).join('');
 }
 
-function addKlasifikasi(){
+async function addKlasifikasi(){
   const input = document.getElementById('klas-new-input');
   const val = input.value.trim();
   if(!val){ showToast('Nama klasifikasi wajib diisi','error'); return; }
-  if(KLASIFIKASI_LIST.includes(val)){ showToast('Klasifikasi sudah ada','error'); return; }
-  KLASIFIKASI_LIST.splice(KLASIFIKASI_LIST.length-1, 0, val); // insert before "Belum Diklasifikasi"
-  localStorage.setItem('ccc_klasifikasi_list', JSON.stringify(KLASIFIKASI_LIST));
+  if(KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi").includes(val)){ showToast('Klasifikasi sudah ada','error'); return; }
+  const saved = await sb_insertProductKlasifikasi(val);
+  if(!saved||!saved.id){ showToast('Gagal simpan klasifikasi','error'); return; }
+  window._klasifikasiData = window._klasifikasiData||[];
+  window._klasifikasiData.push({id:saved.id, name:val});
+  KLASIFIKASI_LIST.splice(KLASIFIKASI_LIST.indexOf('Belum Diklasifikasi'), 0, val);
   input.value = '';
   renderKlasList();
   showToast('Klasifikasi ditambahkan ✓');
 }
 
-function deleteKlasifikasi(idx){
+async function deleteKlasifikasi(idx){
   if(!confirm('Hapus klasifikasi ini?')) return;
+  const klasData = (window._klasifikasiData||[])[idx];
+  if(klasData&&klasData.id){
+    const ok = await sb_deleteProductKlasifikasi(klasData.id);
+    if(!ok){ showToast('Gagal hapus klasifikasi','error'); return; }
+    window._klasifikasiData.splice(idx,1);
+  }
   KLASIFIKASI_LIST.splice(idx, 1);
-  localStorage.setItem('ccc_klasifikasi_list', JSON.stringify(KLASIFIKASI_LIST));
   renderKlasList();
   showToast('Klasifikasi dihapus');
 }
@@ -12649,13 +12924,9 @@ async function daConfirmDelete(id) {
             <option>Draft</option><option>Pre-launch</option><option>Live</option><option>Archived</option>
           </select>
         </div>
-        <div class="cust-field editable">
+        <div class="cust-field editable" style="grid-column:1/-1">
           <div class="cust-field-label">Klasifikasi</div>
           <select id="pm-klas" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"></select>
-        </div>
-        <div class="cust-field editable">
-          <div class="cust-field-label">Tanggal Launch</div>
-          <input class="cust-field-input" id="pm-launch" placeholder="1 Jan 2025">
         </div>
         <div class="cust-field editable" style="grid-column:1/-1">
           <div class="cust-field-label">Landing Page URL</div>
