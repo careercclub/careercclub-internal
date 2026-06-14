@@ -1890,7 +1890,7 @@ function notifRender() {
     const fullTime = `${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
     const newBg = isNew ? 'background:#e8f0fc;' : '';
     const textMain = isNew ? '#1a1a2e' : 'var(--text)';
-    const textSub  = isNew ? '#4c3f8a' : 'var(--text-muted)';
+    const textSub  = isNew ? '#0a3d8f' : 'var(--text-muted)';
     return `<div style="display:flex;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);${newBg}">
       <div style="width:30px;height:30px;border-radius:8px;background:${isNew?'var(--purple-accent)':'var(--bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
         <i class="ti ${icon}" style="font-size:14px;color:${isNew?'#fff':'var(--text-muted)'}"></i>
@@ -14009,11 +14009,13 @@ async function daConfirmDelete(id) {
       if(editId) {
         const ok = await sb_updateVacancy(editId, entry);
         if(!ok){ showLoading(false); showToast('Gagal update loker','error'); return; }
+        logActivity('UPDATE', 'mt_vacancies', `Update loker: ${entry.company} - ${entry.program}`);
         _sbToast('✓ Loker diupdate');
         editId=null;
       } else {
         const saved = await sb_saveVacancy(entry);
         if(!saved || !saved.id){ showLoading(false); showToast('Gagal simpan loker','error'); return; }
+        logActivity('TAMBAH', 'mt_vacancies', `Tambah loker: ${entry.company} - ${entry.program}`);
         _sbToast('✓ Loker tersimpan');
       }
       await loadData();
