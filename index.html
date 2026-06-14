@@ -1763,6 +1763,8 @@ const _ACT_MODULE_MAP = {
   sub_products:               'Products',
   tkt_divisi:                 'Settings',
   tkt_people:                 'Settings',
+  mt_story_list:              'Content Planning',
+  kol_list:                   'Content Planning',
 };
 
 // Tabel yang di-skip dari activity log (terlalu noisy / system tables)
@@ -2439,6 +2441,27 @@ async function sb_saveVoucher(row) { return await sb_insert('vouchers', row); }
 async function sb_updateVoucher(id, row) { return await sb_update('vouchers', id, row); }
 async function sb_deleteVoucher(id) { return await sb_delete('vouchers', id); }
 
+async function sb_loadMTStoryList() { return await sb_load('mt_story_list', { order: 'created_at', ascending: false }).catch(() => []); }
+async function sb_insertMTStory(data) { return await sb_insert('mt_story_list', data); }
+async function sb_updateMTStory(id, data) { return await sb_update('mt_story_list', id, data); }
+async function sb_deleteMTStory(id) { return await sb_delete('mt_story_list', id); }
+
+async function sb_loadKOLList() { return await sb_load('kol_list', { order: 'created_at', ascending: false }).catch(() => []); }
+async function sb_insertKOL(data) { return await sb_insert('kol_list', data); }
+async function sb_updateKOL(id, data) { return await sb_update('kol_list', id, data); }
+async function sb_deleteKOL(id) { return await sb_delete('kol_list', id); }
+
+async function sb_uploadContentPhoto(file, path) {
+  const { data, error } = await _sb.storage.from('content-photos').upload(path, file, { upsert: true });
+  if (error) { console.error('[upload] content-photo:', error); return null; }
+  return data.path;
+}
+async function sb_deleteContentPhoto(path) { await _sb.storage.from('content-photos').remove([path]); }
+function sb_contentPhotoPublicUrl(path) {
+  const { data } = _sb.storage.from('content-photos').getPublicUrl(path);
+  return data.publicUrl;
+}
+
 async function sb_loadContentLib() { return await sb_load('content_library', { order: 'created_at', ascending: false }); }
 async function sb_saveContentLib(row) { return await sb_insert('content_library', row); }
 async function sb_updateContentLib(id, row) { return await sb_update('content_library', id, row); }
@@ -2722,6 +2745,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       buyerRows,
       contentLibRows,
       talentPoolRows,
+      mtStoryRows,
+      kolRows,
     ] = await Promise.all([
       sb_loadDivisi(),
       sb_loadPeople(),
@@ -2754,6 +2779,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       sb_load('buyers', { order: 'created_at', ascending: false }).catch(() => []),
       sb_loadContentLib().catch(() => []),
       sb_loadTalentPool().catch(() => []),
+      sb_loadMTStoryList(),
+      sb_loadKOLList(),
     ]);
 
     // ── MAP DATA ────────────────────────────────────────────────────────────
@@ -2849,6 +2876,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       labels: c.labels||[], created_at: c.created_at
     }));
     _tpData = talentPoolRows;
+    mtStoryList = mtStoryRows.map(r => ({...r, is_posted: r.is_posted || false}));
+    kolList = kolRows;
 
     // Meta Ads
     try {
@@ -4777,7 +4806,7 @@ function openTktDetail(id){
       <div style="padding:16px 20px;border-right:0.5px solid var(--border)">
         <div style="font-size:15px;font-weight:700;margin-bottom:12px;line-height:1.4">${t.judul}</div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:6px">Deskripsi</div>
-        <div class="tkt-desc-box">${t.deskripsi||"—"}</div>
+        <textarea id="tkt-edit-desc" rows="4" style="width:100%;padding:10px 12px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;font-family:'DM Sans',sans-serif;line-height:1.7;background:var(--bg);resize:vertical;color:var(--text)">${(t.deskripsi||'').replace(/</g,'&lt;')}</textarea>
         ${(filesHTML||linksHTML)?`
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin:12px 0 6px">Lampiran & Link</div>
         ${filesHTML}${linksHTML}`:""}
@@ -4875,6 +4904,8 @@ async function saveTktDetail(id){
   t.status=newStatus;
   t.prioritas=document.getElementById('tkt-edit-prio').value;
   t.deadline=document.getElementById('tkt-edit-deadline').value;
+  const descEl=document.getElementById('tkt-edit-desc');
+  if(descEl) t.deskripsi=descEl.value;
   t.assignedToIds=window._tktDetailAssigneeIds||[];
   t.assignedToId=t.assignedToIds[0]||null;
   const ok=await sb_updateTicket(id,t);
@@ -5080,7 +5111,7 @@ function _gcalOpenTicketModal(tktId){
     <div style="display:flex;flex-direction:column;gap:12px">
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUDUL EVENT</label>
-        <input id="gcal-title" value="[${fmtTktNo(t)}] ${t.judul}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+        <input id="gcal-title" value="${t.judul}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
@@ -7268,7 +7299,9 @@ async function syncTaskToTicket(task, eventName){
   // Cari ticket terkait: prioritas pakai task.ticketId (link DB), fallback related_task_id
   let tkt = (task.ticketId ? tickets.find(t=>_idEq(t.id, task.ticketId)) : null)
          || tickets.find(t => _idEq(t.linkedTaskId, task.id));
-  const eventInfo = eventName ? `\n\n📌 Event: ${eventName}\n📅 Deadline: ${fmtDateID(task.deadline)}\n🎯 Phase: ${task.phase}` : "";
+  const taskDesc = (task.desc||"").trim();
+  const eventInfo = eventName ? `Event: ${eventName}\nDeadline: ${fmtDateID(task.deadline)}\nPhase: ${task.phase}` : "";
+  const deskripsi = taskDesc && eventInfo ? `${taskDesc}\n\n${eventInfo}` : (taskDesc || eventInfo);
 
   const ticketData = {
     judul: task.title,
@@ -7277,7 +7310,8 @@ async function syncTaskToTicket(task, eventName){
     divisiId: task.divisiId || null,
     prioritas: task.priority,
     status: TASK_TO_TKT_STATUS[task.status] || "Open",
-    deskripsi: (task.desc||"") + eventInfo,
+    deskripsi,
+    deadline: task.deadline || null,
     source: "Webinar Project",
     linkedTaskId: task.id,
   };
@@ -7429,6 +7463,7 @@ let activeProdId = null;
 let activeKBSection = "painpoints";
 let prodTypeFilter = "all";
 let prodView = "list";
+let productTab = "list";
 
 const PROD_STATUS = ["Draft","Pre-launch","Live","Archived"];
 const PROD_SEVERITY = ["High","Med","Low"];
@@ -7996,10 +8031,20 @@ function renderTaskKanban(projId){
 
 function productHTML(){
   return `<div id="prod-page-wrap" style="height:calc(100vh - 53px);overflow:hidden;display:flex;flex-direction:column;background:var(--bg)">
+    <div class="tab-row" style="flex-shrink:0;margin-bottom:0">
+      <div class="tab ${productTab==='list'?'active':''}" id="prodtab-list" onclick="initProductTab('list')"><i class="ti ti-package" style="font-size:12px"></i> Product List</div>
+    </div>
     <div id="prod-page-content" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0">
       ${prodView==='list' ? prodListPageHTML() : prodDetailPageHTML(activeProdId)}
     </div>
   </div>`;
+}
+
+function initProductTab(tab){
+  productTab=tab;
+  document.querySelectorAll('#mainContent .tab').forEach(t=>t.classList.remove('active'));
+  const el=document.getElementById('prodtab-'+tab);
+  if(el) el.classList.add('active');
 }
 
 function prodListPageHTML(){
@@ -8109,6 +8154,7 @@ function prodDetailPageHTML(id){
 }
 
 function initProductPage(){
+  productTab='list';
   prodView='list';
   activeProdId=null;
 }
@@ -8504,7 +8550,8 @@ async function deleteProductFeatureFromModal(pid,fid){
 function _refreshProdKBCount(pid,section,count){
   const el=document.getElementById('kbmenu-'+section);
   if(!el) return;
-  const badge=el.querySelector('span');
+  const spans=el.querySelectorAll('span');
+  const badge=spans[spans.length-1];
   if(badge) badge.textContent=count;
 }
 
@@ -11266,7 +11313,7 @@ var menuSections = [
 ];
 
 function loadMenuSections(){
-  var MENU_VERSION = 'v13_prod_subpage';
+  var MENU_VERSION = 'v16_prod_tabs';
   var savedVersion = localStorage.getItem('ccc_menuVersion');
   if(savedVersion !== MENU_VERSION){
     // Config outdated or first run - clear and use default
@@ -12179,7 +12226,411 @@ function openAdsDetail(id){
 
 
 
-function contentHTML(){ return comingSoonHTML("Content Planning", "ti-calendar-event", "Kalender konten lintas channel (Threads, IG, TikTok) plus brief & approval flow. Coming soon — modul ini sedang dibangun."); }
+// ── CONTENT PLANNING STATE ──────────────────────────────────────────────────
+let mtStoryList = [];
+let kolList = [];
+let _contentSubTab = 'carousel';
+let mtStoryFilter = 'all';
+let mtStorySearch = '';
+let kolSearch = '';
+let kolNicheFilter = 'all';
+let _mtPhotoUrl = '';
+let _kolPhotoUrl = '';
+let _kolRateFileUrl = '';
+
+function contentHTML(){
+  return `<div style="display:flex;flex-direction:column;height:calc(100vh - 53px)">
+    <div style="background:var(--white);border-bottom:0.5px solid var(--border);padding:0 20px;flex-shrink:0">
+      <div style="display:flex;gap:0">
+        ${[['carousel','Carousel Plan'],['story-plan','Story Plan'],['kol-list','KOL List'],['mt-story','MT Story List']].map(([v,l])=>`
+          <div onclick="switchContentTab('${v}')" id="ctab-${v}" style="padding:12px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid ${_contentSubTab===v?'var(--purple-accent)':'transparent'};color:${_contentSubTab===v?'var(--purple-mid)':'var(--text-muted)'};font-weight:${_contentSubTab===v?'600':'400'};transition:all .15s;white-space:nowrap">${l}</div>`).join('')}
+      </div>
+    </div>
+    <div id="content-tab-body" style="flex:1;overflow-y:auto;background:var(--bg)">
+      ${_contentSubTabHTML(_contentSubTab)}
+    </div>
+  </div>`;
+}
+
+function _contentSubTabHTML(tab){
+  if(tab==='mt-story') return mtStoryPageHTML();
+  if(tab==='kol-list') return kolListPageHTML();
+  const labels={'carousel':'Carousel Plan','story-plan':'Story Plan'};
+  return comingSoonHTML(labels[tab]||tab,'ti-layout-columns','Sedang dibangun — coming soon.');
+}
+
+function switchContentTab(tab){
+  _contentSubTab=tab;
+  ['carousel','story-plan','kol-list','mt-story'].forEach(v=>{
+    const el=document.getElementById('ctab-'+v);
+    if(!el) return;
+    el.style.borderBottomColor=v===tab?'var(--purple-accent)':'transparent';
+    el.style.color=v===tab?'var(--purple-mid)':'var(--text-muted)';
+    el.style.fontWeight=v===tab?'600':'400';
+  });
+  document.getElementById('content-tab-body').innerHTML=_contentSubTabHTML(tab);
+}
+
+function mtStoryPageHTML(){
+  const q=mtStorySearch.toLowerCase();
+  const filtered=mtStoryList.filter(s=>{
+    if(mtStoryFilter==='posted'&&!s.is_posted) return false;
+    if(mtStoryFilter==='unposted'&&s.is_posted) return false;
+    if(q&&!(s.nama||'').toLowerCase().includes(q)&&!(s.perusahaan||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  return `
+  <div style="padding:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px"><input placeholder="Cari nama / perusahaan..." oninput="mtStorySearch=this.value;_refreshMTStoryGrid()" value="${mtStorySearch.replace(/"/g,'&quot;')}" style="width:100%;padding:8px 12px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--white)"></div>
+      <button class="btn btn-primary btn-sm" onclick="openMTStoryModal(null)"><i class="ti ti-plus"></i> Tambah</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
+      ${[['all','Semua'],['posted','Sudah diposting'],['unposted','Belum diposting']].map(([v,l])=>`
+        <div onclick="mtStoryFilter='${v}';_refreshMTStoryGrid()" style="padding:5px 12px;border-radius:20px;border:0.5px solid ${mtStoryFilter===v?'var(--purple-mid)':'var(--border)'};background:${mtStoryFilter===v?'var(--purple-light)':'var(--white)'};color:${mtStoryFilter===v?'var(--purple-mid)':'var(--text-muted)'};font-size:11px;font-weight:${mtStoryFilter===v?'600':'400'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s">${l}</div>`).join('')}
+    </div>
+    <div id="mt-story-grid">
+      ${_mtStoryGridInner(filtered)}
+    </div>
+  </div>`;
+}
+
+function _mtStoryGridInner(filtered){
+  if(!filtered.length) return `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-user-off" style="font-size:36px;display:block;margin-bottom:10px"></i><div style="font-size:13px">Belum ada data</div></div>`;
+  return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">${filtered.map(s=>mtStoryCardHTML(s)).join('')}</div>`;
+}
+
+function _refreshMTStoryGrid(){
+  const q=mtStorySearch.toLowerCase();
+  const filtered=mtStoryList.filter(s=>{
+    if(mtStoryFilter==='posted'&&!s.is_posted) return false;
+    if(mtStoryFilter==='unposted'&&s.is_posted) return false;
+    if(q&&!(s.nama||'').toLowerCase().includes(q)&&!(s.perusahaan||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const pills=document.querySelectorAll('[id^="mt-filter-"]');
+  // update filter pills inline
+  ['all','posted','unposted'].forEach(v=>{
+    const pEl=document.getElementById('mt-filter-pill-'+v);
+    if(!pEl) return;
+    const active=mtStoryFilter===v;
+    pEl.style.borderColor=active?'var(--purple-mid)':'var(--border)';
+    pEl.style.background=active?'var(--purple-light)':'var(--white)';
+    pEl.style.color=active?'var(--purple-mid)':'var(--text-muted)';
+    pEl.style.fontWeight=active?'600':'400';
+  });
+  const g=document.getElementById('mt-story-grid');
+  if(g) g.innerHTML=_mtStoryGridInner(filtered);
+}
+
+function mtStoryCardHTML(s){
+  const initials=(s.nama||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+  const avatar=s.foto_url
+    ?`<img src="${s.foto_url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+    :`<div style="width:48px;height:48px;border-radius:50%;background:var(--purple-light);color:var(--purple-mid);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0">${initials}</div>`;
+  const statusPill=s.is_posted
+    ?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#e8f0fc;color:var(--purple-mid);font-weight:600;white-space:nowrap;flex-shrink:0">Sudah diposting</span>`
+    :`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--bg);color:var(--text-muted);font-weight:600;white-space:nowrap;flex-shrink:0">Belum diposting</span>`;
+  const links=[];
+  if(s.ig_url) links.push(`<a href="${s.ig_url}" target="_blank" style="font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);color:var(--text-muted);text-decoration:none">IG</a>`);
+  if(s.linkedin_url) links.push(`<a href="${s.linkedin_url}" target="_blank" style="font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);color:var(--text-muted);text-decoration:none">LinkedIn</a>`);
+  if(s.brief_url) links.push(`<a href="${s.brief_url}" target="_blank" style="font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);color:var(--text-muted);text-decoration:none">Brief</a>`);
+  return `
+    <div style="background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);${s.is_posted?'border-top:3px solid var(--purple-mid);':''}display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:16px 16px 12px;flex:1">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+          ${avatar}
+          <div style="min-width:0;flex:1">
+            <div style="font-size:13px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.nama||'—'}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${[s.perusahaan,s.batch].filter(Boolean).join(' · ')||'—'}</div>
+          </div>
+          ${statusPill}
+        </div>
+        ${s.deskripsi?`<div style="font-size:12px;color:var(--text-muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:10px">${s.deskripsi}</div>`:''}
+        ${links.length?`<div style="display:flex;gap:5px;flex-wrap:wrap">${links.join('')}</div>`:''}
+      </div>
+      <div style="padding:10px 16px;border-top:0.5px solid var(--border);display:flex;gap:6px;align-items:center;flex-shrink:0">
+        ${s.wa?`<a href="https://wa.me/${(s.wa||'').replace(/\D/g,'')}" target="_blank" class="btn btn-sm" style="border-color:var(--green);color:var(--green);padding:4px 8px"><i class="ti ti-brand-whatsapp" style="font-size:12px"></i></a>`:''}
+        <button class="btn btn-sm" onclick="openMTStoryModal('${s.id}')" style="padding:4px 8px"><i class="ti ti-edit" style="font-size:12px"></i></button>
+        <button class="btn btn-sm" onclick="deleteMTStory('${s.id}')" style="padding:4px 8px;color:var(--red)"><i class="ti ti-trash" style="font-size:12px"></i></button>
+        ${!s.is_posted?`<button class="btn btn-primary btn-sm" onclick="markMTStoryPosted('${s.id}')" style="margin-left:auto;font-size:11px">Tandai Posted</button>`:`<span style="margin-left:auto;font-size:11px;color:var(--text-hint)">✓ Posted</span>`}
+      </div>
+    </div>`;
+}
+
+function kolListPageHTML(){
+  const q=kolSearch.toLowerCase();
+  const filtered=kolList.filter(k=>{
+    if(q&&!(k.nama||'').toLowerCase().includes(q)&&!(k.username_ig||'').toLowerCase().includes(q)&&!(k.username_tiktok||'').toLowerCase().includes(q)) return false;
+    if(kolNicheFilter!=='all'&&(k.niche||'')!==kolNicheFilter) return false;
+    return true;
+  });
+  const niches=[...new Set(kolList.map(k=>k.niche||'').filter(Boolean))];
+  return `
+  <div style="padding:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px"><input placeholder="Cari nama / username..." oninput="kolSearch=this.value;_refreshKOLGrid()" value="${kolSearch.replace(/"/g,'&quot;')}" style="width:100%;padding:8px 12px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--white)"></div>
+      <button class="btn btn-primary btn-sm" onclick="openKOLModal(null)"><i class="ti ti-plus"></i> Tambah KOL</button>
+    </div>
+    ${niches.length?`<div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
+      ${[['all','Semua'],...niches.map(n=>[n,n])].map(([v,l])=>`
+        <div onclick="kolNicheFilter='${v}';_refreshKOLGrid()" style="padding:5px 12px;border-radius:20px;border:0.5px solid ${kolNicheFilter===v?'var(--purple-mid)':'var(--border)'};background:${kolNicheFilter===v?'var(--purple-light)':'var(--white)'};color:${kolNicheFilter===v?'var(--purple-mid)':'var(--text-muted)'};font-size:11px;font-weight:${kolNicheFilter===v?'600':'400'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s">${l}</div>`).join('')}
+    </div>`:''}
+    <div id="kol-grid">
+      ${_kolGridInner(filtered)}
+    </div>
+  </div>`;
+}
+
+function _kolGridInner(filtered){
+  if(!filtered.length) return `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-users-group" style="font-size:36px;display:block;margin-bottom:10px"></i><div style="font-size:13px">Belum ada KOL</div></div>`;
+  return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">${filtered.map(k=>kolCardHTML(k)).join('')}</div>`;
+}
+
+function _refreshKOLGrid(){
+  const q=kolSearch.toLowerCase();
+  const filtered=kolList.filter(k=>{
+    if(q&&!(k.nama||'').toLowerCase().includes(q)&&!(k.username_ig||'').toLowerCase().includes(q)&&!(k.username_tiktok||'').toLowerCase().includes(q)) return false;
+    if(kolNicheFilter!=='all'&&(k.niche||'')!==kolNicheFilter) return false;
+    return true;
+  });
+  const g=document.getElementById('kol-grid');
+  if(g) g.innerHTML=_kolGridInner(filtered);
+}
+
+function kolCardHTML(k){
+  const initials=(k.nama||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+  const avatar=k.foto_url
+    ?`<img src="${k.foto_url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+    :`<div style="width:48px;height:48px;border-radius:50%;background:var(--purple-light);color:var(--purple-mid);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0">${initials}</div>`;
+  const platforms=[];
+  if(k.username_ig) platforms.push(`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#fce4ec;color:#c2185b;font-weight:600">IG · @${k.username_ig}${k.followers_ig?` · ${_fmtFollowers(k.followers_ig)}`:''}</span>`);
+  if(k.username_tiktok) platforms.push(`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f3e5f5;color:#7b1fa2;font-weight:600">TT · @${k.username_tiktok}${k.followers_tiktok?` · ${_fmtFollowers(k.followers_tiktok)}`:''}</span>`);
+  if(k.linkedin_url) platforms.push(`<a href="${k.linkedin_url}" target="_blank" style="font-size:10px;padding:2px 7px;border-radius:20px;background:#e3f2fd;color:#1565c0;font-weight:600;text-decoration:none">LinkedIn</a>`);
+  return `
+    <div style="background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:16px 16px 12px;flex:1">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+          ${avatar}
+          <div style="min-width:0;flex:1">
+            <div style="font-size:13px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.nama||'—'}</div>
+            ${k.niche?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--bg);color:var(--text-muted);font-weight:600;display:inline-block">${k.niche}</span>`:''}
+          </div>
+        </div>
+        ${platforms.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${platforms.join('')}</div>`:''}
+        ${k.rate_card_text?`<div style="font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:var(--radius);padding:6px 8px;margin-bottom:8px;line-height:1.5">Rate: ${k.rate_card_text}</div>`:''}
+        ${k.catatan?`<div style="font-size:11px;color:var(--text-muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${k.catatan}</div>`:''}
+      </div>
+      <div style="padding:10px 16px;border-top:0.5px solid var(--border);display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <button class="btn btn-sm" onclick="openKOLModal('${k.id}')" style="padding:4px 8px"><i class="ti ti-edit" style="font-size:12px"></i></button>
+        <button class="btn btn-sm" onclick="deleteKOL('${k.id}')" style="padding:4px 8px;color:var(--red)"><i class="ti ti-trash" style="font-size:12px"></i></button>
+        ${k.rate_card_file_url?`<a href="${k.rate_card_file_url}" target="_blank" class="btn btn-sm" style="margin-left:auto;font-size:11px"><i class="ti ti-file" style="font-size:11px"></i> Rate Card</a>`:''}
+      </div>
+    </div>`;
+}
+
+function _fmtFollowers(n){
+  if(!n) return '';
+  if(n>=1000000) return (n/1000000).toFixed(1).replace(/\.0$/,'')+'M';
+  if(n>=1000) return (n/1000).toFixed(1).replace(/\.0$/,'')+'K';
+  return String(n);
+}
+
+// ── MT STORY MODAL FUNCTIONS ────────────────────────────────────────────────
+function openMTStoryModal(id){
+  const s=id?mtStoryList.find(x=>String(x.id)===String(id)):null;
+  document.getElementById('mt-story-modal-title').textContent=s?'Edit MT Story':'Tambah MT Story';
+  document.getElementById('mt-nama').value=s?s.nama||'':'';
+  document.getElementById('mt-perusahaan').value=s?s.perusahaan||'':'';
+  document.getElementById('mt-batch').value=s?s.batch||'':'';
+  document.getElementById('mt-wa').value=s?s.wa||'':'';
+  document.getElementById('mt-deskripsi').value=s?s.deskripsi||'':'';
+  document.getElementById('mt-ig').value=s?s.ig_url||'':'';
+  document.getElementById('mt-linkedin').value=s?s.linkedin_url||'':'';
+  document.getElementById('mt-brief').value=s?s.brief_url||'':'';
+  document.getElementById('mt-is-posted').checked=s?!!s.is_posted:false;
+  _mtPhotoUrl=s?s.foto_url||'':'';
+  const prev=document.getElementById('mt-photo-preview');
+  prev.innerHTML=_mtPhotoUrl?`<img src="${_mtPhotoUrl}" style="width:100%;height:100%;object-fit:cover">`:`<i class="ti ti-user" style="font-size:24px;color:var(--text-hint)"></i>`;
+  const del=document.getElementById('mt-delete-btn');
+  del.style.display=s?'inline-flex':'none';
+  del.onclick=()=>deleteMTStoryFromModal(id);
+  document.getElementById('mt-story-modal').dataset.editId=id||'';
+  document.getElementById('mt-story-modal').style.display='flex';
+}
+
+function closeMTStoryModal(){ document.getElementById('mt-story-modal').style.display='none'; }
+
+async function handleMTPhotoUpload(input){
+  const file=input.files[0];
+  if(!file) return;
+  if(file.size>2*1024*1024){showToast('Foto maks 2MB','error');return;}
+  const path=`mt-story/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+  const btn=document.querySelector('#mt-story-modal [onclick*="handleMTPhotoUpload"]');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Upload...';}
+  const stored=await sb_uploadContentPhoto(file,path);
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i> Upload Foto';}
+  if(!stored){showToast('Gagal upload foto','error');return;}
+  _mtPhotoUrl=sb_contentPhotoPublicUrl(stored);
+  document.getElementById('mt-photo-preview').innerHTML=`<img src="${_mtPhotoUrl}" style="width:100%;height:100%;object-fit:cover">`;
+}
+
+async function saveMTStoryModal(){
+  const id=document.getElementById('mt-story-modal').dataset.editId;
+  const data={
+    nama:document.getElementById('mt-nama').value.trim(),
+    perusahaan:document.getElementById('mt-perusahaan').value.trim(),
+    batch:document.getElementById('mt-batch').value.trim(),
+    wa:document.getElementById('mt-wa').value.trim(),
+    deskripsi:document.getElementById('mt-deskripsi').value.trim(),
+    ig_url:document.getElementById('mt-ig').value.trim(),
+    linkedin_url:document.getElementById('mt-linkedin').value.trim(),
+    brief_url:document.getElementById('mt-brief').value.trim(),
+    is_posted:document.getElementById('mt-is-posted').checked,
+    foto_url:_mtPhotoUrl||null,
+  };
+  if(!data.nama){showToast('Nama wajib diisi','error');return;}
+  if(data.is_posted&&!id){data.posted_at=new Date().toISOString();}
+  if(id){
+    const ok=await sb_updateMTStory(id,data);
+    if(!ok){showToast('Gagal update','error');return;}
+    const idx=mtStoryList.findIndex(x=>String(x.id)===String(id));
+    if(idx>=0) mtStoryList[idx]={...mtStoryList[idx],...data};
+    showToast('MT Story diupdate ✓');
+  } else {
+    const row=await sb_insertMTStory(data);
+    if(!row||!row.id){showToast('Gagal simpan','error');return;}
+    mtStoryList.unshift({...data,id:row.id,created_at:row.created_at});
+    showToast('MT Story ditambahkan ✓');
+  }
+  closeMTStoryModal();
+  document.getElementById('content-tab-body').innerHTML=mtStoryPageHTML();
+}
+
+async function markMTStoryPosted(id){
+  const s=mtStoryList.find(x=>String(x.id)===String(id));
+  if(!s) return;
+  const ok=await sb_updateMTStory(id,{is_posted:true,posted_at:new Date().toISOString()});
+  if(!ok){showToast('Gagal update','error');return;}
+  s.is_posted=true;
+  s.posted_at=new Date().toISOString();
+  _refreshMTStoryGrid();
+  showToast('Ditandai posted ✓');
+}
+
+async function deleteMTStory(id){
+  if(!confirm('Hapus MT Story ini?')) return;
+  await sb_deleteMTStory(id);
+  mtStoryList=mtStoryList.filter(x=>String(x.id)!==String(id));
+  _refreshMTStoryGrid();
+  showToast('MT Story dihapus');
+}
+
+async function deleteMTStoryFromModal(id){
+  if(!id||!confirm('Hapus MT Story ini?')) return;
+  await sb_deleteMTStory(id);
+  mtStoryList=mtStoryList.filter(x=>String(x.id)!==String(id));
+  closeMTStoryModal();
+  document.getElementById('content-tab-body').innerHTML=mtStoryPageHTML();
+  showToast('MT Story dihapus');
+}
+
+// ── KOL MODAL FUNCTIONS ─────────────────────────────────────────────────────
+function openKOLModal(id){
+  const k=id?kolList.find(x=>String(x.id)===String(id)):null;
+  document.getElementById('kol-modal-title').textContent=k?'Edit KOL':'Tambah KOL';
+  document.getElementById('kol-nama').value=k?k.nama||'':'';
+  document.getElementById('kol-niche').value=k?k.niche||'':'';
+  document.getElementById('kol-ig').value=k?k.username_ig||'':'';
+  document.getElementById('kol-followers-ig').value=k?k.followers_ig||'':'';
+  document.getElementById('kol-tiktok').value=k?k.username_tiktok||'':'';
+  document.getElementById('kol-followers-tiktok').value=k?k.followers_tiktok||'':'';
+  document.getElementById('kol-linkedin').value=k?k.linkedin_url||'':'';
+  document.getElementById('kol-rate-text').value=k?k.rate_card_text||'':'';
+  document.getElementById('kol-catatan').value=k?k.catatan||'':'';
+  _kolPhotoUrl=k?k.foto_url||'':'';
+  _kolRateFileUrl=k?k.rate_card_file_url||'':'';
+  const prev=document.getElementById('kol-photo-preview');
+  prev.innerHTML=_kolPhotoUrl?`<img src="${_kolPhotoUrl}" style="width:100%;height:100%;object-fit:cover">`:`<i class="ti ti-user" style="font-size:24px;color:var(--text-hint)"></i>`;
+  document.getElementById('kol-rate-file-label').textContent=_kolRateFileUrl?'File terlampir':'Belum ada file';
+  const del=document.getElementById('kol-delete-btn');
+  del.style.display=k?'inline-flex':'none';
+  del.onclick=()=>deleteKOLFromModal(id);
+  document.getElementById('kol-modal').dataset.editId=id||'';
+  document.getElementById('kol-modal').style.display='flex';
+}
+
+function closeKOLModal(){ document.getElementById('kol-modal').style.display='none'; }
+
+async function handleKOLPhotoUpload(input){
+  const file=input.files[0];
+  if(!file) return;
+  if(file.size>2*1024*1024){showToast('Foto maks 2MB','error');return;}
+  const path=`kol/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+  const stored=await sb_uploadContentPhoto(file,path);
+  if(!stored){showToast('Gagal upload foto','error');return;}
+  _kolPhotoUrl=sb_contentPhotoPublicUrl(stored);
+  document.getElementById('kol-photo-preview').innerHTML=`<img src="${_kolPhotoUrl}" style="width:100%;height:100%;object-fit:cover">`;
+}
+
+async function handleKOLRateFileUpload(input){
+  const file=input.files[0];
+  if(!file) return;
+  const path=`kol-rate/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+  const stored=await sb_uploadContentPhoto(file,path);
+  if(!stored){showToast('Gagal upload file','error');return;}
+  _kolRateFileUrl=sb_contentPhotoPublicUrl(stored);
+  document.getElementById('kol-rate-file-label').textContent='✓ File terupload';
+}
+
+async function saveKOLModal(){
+  const id=document.getElementById('kol-modal').dataset.editId;
+  const data={
+    nama:document.getElementById('kol-nama').value.trim(),
+    niche:document.getElementById('kol-niche').value.trim(),
+    username_ig:document.getElementById('kol-ig').value.trim(),
+    followers_ig:parseInt(document.getElementById('kol-followers-ig').value)||null,
+    username_tiktok:document.getElementById('kol-tiktok').value.trim(),
+    followers_tiktok:parseInt(document.getElementById('kol-followers-tiktok').value)||null,
+    linkedin_url:document.getElementById('kol-linkedin').value.trim(),
+    rate_card_text:document.getElementById('kol-rate-text').value.trim(),
+    catatan:document.getElementById('kol-catatan').value.trim(),
+    foto_url:_kolPhotoUrl||null,
+    rate_card_file_url:_kolRateFileUrl||null,
+  };
+  if(!data.nama){showToast('Nama KOL wajib diisi','error');return;}
+  if(id){
+    const ok=await sb_updateKOL(id,data);
+    if(!ok){showToast('Gagal update','error');return;}
+    const idx=kolList.findIndex(x=>String(x.id)===String(id));
+    if(idx>=0) kolList[idx]={...kolList[idx],...data};
+    showToast('KOL diupdate ✓');
+  } else {
+    const row=await sb_insertKOL(data);
+    if(!row||!row.id){showToast('Gagal simpan','error');return;}
+    kolList.unshift({...data,id:row.id,created_at:row.created_at});
+    showToast('KOL ditambahkan ✓');
+  }
+  closeKOLModal();
+  document.getElementById('content-tab-body').innerHTML=kolListPageHTML();
+}
+
+async function deleteKOL(id){
+  if(!confirm('Hapus KOL ini?')) return;
+  await sb_deleteKOL(id);
+  kolList=kolList.filter(x=>String(x.id)!==String(id));
+  _refreshKOLGrid();
+  showToast('KOL dihapus');
+}
+
+async function deleteKOLFromModal(id){
+  if(!id||!confirm('Hapus KOL ini?')) return;
+  await sb_deleteKOL(id);
+  kolList=kolList.filter(x=>String(x.id)!==String(id));
+  closeKOLModal();
+  document.getElementById('content-tab-body').innerHTML=kolListPageHTML();
+  showToast('KOL dihapus');
+}
 var _daSubTab = 'references'; // 'references' | 'assets'
 
 function designHTML(){
@@ -20155,6 +20606,90 @@ async function gcalCreateEvent(taskId) {
   };
 })();
 </script>
+
+<!-- MT STORY MODAL -->
+<div id="mt-story-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeMTStoryModal()">
+  <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title" id="mt-story-modal-title">Tambah MT Story</div>
+      <button class="modal-close" onclick="closeMTStoryModal()">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div id="mt-photo-preview" style="width:64px;height:64px;border-radius:50%;border:0.5px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><i class="ti ti-user" style="font-size:24px;color:var(--text-hint)"></i></div>
+        <div>
+          <button class="btn btn-sm" onclick="document.getElementById('mt-photo-input').click()"><i class="ti ti-upload"></i> Upload Foto</button>
+          <input type="file" id="mt-photo-input" accept="image/*" style="display:none" onchange="handleMTPhotoUpload(this)">
+          <div style="font-size:10px;color:var(--text-hint);margin-top:4px">JPG / PNG, maks 2MB</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Nama *</label><input id="mt-nama" class="form-control" placeholder="Nama MT alumni"></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Perusahaan MT</label><input id="mt-perusahaan" class="form-control" placeholder="Nama perusahaan"></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Batch / Tahun</label><input id="mt-batch" class="form-control" placeholder="MT 2023"></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">No WhatsApp</label><input id="mt-wa" class="form-control" placeholder="08xxx"></div>
+      </div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Deskripsi / Topik Konten</label><textarea id="mt-deskripsi" class="form-control" rows="3" placeholder="Cerita singkat atau topik konten yang mau diangkat..."></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Link Instagram</label><input id="mt-ig" class="form-control" placeholder="https://instagram.com/..."></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Link LinkedIn</label><input id="mt-linkedin" class="form-control" placeholder="https://linkedin.com/in/..."></div>
+      </div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Link Content Brief</label><input id="mt-brief" class="form-control" placeholder="https://..."></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;font-weight:500"><input type="checkbox" id="mt-is-posted"> Sudah diposting</label>
+    </div>
+    <div class="modal-footer">
+      <button id="mt-delete-btn" class="btn btn-sm" style="color:var(--red);display:none"><i class="ti ti-trash"></i> Hapus</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-sm" onclick="closeMTStoryModal()">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveMTStoryModal()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- KOL MODAL -->
+<div id="kol-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeKOLModal()">
+  <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title" id="kol-modal-title">Tambah KOL</div>
+      <button class="modal-close" onclick="closeKOLModal()">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div id="kol-photo-preview" style="width:64px;height:64px;border-radius:50%;border:0.5px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><i class="ti ti-user" style="font-size:24px;color:var(--text-hint)"></i></div>
+        <div>
+          <button class="btn btn-sm" onclick="document.getElementById('kol-photo-input').click()"><i class="ti ti-upload"></i> Upload Foto</button>
+          <input type="file" id="kol-photo-input" accept="image/*" style="display:none" onchange="handleKOLPhotoUpload(this)">
+          <div style="font-size:10px;color:var(--text-hint);margin-top:4px">JPG / PNG, maks 2MB</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Nama *</label><input id="kol-nama" class="form-control" placeholder="Nama KOL"></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Niche / Kategori</label><input id="kol-niche" class="form-control" placeholder="Lifestyle, Finance, Education..."></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Username Instagram</label><input id="kol-ig" class="form-control" placeholder="username (tanpa @)"></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Followers IG</label><input id="kol-followers-ig" class="form-control" type="number" placeholder="50000"></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Username TikTok</label><input id="kol-tiktok" class="form-control" placeholder="username (tanpa @)"></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Followers TikTok</label><input id="kol-followers-tiktok" class="form-control" type="number" placeholder="100000"></div>
+      </div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Link LinkedIn</label><input id="kol-linkedin" class="form-control" placeholder="https://linkedin.com/in/..."></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Rate Card (teks)</label><input id="kol-rate-text" class="form-control" placeholder="Feed Rp 500K · Story Rp 300K · Reel Rp 1jt"></div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">Rate Card File (PDF / gambar)</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn btn-sm" onclick="document.getElementById('kol-rate-file-input').click()"><i class="ti ti-upload"></i> Upload File</button>
+          <input type="file" id="kol-rate-file-input" accept=".pdf,image/*" style="display:none" onchange="handleKOLRateFileUpload(this)">
+          <span id="kol-rate-file-label" style="font-size:11px;color:var(--text-muted)">Belum ada file</span>
+        </div>
+      </div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Catatan</label><textarea id="kol-catatan" class="form-control" rows="2" placeholder="Catatan tambahan..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button id="kol-delete-btn" class="btn btn-sm" style="color:var(--red);display:none"><i class="ti ti-trash"></i> Hapus</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-sm" onclick="closeKOLModal()">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveKOLModal()">Simpan</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
