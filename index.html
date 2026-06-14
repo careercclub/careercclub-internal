@@ -9843,46 +9843,58 @@ async function ppParseScreenshot(file){
 }
 
 function openPPForm(){
-  // Show add form - scroll to existing form or show modal
   var existing = document.getElementById('pp-add-form');
   if(existing){ existing.scrollIntoView({behavior:'smooth'}); return; }
-  // Switch back to show the form - render a simple inline form
   var container = document.getElementById('pp-tab-content');
   if(!container) return;
-  var formHTML = '<div id="pp-add-form" style="background:var(--white);border:0.5px solid var(--purple-accent);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-    + '<div style="font-size:13px;font-weight:600">Tambah Data Baru</div>'
-    + '</div>'
-    + '<div id="pp-ai-zone" style="border:1.5px dashed var(--border-md);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:border-color .15s;margin-bottom:12px"'
-    + ' onclick="document.getElementById(\'pp-screenshot-input\').click()"'
-    + ' ondragover="event.preventDefault();this.style.borderColor=\'var(--purple-mid)\'"'
-    + ' ondragleave="this.style.borderColor=\'\'"'
-    + ' ondrop="event.preventDefault();this.style.borderColor=\'\';ppParseScreenshot(event.dataTransfer.files[0])">'
-    + '<i class="ti ti-photo-ai" style="font-size:22px;color:var(--text-muted)"></i>'
-    + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Drop screenshot · klik · atau Ctrl+V untuk parse otomatis dengan AI</div>'
-    + '</div>'
-    + '<input type="file" id="pp-screenshot-input" accept="image/*" style="display:none" onchange="ppParseScreenshot(this.files[0])">'
-    + '<label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Komentar / Diskusi *</label>'
-    + '<textarea id="pf-komentar" style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;resize:vertical;min-height:70px;font-family:inherit;margin-bottom:10px" placeholder="Paste komentar dari TikTok, IG, X..."></textarea>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">'
-    + '<div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Platform *</label>'
-    + '<select id="pf-platform" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">'
-    + ppMasterPlatforms.map(function(p){return '<option>'+p+'</option>';}).join('') + '</select></div>'
-    + '<div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Bulan *</label>'
-    + '<select id="pf-bulan" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">'
-    + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'].map(function(m){return '<option>'+m+'</option>';}).join('') + '</select></div>'
-    + '<div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Kategori *</label>'
-    + '<select id="pf-kategori" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">'
-    + ppMasterKategori.map(function(k){return '<option>'+k+'</option>';}).join('') + '</select></div>'
-    + '</div>'
-    + '<div style="display:flex;gap:8px">'
-    + '<div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Labels</label>'    + ppDDWidget('pf', []) + '</div>'    + '<button class="btn btn-primary btn-sm" onclick="submitPPForm()"><i class="ti ti-check"></i> Simpan</button>'
-    + '<button class="btn btn-sm" onclick="ppCloseAddForm()">Batal</button>'
-    + '</div></div>';
-  container.insertAdjacentHTML('afterbegin', formHTML);
-  if(_ppScreenshotPasteHandler) document.removeEventListener('paste',_ppScreenshotPasteHandler);
-  _ppScreenshotPasteHandler=function(e){const items=(e.clipboardData||{}).items||[];for(const it of items){if(it.type.startsWith('image/')){e.preventDefault();ppParseScreenshot(it.getAsFile());break;}}};
-  document.addEventListener('paste',_ppScreenshotPasteHandler);
+
+  var platOpts = (ppMasterPlatforms||[]).map(function(p){return '<option>'+p+'</option>';}).join('');
+  var katOpts  = (ppMasterKategori||[]).map(function(k){return '<option>'+k+'</option>';}).join('');
+  var bulanOpts= ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'].map(function(m){return '<option>'+m+'</option>';}).join('');
+
+  var el = document.createElement('div');
+  el.id = 'pp-add-form';
+  el.style.cssText = 'background:var(--white);border:0.5px solid var(--purple-accent);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px';
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px">Tambah Data Baru</div>
+    <div id="pp-ai-zone" style="border:1.5px dashed var(--border-md);border-radius:var(--radius);padding:14px 16px;text-align:center;margin-bottom:12px;transition:border-color .15s,background .15s">
+      <i class="ti ti-camera" style="font-size:26px;color:var(--text-hint);display:block;margin:0 auto 6px"></i>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Upload atau paste screenshot (Ctrl+V)</div>
+      <button id="pp-ai-parse-btn" type="button" style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:8px;border:none;background:var(--purple-light);color:var(--purple-mid);font-size:12px;font-weight:600;cursor:pointer"><i class="ti ti-sparkles" style="font-size:13px"></i> Parse dengan AI</button>
+    </div>
+    <input type="file" id="pp-screenshot-input" accept="image/*" style="display:none">
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Komentar / Diskusi *</label>
+    <textarea id="pf-komentar" style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;resize:vertical;min-height:70px;font-family:inherit;margin-bottom:10px" placeholder="Paste komentar dari TikTok, IG, X..."></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Platform *</label><select id="pf-platform" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">${platOpts}</select></div>
+      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Bulan *</label><select id="pf-bulan" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">${bulanOpts}</select></div>
+      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Kategori *</label><select id="pf-kategori" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">${katOpts}</select></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <div style="flex:1"><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Labels</label>${ppDDWidget('pf', [])}</div>
+      <button class="btn btn-primary btn-sm" type="button" onclick="submitPPForm()"><i class="ti ti-check"></i> Simpan</button>
+      <button class="btn btn-sm" type="button" onclick="ppCloseAddForm()">Batal</button>
+    </div>`;
+
+  container.insertBefore(el, container.firstChild);
+
+  // Wire events via JS (no inline handlers — avoids quoting issues)
+  var zone      = document.getElementById('pp-ai-zone');
+  var fileInput = document.getElementById('pp-screenshot-input');
+  var parseBtn  = document.getElementById('pp-ai-parse-btn');
+
+  parseBtn.addEventListener('click', function(e){ e.stopPropagation(); fileInput.click(); });
+  fileInput.addEventListener('change', function(){ if(this.files[0]) ppParseScreenshot(this.files[0]); });
+  zone.addEventListener('dragover',  function(e){ e.preventDefault(); zone.style.borderColor='var(--purple-mid)'; zone.style.background='var(--purple-light)'; });
+  zone.addEventListener('dragleave', function(){  zone.style.borderColor=''; zone.style.background=''; });
+  zone.addEventListener('drop',      function(e){ e.preventDefault(); zone.style.borderColor=''; zone.style.background=''; if(e.dataTransfer.files[0]) ppParseScreenshot(e.dataTransfer.files[0]); });
+
+  if(_ppScreenshotPasteHandler) document.removeEventListener('paste', _ppScreenshotPasteHandler);
+  _ppScreenshotPasteHandler = function(e){
+    var items=(e.clipboardData||{}).items||[];
+    for(var i=0;i<items.length;i++){ if(items[i].type.startsWith('image/')){ e.preventDefault(); ppParseScreenshot(items[i].getAsFile()); break; } }
+  };
+  document.addEventListener('paste', _ppScreenshotPasteHandler);
 }
 
 
