@@ -253,7 +253,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:#faf9ff}
 .tkt-stat-val{font-size:18px;font-weight:700;line-height:1}
 .tkt-stat-label{font-size:10px;color:var(--text-muted);margin-top:2px}
 .tkt-table-wrap{background:var(--white);border-radius:var(--radius-lg);border:0.5px solid var(--border);overflow:hidden}
-.tkt-row{display:grid;grid-template-columns:60px 1fr 90px 80px 70px 80px 90px;align-items:center;gap:8px;padding:9px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s;font-size:12px}
+.tkt-row{display:grid;grid-template-columns:60px 1fr 90px 80px 70px 80px 90px 36px;align-items:center;gap:8px;padding:9px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s;font-size:12px}
 .tkt-row:last-child{border-bottom:none}
 .tkt-row:hover{background:#f9f8ff}
 .tkt-head{background:var(--bg);font-size:11px;font-weight:600;color:var(--text-muted);cursor:default}
@@ -576,7 +576,8 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
   .tkt-row { grid-template-columns: 50px 1fr 80px 70px !important; }
   .tkt-row > *:nth-child(5),
   .tkt-row > *:nth-child(6),
-  .tkt-row > *:nth-child(7) { display:none; }
+  .tkt-row > *:nth-child(7),
+  .tkt-row > *:nth-child(8) { display:none; }
   .tkt-detail-grid { grid-template-columns: 1fr !important; }
   .tkt-detail-side { display:none; }
   .tkt-modal { width:96vw !important; max-height:92vh; }
@@ -1386,7 +1387,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 </div>
 
 <!-- NEW TICKET FORM MODAL -->
-<div id="tkt-form-modal" style="display:none" class="modal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+<div id="tkt-form-modal" style="display:none" class="modal-overlay">
   <div class="tkt-form-modal">
     <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border)">
       <div class="modal-title" style="font-size:14px;font-weight:700"><i class="ti ti-ticket" style="margin-right:6px;color:var(--purple-accent)"></i>Buat Ticket Baru</div>
@@ -1399,7 +1400,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
       </div>
       <div class="form-row">
         <div>
-          <label class="form-label">Ditujukan ke</label>
+          <label class="form-label">Ditujukan ke (Divisi)</label>
           <select class="form-input" id="nf-div"></select>
         </div>
         <div>
@@ -1415,53 +1416,29 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
           </select>
         </div>
         <div>
-          <label class="form-label">Requester</label>
-          <select class="form-input" id="nf-requester"></select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div>
-          <label class="form-label">Assignee (opsional)</label>
-          <select class="form-input" id="nf-assignee">
-            <option value="">— Pilih assignee —</option>
-          </select>
-        </div>
-        <div>
           <label class="form-label">Deadline (opsional)</label>
           <input class="form-input" id="nf-deadline" type="date" style="cursor:pointer">
         </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Assignee</label>
+        <select class="form-input" id="nf-assignee-add" onchange="nfAddAssignee(this.value);this.value=''" style="font-size:12px;margin-bottom:6px">
+          <option value="">+ Tambah assignee...</option>
+        </select>
+        <div id="nf-assignee-chips" style="display:flex;flex-wrap:wrap;gap:4px;min-height:24px"></div>
       </div>
       <div class="form-field">
         <label class="form-label">Deskripsi</label>
         <textarea class="form-textarea" id="nf-desc" placeholder="Jelaskan detail request, konteks, dan ekspektasi output..."></textarea>
       </div>
       <div class="form-field">
-        <label class="form-label">CC <span style="font-size:10px;color:var(--text-muted);font-weight:400">— pilih dari list atau ketik email</span></label>
-        <div style="margin-bottom:6px">
-          <select class="form-input" id="cc-user-select" onchange="addCCFromDropdown(this)" style="font-size:12px">
-            <option value="">+ Pilih dari master user...</option>
-          </select>
-        </div>
-        <div class="cc-input-wrap" id="cc-wrap" onclick="document.getElementById('cc-bare')?.focus()"></div>
-      </div>
-      <div class="form-field">
         <label class="form-label">Link Terkait <span style="font-size:10px;color:var(--text-muted);font-weight:400">— Figma, Drive, Gdoc, dll</span></label>
         <div id="link-inputs"></div>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Lampiran File / Gambar</label>
-        <div class="upload-area" onclick="document.getElementById('tkt-file-input').click()">
-          <i class="ti ti-cloud-upload"></i>
-          <div>Klik untuk upload gambar atau file</div>
-          <div style="font-size:10px;margin-top:3px">JPG, PNG, PDF, DOCX, dan lainnya</div>
-        </div>
-        <input type="file" id="tkt-file-input" multiple style="display:none" onchange="handleFileUpload(event)">
-        <div class="file-preview-wrap" id="file-preview"></div>
       </div>
     </div>
     <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
       <button class="btn" onclick="closeNewTktModal()">Batal</button>
-      <button class="btn btn-primary" onclick="saveNewTicket()"><i class="ti ti-send"></i> Buat & Kirim Ticket</button>
+      <button class="btn btn-primary" onclick="saveNewTicket()"><i class="ti ti-check"></i> Simpan</button>
     </div>
   </div>
 </div>
@@ -2362,6 +2339,7 @@ function _tktRowToJS(d) {
     links:    Array.isArray(d.links)    ? d.links    : [],
     files:    Array.isArray(d.files)    ? d.files    : [],
     komentar: Array.isArray(d.komentar) ? d.komentar : [],
+    gcal_added: d.gcal_added === true,
   };
 }
 function _tktJSToRow(t) {
@@ -2385,6 +2363,7 @@ function _tktJSToRow(t) {
     links:    Array.isArray(t.links)    ? t.links    : [],
     files:    Array.isArray(t.files)    ? t.files    : [],
     komentar: Array.isArray(t.komentar) ? t.komentar : [],
+    gcal_added: t.gcal_added === true,
   };
 }
 function fmtDtTktTanggal(iso) {
@@ -3166,6 +3145,12 @@ function renderDashCalendar() {
     if(!eventsByDate[p.tanggal]) eventsByDate[p.tanggal]=[];
     eventsByDate[p.tanggal].push({type:"event",data:p});
   });
+  (typeof tickets!=='undefined'?tickets:[]).forEach(t=>{
+    if(!t.deadline||t.status==='Done') return;
+    const dateISO=t.deadline.substring(0,10);
+    if(!eventsByDate[dateISO]) eventsByDate[dateISO]=[];
+    eventsByDate[dateISO].push({type:"ticket",data:t});
+  });
 
   const cells=[];
   for(let i=0;i<startWeekday;i++){cells.push({date:new Date(y,m,-(startWeekday-i-1)),inMonth:false});}
@@ -3187,6 +3172,7 @@ function renderDashCalendar() {
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#059669;display:inline-block"></span>Pre';
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#dc2626;display:inline-block;margin-left:3px"></span>H';
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#2563eb;display:inline-block;margin-left:3px"></span>Post';
+  html += '<span style="width:7px;height:7px;border-radius:2px;background:#c2410c;display:inline-block;margin-left:3px"></span>Ticket';
   html += '</div></div>';
   html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg);border-bottom:0.5px solid var(--border)">';
   dayNames.forEach(d=>{html+='<div style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase">'+d+'</div>';});
@@ -3212,6 +3198,10 @@ function renderDashCalendar() {
       if(it.type==="event"){
         var evName = it.data.nama.substring(0,15).replace(/"/g, "&quot;");
         html += "<div onclick=\"switchPage('program')\" title=\"" + evName + "\" style=\"background:var(--purple-accent);color:#fff;padding:2px 5px;border-radius:3px;font-size:9px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-broadcast\" style=\"font-size:8px\"></i> " + evName + "</div>";
+      } else if(it.type==="ticket"){
+        var tkt=it.data;
+        var safeTitle = (fmtTktNo(tkt)+' '+tkt.judul).replace(/"/g,"&quot;");
+        html += "<div onclick=\"event.stopPropagation();openTktDetail('"+tkt.id+"')\" title=\""+safeTitle+"\" style=\"background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-ticket\" style=\"font-size:8px\"></i> "+fmtTktNo(tkt)+" "+tkt.judul+"</div>";
       } else {
         var t=it.data;
         var isDone=t.status==="Done";
@@ -4650,7 +4640,7 @@ function ticketsHTML(){
     </div>
     <div>
       <div class="tkt-row tkt-head">
-        <div>ID</div><div>Judul & Deskripsi</div><div>Divisi</div><div>Prioritas</div><div>Status</div><div>Assignee</div><div>Tanggal</div>
+        <div>ID</div><div>Judul & Deskripsi</div><div>Divisi</div><div>Prioritas</div><div>Status</div><div>Assignee</div><div>Tanggal</div><div></div>
       </div>
       <div id="tkt-list"></div>
     </div>
@@ -4710,12 +4700,13 @@ function renderTickets(){
     const isDone=t.status==="Done";
     return `<div class="tkt-row" onclick="openTktDetail('${t.id}')" style="${isDone?'opacity:0.45':''}">
       <div class="tkt-id-cell">${fmtTktNo(t)}</div>
-      <div><div class="tkt-title-cell" style="${isDone?'text-decoration:line-through':''}">${t.judul}</div><div class="tkt-sub">${getTypeById(t.tipeId).nama}${att>0?` · <i class="ti ti-paperclip" style="font-size:10px"></i> ${att}`:""}${cc>0?` · <i class="ti ti-users" style="font-size:10px"></i> CC ${cc}`:""}</div></div>
+      <div><div class="tkt-title-cell" style="${isDone?'text-decoration:line-through':''}">${t.judul}</div><div class="tkt-sub">${getTypeById(t.tipeId).nama}${att>0?` · <i class="ti ti-paperclip" style="font-size:10px"></i> ${att}`:""}</div></div>
       <div><span class="pill ic-${divColor(div.color)}" style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600">${div.nama}</span></div>
       <div>${tktPrioPill(t.prioritas)}</div>
       <div>${tktStatusPill(t.status)}</div>
       <div style="font-size:12px;display:flex;align-items:center;gap:5px"><div class="avatar" style="width:20px;height:20px;font-size:9px;flex-shrink:0">${personInitials(person.nama)}</div>${person.nama}</div>
       <div style="font-size:11px;color:var(--text-muted)">${t.tanggal}</div>
+      <div onclick="event.stopPropagation()"><button class="btn btn-sm" onclick="gcalAddTicket('${t.id}')" title="${t.gcal_added?'Sudah di Calendar':'Add to Google Calendar'}" style="padding:3px 7px;font-size:10px;${t.gcal_added?'background:var(--green);border-color:var(--green);color:#fff':''}"><i class="ti ti-calendar-${t.gcal_added?'check':'plus'}" style="font-size:13px"></i></button></div>
     </div>`;
   }).join("");
 
@@ -5127,6 +5118,8 @@ async function gcalCreateTicketEvent(tktId){
     if(!res.ok) throw new Error((await res.json()).error?.message||'API error');
     gcalCloseModal();
     showToast('Event dibuat di Google Calendar ✓');
+    const tktObj=tickets.find(x=>_idEq(x.id,tktId));
+    if(tktObj){tktObj.gcal_added=true;sb_update('tickets',tktObj.id,{gcal_added:true});renderTickets();}
   }catch(e){showToast('Gagal buat event: '+e.message,'error');}
 }
 
@@ -5136,34 +5129,49 @@ let newTktLinks=[""];
 let newTktCC=[];
 
 function openNewTktModal(){
-  newTktFiles=[];newTktLinks=[""];newTktCC=[];
+  newTktLinks=[""];
+  window._nfAssigneeIds=[];
   document.getElementById("tkt-form-modal").style.display="flex";
-  renderCCTags();renderLinkInputs();renderFilePreview();
-  // populate selects
-  // "Ditujukan ke" — pilih orang langsung (bukan divisi)
-  document.getElementById("nf-div").innerHTML=tktPeople.filter(p=>p.level!=="admin").map(p=>{
-    const div=p.divisiId?getDivisiById(p.divisiId):{nama:"—"};
-    return `<option value="${p.id}">${p.nama} · ${div.nama} (${p.level})</option>`;
-  }).join("");
+  renderLinkInputs();
+  document.getElementById("nf-div").innerHTML=`<option value="">— Pilih divisi —</option>`+tktDivisi.map(d=>`<option value="${d.id}">${d.nama}</option>`).join("");
   document.getElementById("nf-type").innerHTML=tktTypes.map(t=>`<option value="${t.id}">${t.nama}</option>`).join("");
-  // requester default ke currentUser
-  document.getElementById("nf-requester").innerHTML=tktPeople.map(u=>{
-    const div=u.divisiId?getDivisiById(u.divisiId):{nama:"Admin"};
-    return `<option value="${u.id}" ${currentUser&&u.id===currentUser.id?"selected":""}>${u.nama} (${div.nama})</option>`;
-  }).join("");
-  // assignee = sama dengan ditujukan ke, disync
-  document.getElementById("nf-assignee").innerHTML=`<option value="">— sama dengan Ditujukan ke —</option>`+tktPeople.filter(p=>p.level!=="admin").map(p=>{
+  document.getElementById("nf-assignee-add").innerHTML=`<option value="">+ Tambah assignee...</option>`+tktPeople.map(p=>{
     const div=p.divisiId?getDivisiById(p.divisiId):{nama:"—"};
     return `<option value="${p.id}">${p.nama} · ${div.nama}</option>`;
   }).join("");
-  // cc dropdown
-  document.getElementById("cc-user-select").innerHTML=`<option value="">+ Pilih dari master user...</option>`+tktPeople.map(u=>`<option value="${u.email}">${u.nama} — ${u.email}</option>`).join("");
   document.getElementById("nf-prio").value="Med";
   document.getElementById("nf-judul").value="";
   document.getElementById("nf-desc").value="";
   document.getElementById("nf-deadline").value="";
+  nfRenderAssigneeChips();
 }
 function closeNewTktModal(){document.getElementById("tkt-form-modal").style.display="none";}
+
+function nfRenderAssigneeChips(){
+  const el=document.getElementById('nf-assignee-chips');if(!el) return;
+  const ids=window._nfAssigneeIds||[];
+  if(!ids.length){el.innerHTML='<span style="font-size:11px;color:var(--text-hint);font-style:italic">Belum ada assignee</span>';return;}
+  el.innerHTML=ids.map(id=>{
+    const p=getPersonById(id);if(!p) return '';
+    const initials=p.nama.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    return `<div style="display:inline-flex;align-items:center;gap:4px;background:var(--purple-light);border-radius:20px;padding:3px 8px 3px 5px;font-size:11px;font-weight:600;color:var(--purple-mid)">
+      <div style="width:16px;height:16px;border-radius:50%;background:var(--purple-accent);color:#fff;font-size:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+      ${p.nama}
+      <button onclick="nfRemoveAssignee('${id}')" style="background:none;border:none;cursor:pointer;padding:0;margin-left:2px;color:var(--purple-mid);font-size:11px;line-height:1">×</button>
+    </div>`;
+  }).join('');
+}
+function nfAddAssignee(id){
+  if(!id) return;
+  if(!window._nfAssigneeIds) window._nfAssigneeIds=[];
+  if(window._nfAssigneeIds.includes(id)) return;
+  window._nfAssigneeIds.push(id);
+  nfRenderAssigneeChips();
+}
+function nfRemoveAssignee(id){
+  window._nfAssigneeIds=(window._nfAssigneeIds||[]).filter(x=>x!==id);
+  nfRenderAssigneeChips();
+}
 
 function renderCCTags(){
   const wrap=document.getElementById("cc-wrap");if(!wrap) return;
@@ -5228,41 +5236,31 @@ function removeFile(i){newTktFiles.splice(i,1);renderFilePreview();}
 async function saveNewTicket(){
   const judul=document.getElementById("nf-judul").value.trim();
   if(!judul){showToast("Judul ticket wajib diisi");return;}
-  // ID = UUID string (Supabase). Jangan parseInt → NaN. value "" → null.
   const _v=id=>{const x=document.getElementById(id).value;return x===""?null:x;};
-  const assignedToId=_v("nf-div");
+  const divisiId=_v("nf-div");
   const tipeId=_v("nf-type");
-  const requesterId=_v("nf-requester");
   const prioritas=document.getElementById("nf-prio").value;
   const deskripsi=document.getElementById("nf-desc").value.trim();
-  const deadlineRaw=document.getElementById("nf-deadline").value;
-  const deadline=deadlineRaw || "";
+  const deadline=document.getElementById("nf-deadline").value||"";
   const links=newTktLinks.filter(l=>l.trim());
-  const files=[...newTktFiles];
-  const cc=[...newTktCC];
-  const bare=document.getElementById("cc-bare");
-  if(bare&&bare.value.trim()&&bare.value.includes("@")) cc.push(bare.value.trim());
+  const assignedToIds=window._nfAssigneeIds||[];
+  const assignedToId=assignedToIds[0]||null;
 
-  const person=getPersonById(assignedToId);
   const newTkt={
     ticketNo: nextTicketNo(),
     judul, deskripsi, prioritas, status:"Open",
-    assignedToId, tipeId, requesterId,
-    divisiId: person.divisiId || null,
+    assignedToId, assignedToIds, tipeId,
+    divisiId, requesterId:null,
     deadline, source:"Manual", linkedTaskId:null,
-    attachments:[],
-    cc, links, files, komentar:[],
+    attachments:[], cc:[], links, files:[], komentar:[],
   };
   const row = await sb_saveTicket(newTkt);
   if(!row || !row.id){ showToast("Gagal simpan ticket","error"); return; }
-  const saved = { ..._tktRowToJS(row), cc, links, files, komentar:[] };
+  const saved = { ..._tktRowToJS(row), links, komentar:[] };
   tickets.unshift(saved);
   closeNewTktModal();
   renderTickets();
-
-  const autoSend=confirm(`Ticket berhasil dibuat!\n\nKirim notifikasi email ke ${person.nama} (${person.email})?`);
-  if(autoSend) sendTktEmail(saved.id);
-  else showToast(`Ticket dibuat ✓`);
+  showToast("Ticket dibuat ✓");
 }
 
 // ── MASTER TICKET PAGE ────────────────────────────
@@ -6733,7 +6731,7 @@ function prodKBListHTML(){
   return `
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
     ${products.map(p=>{
-      const _pp=p.painPoints||[]; const _pas=p.passionPoints||[]; const _fb=p.feedbacks||[]; const _bn=p.benefits||[]; const _as=p.assets||[]; const _cl=p.changelog||[];
+      const _pp=p.painPoints||[]; const _pas=p.passionPoints||[]; const _fb=p.feedbacks||[]; const _bn=p.benefits||[]; const _as=p.assets||[];
       const ppHigh=_pp.filter(x=>x.severity==="High").length;
       const hasIssue=_fb.filter(x=>x.tipe==="Complaint"||x.tipe==="Bug/Error").length;
       return `<div class="card" style="cursor:pointer;margin:0;transition:all .15s" onmouseenter="this.style.borderColor='var(--purple-accent)'" onmouseleave="this.style.borderColor=''" onclick="openKBDetail('${p.id}')">
@@ -6747,7 +6745,7 @@ function prodKBListHTML(){
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">
           <div style="background:var(--bg);border-radius:7px;padding:7px 8px;text-align:center">
             <div style="font-weight:700;color:${ppHigh>0?"var(--red)":"var(--text)"}">${_pp.length}</div>
-            <div style="color:var(--text-muted)">Customer Insights</div>
+            <div style="color:var(--text-muted)">Pain Points</div>
           </div>
           <div style="background:var(--pink-bg);border-radius:7px;padding:7px 8px;text-align:center">
             <div style="font-weight:700;color:var(--pink)">${_pas.length}</div>
@@ -6758,7 +6756,7 @@ function prodKBListHTML(){
             <div style="color:var(--text-muted)">Feedback</div>
           </div>
         </div>
-        ${_as.length>0?`<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);font-size:11px;color:var(--text-muted)">${_as.length} aset · ${_cl.length} changelog</div>`:""}
+        ${_as.length>0?`<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);font-size:11px;color:var(--text-muted)">${_as.length} aset</div>`:""}
       </div>`;
     }).join("")}
     <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;min-height:160px;border-style:dashed;margin:0;color:var(--text-muted)" onclick="openProdModal(null)">
@@ -6792,11 +6790,6 @@ function updateAsset(pid,aid,field,val){
   if(a) a[field]=val;
 }
 
-function updateCL(pid,cid,field,val){
-  const p=products.find(x=>String(x.id)===String(pid));
-  const c=p&&p.changelog.find(x=>String(x.id)===String(cid));
-  if(c) c[field]=val;
-}
 
 function getBundleSourceItems(p){
   return (p.bundleItems||[]).map(b=>products.find(x=>String(x.id)===String(b.itemId))).filter(Boolean);
@@ -6808,7 +6801,6 @@ function getKBEntries(prod,section){
   if(section==='benefits') return prod.benefits||[];
   if(section==='features') return prod.features||[];
   if(section==='assets') return prod.assets||[];
-  if(section==='changelog') return prod.changelog||[];
   if(section==='feedback') return prod.feedbacks||[];
   return [];
 }
@@ -6881,7 +6873,6 @@ function renderKBSection(section,p){
   if(section==="features") return renderProductFeatures(p);
   if(section==="subproducts") return renderSubProducts(p);
   if(section==="assets") return renderAssets(p);
-  if(section==="changelog") return renderChangelog(p);
   if(section==="feedback") return renderFeedback(p);
   return "";
 }
@@ -7116,11 +7107,10 @@ function prodKBDetailHTML(id){
   <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start">
     <div class="card" style="margin:0;padding:0;overflow:hidden;position:sticky;top:0">
       ${[
-        ["painpoints","ti-alert-circle","Customer Insights",(p.painPoints||[]).length],
+        ["painpoints","ti-alert-circle","Pain Points",(p.painPoints||[]).length],
         ["passionpoints","ti-heart","Passion Points",(p.passionPoints||[]).length],
         ["benefits","ti-star","Benefits",(p.benefits||[]).length],
         ["assets","ti-link","Aset Konten",(p.assets||[]).length],
-        ["changelog","ti-history","Changelog",(p.changelog||[]).length],
         ["feedback","ti-message","Feedback",(p.feedbacks||[]).length],
       ].map(([key,icon,label,count])=>`
         <div onclick="switchKBSection('${key}','${id}')" id="kbmenu-${key}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;font-size:12px;border-left:3px solid ${activeKBSection===key?"var(--purple-accent)":"transparent"};background:${activeKBSection===key?"var(--purple-light)":"transparent"};color:${activeKBSection===key?"var(--purple-mid)":"var(--text-muted)"};font-weight:${activeKBSection===key?"600":"400"};transition:all .15s" onmouseenter="if('${key}'!=='${activeKBSection}')this.style.background='var(--bg)'" onmouseleave="if('${key}'!=='${activeKBSection}')this.style.background='transparent'">
@@ -7518,12 +7508,6 @@ function changeCalMonth(delta){
   document.getElementById("project-tab-content").innerHTML = renderMonthlyCalendar();
 }
 
-function deleteCL(pid,cid){
-  const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  if(!confirm("Hapus changelog ini?")) return;
-  p.changelog=p.changelog.filter(x=>x.id!==cid);
-  document.getElementById("kb-section-content").innerHTML=renderKBSection("changelog",p);
-}
 
 // ── FEEDBACK ─────────────────────────────────────────────────
 
@@ -7762,13 +7746,6 @@ function openDuplicateModal(sourceId){
   document.getElementById("duplicate-modal").style.display = "flex";
 }
 
-function addChangelog(pid){
-  const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  const vNum=p.changelog.length+1;
-  p.changelog.unshift({id:Date.now(),tanggal:new Date().toLocaleDateString("id-ID",{month:"short",year:"numeric"}),versi:`v1.${vNum}`,catatan:"Deskripsi update..."});
-  document.getElementById("kb-section-content").innerHTML=renderKBSection("changelog",p);
-  showToast("Changelog ditambahkan");
-}
 
 function updateBenefit(pid,bid,field,val){
   const p=products.find(x=>String(x.id)===String(pid));
@@ -8056,13 +8033,12 @@ function prodRightPanelHTML(id){
   const isBundling=(p.type||'satuan')==='bundling';
   if(isBundling) return bundlingRightPanelHTML(p);
   const kbSections=[
-    ['painpoints','ti-alert-circle','Customer Insights',(p.painPoints||[]).length],
+    ['painpoints','ti-alert-circle','Pain Points',(p.painPoints||[]).length],
     ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
     ['benefits','ti-star','Benefits',(p.benefits||[]).length],
     ['features','ti-settings-2','Product Features',(p.features||[]).length],
     ['subproducts','ti-package','Sub-produk',(p.subProducts||[]).length],
     ['assets','ti-link','Aset Konten',(p.assets||[]).length],
-    ['changelog','ti-history','Changelog',(p.changelog||[]).length],
     ['feedback','ti-message','Feedback',(p.feedbacks||[]).length],
   ];
   return `
@@ -8102,12 +8078,11 @@ function bundlingRightPanelHTML(p){
   const subtotal=items.reduce((s,x)=>s+x.harga,0);
   const discountPct=subtotal>0&&p.harga<subtotal?Math.round((subtotal-p.harga)/subtotal*100):0;
   const kbSections=[
-    ['painpoints','ti-alert-circle','Customer Insights',getBundleKBCount(p,'painpoints')],
+    ['painpoints','ti-alert-circle','Pain Points',getBundleKBCount(p,'painpoints')],
     ['passionpoints','ti-heart','Passion Points',getBundleKBCount(p,'passionpoints')],
     ['benefits','ti-star','Benefits',getBundleKBCount(p,'benefits')],
     ['features','ti-settings-2','Product Features',getBundleKBCount(p,'features')],
     ['assets','ti-link','Aset Konten',getBundleKBCount(p,'assets')],
-    ['changelog','ti-history','Changelog',getBundleKBCount(p,'changelog')],
     ['feedback','ti-message','Feedback',getBundleKBCount(p,'feedback')],
   ];
   return `
@@ -8832,8 +8807,8 @@ function renderPainPoints(p){
   <div class="card" style="margin:0">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div>
-        <div style="font-size:13px;font-weight:600">Customer Insights</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Masalah nyata yang dialami user terkait produk ini.</div>
+        <div style="font-size:13px;font-weight:600">Pain Points</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Masalah dan keluhan nyata yang dialami user seputar persiapan MT dan produk sejenis.</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="addPainPoint('${p.id}')"><i class="ti ti-plus"></i> Tambah</button>
     </div>
@@ -10233,34 +10208,6 @@ const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agu
 
 var ppFilterPlatform=""; var ppFilterMonth=""; var ppFilterKategori=""; var ppFilterLabel="";
 
-function renderChangelog(p){
-  return `
-  <div class="card" style="margin:0">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div>
-        <div style="font-size:13px;font-weight:600">Changelog</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Riwayat update produk. Penting buat transparansi ke buyers & tracking revisi.</div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="addChangelog('${p.id}')"><i class="ti ti-plus"></i> Tambah</button>
-    </div>
-    ${p.changelog.length===0?`<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12px"><i class="ti ti-history" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada changelog.</div>`:""}
-    <div style="position:relative;padding-left:20px">
-      <div style="position:absolute;left:6px;top:0;bottom:0;width:2px;background:var(--border)"></div>
-      ${p.changelog.map(c=>`
-      <div style="position:relative;margin-bottom:14px">
-        <div style="position:absolute;left:-17px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--purple-accent);border:2px solid var(--white)"></div>
-        <div style="background:var(--bg);border-radius:10px;padding:11px 14px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
-            <span class="pill pill-purple" style="font-size:10px">${c.versi}</span>
-            <input style="border:none;background:transparent;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text-muted);width:90px" value="${c.tanggal}" onchange="updateCL('${p.id}','${c.id}','tanggal',this.value)">
-            <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:10px;margin-left:auto" onclick="deleteCL('${p.id}','${c.id}')"><i class="ti ti-trash"></i></button>
-          </div>
-          <input style="border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);width:100%" value="${c.catatan}" onchange="updateCL('${p.id}','${c.id}','catatan',this.value)">
-        </div>
-      </div>`).join("")}
-    </div>
-  </div>`;
-}
 
 // PP label badge colors
 const PP_LABEL_COLORS = [
@@ -10553,47 +10500,58 @@ function renderRundownSection(projId){
   if(!proj) return '';
   const rows=(proj.rundown||[]).slice().sort((a,b)=>a.urutan-b.urutan);
   let runningTime=proj.waktu||'';
-  const rowsWithTime=rows.map((r,i)=>{
+  const rowsWithTime=rows.map(r=>{
     const displayTime=runningTime;
     runningTime=_addMinsToTime(runningTime,r.durasi);
     return {...r,_displayTime:displayTime};
   });
+  const cs=`border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;width:100%;outline:none;color:var(--text);padding:0`;
+  const th=`padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border);white-space:nowrap`;
   return `
   <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--border)">
-      <div style="font-size:13px;font-weight:600">Rundown (${rows.length} item)</div>
-      <button class="btn btn-primary btn-sm" onclick="openRundownRowModal('${projId}',null)"><i class="ti ti-plus"></i> Tambah</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:13px;font-weight:600">Rundown</div>
+      <button class="btn btn-primary btn-sm" onclick="addRundownRow('${projId}')"><i class="ti ti-plus"></i> Tambah</button>
     </div>
     ${rows.length===0?`<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px">Belum ada rundown. Klik "+ Tambah" untuk mulai.</div>`:`
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="background:var(--bg)">
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);white-space:nowrap;border-bottom:0.5px solid var(--border)">Waktu</th>
-            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);white-space:nowrap;border-bottom:0.5px solid var(--border)">Durasi</th>
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Activity</th>
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Keterangan</th>
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Link</th>
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border)">Cue MC</th>
-            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:0.5px solid var(--border);white-space:nowrap">Urutan</th>
-            <th style="padding:8px 10px;border-bottom:0.5px solid var(--border)"></th>
+            <th style="${th}">Waktu</th>
+            <th style="${th};text-align:center">Durasi (min)</th>
+            <th style="${th}">Activity</th>
+            <th style="${th}">Keterangan</th>
+            <th style="${th}">Link</th>
+            <th style="${th}">Cue MC</th>
+            <th style="${th}"></th>
+            <th style="${th}"></th>
           </tr>
         </thead>
         <tbody>
           ${rowsWithTime.map((r,i)=>`
           <tr style="border-bottom:0.5px solid var(--border);background:${i%2===0?'var(--white)':'var(--bg)'}">
-            <td style="padding:8px 10px;font-weight:600;color:var(--purple-mid);white-space:nowrap">${r._displayTime||'—'}</td>
-            <td style="padding:8px 10px;text-align:center;color:var(--text-muted);white-space:nowrap">${r.durasi?r.durasi+' min':'—'}</td>
-            <td style="padding:8px 10px;font-weight:500;max-width:200px">${r.activity||'—'}</td>
-            <td style="padding:8px 10px;color:var(--text-muted);max-width:160px">${r.keterangan||'—'}</td>
-            <td style="padding:8px 10px;max-width:120px">${r.link?`<a href="${r.link}" target="_blank" style="color:var(--purple-accent);font-size:11px;word-break:break-all"><i class="ti ti-external-link" style="font-size:10px"></i> Link</a>`:'—'}</td>
-            <td style="padding:8px 10px;color:var(--text-muted);max-width:160px;font-style:${r.cue_mc?'normal':'italic'}">${r.cue_mc||'—'}</td>
-            <td style="padding:8px 10px;text-align:center;white-space:nowrap">
-              ${i>0?`<button onclick="moveRundownRow('${projId}','${r.id}',-1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--text-muted)"><i class="ti ti-chevron-up" style="font-size:12px"></i></button>`:'<span style="width:24px;display:inline-block"></span>'}
-              ${i<rows.length-1?`<button onclick="moveRundownRow('${projId}','${r.id}',1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--text-muted)"><i class="ti ti-chevron-down" style="font-size:12px"></i></button>`:'<span style="width:24px;display:inline-block"></span>'}
+            <td style="padding:5px 10px;font-weight:600;color:var(--purple-mid);white-space:nowrap;font-size:12px">${r._displayTime||'—'}</td>
+            <td style="padding:4px 8px;text-align:center">
+              <input type="number" min="0" value="${r.durasi||''}" placeholder="0" style="${cs};width:52px;text-align:center" onblur="saveRundownCell('${projId}','${r.id}','durasi',this.value)">
             </td>
-            <td style="padding:8px 10px;white-space:nowrap">
-              <button onclick="openRundownRowModal('${projId}','${r.id}')" style="background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--text-muted)"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+            <td style="padding:4px 8px;min-width:140px">
+              <input type="text" value="${(r.activity||'').replace(/"/g,'&quot;')}" placeholder="Activity..." style="${cs}" onblur="saveRundownCell('${projId}','${r.id}','activity',this.value)">
+            </td>
+            <td style="padding:4px 8px;min-width:110px">
+              <input type="text" value="${(r.keterangan||'').replace(/"/g,'&quot;')}" placeholder="Keterangan..." style="${cs}" onblur="saveRundownCell('${projId}','${r.id}','keterangan',this.value)">
+            </td>
+            <td style="padding:4px 8px;min-width:90px">
+              <input type="text" value="${(r.link||'').replace(/"/g,'&quot;')}" placeholder="https://..." style="${cs};color:${r.link?'var(--purple-accent)':'var(--text)'}" onfocus="this.style.color='var(--purple-accent)'" onblur="saveRundownCell('${projId}','${r.id}','link',this.value);this.style.color=this.value?'var(--purple-accent)':'var(--text)'">
+            </td>
+            <td style="padding:4px 8px;min-width:110px">
+              <input type="text" value="${(r.cue_mc||'').replace(/"/g,'&quot;')}" placeholder="Teks MC..." style="${cs}" onblur="saveRundownCell('${projId}','${r.id}','cue_mc',this.value)">
+            </td>
+            <td style="padding:4px 6px;text-align:center;white-space:nowrap">
+              ${i>0?`<button onclick="moveRundownRow('${projId}','${r.id}',-1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--text-muted)"><i class="ti ti-chevron-up" style="font-size:12px"></i></button>`:'<span style="display:inline-block;width:22px"></span>'}
+              ${i<rows.length-1?`<button onclick="moveRundownRow('${projId}','${r.id}',1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--text-muted)"><i class="ti ti-chevron-down" style="font-size:12px"></i></button>`:'<span style="display:inline-block;width:22px"></span>'}
+            </td>
+            <td style="padding:4px 6px">
               <button onclick="deleteRundownRow('${projId}','${r.id}')" style="background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--red)"><i class="ti ti-trash" style="font-size:13px"></i></button>
             </td>
           </tr>`).join('')}
@@ -10603,55 +10561,27 @@ function renderRundownSection(projId){
   </div>`;
 }
 
-function openRundownRowModal(projId, rowId){
+async function addRundownRow(projId){
   const proj=projects.find(p=>_idEq(p.id,projId));if(!proj) return;
-  const r=rowId?(proj.rundown||[]).find(x=>String(x.id)===String(rowId)):null;
-  const modal=document.getElementById('rundown-row-modal');
-  document.getElementById('rrm-title').textContent=r?'Edit Row Rundown':'Tambah Row Rundown';
-  document.getElementById('rrm-durasi').value=r?r.durasi:'';
-  document.getElementById('rrm-activity').value=r?r.activity:'';
-  document.getElementById('rrm-keterangan').value=r?r.keterangan:'';
-  document.getElementById('rrm-link').value=r?r.link:'';
-  document.getElementById('rrm-cue-mc').value=r?r.cue_mc:'';
-  document.getElementById('rrm-delete-btn').style.display=r?'inline-flex':'none';
-  if(r) document.getElementById('rrm-delete-btn').onclick=()=>deleteRundownRow(projId,rowId);
-  modal.dataset.projId=projId;
-  modal.dataset.rowId=rowId||'';
-  modal.style.display='flex';
-}
-
-function closeRundownRowModal(){
-  document.getElementById('rundown-row-modal').style.display='none';
-}
-
-async function saveRundownRow(){
-  const modal=document.getElementById('rundown-row-modal');
-  const projId=modal.dataset.projId;
-  const rowId=modal.dataset.rowId||'';
-  const proj=projects.find(p=>_idEq(p.id,projId));if(!proj) return;
-  const data={
-    durasi:parseInt(document.getElementById('rrm-durasi').value)||0,
-    activity:document.getElementById('rrm-activity').value.trim(),
-    keterangan:document.getElementById('rrm-keterangan').value.trim(),
-    link:document.getElementById('rrm-link').value.trim(),
-    cue_mc:document.getElementById('rrm-cue-mc').value.trim(),
-  };
-  if(!data.activity){showToast('Activity wajib diisi');return;}
-  if(rowId){
-    const r=(proj.rundown||[]).find(x=>String(x.id)===String(rowId));
-    if(r){Object.assign(r,data);data.urutan=r.urutan;}
-    await sb_updateRundownRow(rowId,{...data,urutan:r?r.urutan:0});
-  } else {
-    const maxUrutan=Math.max(-1,...(proj.rundown||[]).map(r=>r.urutan));
-    data.urutan=maxUrutan+1;
-    const row=await sb_insertRundownRow(projId,data);
-    if(!row||!row.id){showToast('Gagal simpan','error');return;}
-    if(!proj.rundown) proj.rundown=[];
-    proj.rundown.push({id:row.id,...data});
-  }
-  closeRundownRowModal();
+  const maxUrutan=Math.max(-1,...(proj.rundown||[]).map(r=>r.urutan));
+  const data={durasi:0,activity:'',keterangan:'',link:'',cue_mc:'',urutan:maxUrutan+1};
+  const row=await sb_insertRundownRow(projId,data);
+  if(!row||!row.id){showToast('Gagal tambah row','error');return;}
+  if(!proj.rundown) proj.rundown=[];
+  proj.rundown.push({id:row.id,...data});
   document.getElementById('project-tab-content').innerHTML=projectTasksHTML();
-  showToast(rowId?'Row diperbarui':'Row ditambahkan');
+}
+
+async function saveRundownCell(projId,rowId,field,rawValue){
+  const proj=projects.find(p=>_idEq(p.id,projId));if(!proj) return;
+  const r=(proj.rundown||[]).find(x=>String(x.id)===String(rowId));if(!r) return;
+  const value=field==='durasi'?(parseInt(rawValue)||0):rawValue.trim();
+  if(String(r[field])===String(value)) return;
+  r[field]=value;
+  await sb_updateRundownRow(rowId,{...r});
+  if(field==='durasi'){
+    document.getElementById('project-tab-content').innerHTML=projectTasksHTML();
+  }
 }
 
 async function deleteRundownRow(projId,rowId){
@@ -10660,7 +10590,6 @@ async function deleteRundownRow(projId,rowId){
   if(!ok){showToast('Gagal hapus','error');return;}
   const proj=projects.find(p=>_idEq(p.id,projId));
   if(proj) proj.rundown=(proj.rundown||[]).filter(r=>String(r.id)!==String(rowId));
-  closeRundownRowModal();
   document.getElementById('project-tab-content').innerHTML=projectTasksHTML();
   showToast('Row dihapus');
 }
@@ -10992,7 +10921,7 @@ function renderMonthlyCalendar(){
     <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text-muted);flex-wrap:wrap">
       <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--purple-accent)"></span> Event
       <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--amber);margin-left:6px"></span> Deadline task
-      <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#0e7490;margin-left:6px"></span> Ticket
+      <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#c2410c;margin-left:6px"></span> Ticket
     </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
@@ -11016,8 +10945,7 @@ function renderMonthlyCalendar(){
               return `<div onclick="event.stopPropagation();openProjectModal('${p.id}')" title="${p.nama} - ${p.waktu}" style="background:var(--purple-accent);color:#fff;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-broadcast" style="font-size:9px"></i> ${p.waktu} ${p.nama.replace(/Free Class: /,"")}</div>`;
             } else if(it.type==="ticket"){
               const t=it.data;
-              const person=getPersonById(t.assignedToId);
-              return `<div onclick="event.stopPropagation();openTktDetail('${t.id}')" title="${fmtTktNo(t)} - ${t.judul}" style="background:#cffafe;color:#0e7490;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-ticket" style="font-size:9px"></i> ${t.judul}</div>`;
+              return `<div onclick="event.stopPropagation();openTktDetail('${t.id}')" title="${fmtTktNo(t)} — ${t.judul}" style="background:#ffedd5;color:#c2410c;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-ticket" style="font-size:9px"></i> ${fmtTktNo(t)} ${t.judul}</div>`;
             } else {
               const t=it.data;
               const person=getPersonById(t.assigneeId);
@@ -11070,14 +10998,14 @@ function renderMonthlyCalendar(){
         } else if(it.type==="ticket"){
           const t=it.data;
           const person=getPersonById(t.assignedToId);
-          return `<div onclick="openTktDetail('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#cffafe;border-radius:8px;margin-bottom:6px;cursor:pointer;border-left:3px solid #0e7490">
+          return `<div onclick="openTktDetail('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#ffedd5;border-radius:8px;margin-bottom:6px;cursor:pointer;border-left:3px solid #c2410c">
             <div style="width:42px;text-align:center;flex-shrink:0">
-              <div style="font-size:10px;color:#0e7490;font-weight:600">${fmtDateShort(it.date)}</div>
+              <div style="font-size:10px;color:#c2410c;font-weight:600">${fmtDateShort(it.date)}</div>
             </div>
-            <i class="ti ti-ticket" style="color:#0e7490;font-size:14px;flex-shrink:0"></i>
+            <i class="ti ti-ticket" style="color:#c2410c;font-size:14px;flex-shrink:0"></i>
             <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:500;color:#0e7490;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtTktNo(t)} — ${t.judul}</div>
-              <div style="font-size:10px;color:#0891b2">${person.nama} · Deadline</div>
+              <div style="font-size:12px;font-weight:500;color:#c2410c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtTktNo(t)} — ${t.judul}</div>
+              <div style="font-size:10px;color:#ea580c">${person.nama} · Deadline</div>
             </div>
             ${tktStatusPill(t.status)}
           </div>`;
@@ -13893,45 +13821,6 @@ async function daConfirmDelete(id) {
       <button class="btn btn-danger btn-sm" id="tm-delete-btn" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>
       <button class="btn btn-sm" onclick="closeTaskModal()">Batal</button>
       <button class="btn btn-primary btn-sm" onclick="saveTaskModal()"><i class="ti ti-check"></i> Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- Rundown Row Modal -->
-<div id="rundown-row-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeRundownRowModal()">
-  <div style="background:var(--white);border-radius:var(--radius-lg);width:92%;max-width:500px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
-    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid var(--border)">
-      <div style="font-size:14px;font-weight:700" id="rrm-title">Tambah Row Rundown</div>
-      <button class="btn btn-sm" onclick="closeRundownRowModal()"><i class="ti ti-x"></i></button>
-    </div>
-    <div style="padding:16px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="cust-field editable" style="grid-column:1/-1">
-          <div class="cust-field-label">Activity *</div>
-          <input class="cust-field-input" id="rrm-activity" placeholder="contoh: Opening, Materi, Q&A...">
-        </div>
-        <div class="cust-field editable">
-          <div class="cust-field-label">Durasi (menit)</div>
-          <input class="cust-field-input" id="rrm-durasi" type="number" placeholder="10">
-        </div>
-        <div class="cust-field editable">
-          <div class="cust-field-label">Link</div>
-          <input class="cust-field-input" id="rrm-link" placeholder="https://...">
-        </div>
-        <div class="cust-field editable" style="grid-column:1/-1">
-          <div class="cust-field-label">Keterangan</div>
-          <textarea class="cust-field-input" id="rrm-keterangan" rows="2" style="resize:vertical" placeholder="Detail tambahan..."></textarea>
-        </div>
-        <div class="cust-field editable" style="grid-column:1/-1">
-          <div class="cust-field-label">Cue MC</div>
-          <textarea class="cust-field-input" id="rrm-cue-mc" rows="2" style="resize:vertical" placeholder="Teks untuk MC..."></textarea>
-        </div>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
-      <button class="btn btn-danger btn-sm" id="rrm-delete-btn" style="display:none;margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>
-      <button class="btn btn-sm" onclick="closeRundownRowModal()">Batal</button>
-      <button class="btn btn-primary btn-sm" onclick="saveRundownRow()"><i class="ti ti-check"></i> Simpan</button>
     </div>
   </div>
 </div>
