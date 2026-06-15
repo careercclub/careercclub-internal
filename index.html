@@ -3079,6 +3079,7 @@ function toggleSidebar() {
 })();
 
 function switchPage(page,el){
+  if(!el) el=[...document.querySelectorAll('.nav-item')].find(n=>(n.getAttribute('onclick')||'').includes("'"+page+"'"));
   // Reset content padding/overflow when leaving product page
   const _c=document.getElementById('mainContent');
   if(_c){_c.style.removeProperty('padding');_c.style.removeProperty('overflow');}
@@ -3248,7 +3249,8 @@ function renderDashCalendar() {
     visItems.forEach(function(it){
       if(it.type==="event"){
         var evName = it.data.nama.substring(0,15).replace(/"/g, "&quot;");
-        html += "<div onclick=\"switchPage('program')\" title=\"" + evName + "\" style=\"background:var(--purple-accent);color:#fff;padding:2px 5px;border-radius:3px;font-size:9px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-broadcast\" style=\"font-size:8px\"></i> " + evName + "</div>";
+        var evId = it.data.id;
+        html += "<div onclick=\"event.stopPropagation();switchPage('project');openProjectDetail('"+evId+"')\" title=\"" + evName + "\" style=\"background:var(--purple-accent);color:#fff;padding:2px 5px;border-radius:3px;font-size:9px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-broadcast\" style=\"font-size:8px\"></i> " + evName + "</div>";
       } else if(it.type==="ticket"){
         var tkt=it.data;
         var safeTitle = (fmtTktNo(tkt)+' '+tkt.judul).replace(/"/g,"&quot;");
@@ -3262,7 +3264,7 @@ function renderDashCalendar() {
         var opac = isDone ? "0.5" : "1";
         var deco = isDone ? "text-decoration:line-through;" : "";
         var bLeft = isProgress ? "border-left:2px solid " + pc.fg + ";" : "";
-        html += "<div draggable=\"true\" ondragstart=\"calDragStart(event,'" + t.id + "','" + t.projectId + "')\" onclick=\"event.stopPropagation()\" title=\"" + safeTitle + "\" style=\"background:" + pc.bg + ";color:" + pc.fg + ";padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:" + opac + ";" + deco + bLeft + "\">" + t.title + "</div>";
+        html += "<div draggable=\"true\" ondragstart=\"calDragStart(event,'" + t.id + "','" + t.projectId + "')\" onclick=\"event.stopPropagation();openTaskModal('"+t.id+"','"+t.projectId+"')\" title=\"" + safeTitle + "\" style=\"background:" + pc.bg + ";color:" + pc.fg + ";padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:" + opac + ";" + deco + bLeft + "\">" + t.title + "</div>";
       }
     });
     if(items.length>2){
@@ -4933,7 +4935,7 @@ function tktStartTitleEdit(id) {
     }
     const hdr = document.getElementById('tkt-detail-title');
     if (hdr) hdr.textContent = `${fmtTktNo(t)} — ${t.judul}`;
-    renderTicketList();
+    renderTickets();
     restore(t.judul);
   }
 
@@ -9737,10 +9739,6 @@ function ppDatabaseHTML(){
           + '<button onclick="ppSaveEdit(\''+eid+'\')" style="padding:4px 12px;background:var(--purple-accent);color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer"><i class="ti ti-check"></i> Simpan</button>'
           + '<button onclick="ppCancelEdit(\''+eid+'\')" style="padding:4px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">Batal</button>'
           + '</div></div>'
-          + '<div style="margin-top:4px;display:flex;gap:6px">'
-          + '<span onclick="ppToggleExpand(\''+eid+'\')" style="font-size:10px;color:var(--purple-mid);cursor:pointer" id="pp-expand-lbl-'+eid+'">▼ Lihat selengkapnya</span>'
-          + '<span onclick="ppStartEdit(\''+eid+'\')" style="font-size:10px;color:var(--text-muted);cursor:pointer"><i class="ti ti-pencil" style="font-size:10px"></i> Edit</span>'
-          + '</div>'
           + '</td>'
           // Platform
           + '<td style="padding:10px 12px;white-space:nowrap;width:12%"><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;background:var(--bg);border-radius:6px;padding:2px 8px"><i class="ti '+platIcon+'" style="font-size:11px"></i>'+(e.platform||'')+'</span></td>'
@@ -9750,7 +9748,10 @@ function ppDatabaseHTML(){
           + '<td style="padding:10px 12px;width:16%"><span style="font-size:11px;background:var(--purple-light);color:var(--purple-mid);border-radius:20px;padding:2px 9px;white-space:nowrap">'+(e.kategori||'')+'</span></td>'
           + '<td style="padding:10px 12px;width:18%"><div style="display:flex;flex-wrap:wrap;gap:3px">'+(e.labels&&e.labels.length?ppLabelBadges(e.labels):'<span style="font-size:11px;color:var(--text-muted)">—</span>')+'</div></td>'
           // Aksi
-          + '<td style="padding:10px 12px;text-align:center;width:7%"><button onclick="ppDeleteEntry(\''+eid+'\')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px"><i class="ti ti-trash"></i></button></td>'
+          + '<td style="padding:10px 12px;text-align:center;width:7%">'
+          + '<button onclick="ppStartEdit(\''+eid+'\')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px"><i class="ti ti-pencil"></i></button>'
+          + '<button onclick="ppDeleteEntry(\''+eid+'\')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px"><i class="ti ti-trash"></i></button>'
+          + '</td>'
           + '</tr>';
       }).join('');
 
@@ -16084,7 +16085,7 @@ async function ciHandleLogoFile(file) {
 async function saveCiProfile(profileId) {
   const name = document.getElementById('ci-p-name').value.trim();
   if (!name) { showToast('Nama wajib diisi!', 'error'); return; }
-  const platforms = [...document.querySelectorAll('#ci-profile-modal input[type=checkbox]:checked')].map(c => c.value);
+  const platforms = [...document.querySelectorAll('#ci-profile-modal input[type=checkbox]:checked')].filter(c => !c.closest('#ci-target-pills')).map(c => c.value);
   const followers = {};
   ['instagram','tiktok','youtube'].forEach(pl => {
     const v = document.getElementById('ci-p-fol-'+pl)?.value;
