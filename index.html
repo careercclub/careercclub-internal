@@ -3297,11 +3297,17 @@ function dashCalToday() {
 function renderDashUpcoming() {
   const today=new Date(); today.setHours(0,0,0,0);
   const future=new Date(today); future.setDate(future.getDate()+7);
-  const upcoming=projectTasks.filter(t=>{
-    if(!t.deadline || t.status==="Done") return false;
-    const d=new Date(t.deadline); d.setHours(0,0,0,0);
-    return d>=today && d<=future;
-  }).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+  const todayISO=toLocalDateISO(today);
+  const futureISO=toLocalDateISO(future);
+
+  const taskItems=projectTasks.filter(t=>t.deadline&&t.status!=='Done'&&t.deadline>=todayISO&&t.deadline<=futureISO)
+    .map(t=>({type:'task',deadline:t.deadline,title:t.title,phase:t.phase,projectId:t.projectId,id:t.id}));
+  const tktItems=(typeof tickets!=='undefined'?tickets:[]).filter(t=>{
+    if(!t.deadline||t.status==='Done') return false;
+    const dl=t.deadline.substring(0,10);
+    return dl>=todayISO&&dl<=futureISO;
+  }).map(t=>({type:'ticket',deadline:t.deadline.substring(0,10),title:t.judul,id:t.id}));
+  const upcoming=[...taskItems,...tktItems].sort((a,b)=>a.deadline.localeCompare(b.deadline));
 
   const el=document.getElementById('dash-upcoming');
   if(!el) return;
@@ -3314,24 +3320,33 @@ function renderDashUpcoming() {
   const phaseColors={"Pre Event":{bg:"#d1fae5",fg:"#059669"},"Hari H":{bg:"#fee2e2",fg:"#dc2626"},"Post Event":{bg:"#dbeafe",fg:"#2563eb"}};
   let html='';
   let lastDate='';
-  upcoming.forEach(t=>{
-    if(t.deadline!==lastDate){
-      const d=new Date(t.deadline); d.setHours(0,0,0,0);
-      const isToday=d.getTime()===today.getTime();
-      const isTomorrow=d.getTime()===today.getTime()+86400000;
-      const label=isToday?'<span style="color:var(--red);font-weight:700">Hari ini</span>':isTomorrow?'<span style="color:var(--amber);font-weight:700">Besok</span>':fmtDateShort(t.deadline);
+  upcoming.forEach(item=>{
+    if(item.deadline!==lastDate){
+      const todayT=today.getTime();
+      const tomorrowISO=toLocalDateISO(new Date(todayT+86400000));
+      const isToday=item.deadline===todayISO;
+      const isTomorrow=item.deadline===tomorrowISO;
+      const label=isToday?'<span style="color:var(--red);font-weight:700">Hari ini</span>':isTomorrow?'<span style="color:var(--amber);font-weight:700">Besok</span>':fmtDateShort(item.deadline);
       html+='<div style="font-size:10px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">'+label+'</div>';
-      lastDate=t.deadline;
+      lastDate=item.deadline;
     }
-    const pc=phaseColors[t.phase]||{bg:"var(--amber-bg)",fg:"var(--amber)"};
-    const proj=projects.find(p=>_idEq(p.id,t.projectId));
-    html+="<div style=\"display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer\" onclick=\"switchPage('project')\">";
-    html+='<div style="width:8px;height:8px;border-radius:2px;background:'+pc.fg+';flex-shrink:0"></div>';
-    html+='<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.title+'</div>';
-    if(proj) html+='<div style="font-size:10px;color:var(--text-muted)">'+proj.nama+'</div>';
-    html+='</div>';
-    html+='<span style="font-size:9px;padding:1px 6px;border-radius:8px;background:'+pc.bg+';color:'+pc.fg+';flex-shrink:0">'+t.phase+'</span>';
-    html+='</div>';
+    if(item.type==='ticket'){
+      html+="<div style=\"display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer\" onclick=\"openTktDetail('"+item.id+"')\">";
+      html+='<div style="width:8px;height:8px;border-radius:2px;background:#c2410c;flex-shrink:0"></div>';
+      html+='<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+item.title+'</div></div>';
+      html+='<span style="font-size:9px;padding:1px 6px;border-radius:8px;background:#ffedd5;color:#c2410c;flex-shrink:0">Ticket</span>';
+      html+='</div>';
+    } else {
+      const pc=phaseColors[item.phase]||{bg:"var(--amber-bg)",fg:"var(--amber)"};
+      const proj=projects.find(p=>_idEq(p.id,item.projectId));
+      html+="<div style=\"display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer\" onclick=\"switchPage('project')\">";
+      html+='<div style="width:8px;height:8px;border-radius:2px;background:'+pc.fg+';flex-shrink:0"></div>';
+      html+='<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+item.title+'</div>';
+      if(proj) html+='<div style="font-size:10px;color:var(--text-muted)">'+proj.nama+'</div>';
+      html+='</div>';
+      html+='<span style="font-size:9px;padding:1px 6px;border-radius:8px;background:'+pc.bg+';color:'+pc.fg+';flex-shrink:0">'+item.phase+'</span>';
+      html+='</div>';
+    }
   });
   el.innerHTML=html;
 }
@@ -20046,7 +20061,12 @@ async function gcalCreateEvent(taskId) {
     if(!ptr) return;
     let startY = 0, curY = 0, pulling = false;
     const threshold = 70, maxPull = 140;
-    function resetPtr(){ ptr.classList.remove('show'); ptr.style.transform = 'translateX(-50%) translateY(-120%)'; ptr.querySelector('.label').textContent = 'Refreshing...'; }
+    function resetPtr(){
+      ptr.classList.remove('show');
+      ptr.style.transform = 'translateX(-50%) translateY(-120%)';
+      ptr.style.opacity = '0';
+      ptr.querySelector('.label').textContent = 'Pull to refresh';
+    }
 
     function onTouchStart(e){
       if(!(document.body.classList.contains('pwa-mode') || window.matchMedia('(display-mode: standalone)').matches)) return;
@@ -20079,20 +20099,31 @@ async function gcalCreateEvent(taskId) {
     }
 
     function onTouchEnd(){
-      if(!pulling) { startY = 0; curY = 0; return; }
+      // Always reset pull state first — even if user lifts before threshold
+      const wasPulling = pulling;
       const delta = Math.max(0, curY - startY);
+      startY = 0; curY = 0; pulling = false;
+
+      if(!wasPulling) return;
+
       if(delta > threshold){
-        // Show indicator and refresh current page
         ptr.querySelector('.label').textContent = 'Refreshing...';
         ptr.classList.add('show');
         const page = window._currentPage || 'dashboard';
+
+        let hidden = false;
+        function doHide(){ if(hidden) return; hidden=true; resetPtr(); }
+
+        // Hard fallback: force-hide after 3 seconds regardless
+        const fallback = setTimeout(doHide, 3000);
+
         try{ switchPage(page); }catch(e){ console.warn('refresh failed',e); }
-        // Hide after a short delay
-        setTimeout(()=>{ resetPtr(); startY=0; curY=0; pulling=false; }, 900);
+        // Normal hide after page init completes (~900ms)
+        setTimeout(()=>{ clearTimeout(fallback); doHide(); }, 900);
       } else {
-        // reset
-        ptr.style.transform = 'translateX(-50%) translateY(-120%)'; ptr.style.opacity = 0;
-        startY = 0; curY = 0; pulling = false;
+        // Sub-threshold pull: smooth transition back up
+        ptr.style.transform = 'translateX(-50%) translateY(-120%)';
+        ptr.style.opacity = '0';
       }
     }
 
@@ -20134,44 +20165,43 @@ async function gcalCreateEvent(taskId) {
     }
 
     const today=new Date(); today.setHours(0,0,0,0);
-    const days=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
-    let calHtml='<div class="pwa-cal-strip">';
-    for(let i=0;i<=6;i++){
-      const d=new Date(today); d.setDate(d.getDate()+i);
-      const iso=toLocalDateISO(d);
-      const isToday=i===0;
-      const hasTasks=projectTasks.some(t=>t.deadline===iso&&t.status!=='Done');
-      const cls = isToday ? 'today' : hasTasks ? 'has-event' : 'normal';
-      const inlineStyle = isToday 
-        ? 'background:#0a3d8f;border-radius:12px;' 
-        : hasTasks 
-          ? 'background:#fff;border:0.5px solid #e5e3f5;border-radius:12px;' 
-          : 'background:#fff;opacity:0.5;border-radius:12px;';
-      calHtml+=`<div class="pwa-cal-day ${cls}" style="${inlineStyle}">
-        <div class="pwa-cal-day-name" style="font-size:10px;font-weight:500;margin-bottom:2px;${isToday?'color:rgba(255,255,255,0.75)':hasTasks?'color:#0f52ba;font-weight:600':'color:#6b6b8a'}">${days[d.getDay()]}</div>
-        <div class="pwa-cal-day-num" style="font-size:15px;font-weight:600;line-height:1.3;${isToday?'color:white':'color:#1a1833'}">${d.getDate()}</div>
-        ${hasTasks?`<div style="width:5px;height:5px;border-radius:50%;background:${isToday?'rgba(255,255,255,0.8)':'#0f52ba'};margin:4px auto 0"></div>`:'<div style="height:7px"></div>'}
-      </div>`;
-    }
-    calHtml+='</div>';
-    calEl.innerHTML=calHtml;
+    const todayISO=toLocalDateISO(today);
     const future=new Date(today); future.setDate(future.getDate()+7);
-    const upcoming=projectTasks.filter(t=>{if(!t.deadline||t.status==='Done') return false; const d=new Date(t.deadline); d.setHours(0,0,0,0); return d>=today&&d<=future;}).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+    const futureISO=toLocalDateISO(future);
+    const tomorrowISO=toLocalDateISO(new Date(today.getTime()+86400000));
+
+    const taskItems=projectTasks.filter(t=>t.deadline&&t.status!=='Done'&&t.deadline>=todayISO&&t.deadline<=futureISO)
+      .map(t=>({type:'task',deadline:t.deadline,title:t.title,phase:t.phase,projectId:t.projectId,id:t.id,status:t.status}));
+    const tktItems=(typeof tickets!=='undefined'?tickets:[]).filter(t=>{
+      if(!t.deadline||t.status==='Done') return false;
+      const dl=t.deadline.substring(0,10);
+      return dl>=todayISO&&dl<=futureISO;
+    }).map(t=>({type:'ticket',deadline:t.deadline.substring(0,10),title:t.judul,id:t.id}));
+    const upcoming=[...taskItems,...tktItems].sort((a,b)=>a.deadline.localeCompare(b.deadline));
+
     if(!upcoming.length){upEl.innerHTML='<div style="text-align:center;color:var(--text-hint);font-size:12px;padding:20px 0"><i class="ti ti-check" style="font-size:24px;display:block;margin-bottom:6px"></i>Tidak ada task dalam 7 hari</div>';return;}
     const phaseColors={'Pre Event':'#059669','Hari H':'#dc2626','Post Event':'#2563eb'};
     let lastDate='';
     let html='<div style="background:var(--white);border-radius:12px;border:0.5px solid var(--border);overflow:hidden">';
-    upcoming.slice(0,10).forEach(t=>{
-      if(t.deadline!==lastDate){const d=new Date(t.deadline);d.setHours(0,0,0,0);const isToday=d.getTime()===today.getTime();html+=`<div style="font-size:10px;color:var(--text-muted);padding:8px 14px 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:0.5px solid var(--border)">${isToday?'Hari ini':fmtDateShort(t.deadline)}</div>`;lastDate=t.deadline;}
-      const proj=projects.find(p=>_idEq(p.id,t.projectId));
-      const color=phaseColors[t.phase]||'#0f52ba';
-      const isDone=t.status==='Done';
-      html+=`<div class="pwa-check-item" onclick="switchPage('project')"><div class="pwa-checkbox${isDone?' done':''}">${isDone?'<i class="ti ti-check" style="font-size:10px;color:white"></i>':''}</div><div style="flex:1;min-width:0"><div class="pwa-check-title${isDone?' done':''}">${t.title}</div><div class="pwa-check-meta">${proj?proj.nama+' · ':''}<span style="color:${color}">${t.phase}</span></div></div></div>`;
+    upcoming.slice(0,10).forEach(item=>{
+      if(item.deadline!==lastDate){
+        const isToday=item.deadline===todayISO;
+        const isTomorrow=item.deadline===tomorrowISO;
+        const dateLabel=isToday?'Hari ini':isTomorrow?'Besok':fmtDateShort(item.deadline);
+        html+=`<div style="font-size:10px;color:var(--text-muted);padding:8px 14px 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:0.5px solid var(--border)">${dateLabel}</div>`;
+        lastDate=item.deadline;
+      }
+      if(item.type==='ticket'){
+        html+=`<div class="pwa-check-item" onclick="openTktDetail('${item.id}')"><div class="pwa-checkbox" style="background:#ffedd5;border-color:#c2410c"><i class="ti ti-ticket" style="font-size:10px;color:#c2410c"></i></div><div style="flex:1;min-width:0"><div class="pwa-check-title">${item.title}</div><div class="pwa-check-meta"><span style="color:#c2410c">Ticket</span></div></div></div>`;
+      } else {
+        const proj=projects.find(p=>_idEq(p.id,item.projectId));
+        const color=phaseColors[item.phase]||'#0f52ba';
+        const isDone=item.status==='Done';
+        html+=`<div class="pwa-check-item" onclick="switchPage('project')"><div class="pwa-checkbox${isDone?' done':''}">${isDone?'<i class="ti ti-check" style="font-size:10px;color:white"></i>':''}</div><div style="flex:1;min-width:0"><div class="pwa-check-title${isDone?' done':''}">${item.title}</div><div class="pwa-check-meta">${proj?proj.nama+' · ':''}<span style="color:${color}">${item.phase}</span></div></div></div>`;
+      }
     });
     html+='</div>';
     upEl.innerHTML=html;
-    const layout=document.getElementById('dash-layout');
-    if(layout) layout.style.gridTemplateColumns='1fr';
   }
 
   // 2. CRM — Notion DB list
