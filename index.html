@@ -4779,6 +4779,17 @@ async function toggleTktDone(id){
   const ok=await sb_updateTicket(id,{status:newStatus});
   if(!ok){showToast('Gagal update status','error');return;}
   t.status=newStatus;
+  // Sync ke program task terkait (jika ticket berasal dari task)
+  if(t.linkedTaskId){
+    const linkedTask=projectTasks.find(x=>_idEq(x.id,t.linkedTaskId));
+    if(linkedTask){
+      const taskStatus=TKT_TO_TASK_STATUS[newStatus]||'Todo';
+      if(linkedTask.status!==taskStatus){
+        linkedTask.status=taskStatus;
+        await sb_updateTask(linkedTask.id,linkedTask);
+      }
+    }
+  }
   renderTicketList();
 }
 
@@ -10771,13 +10782,15 @@ function projectTasksHTML(){
   </div>
 
   <div class="card" style="margin-bottom:10px;padding:12px 14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
       <div style="font-size:14px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nama}</div>
       ${projStatusPill(p.status)}
+      ${p.jenis_program&&jenisBadge[p.jenis_program]?jenisBadge[p.jenis_program]:''}
+      <button onclick="openProjectModal('${p.id}')" class="btn btn-sm" style="flex-shrink:0;font-size:11px;padding:3px 9px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button>
     </div>
     <div style="font-size:11px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap">
-      <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)} · ${p.waktu}</span>
-      <span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>
+      <span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDateID(p.tanggal)}${p.waktu?' · '+p.waktu:''}</span>
+      ${p.speaker?`<span><i class="ti ti-microphone" style="font-size:11px"></i> ${p.speaker}</span>`:''}
     </div>
   </div>
 
@@ -10789,6 +10802,7 @@ function projectTasksHTML(){
     }).join("")}
   </div>
 
+  ${renderEventLinks(p)}
   ${projectTaskView==="list" ? renderTaskList(p.id) : renderTaskKanban(p.id)}
   ${renderRundownSection(p.id)}
   `;
@@ -12950,8 +12964,8 @@ function daSendToContentLib(id) {
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
-      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
-      <button id="cl-upload-btn" onclick="clDoSendFromDA('${id}')" class="btn btn-primary" style="font-size:12px">Kirim ke Content Library</button>
+      <button onclick="gcalCloseModal()" class="btn btn-sm">Batal</button>
+      <button id="cl-upload-btn" onclick="clDoSendFromDA('${id}')" class="btn btn-primary btn-sm">Kirim ke Content Library</button>
     </div>
   </div>`;
   setTimeout(() => clRenderLabelChips(), 50);
@@ -12963,7 +12977,7 @@ async function clDoSendFromDA(daId) {
   const platform    = document.getElementById('cl-platform').value;
   const jenis       = document.getElementById('cl-jenis').value;
   const link        = document.getElementById('cl-link')?.value.trim()||'';
-  const copywriting = document.getElementById('cl-copy').value.trim();
+  const copywriting = document.getElementById('cl-copy')?.value.trim()||'';
   const views       = parseInt(document.getElementById('cl-views').value)||0;
   const likesRawDA  = document.getElementById('cl-likes').value;
   if (likesRawDA === '' || likesRawDA === null || likesRawDA === undefined) {
@@ -12980,14 +12994,14 @@ async function clDoSendFromDA(daId) {
   const comments    = parseInt(document.getElementById('cl-comments').value)||0;
   const shares      = parseInt(document.getElementById('cl-shares').value)||0;
   const notes       = document.getElementById('cl-notes').value.trim();
-  // Ambil label langsung dari chips yang terrender — lebih reliable dari window._clLabels
-  const labelEls    = document.querySelectorAll('#cl-label-chips span');
+  // Ambil label dari data-label attribute (reliable)
+  const labelEls    = document.querySelectorAll('#cl-label-chips [data-label]');
   const labels      = labelEls.length
-    ? [...labelEls].map(el => el.childNodes[0]?.textContent?.trim()).filter(Boolean)
+    ? [...labelEls].map(el => el.dataset.label).filter(Boolean)
     : (window._clLabels || []);
   if (!labels.length) {
     showToast('Label wajib diisi', 'error');
-    document.getElementById('cl-label-input').focus();
+    document.getElementById('cl-dd-new-input')?.focus();
     return;
   }
   const btn = document.getElementById('cl-upload-btn');
@@ -19038,22 +19052,23 @@ function clOpenUploadModal(prefillFile) {
         </div>
       </div>
       <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN</label>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LINK KONTEN (wajib)</label>
         ${linkInputHTML("cl-link", "", "https://...")}
       </div>
       <div>
-
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COPYWRITING (opsional)</label>
+        <textarea id="cl-copy" placeholder="Caption atau teks konten..." rows="3" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical;font-family:inherit"></textarea>
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">ENGAGEMENT</label>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
-          ${[['cl-views','👁 Views'],['cl-likes','❤️ Likes'],['cl-comments','💬 Comments'],['cl-shares','🔁 Shares']].map(([id,label]) =>
-            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">${label}</label><input id="${id}" type="number" min="0" placeholder="0" style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
+          ${[['cl-views','👁 Views'],['cl-likes','❤️ Likes (wajib)'],['cl-comments','💬 Comments'],['cl-shares','🔁 Shares']].map(([id,label]) =>
+            `<div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;${id==='cl-likes'?'color:#e53e3e;font-weight:700':''}">${label}</label><input id="${id}" type="number" min="0" placeholder="0" style="width:100%;padding:6px 8px;border:0.5px solid ${id==='cl-likes'?'#e53e3e':'var(--border-md)'};border-radius:var(--radius);font-size:12px;background:var(--bg)"></div>`
           ).join('')}
         </div>
       </div>
       <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS (opsional)</label>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">LABELS (wajib)</label>
         <div id="cl-label-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px"></div>
         <div class="cl-dd-wrap">
           <div class="cl-dd-trigger" onclick="clDDOpen()">
@@ -19078,8 +19093,8 @@ function clOpenUploadModal(prefillFile) {
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
-      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
-      <button id="cl-upload-btn" onclick="clDoUpload()" class="btn btn-primary" style="font-size:12px">Simpan</button>
+      <button onclick="gcalCloseModal()" class="btn btn-sm">Batal</button>
+      <button id="cl-upload-btn" onclick="clDoUpload()" class="btn btn-primary btn-sm">Simpan</button>
     </div>
   </div>`;
 
@@ -19150,12 +19165,19 @@ function clAddLabelVal(val) {
   clDDRenderItems();
 }
 
+function clRemoveLabel(val) {
+  window._clLabels = (window._clLabels||[]).filter(l => l !== val);
+  clRenderLabelChips();
+  clDDRenderItems();
+}
+
 function clRenderLabelChips() {
   const el = document.getElementById('cl-label-chips');
   if (!el) return;
-  el.innerHTML = (window._clLabels||[]).map((l,i) =>
-    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--purple-light);color:var(--purple-mid);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${l}<button onclick="window._clLabels.splice(${i},1);clRenderLabelChips();clDDRenderItems()" style="background:none;border:none;cursor:pointer;padding:0;color:var(--purple-mid);font-size:12px;line-height:1">×</button></span>`
-  ).join('');
+  el.innerHTML = (window._clLabels||[]).map(l => {
+    const safe = l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return `<span data-label="${safe}" style="display:inline-flex;align-items:center;gap:3px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px 2px 8px;border-radius:20px;font-size:12px;font-weight:500">${safe}<button onclick="event.stopPropagation();clRemoveLabel(this.parentElement.dataset.label)" style="background:none;border:none;cursor:pointer;padding:0 0 0 2px;color:var(--purple-mid);opacity:0.7;font-size:14px;line-height:1;display:inline-flex;align-items:center">&times;</button></span>`;
+  }).join('');
 }
 
 // ── Custom label dropdown ────────────────────────────────────────
@@ -19256,14 +19278,14 @@ async function clDoUpload() {
   const comments = parseInt(document.getElementById('cl-comments').value)||0;
   const shares   = parseInt(document.getElementById('cl-shares').value)||0;
   const notes    = document.getElementById('cl-notes').value.trim();
-  // Baca label dari DOM chips (lebih reliable)
-  const labelEls = document.querySelectorAll('#cl-label-chips span');
+  // Baca label dari data-label attribute (reliable)
+  const labelEls = document.querySelectorAll('#cl-label-chips [data-label]');
   const labels   = labelEls.length
-    ? [...labelEls].map(el => el.childNodes[0]?.textContent?.trim()).filter(Boolean)
+    ? [...labelEls].map(el => el.dataset.label).filter(Boolean)
     : (window._clLabels || []);
   if (!labels.length) {
     showToast('Label wajib diisi', 'error');
-    document.getElementById('cl-label-input').focus();
+    document.getElementById('cl-dd-new-input')?.focus();
     return;
   }
   const files    = window._clFiles || [];
@@ -19424,8 +19446,8 @@ function clOpenEditModal(id) {
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
-      <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" class="btn" style="font-size:12px">Batal</button>
-      <button onclick="clSaveEdit('${id}')" class="btn btn-primary" style="font-size:12px">Simpan</button>
+      <button onclick="clRenderPreviewModal(clData.find(x=>x.id==='${id}'))" class="btn btn-sm">Batal</button>
+      <button onclick="clSaveEdit('${id}')" class="btn btn-primary btn-sm">Simpan</button>
     </div>
   </div>`;
   setTimeout(() => clRenderLabelChips(), 50);
