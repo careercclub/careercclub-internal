@@ -9641,7 +9641,7 @@ function ppDashboardHTML(){
       var pct = Math.round((cnt/entries.length)*100);
       var barW = Math.round((cnt/maxPlat)*100);
       var key = nm.toLowerCase();
-      var pIcon = key==='tiktok'?'ti-brand-tiktok':key==='instagram'?'ti-brand-instagram':key==='threads'?'ti-brand-threads':(key==='twitter'||key==='x')?'ti-brand-x':key==='youtube'?'ti-brand-youtube':'ti-hash';
+      var pIcon = key==='tiktok'?'ti-brand-tiktok':key==='instagram'?'ti-brand-instagram':key==='threads'?'ti-brand-threads':(key==='twitter'||key==='x')?'ti-brand-x':key==='youtube'?'ti-brand-youtube':key==='whatsapp'?'ti-brand-whatsapp':'ti-hash';
       var barColor = platColorMap[key] || 'var(--purple-accent)';
       h += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">';
       h += '<div style="display:flex;align-items:center;gap:6px;width:110px;flex-shrink:0">';
