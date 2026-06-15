@@ -2376,7 +2376,6 @@ function _tktJSToRow(t) {
     type_id: t.tipeId || null,
     divisi_id: t.divisiId || null,
     assigned_to_id: (t.assignedToIds && t.assignedToIds[0]) || t.assignedToId || null,
-    assigned_to_ids: t.assignedToIds || (t.assignedToId ? [t.assignedToId] : []),
     requester_id: t.requesterId || null,
     due_date: t.deadline || null,
     related_task_id: t.linkedTaskId || null,
@@ -4830,7 +4829,7 @@ function openTktDetail(id){
     <div style="display:grid;grid-template-columns:1fr 210px;gap:0;min-height:0">
       <!-- LEFT: judul, desc, lampiran, komentar -->
       <div style="padding:16px 20px;border-right:0.5px solid var(--border)">
-        <div style="font-size:15px;font-weight:700;margin-bottom:12px;line-height:1.4">${t.judul}</div>
+        <div id="tkt-inline-title" onclick="tktStartTitleEdit('${t.id}')" style="font-size:15px;font-weight:700;margin-bottom:12px;line-height:1.4;cursor:text;border-radius:4px;padding:2px 3px;margin-left:-3px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">${(t.judul||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:6px">Deskripsi</div>
         <textarea id="tkt-edit-desc" rows="4" style="width:100%;padding:10px 12px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;font-family:'DM Sans',sans-serif;line-height:1.7;background:var(--bg);resize:vertical;color:var(--text)">${(t.deskripsi||'').replace(/</g,'&lt;')}</textarea>
         ${(filesHTML||linksHTML)?`
@@ -4891,6 +4890,57 @@ function openTktDetail(id){
 function closeTktDetail(){
   document.getElementById("tkt-detail-modal").style.display="none";
   activeTktId=null;
+}
+
+function tktStartTitleEdit(id) {
+  const el = document.getElementById('tkt-inline-title');
+  if (!el || el.querySelector('input')) return;
+  const t = tickets.find(x => _idEq(x.id, id));
+  if (!t) return;
+  const current = t.judul;
+
+  const inp = document.createElement('input');
+  inp.value = current;
+  inp.style.cssText = 'width:100%;font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1.5px solid var(--purple-mid);background:transparent;color:var(--text);outline:none;line-height:1.4;padding:2px 0;box-sizing:border-box';
+  el.onmouseover = null; el.onmouseout = null;
+  el.innerHTML = '';
+  el.appendChild(inp);
+  inp.focus();
+  inp.select();
+
+  function restore(judul) {
+    const safe = (judul||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    el.innerHTML = safe;
+    el.onclick = () => tktStartTitleEdit(id);
+    el.onmouseover = () => { el.style.background = 'var(--bg)'; };
+    el.onmouseout  = () => { el.style.background = ''; };
+  }
+
+  let committed = false;
+  async function commit() {
+    if (committed) return;
+    committed = true;
+    const val = inp.value.trim();
+    if (!val || val === current) { restore(current); return; }
+    t.judul = val;
+    const ok = await sb_updateTicket(id, t);
+    if (!ok) {
+      showToast('Gagal simpan judul', 'error');
+      t.judul = current;
+      restore(current);
+      return;
+    }
+    const hdr = document.getElementById('tkt-detail-title');
+    if (hdr) hdr.textContent = `${fmtTktNo(t)} — ${t.judul}`;
+    renderTicketList();
+    restore(t.judul);
+  }
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); inp.blur(); }
+    if (e.key === 'Escape') { committed = true; restore(current); }
+  });
+  inp.addEventListener('blur', commit);
 }
 
 function tktDetailRenderAssigneeChips(){
