@@ -1376,7 +1376,10 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
   <div class="tkt-modal">
     <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid var(--border);gap:12px;flex-shrink:0">
       <div style="min-width:0">
-        <div class="modal-title" style="font-size:14px;font-weight:700;margin-bottom:6px" id="tkt-detail-title">Ticket Detail</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span id="tkt-id-badge" style="font-size:10px;font-weight:600;color:var(--text-muted);flex-shrink:0"></span>
+          <div class="modal-title" id="tkt-detail-title" style="font-size:14px;font-weight:700;cursor:text;border-radius:4px;padding:1px 3px;margin-left:-3px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''" onclick="activeTktId&&tktStartTitleEdit(activeTktId)">Ticket Detail</div>
+        </div>
         <div id="tkt-detail-tags" style="display:flex;gap:5px;flex-wrap:wrap"></div>
       </div>
       <button class="btn btn-sm" onclick="closeTktDetail()" style="flex-shrink:0;margin-top:2px"><i class="ti ti-x"></i></button>
@@ -3254,7 +3257,7 @@ function renderDashCalendar() {
       } else if(it.type==="ticket"){
         var tkt=it.data;
         var safeTitle = (fmtTktNo(tkt)+' '+tkt.judul).replace(/"/g,"&quot;");
-        html += "<div onclick=\"event.stopPropagation();openTktDetail('"+tkt.id+"')\" title=\""+safeTitle+"\" style=\"background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-ticket\" style=\"font-size:8px\"></i> "+fmtTktNo(tkt)+" "+tkt.judul+"</div>";
+        html += "<div onclick=\"event.stopPropagation();openTktDetail('"+tkt.id+"')\" title=\""+safeTitle+"\" style=\"background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-ticket\" style=\"font-size:8px\"></i> "+tkt.judul+"</div>";
       } else {
         var t=it.data;
         var isDone=t.status==="Done";
@@ -4805,7 +4808,8 @@ function openTktDetail(id){
   const div=primaryPerson.divisiId?getDivisiById(primaryPerson.divisiId):{nama:"—",color:"purple"};
 
   // Header tags
-  document.getElementById("tkt-detail-title").textContent=`${fmtTktNo(t)} — ${t.judul}`;
+  const _idBadge=document.getElementById("tkt-id-badge"); if(_idBadge) _idBadge.textContent=fmtTktNo(t);
+  document.getElementById("tkt-detail-title").textContent=t.judul;
   document.getElementById("tkt-detail-tags").innerHTML=
     `${tktStatusPill(t.status)} ${tktPrioPill(t.prioritas)}<span class="pill ic-${divColor(div.color)}" style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600">${div.nama}</span><span class="pill pill-gray">${getTypeById(t.tipeId).nama}</span>`;
 
@@ -4830,9 +4834,8 @@ function openTktDetail(id){
   // Body: 2-column layout
   document.getElementById("tkt-detail-body").innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 210px;gap:0;min-height:0">
-      <!-- LEFT: judul, desc, lampiran, komentar -->
+      <!-- LEFT: desc, lampiran, komentar -->
       <div style="padding:16px 20px;border-right:0.5px solid var(--border)">
-        <div id="tkt-inline-title" onclick="tktStartTitleEdit('${t.id}')" style="font-size:15px;font-weight:700;margin-bottom:12px;line-height:1.4;cursor:text;border-radius:4px;padding:2px 3px;margin-left:-3px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">${(t.judul||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:6px">Deskripsi</div>
         <textarea id="tkt-edit-desc" rows="4" style="width:100%;padding:10px 12px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;font-family:'DM Sans',sans-serif;line-height:1.7;background:var(--bg);resize:vertical;color:var(--text)">${(t.deskripsi||'').replace(/</g,'&lt;')}</textarea>
         ${(filesHTML||linksHTML)?`
@@ -4896,7 +4899,7 @@ function closeTktDetail(){
 }
 
 function tktStartTitleEdit(id) {
-  const el = document.getElementById('tkt-inline-title');
+  const el = document.getElementById('tkt-detail-title');
   if (!el || el.querySelector('input')) return;
   const t = tickets.find(x => _idEq(x.id, id));
   if (!t) return;
@@ -4904,8 +4907,9 @@ function tktStartTitleEdit(id) {
 
   const inp = document.createElement('input');
   inp.value = current;
-  inp.style.cssText = 'width:100%;font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1.5px solid var(--purple-mid);background:transparent;color:var(--text);outline:none;line-height:1.4;padding:2px 0;box-sizing:border-box';
+  inp.style.cssText = 'width:100%;font-size:14px;font-weight:700;font-family:inherit;border:none;border-bottom:1.5px solid var(--purple-mid);background:transparent;color:var(--text);outline:none;line-height:1.4;padding:1px 0;box-sizing:border-box';
   el.onmouseover = null; el.onmouseout = null;
+  el.onclick = null;
   el.innerHTML = '';
   el.appendChild(inp);
   inp.focus();
@@ -4933,8 +4937,6 @@ function tktStartTitleEdit(id) {
       restore(current);
       return;
     }
-    const hdr = document.getElementById('tkt-detail-title');
-    if (hdr) hdr.textContent = `${fmtTktNo(t)} — ${t.judul}`;
     renderTickets();
     restore(t.judul);
   }
@@ -8086,12 +8088,13 @@ function renderTaskKanban(projId){
               ${phasePill(t.phase)}
               ${taskPriorityPill(t.priority)}
             </div>
-            <div style="font-size:12px;font-weight:500;margin-bottom:8px;line-height:1.4">${t.title}</div>
+            <div style="font-size:12px;font-weight:500;margin-bottom:8px;line-height:1.4;${t.status==="Done"?"text-decoration:line-through;color:var(--text-muted)":""}">${t.title}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-muted)">
               <span><i class="ti ti-user" style="font-size:10px"></i> ${person.nama}</span>
               <span style="${overdue?'color:var(--red);font-weight:600':''}"><i class="ti ti-calendar" style="font-size:10px"></i> ${fmtDateShort(t.deadline)}</span>
             </div>
-            ${t.attachments&&t.attachments.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:0.5px solid var(--border)"><i class="ti ti-paperclip" style="font-size:10px"></i> ${t.attachments.length} attachment</div>`:""}            <div onclick="event.stopPropagation();gcalAddTask('${t.id}')" style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border);font-size:10px;color:${t.gcal_added ? 'var(--green)' : 'var(--text-muted)'};cursor:pointer;display:flex;align-items:center;gap:4px;font-weight:${t.gcal_added ? '600' : '400'}" title="${t.gcal_added ? 'Sudah di Calendar (klik untuk re-sync)' : 'Add to Google Calendar'}"><i class="ti ti-calendar-${t.gcal_added ? 'check' : 'plus'}" style="font-size:11px;color:${t.gcal_added ? 'var(--green)' : 'var(--text-muted)'}"></i> ${t.gcal_added ? '✓ Added to Calendar' : 'Add to Calendar'}</div>
+            ${t.attachments&&t.attachments.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:0.5px solid var(--border)"><i class="ti ti-paperclip" style="font-size:10px"></i> ${t.attachments.length} attachment</div>`:""}
+            <div onclick="event.stopPropagation()" style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border);display:flex;justify-content:flex-end"><button class="btn btn-sm" onclick="gcalAddTask('${t.id}')" title="${t.gcal_added ? 'Sudah di Calendar (klik untuk re-sync)' : 'Add to Google Calendar'}" style="padding:3px 7px;font-size:10px;${t.gcal_added ? 'background:var(--green);border-color:var(--green);color:#fff' : ''}"><i class="ti ti-calendar-${t.gcal_added ? 'check' : 'plus'}" style="font-size:13px"></i></button></div>
           </div>`;
         }).join("")}
         ${tlist.length===0?`<div style="text-align:center;padding:20px 0;color:var(--text-hint);font-size:11px">Kosong</div>`:""}
@@ -8234,17 +8237,25 @@ function initProductPage(){
 function prodListItemHTML(p){
   const isBundling=(p.type||'satuan')==='bundling';
   const itemCount=(p.bundleItems||[]).length;
-  const badges=isBundling
-    ?`<span class="pill pill-purple">Bundling</span><span style="font-size:10px;color:var(--text-muted)">${itemCount} produk</span>`
+  const accentMap={Live:'#3b6d11','Pre-launch':'#854F0B',Draft:'#888',Archived:'#aaa'};
+  const accent=accentMap[p.status]||'#888';
+  const badgeRow=isBundling
+    ?`<span class="pill pill-purple">Bundling</span>`
     :`${prodStatusPill(p.status)}${klasPill(p.klasifikasi)}`;
-  return `<div onclick="selectProduct('${p.id}')" style="background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);padding:12px 16px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--purple-accent)'" onmouseout="this.style.borderColor='var(--border)'">
-    <div style="min-width:0">
-      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nama}</div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">${badges}</div>
+  const metaRow=isBundling
+    ?`Bundling &middot; ${itemCount} produk`
+    :`Satuan`;
+  return `<div onclick="selectProduct('${p.id}')" style="background:var(--white);border-radius:var(--radius-lg);border:0.5px solid var(--border);border-left:3px solid ${accent};padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--white)'">
+    <div style="min-width:0;flex:1">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+        <span style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3">${p.nama}</span>
+        ${badgeRow}
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">${metaRow}</div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-      <div style="font-size:12px;font-weight:600;color:var(--text-muted)">Rp ${p.harga.toLocaleString('id-ID')}</div>
-      <i class="ti ti-chevron-right" style="color:var(--text-hint);font-size:14px"></i>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <div style="font-size:12px;font-weight:600;color:var(--text)">Rp ${p.harga.toLocaleString('id-ID')}</div>
+      <i class="ti ti-chevron-right" style="color:var(--text-hint);font-size:13px"></i>
     </div>
   </div>`;
 }
@@ -11316,7 +11327,7 @@ function renderMonthlyCalendar(){
               return `<div onclick="event.stopPropagation();openProjectModal('${p.id}')" title="${p.nama} - ${p.waktu}" style="background:var(--purple-accent);color:#fff;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-broadcast" style="font-size:9px"></i> ${p.waktu} ${p.nama.replace(/Free Class: /,"")}</div>`;
             } else if(it.type==="ticket"){
               const t=it.data;
-              return `<div onclick="event.stopPropagation();openTktDetail('${t.id}')" title="${fmtTktNo(t)} — ${t.judul}" style="background:#ffedd5;color:#c2410c;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-ticket" style="font-size:9px"></i> ${fmtTktNo(t)} ${t.judul}</div>`;
+              return `<div onclick="event.stopPropagation();openTktDetail('${t.id}')" title="${fmtTktNo(t)} — ${t.judul}" style="background:#ffedd5;color:#c2410c;padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3"><i class="ti ti-ticket" style="font-size:9px"></i> ${t.judul}</div>`;
             } else {
               const t=it.data;
               const person=getPersonById(t.assigneeId);
