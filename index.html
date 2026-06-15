@@ -2346,7 +2346,7 @@ function _tktRowToJS(d) {
     ticketNo: d.ticket_no || null,
     judul: d.title || '',
     deskripsi: d.description || '',
-    status: d.status || 'Open',
+    status: d.status || 'Todo',
     prioritas: d.priority || 'Med',
     tipeId: d.type_id || null,
     divisiId: d.divisi_id || null,
@@ -2371,7 +2371,7 @@ function _tktJSToRow(t) {
     ticket_no: t.ticketNo || null,
     title: t.judul || '',
     description: t.deskripsi || '',
-    status: t.status || 'Open',
+    status: t.status || 'Todo',
     priority: t.prioritas || 'Med',
     type_id: t.tipeId || null,
     divisi_id: t.divisiId || null,
@@ -2926,7 +2926,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Sidebar badge updater — dipanggil setelah data load atau setelah CRUD
 function updateSidebarBadges() {
   try {
-    const openTickets = (tickets || []).filter(t => t.status && t.status !== 'Done' && t.status !== 'Rejected').length;
+    const openTickets = (tickets || []).filter(t => t.status && t.status !== 'Done').length;
     const activeProjects = (projects || []).filter(p => p.status === 'On Progress' || p.status === 'Planning').length;
 
     pageBadgeMap.tickets = openTickets > 0 ? String(openTickets) : '';
@@ -4625,7 +4625,7 @@ function fmtTktNo(t){
 // SESSION — siapa yang lagi login
 var currentUser=null; // akan di-set saat login
 
-const tktStatusList=["Open","In Review","In Progress","Done","Rejected"];
+const tktStatusList=["Todo","In Progress","Done"];
 const tktPrioList=["High","Med","Low"];
 
 // ── HELPER FUNCTIONS ──────────────────────────────
@@ -4654,8 +4654,13 @@ function getVisibleTickets(){
 }
 
 function tktStatusPill(s){
-  const m={Open:"pill-red","In Review":"pill-amber","In Progress":"pill-purple",Done:"pill-green",Rejected:"pill-gray"};
-  return `<span class="pill ${m[s]||'pill-gray'}">${s}</span>`;
+  const m={
+    Todo:       'background:#F1EFE8;color:#5F5E5A',
+    "In Progress":'background:#FAEEDA;color:#854F0B',
+    Done:       'background:#EAF3DE;color:#3B6D11',
+  };
+  const style=m[s]||'background:#F1EFE8;color:#5F5E5A';
+  return `<span style="display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600;${style}">${s}</span>`;
 }
 function tktPrioPill(p){
   const m={High:"p-high",Med:"p-med",Low:"p-low"};
@@ -4677,7 +4682,7 @@ function ticketsHTML(){
     <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:0.5px solid var(--border)">
       <div class="tab-row" style="border:none;margin:0">
         <div class="tab active" id="ttab-all" onclick="tktTab('all',this)">Semua</div>
-        <div class="tab" id="ttab-open" onclick="tktTab('open',this)">Open</div>
+        <div class="tab" id="ttab-open" onclick="tktTab('open',this)">Todo</div>
         <div class="tab" id="ttab-inprogress" onclick="tktTab('inprogress',this)">In Progress</div>
         <div class="tab" id="ttab-done" onclick="tktTab('done',this)">Done</div>
       </div>
@@ -4708,18 +4713,14 @@ function tktTab(tab,el){
 
 function renderTickets(){
   // stats
-  const open=tickets.filter(t=>t.status==="Open").length;
-  const inrev=tickets.filter(t=>t.status==="In Review").length;
+  const todo=tickets.filter(t=>t.status==="Todo").length;
   const inprog=tickets.filter(t=>t.status==="In Progress").length;
   const done=tickets.filter(t=>t.status==="Done").length;
-  const rej=tickets.filter(t=>t.status==="Rejected").length;
   const statsEl=document.getElementById("tkt-stats");
   if(statsEl) statsEl.innerHTML=`
-    <div class="tkt-stat"><div class="tkt-stat-icon ic-red"><i class="ti ti-alert-circle"></i></div><div><div class="tkt-stat-val" style="color:var(--red)">${open}</div><div class="tkt-stat-label">Open</div></div></div>
-    <div class="tkt-stat"><div class="tkt-stat-icon ic-amber"><i class="ti ti-eye"></i></div><div><div class="tkt-stat-val" style="color:var(--amber)">${inrev}</div><div class="tkt-stat-label">In Review</div></div></div>
-    <div class="tkt-stat"><div class="tkt-stat-icon ic-purple"><i class="ti ti-loader"></i></div><div><div class="tkt-stat-val" style="color:var(--purple-mid)">${inprog}</div><div class="tkt-stat-label">In Progress</div></div></div>
-    <div class="tkt-stat"><div class="tkt-stat-icon ic-green"><i class="ti ti-circle-check"></i></div><div><div class="tkt-stat-val" style="color:var(--green)">${done}</div><div class="tkt-stat-label">Done</div></div></div>
-    <div class="tkt-stat"><div class="tkt-stat-icon ic-coral"><i class="ti ti-ban"></i></div><div><div class="tkt-stat-val" style="color:var(--coral)">${rej}</div><div class="tkt-stat-label">Rejected</div></div></div>`;
+    <div class="tkt-stat"><div class="tkt-stat-icon" style="background:#F1EFE8"><i class="ti ti-circle-dashed" style="color:#5F5E5A"></i></div><div><div class="tkt-stat-val" style="color:#5F5E5A">${todo}</div><div class="tkt-stat-label">Todo</div></div></div>
+    <div class="tkt-stat"><div class="tkt-stat-icon" style="background:#FAEEDA"><i class="ti ti-loader" style="color:#854F0B"></i></div><div><div class="tkt-stat-val" style="color:#854F0B">${inprog}</div><div class="tkt-stat-label">In Progress</div></div></div>
+    <div class="tkt-stat"><div class="tkt-stat-icon" style="background:#EAF3DE"><i class="ti ti-circle-check" style="color:#3B6D11"></i></div><div><div class="tkt-stat-val" style="color:#3B6D11">${done}</div><div class="tkt-stat-label">Done</div></div></div>`;
 
   const search=(document.getElementById("tkt-search")?.value||"").toLowerCase();
   const fDiv=document.getElementById("tkt-f-div")?.value||"";
@@ -4727,9 +4728,9 @@ function renderTickets(){
 
   const visible=getVisibleTickets();
   let filtered=visible.filter(t=>{
-    if(tktActiveTab==="open" && !["Open","In Review"].includes(t.status)) return false;
+    if(tktActiveTab==="open" && t.status!=="Todo") return false;
     if(tktActiveTab==="inprogress" && t.status!=="In Progress") return false;
-    if(tktActiveTab==="done" && !["Done","Rejected"].includes(t.status)) return false;
+    if(tktActiveTab==="done" && t.status!=="Done") return false;
     if(search && !t.judul.toLowerCase().includes(search) && !String(t.id).includes(search)) return false;
     if(fDiv){
       const person=getPersonById(t.assignedToId);
@@ -4768,13 +4769,13 @@ function renderTickets(){
 
   // update nav badge
   const badge=document.querySelector(".nav-item .nav-badge.red");
-  if(badge) badge.textContent=open+inrev;
+  if(badge) badge.textContent=todo+inprog;
 }
 
 async function toggleTktDone(id){
   const t=tickets.find(x=>_idEq(x.id,id));
   if(!t) return;
-  const newStatus=t.status==="Done"?"Open":"Done";
+  const newStatus=t.status==="Done"?"Todo":"Done";
   const ok=await sb_updateTicket(id,{status:newStatus});
   if(!ok){showToast('Gagal update status','error');return;}
   t.status=newStatus;
@@ -4789,7 +4790,7 @@ async function toggleTktDone(id){
       }
     }
   }
-  renderTicketList();
+  renderTickets();
 }
 
 // ── TICKET DETAIL MODAL ───────────────────────────
@@ -5013,7 +5014,7 @@ function autoSendStatusEmail(t, newStatus){
   const {to, cc}=buildEmailRecipients(t);
   const div=getDivById(t.divId);
   const subject=encodeURIComponent(`[UPDATE ${fmtTktNo(t)}] Status → ${newStatus}: ${t.judul}`);
-  const statusEmoji={"In Progress":"🔄","Done":"✅","Rejected":"❌","In Review":"👀"}[newStatus]||"";
+  const statusEmoji={"In Progress":"🔄","Done":"✅","Todo":"📋"}[newStatus]||"";
   const body=encodeURIComponent(
     `Halo,
 
@@ -5087,7 +5088,7 @@ async function updateTktStatus(id,val){
   }
   showToast(`Status diupdate: ${val}`);
   renderTickets();
-  if((val==="In Progress"||val==="Done"||val==="Rejected")&&val!==oldStatus){
+  if((val==="In Progress"||val==="Done")&&val!==oldStatus){
     autoSendStatusEmail(t, val);
   }
 }
@@ -5383,7 +5384,7 @@ async function saveNewTicket(){
 
   const newTkt={
     ticketNo: nextTicketNo(),
-    judul, deskripsi, prioritas, status:"Open",
+    judul, deskripsi, prioritas, status:"Todo",
     assignedToId, assignedToIds, tipeId,
     divisiId, requesterId:null,
     deadline, source:"Manual", linkedTaskId:null,
@@ -5627,16 +5628,9 @@ function renderMasterFlow(){
   <div style="margin-bottom:16px">
     <div style="font-size:12px;font-weight:600;margin-bottom:10px">Alur Status Ticket</div>
     <div class="status-flow">
-      <div class="status-node pill-red">Open</div><div class="status-arrow">→</div>
-      <div class="status-node pill-amber">In Review</div><div class="status-arrow">→</div>
-      <div class="status-node pill-purple">In Progress</div><div class="status-arrow">→</div>
-      <div class="status-node pill-green">Done</div>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Atau dari status apapun:</div>
-    <div class="status-flow">
-      <div class="status-node" style="background:var(--bg);border:0.5px solid var(--border-md)">Any Status</div>
-      <div class="status-arrow">→</div>
-      <div class="status-node pill-gray">Rejected</div>
+      <div class="status-node" style="background:#F1EFE8;color:#5F5E5A">Todo</div><div class="status-arrow">→</div>
+      <div class="status-node" style="background:#FAEEDA;color:#854F0B">In Progress</div><div class="status-arrow">→</div>
+      <div class="status-node" style="background:#EAF3DE;color:#3B6D11">Done</div>
     </div>
   </div>
   <div style="background:var(--bg);border-radius:var(--radius);padding:14px">
@@ -7385,10 +7379,10 @@ async function syncTaskToTicket(task, eventName){
     tipeId: getTipeIdByDivisi(task.divisiId),
     divisiId: task.divisiId || null,
     prioritas: task.priority,
-    status: TASK_TO_TKT_STATUS[task.status] || "Open",
+    status: TASK_TO_TKT_STATUS[task.status] || "Todo",
     deskripsi,
     deadline: task.deadline || null,
-    source: "Webinar Project",
+    source: "Program",
     linkedTaskId: task.id,
   };
 
@@ -8941,17 +8935,15 @@ async function deleteProd(id){
 // TASK ↔ TICKET SYNC (2-way)
 // ═══════════════════════════════════════════════════
 const TASK_TO_TKT_STATUS = {
-  "Todo":"Open",
+  "Todo":"Todo",
   "On Progress":"In Progress",
   "Done":"Done",
-  "Blocked":"Done"
+  "Blocked":"In Progress"
 };
 const TKT_TO_TASK_STATUS = {
-  "Open":"Todo",
-  "In Review":"On Progress",
+  "Todo":"Todo",
   "In Progress":"On Progress",
   "Done":"Done",
-  "Rejected":"Todo"
 };
 
 function ppRenderList(items){
