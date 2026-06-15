@@ -7592,6 +7592,7 @@ let activeKBSection = "painpoints";
 let prodTypeFilter = "all";
 let prodView = "list";
 let productTab = "list";
+let _prodExpandedId = null;
 
 const PROD_STATUS = ["Draft","Pre-launch","Live","Archived"];
 const PROD_SEVERITY = ["High","Med","Low"];
@@ -8110,22 +8111,29 @@ function setProdTypeFilter(f){
 function _refreshProdListPanel(){
   const el=document.getElementById('prod-list-inner');
   if(!el) return;
+  const prev=_prodExpandedId;
+  _prodExpandedId=null;
   const filtered=_getFilteredProducts();
-  el.innerHTML=(filtered.length
+  el.innerHTML=filtered.length
     ? filtered.map(p=>prodListItemHTML(p)).join('')
-    : `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-package" style="font-size:40px;display:block;margin-bottom:12px"></i><div style="font-size:14px">Belum ada produk</div></div>`
-  );
+    : `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-package" style="font-size:40px;display:block;margin-bottom:12px"></i><div style="font-size:14px">Belum ada produk</div></div>`;
+  // Re-expand the previously expanded product if it still exists in the filtered list
+  if(prev&&filtered.find(p=>String(p.id)===prev)){
+    _prodExpandedId=prev;
+    _prodAccordionExpand(prev);
+  }
 }
 
 function _refreshProdRightPanel(id){
-  if(id){
-    prodView='detail';
-    activeProdId=String(id);
-    const wrap=document.getElementById('prod-page-content');
-    if(wrap) wrap.innerHTML=prodDetailPageHTML(id);
-  } else {
-    backToProdList();
+  // After edit, re-render the accordion content for this product
+  if(id&&_prodExpandedId===String(id)){
+    const p=products.find(x=>String(x.id)===String(id));
+    if(p){
+      const panel=document.getElementById('prod-accordion-'+id);
+      if(panel) panel.innerHTML=prodAccordionPanelHTML(p);
+    }
   }
+  _refreshProdListPanel();
 }
 
 function renderTaskKanban(projId){
@@ -8170,11 +8178,8 @@ function renderTaskKanban(projId){
 
 function productHTML(){
   return `<div id="prod-page-wrap" style="height:calc(100vh - 53px);overflow:hidden;display:flex;flex-direction:column;background:var(--bg)">
-    <div class="tab-row" style="flex-shrink:0;margin-bottom:0">
-      <div class="tab ${productTab==='list'?'active':''}" id="prodtab-list" onclick="initProductTab('list')"><i class="ti ti-package" style="font-size:12px"></i> Product List</div>
-    </div>
     <div id="prod-page-content" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0">
-      ${prodView==='list' ? prodListPageHTML() : prodDetailPageHTML(activeProdId)}
+      ${prodListPageHTML()}
     </div>
   </div>`;
 }
@@ -8296,6 +8301,7 @@ function initProductPage(){
   productTab='list';
   prodView='list';
   activeProdId=null;
+  _prodExpandedId=null;
 }
 
 function prodListItemHTML(p){
@@ -8306,37 +8312,109 @@ function prodListItemHTML(p){
   const badgeRow=isBundling
     ?`<span class="pill pill-purple">Bundling</span>`
     :`${prodStatusPill(p.status)}${klasPill(p.klasifikasi)}`;
-  const metaRow=isBundling
-    ?`Bundling &middot; ${itemCount} produk`
-    :`Satuan`;
-  return `<div onclick="selectProduct('${p.id}')" style="background:var(--white);border-radius:var(--radius-lg);border:0.5px solid var(--border);border-left:3px solid ${accent};padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--white)'">
-    <div style="min-width:0;flex:1">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
-        <span style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3">${p.nama}</span>
-        ${badgeRow}
+  const metaRow=isBundling?`Bundling &middot; ${itemCount} produk`:`Satuan`;
+  const isExp=_prodExpandedId===String(p.id);
+  const cardRadius=isExp?'var(--radius-lg) var(--radius-lg) 0 0':'var(--radius-lg)';
+  const borderColor=isExp?'var(--purple-accent)':'var(--border)';
+  return `<div id="prod-item-${p.id}" style="margin-bottom:8px">
+    <div onclick="toggleProdAccordion('${p.id}')" id="prod-card-${p.id}" style="background:var(--white);border-radius:${cardRadius};border:0.5px solid ${borderColor};border-left:3px solid ${accent};padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .15s,border-color .2s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--white)'">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+          <span style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3">${p.nama}</span>
+          ${badgeRow}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted)">${metaRow}</div>
       </div>
-      <div style="font-size:12px;color:var(--text-muted)">${metaRow}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">Rp ${p.harga.toLocaleString('id-ID')}</div>
+        <i id="prod-chevron-${p.id}" class="ti ti-chevron-down" style="color:var(--text-hint);font-size:14px;transition:transform .25s ease;${isExp?'transform:rotate(180deg)':''}"></i>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-      <div style="font-size:12px;font-weight:600;color:var(--text)">Rp ${p.harga.toLocaleString('id-ID')}</div>
-      <i class="ti ti-chevron-right" style="color:var(--text-hint);font-size:13px"></i>
-    </div>
+    <div id="prod-accordion-${p.id}" style="max-height:${isExp?'4000px':'0'};overflow:hidden;transition:max-height .3s ease;border:0.5px solid ${borderColor};border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)"></div>
   </div>`;
 }
 
-function selectProduct(id){
-  prodView='detail';
-  activeProdId=String(id);
-  activeKBSection='painpoints';
-  const wrap=document.getElementById('prod-page-content');
-  if(wrap) wrap.innerHTML=prodDetailPageHTML(activeProdId);
+function selectProduct(id){ toggleProdAccordion(id); } // kept for back-compat
+function backToProdList(){ _prodExpandedId=null; _refreshProdListPanel(); }
+
+function toggleProdAccordion(id){
+  id=String(id);
+  const prev=_prodExpandedId;
+  if(prev&&prev!==id) _prodAccordionCollapse(prev);
+  if(prev===id){ _prodAccordionCollapse(id); _prodExpandedId=null; }
+  else { _prodExpandedId=id; _prodAccordionExpand(id); }
 }
 
-function backToProdList(){
-  prodView='list';
-  activeProdId=null;
-  const wrap=document.getElementById('prod-page-content');
-  if(wrap) wrap.innerHTML=prodListPageHTML();
+function _prodAccordionCollapse(id){
+  const panel=document.getElementById('prod-accordion-'+id);
+  const chevron=document.getElementById('prod-chevron-'+id);
+  const card=document.getElementById('prod-card-'+id);
+  if(panel){ panel.style.maxHeight='0'; panel.style.borderColor='var(--border)'; }
+  if(chevron) chevron.style.transform='';
+  if(card){ card.style.borderRadius='var(--radius-lg)'; card.style.borderColor='var(--border)'; }
+}
+
+function _prodAccordionExpand(id){
+  const p=products.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const panel=document.getElementById('prod-accordion-'+id);
+  const chevron=document.getElementById('prod-chevron-'+id);
+  const card=document.getElementById('prod-card-'+id);
+  if(!panel) return;
+  const isBundling=(p.type||'satuan')==='bundling';
+  activeKBSection=isBundling?'bundle-contents':'painpoints';
+  panel.innerHTML=prodAccordionPanelHTML(p);
+  panel.style.maxHeight='4000px';
+  panel.style.borderColor='var(--purple-accent)';
+  if(card){ card.style.borderRadius='var(--radius-lg) var(--radius-lg) 0 0'; card.style.borderColor='var(--purple-accent)'; }
+  if(chevron) chevron.style.transform='rotate(180deg)';
+  setTimeout(()=>{ const el=document.getElementById('prod-item-'+id); if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'}); },150);
+}
+
+function prodAccordionPanelHTML(p){
+  const id=String(p.id);
+  const isBundling=(p.type||'satuan')==='bundling';
+  const kbSections=isBundling?[
+    ['bundle-contents','ti-package','Isi Bundling',(p.bundleItems||[]).length],
+    ['painpoints','ti-alert-circle','Pain Points',getBundleKBCount(p,'painpoints')],
+    ['passionpoints','ti-heart','Passion Points',getBundleKBCount(p,'passionpoints')],
+    ['benefits','ti-star','Benefits',getBundleKBCount(p,'benefits')],
+    ['features','ti-settings-2','Fitur',getBundleKBCount(p,'features')],
+    ['assets','ti-link','Aset',getBundleKBCount(p,'assets')],
+    ['feedback','ti-message','Feedback',getBundleKBCount(p,'feedback')],
+  ]:[
+    ['painpoints','ti-alert-circle','Pain Points',(p.painPoints||[]).length],
+    ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
+    ['benefits','ti-star','Benefits',(p.benefits||[]).length],
+    ['features','ti-settings-2','Fitur',(p.features||[]).length],
+    ['subproducts','ti-package','Sub-produk',(p.subProducts||[]).length],
+    ['assets','ti-link','Aset Konten',(p.assets||[]).length],
+    ['feedback','ti-message','Feedback',(p.feedbacks||[]).length],
+  ];
+  const editBtn=isBundling
+    ?`<button class="btn btn-sm" onclick="openBundlingModal('${id}')"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button>`
+    :`<button class="btn btn-sm" onclick="openProdModal('${id}')"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button>`;
+  const mainContent=activeKBSection==='bundle-contents'?_bundleContentsHTML(p):renderKBSection(activeKBSection,p);
+  return `<div style="border-top:0.5px solid var(--purple-accent)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg);border-bottom:0.5px solid var(--border)">
+      <div style="font-size:12px;color:var(--text-muted);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${p.desc?p.desc.substring(0,80)+(p.desc.length>80?'…':''):''}</div>
+      <div style="display:flex;gap:6px;flex-shrink:0">${editBtn}<button class="btn btn-sm" onclick="exportSingleProductJSON('${id}')"><i class="ti ti-download" style="font-size:11px"></i> Export KB</button></div>
+    </div>
+    <div style="background:var(--white);border-bottom:0.5px solid var(--border);overflow-x:auto">
+      <div style="display:flex;padding:0 4px;white-space:nowrap">
+        ${kbSections.map(([key,icon,label,count])=>`
+          <div onclick="switchKBSection('${key}','${id}')" id="kbmenu-${key}" style="display:flex;align-items:center;gap:5px;padding:10px 12px;cursor:pointer;font-size:12px;border-bottom:2px solid ${activeKBSection===key?'var(--purple-accent)':'transparent'};color:${activeKBSection===key?'var(--purple-mid)':'var(--text-muted)'};font-weight:${activeKBSection===key?'600':'400'};transition:all .15s;flex-shrink:0"><i class="ti ${icon}" style="font-size:11px"></i>${label}<span style="background:var(--bg);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--text-muted);margin-left:2px">${count}</span></div>`).join('')}
+      </div>
+    </div>
+    <div id="kb-section-content" style="padding:16px 20px;background:var(--bg)">${mainContent}</div>
+  </div>`;
+}
+
+function _bundleContentsHTML(p){
+  const items=(p.bundleItems||[]).map(b=>products.find(x=>String(x.id)===String(b.itemId))).filter(Boolean);
+  const subtotal=items.reduce((s,x)=>s+x.harga,0);
+  const discountPct=subtotal>0&&p.harga<subtotal?Math.round((subtotal-p.harga)/subtotal*100):0;
+  return `<div class="card" style="margin:0"><div style="font-size:13px;font-weight:600;margin-bottom:12px">Isi Bundling (${items.length} produk)</div>${items.length===0?`<div style="font-size:12px;color:var(--text-muted)">Belum ada produk dalam bundle.</div>`:''}${items.map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:12px"><div><div style="font-weight:500">${x.nama}</div><div style="margin-top:2px">${klasPill(x.klasifikasi)}</div></div><div style="font-weight:600;color:var(--text-muted)">Rp ${x.harga.toLocaleString('id-ID')}</div></div>`).join('')}${items.length>0?`<div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;font-size:12px"><span style="color:var(--text-muted)">Subtotal satuan</span><span style="font-weight:600">Rp ${subtotal.toLocaleString('id-ID')}</span></div><div style="display:flex;justify-content:space-between;padding-top:6px;font-size:13px"><span style="font-weight:600">Harga bundling</span><span style="font-weight:700;color:var(--purple-mid)">Rp ${p.harga.toLocaleString('id-ID')}</span></div>${discountPct>0?`<div style="margin-top:8px;padding:7px 10px;background:var(--green-bg);border-radius:var(--radius);font-size:12px;color:var(--green);font-weight:600">Hemat ${discountPct}% · Rp ${(subtotal-p.harga).toLocaleString('id-ID')} lebih murah</div>`:''}`:''}</div>`;
 }
 
 function prodRightPanelHTML(id){
@@ -8469,24 +8547,18 @@ function switchKBSection(section,id){
   activeKBSection=section;
   const p=products.find(x=>String(x.id)===String(id));
   if(!p) return;
+  // Horizontal tab style (accordion) — border-bottom active indicator
   ["painpoints","passionpoints","benefits","features","subproducts","assets","feedback","bundle-contents"].forEach(k=>{
     const el=document.getElementById("kbmenu-"+k);
     if(!el) return;
-    el.style.background=k===section?'var(--purple-light)':'transparent';
-    el.style.color=k===section?'var(--purple-mid)':'var(--text)';
-    el.style.fontWeight=k===section?'600':'400';
-    el.style.borderLeftColor=k===section?'var(--purple-accent)':'transparent';
+    const active=k===section;
+    el.style.borderBottom=active?'2px solid var(--purple-accent)':'2px solid transparent';
+    el.style.color=active?'var(--purple-mid)':'var(--text-muted)';
+    el.style.fontWeight=active?'600':'400';
   });
   const contentEl=document.getElementById("kb-section-content");
   if(!contentEl) return;
-  if(section==='bundle-contents'){
-    const items=(p.bundleItems||[]).map(b=>products.find(x=>String(x.id)===String(b.itemId))).filter(Boolean);
-    const subtotal=items.reduce((s,x)=>s+x.harga,0);
-    const discountPct=subtotal>0&&p.harga<subtotal?Math.round((subtotal-p.harga)/subtotal*100):0;
-    contentEl.innerHTML=`<div class="card" style="margin:0"><div style="font-size:13px;font-weight:600;margin-bottom:12px">Isi Bundling (${items.length} produk)</div>${items.length===0?`<div style="font-size:12px;color:var(--text-muted)">Belum ada produk dalam bundle.</div>`:''}${items.map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:12px"><div><div style="font-weight:500">${x.nama}</div><div style="margin-top:2px">${klasPill(x.klasifikasi)}</div></div><div style="font-weight:600;color:var(--text-muted)">Rp ${x.harga.toLocaleString('id-ID')}</div></div>`).join('')}${items.length>0?`<div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;font-size:12px"><span style="color:var(--text-muted)">Subtotal satuan</span><span style="font-weight:600">Rp ${subtotal.toLocaleString('id-ID')}</span></div><div style="display:flex;justify-content:space-between;padding-top:6px;font-size:13px"><span style="font-weight:600">Harga bundling</span><span style="font-weight:700;color:var(--purple-mid)">Rp ${p.harga.toLocaleString('id-ID')}</span></div>${discountPct>0?`<div style="margin-top:8px;padding:7px 10px;background:var(--green-bg);border-radius:var(--radius);font-size:12px;color:var(--green);font-weight:600">Hemat ${discountPct}% · Rp ${(subtotal-p.harga).toLocaleString('id-ID')} lebih murah</div>`:''}`:''}</div>`;
-  } else {
-    contentEl.innerHTML=renderKBSection(section,p);
-  }
+  contentEl.innerHTML=section==='bundle-contents'?_bundleContentsHTML(p):renderKBSection(section,p);
 }
 
 async function saveTaskModal(){
@@ -12474,8 +12546,8 @@ function contentHTML(){
   return `<div style="display:flex;flex-direction:column;height:calc(100vh - 53px)">
     <div style="background:var(--white);border-bottom:0.5px solid var(--border);padding:0 20px;flex-shrink:0">
       <div style="display:flex;gap:0">
-        ${[['carousel','Carousel Plan'],['story-plan','Story Plan'],['kol-list','KOL List'],['mt-story','MT Story List']].map(([v,l])=>`
-          <div onclick="switchContentTab('${v}')" id="ctab-${v}" style="padding:12px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid ${_contentSubTab===v?'var(--purple-accent)':'transparent'};color:${_contentSubTab===v?'var(--purple-mid)':'var(--text-muted)'};font-weight:${_contentSubTab===v?'600':'400'};transition:all .15s;white-space:nowrap">${l}</div>`).join('')}
+        ${[['carousel','ti-layout-columns','Carousel Plan'],['story-plan','ti-layout-rows','Story Plan'],['kol-list','ti-users','KOL List'],['mt-story','ti-star','MT Story List']].map(([v,icon,l])=>`
+          <div onclick="switchContentTab('${v}')" id="ctab-${v}" style="display:flex;align-items:center;gap:6px;padding:10px 14px;font-size:12px;cursor:pointer;border-bottom:2px solid ${_contentSubTab===v?'var(--purple-accent)':'transparent'};color:${_contentSubTab===v?'var(--purple-mid)':'var(--text-muted)'};font-weight:${_contentSubTab===v?'600':'400'};transition:all .15s;white-space:nowrap"><i class="ti ${icon}" style="font-size:12px"></i>${l}</div>`).join('')}
       </div>
     </div>
     <div id="content-tab-body" style="flex:1;overflow-y:auto;background:var(--bg)">
@@ -12513,13 +12585,12 @@ function mtStoryPageHTML(){
   });
   return `
   <div style="padding:20px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-      <div style="flex:1;min-width:180px"><input placeholder="Cari nama / perusahaan..." oninput="mtStorySearch=this.value;_refreshMTStoryGrid()" value="${mtStorySearch.replace(/"/g,'&quot;')}" style="width:100%;padding:8px 12px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--white)"></div>
-      <button class="btn btn-primary btn-sm" onclick="openMTStoryModal(null)"><i class="ti ti-plus"></i> Tambah</button>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
+    <div class="filter-bar" style="margin-bottom:16px">
+      <input type="text" placeholder="Cari nama / perusahaan..." oninput="mtStorySearch=this.value;_refreshMTStoryGrid()" value="${mtStorySearch.replace(/"/g,'&quot;')}" style="max-width:160px">
       ${[['all','Semua'],['posted','Sudah diposting'],['unposted','Belum diposting']].map(([v,l])=>`
-        <div onclick="mtStoryFilter='${v}';_refreshMTStoryGrid()" style="padding:5px 12px;border-radius:20px;border:0.5px solid ${mtStoryFilter===v?'var(--purple-mid)':'var(--border)'};background:${mtStoryFilter===v?'var(--purple-light)':'var(--white)'};color:${mtStoryFilter===v?'var(--purple-mid)':'var(--text-muted)'};font-size:11px;font-weight:${mtStoryFilter===v?'600':'400'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s">${l}</div>`).join('')}
+        <div onclick="mtStoryFilter='${v}';_refreshMTStoryGrid()" id="mt-filter-pill-${v}" class="filter-bar-btn" style="background:${mtStoryFilter===v?'#0f52ba':'var(--white)'};border-color:${mtStoryFilter===v?'#0f52ba':'var(--border-md)'};color:${mtStoryFilter===v?'#fff':'var(--text)'};font-weight:${mtStoryFilter===v?'600':'500'};cursor:pointer">${l}</div>`).join('')}
+      <div class="filter-bar-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="openMTStoryModal(null)"><i class="ti ti-plus"></i> Tambah</button>
     </div>
     <div id="mt-story-grid">
       ${_mtStoryGridInner(filtered)}
@@ -12540,16 +12611,14 @@ function _refreshMTStoryGrid(){
     if(q&&!(s.nama||'').toLowerCase().includes(q)&&!(s.perusahaan||'').toLowerCase().includes(q)) return false;
     return true;
   });
-  const pills=document.querySelectorAll('[id^="mt-filter-"]');
-  // update filter pills inline
   ['all','posted','unposted'].forEach(v=>{
     const pEl=document.getElementById('mt-filter-pill-'+v);
     if(!pEl) return;
     const active=mtStoryFilter===v;
-    pEl.style.borderColor=active?'var(--purple-mid)':'var(--border)';
-    pEl.style.background=active?'var(--purple-light)':'var(--white)';
-    pEl.style.color=active?'var(--purple-mid)':'var(--text-muted)';
-    pEl.style.fontWeight=active?'600':'400';
+    pEl.style.background=active?'#0f52ba':'var(--white)';
+    pEl.style.borderColor=active?'#0f52ba':'var(--border-md)';
+    pEl.style.color=active?'#fff':'var(--text)';
+    pEl.style.fontWeight=active?'600':'500';
   });
   const g=document.getElementById('mt-story-grid');
   if(g) g.innerHTML=_mtStoryGridInner(filtered);
@@ -12598,16 +12667,16 @@ function kolListPageHTML(){
     return true;
   });
   const niches=[...new Set(kolList.map(k=>k.niche||'').filter(Boolean))];
+  const kolNiches=[['all','Semua'],...niches.map(n=>[n,n])];
   return `
   <div style="padding:20px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-      <div style="flex:1;min-width:180px"><input placeholder="Cari nama / username..." oninput="kolSearch=this.value;_refreshKOLGrid()" value="${kolSearch.replace(/"/g,'&quot;')}" style="width:100%;padding:8px 12px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--white)"></div>
+    <div class="filter-bar" style="margin-bottom:16px">
+      <input type="text" placeholder="Cari nama / username..." oninput="kolSearch=this.value;_refreshKOLGrid()" value="${kolSearch.replace(/"/g,'&quot;')}" style="max-width:160px">
+      ${kolNiches.map(([v,l])=>`
+        <div onclick="kolNicheFilter='${v}';_refreshKOLGrid()" id="kol-niche-pill-${v}" class="filter-bar-btn" style="background:${kolNicheFilter===v?'#0f52ba':'var(--white)'};border-color:${kolNicheFilter===v?'#0f52ba':'var(--border-md)'};color:${kolNicheFilter===v?'#fff':'var(--text)'};font-weight:${kolNicheFilter===v?'600':'500'};cursor:pointer">${l}</div>`).join('')}
+      <div class="filter-bar-spacer"></div>
       <button class="btn btn-primary btn-sm" onclick="openKOLModal(null)"><i class="ti ti-plus"></i> Tambah KOL</button>
     </div>
-    ${niches.length?`<div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
-      ${[['all','Semua'],...niches.map(n=>[n,n])].map(([v,l])=>`
-        <div onclick="kolNicheFilter='${v}';_refreshKOLGrid()" style="padding:5px 12px;border-radius:20px;border:0.5px solid ${kolNicheFilter===v?'var(--purple-mid)':'var(--border)'};background:${kolNicheFilter===v?'var(--purple-light)':'var(--white)'};color:${kolNicheFilter===v?'var(--purple-mid)':'var(--text-muted)'};font-size:11px;font-weight:${kolNicheFilter===v?'600':'400'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s">${l}</div>`).join('')}
-    </div>`:''}
     <div id="kol-grid">
       ${_kolGridInner(filtered)}
     </div>
@@ -12625,6 +12694,14 @@ function _refreshKOLGrid(){
     if(q&&!(k.nama||'').toLowerCase().includes(q)&&!(k.username_ig||'').toLowerCase().includes(q)&&!(k.username_tiktok||'').toLowerCase().includes(q)) return false;
     if(kolNicheFilter!=='all'&&(k.niche||'')!==kolNicheFilter) return false;
     return true;
+  });
+  document.querySelectorAll('[id^="kol-niche-pill-"]').forEach(el=>{
+    const v=el.id.replace('kol-niche-pill-','');
+    const active=kolNicheFilter===v;
+    el.style.background=active?'#0f52ba':'var(--white)';
+    el.style.borderColor=active?'#0f52ba':'var(--border-md)';
+    el.style.color=active?'#fff':'var(--text)';
+    el.style.fontWeight=active?'600':'500';
   });
   const g=document.getElementById('kol-grid');
   if(g) g.innerHTML=_kolGridInner(filtered);
