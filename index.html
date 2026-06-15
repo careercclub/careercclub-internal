@@ -3257,7 +3257,7 @@ function renderDashCalendar() {
       } else if(it.type==="ticket"){
         var tkt=it.data;
         var safeTitle = (fmtTktNo(tkt)+' '+tkt.judul).replace(/"/g,"&quot;");
-        html += "<div onclick=\"event.stopPropagation();openTktDetail('"+tkt.id+"')\" title=\""+safeTitle+"\" style=\"background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-ticket\" style=\"font-size:8px\"></i> "+tkt.judul+"</div>";
+        html += "<div draggable=\"true\" ondragstart=\"event.stopPropagation();calDragStartTkt(event,'"+tkt.id+"')\" onclick=\"event.stopPropagation();openTktDetail('"+tkt.id+"')\" title=\""+safeTitle+"\" style=\"background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-ticket\" style=\"font-size:8px\"></i> "+tkt.judul+"</div>";
       } else {
         var t=it.data;
         var isDone=t.status==="Done";
@@ -11204,15 +11204,47 @@ function projectHistoryHTML(){
 // ═══════════════════════════════════════════
 var _calDragTaskId = null;
 var _calDragProjId = null;
+var _calDragTktId  = null;
 
 function calDragStart(e, taskId, projId) {
   _calDragTaskId = taskId;
   _calDragProjId = projId;
+  _calDragTktId  = null;
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function calDragStartTkt(e, tktId) {
+  _calDragTktId  = tktId;
+  _calDragTaskId = null;
+  _calDragProjId = null;
   e.dataTransfer.effectAllowed = 'move';
 }
 
 async function calDrop(e, newDateISO) {
   e.preventDefault();
+
+  // Ticket drag
+  if (_calDragTktId) {
+    const tkt = tickets.find(t => _idEq(t.id, _calDragTktId));
+    const tktId = _calDragTktId;
+    _calDragTktId = null;
+    if (!tkt) return;
+    if (tkt.deadline === newDateISO) return;
+    const oldDeadline = tkt.deadline;
+    tkt.deadline = newDateISO;
+    try {
+      await sb_update('tickets', tktId, { due_date: newDateISO });
+      showToast('Deadline diperbarui ke ' + fmtDateShort(newDateISO));
+    } catch(err) {
+      tkt.deadline = oldDeadline;
+      showToast('Gagal update deadline', 'error');
+    }
+    const dashCalEl = document.getElementById('dash-calendar');
+    if (dashCalEl) dashCalEl.innerHTML = renderDashCalendar();
+    return;
+  }
+
+  // Task drag
   if (!_calDragTaskId) return;
   const task = projectTasks.find(t => _idEq(t.id, _calDragTaskId));
   if (!task) return;
