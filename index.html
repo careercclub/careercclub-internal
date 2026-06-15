@@ -2451,13 +2451,17 @@ async function sb_updateKOL(id, data) { return await sb_update('kol_list', id, d
 async function sb_deleteKOL(id) { return await sb_delete('kol_list', id); }
 
 async function sb_uploadContentPhoto(file, path) {
-  const { data, error } = await _sb.storage.from('content-photos').upload(path, file, { upsert: true });
-  if (error) { console.error('[upload] content-photo:', error); return null; }
+  const { data, error } = await _sb.storage.from('uploads').upload(path, file, { upsert: true });
+  if (error) {
+    console.error('[upload] content-photo:', error);
+    showToast('Gagal upload foto: ' + (error.message || 'Storage error'), 'error');
+    return null;
+  }
   return data.path;
 }
-async function sb_deleteContentPhoto(path) { await _sb.storage.from('content-photos').remove([path]); }
+async function sb_deleteContentPhoto(path) { await _sb.storage.from('uploads').remove([path]); }
 function sb_contentPhotoPublicUrl(path) {
-  const { data } = _sb.storage.from('content-photos').getPublicUrl(path);
+  const { data } = _sb.storage.from('uploads').getPublicUrl(path);
   return data.publicUrl;
 }
 
@@ -2917,6 +2921,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
     _sbToast('✓ Data loaded from Supabase');
     notifLoad(); // Load activity log untuk badge
+    // One-time backfill: create tickets for tasks that never got one
+    setTimeout(() => fixOrphanedTasks().catch(e => console.warn('[fixOrphanedTasks] error:', e)), 2000);
   } catch (err) {
     console.error('[Supabase] Bootstrap error:', err);
     _sbToast('Bootstrap error — cek console', true);
@@ -7422,6 +7428,38 @@ async function syncTaskToTicket(task, eventName){
   return tkt;
 }
 
+async function fixOrphanedTasks() {
+  const FLAG = 'orphan_fix_v1_done';
+  if (localStorage.getItem(FLAG)) return;
+
+  const orphans = projectTasks.filter(t => !t.ticketId);
+  if (!orphans.length) {
+    localStorage.setItem(FLAG, '1');
+    console.log('[fixOrphanedTasks] No orphaned tasks — all linked.');
+    return;
+  }
+
+  console.log(`[fixOrphanedTasks] ${orphans.length} orphaned tasks — creating tickets...`);
+  let fixed = 0;
+  for (const task of orphans) {
+    try {
+      const eventName = getTaskEventName(task.id);
+      const tkt = await syncTaskToTicket(task, eventName);
+      if (tkt && tkt.id) {
+        task.ticketId = tkt.id;
+        await sb_updateTask(task.id, task);
+        fixed++;
+      }
+    } catch (e) {
+      console.warn('[fixOrphanedTasks] skipped task', task.id, e);
+    }
+  }
+
+  localStorage.setItem(FLAG, '1');
+  console.log(`[fixOrphanedTasks] Done — fixed ${fixed}/${orphans.length}.`);
+  if (fixed > 0) showToast(`${fixed} task berhasil disinkronisasi ke ticket ✓`);
+}
+
 function addTmAttachment(tipe){
   // Auto-remove form sebelumnya kalau ada
   const existingForm = document.getElementById('tm-inline-form');
@@ -7603,7 +7641,7 @@ async function confirmDuplicate(){
   };
   projects.unshift(newProj);
 
-  // Duplicate hanya task yang dicentang, reset status ke Todo
+  // Duplicate hanya task yang dicentang, reset status ke Todo, ticket_id = null (fresh tickets created below)
   const tasks = projectTasks.filter(t=>_idEq(t.projectId,_dupSourceId) && checkedTaskIds.includes(String(t.id)));
   let dupOk=0;
   for(const t of tasks){
@@ -7616,11 +7654,21 @@ async function confirmDuplicate(){
       priority: t.priority || 'Med',
       deadline: null,
       assigneeId: null,
+      ticketId: null, // explicit reset — fresh ticket will be created below
     };
     const saved = await sb_saveTask(payload);
     if(!saved || !saved.id){ continue; }
     const newTask = { ..._taskRowToJS(saved), attachments: [] };
     projectTasks.push(newTask);
+    // Create a fresh ticket for this duplicated task and link bidirectionally
+    try {
+      const eventName = newProj.nama;
+      const tkt = await syncTaskToTicket(newTask, eventName);
+      if(tkt && tkt.id){
+        newTask.ticketId = tkt.id;
+        await sb_updateTask(newTask.id, newTask);
+      }
+    } catch(e){ console.warn('[confirmDuplicate] ticket sync failed for task', newTask.id, e); }
     dupOk++;
   }
 
@@ -19555,24 +19603,40 @@ function clOpenEditModal(id) {
 async function clSaveEdit(id) {
   const c = clData.find(x => _idEq(x.id, id));
   if (!c) return;
+
+  // Guard: modal must still be open with all fields present
+  const elPlatform  = document.getElementById('cle-platform');
+  const elJenis     = document.getElementById('cle-jenis');
+  const elLink      = document.getElementById('cle-link');
+  const elCopy      = document.getElementById('cle-copy');
+  const elViews     = document.getElementById('cle-views');
+  const elLikes     = document.getElementById('cle-likes');
+  const elComments  = document.getElementById('cle-comments');
+  const elShares    = document.getElementById('cle-shares');
+  const elNotes     = document.getElementById('cle-notes');
+  if (!elPlatform || !elJenis || !elLink || !elCopy || !elViews || !elLikes || !elComments || !elShares || !elNotes) {
+    showToast('Gagal simpan: form sudah ditutup', 'error');
+    return;
+  }
+
   const updates = {
-    platform:    document.getElementById('cle-platform').value,
-    jenis:       document.getElementById('cle-jenis').value,
-    link:        document.getElementById('cle-link').value.trim(),
-    copywriting: document.getElementById('cle-copy').value.trim(),
-    views:       parseInt(document.getElementById('cle-views').value)||0,
+    platform:    elPlatform.value,
+    jenis:       elJenis.value,
+    link:        elLink.value.trim(),
+    copywriting: elCopy.value.trim(),
+    views:       parseInt(elViews.value)||0,
   };
-  const likesRawEdit = document.getElementById('cle-likes').value;
+  const likesRawEdit = elLikes.value;
   if (likesRawEdit === '' || likesRawEdit === null || likesRawEdit === undefined) {
     showToast('Likes wajib diisi', 'error');
-    document.getElementById('cle-likes').focus();
+    elLikes.focus();
     return;
   }
   Object.assign(updates, {
     likes:       parseInt(likesRawEdit)||0,
-    comments:    parseInt(document.getElementById('cle-comments').value)||0,
-    shares:      parseInt(document.getElementById('cle-shares').value)||0,
-    notes:       document.getElementById('cle-notes').value.trim(),
+    comments:    parseInt(elComments.value)||0,
+    shares:      parseInt(elShares.value)||0,
+    notes:       elNotes.value.trim(),
     labels:      window._clLabels || []
   });
   const ok = await sb_updateContentLib(id, updates);
