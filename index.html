@@ -1376,10 +1376,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
   <div class="tkt-modal">
     <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid var(--border);gap:12px;flex-shrink:0">
       <div style="min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span id="tkt-id-badge" style="font-size:10px;font-weight:600;color:var(--text-muted);flex-shrink:0"></span>
-          <div class="modal-title" id="tkt-detail-title" style="font-size:14px;font-weight:700;cursor:text;border-radius:4px;padding:1px 3px;margin-left:-3px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''" onclick="activeTktId&&tktStartTitleEdit(activeTktId)">Ticket Detail</div>
-        </div>
+        <span id="tkt-id-badge" style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.3px;display:block;margin-bottom:5px"></span>
         <div id="tkt-detail-tags" style="display:flex;gap:5px;flex-wrap:wrap"></div>
       </div>
       <button class="btn btn-sm" onclick="closeTktDetail()" style="flex-shrink:0;margin-top:2px"><i class="ti ti-x"></i></button>
@@ -4807,9 +4804,8 @@ function openTktDetail(id){
   const primaryPerson=getPersonById(assigneeIds[0]||null);
   const div=primaryPerson.divisiId?getDivisiById(primaryPerson.divisiId):{nama:"—",color:"purple"};
 
-  // Header tags
+  // Header — badge only (no title in header)
   const _idBadge=document.getElementById("tkt-id-badge"); if(_idBadge) _idBadge.textContent=fmtTktNo(t);
-  document.getElementById("tkt-detail-title").textContent=t.judul;
   document.getElementById("tkt-detail-tags").innerHTML=
     `${tktStatusPill(t.status)} ${tktPrioPill(t.prioritas)}<span class="pill ic-${divColor(div.color)}" style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600">${div.nama}</span><span class="pill pill-gray">${getTypeById(t.tipeId).nama}</span>`;
 
@@ -4834,8 +4830,9 @@ function openTktDetail(id){
   // Body: 2-column layout
   document.getElementById("tkt-detail-body").innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 210px;gap:0;min-height:0">
-      <!-- LEFT: desc, lampiran, komentar -->
+      <!-- LEFT: title, desc, lampiran, komentar -->
       <div style="padding:16px 20px;border-right:0.5px solid var(--border)">
+        <div id="tkt-inline-title" onclick="tktStartTitleEdit('${t.id}')" style="font-size:15px;font-weight:700;margin-bottom:12px;line-height:1.4;cursor:text;border-radius:4px;padding:2px 3px;margin-left:-3px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">${(t.judul||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:6px">Deskripsi</div>
         <textarea id="tkt-edit-desc" rows="4" style="width:100%;padding:10px 12px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;font-family:'DM Sans',sans-serif;line-height:1.7;background:var(--bg);resize:vertical;color:var(--text)">${(t.deskripsi||'').replace(/</g,'&lt;')}</textarea>
         ${(filesHTML||linksHTML)?`
@@ -4899,7 +4896,7 @@ function closeTktDetail(){
 }
 
 function tktStartTitleEdit(id) {
-  const el = document.getElementById('tkt-detail-title');
+  const el = document.getElementById('tkt-inline-title');
   if (!el || el.querySelector('input')) return;
   const t = tickets.find(x => _idEq(x.id, id));
   if (!t) return;
@@ -4907,7 +4904,7 @@ function tktStartTitleEdit(id) {
 
   const inp = document.createElement('input');
   inp.value = current;
-  inp.style.cssText = 'width:100%;font-size:14px;font-weight:700;font-family:inherit;border:none;border-bottom:1.5px solid var(--purple-mid);background:transparent;color:var(--text);outline:none;line-height:1.4;padding:1px 0;box-sizing:border-box';
+  inp.style.cssText = 'width:100%;font-size:15px;font-weight:700;font-family:inherit;border:none;border-bottom:1.5px solid var(--purple-mid);background:transparent;color:var(--text);outline:none;line-height:1.4;padding:2px 0;box-sizing:border-box';
   el.onmouseover = null; el.onmouseout = null;
   el.onclick = null;
   el.innerHTML = '';
@@ -6805,12 +6802,13 @@ function renderTaskList(projId){
           const div = getDivisiById(firstPerson.divisiId);
           const days=daysUntil(t.deadline);
           const overdue=t.status!=="Done" && days<0;
-          return `<tr style="cursor:pointer" onclick="openTaskModal('${t.id}','${projId}')">
+          const _isDone=t.status==="Done";
+          return `<tr style="cursor:pointer;${_isDone?'opacity:0.6':''}" onclick="openTaskModal('${t.id}','${projId}')">
             <td onclick="event.stopPropagation();toggleTaskDone('${t.id}')" style="text-align:center">
-              <input type="checkbox" ${t.status==="Done"?"checked":""} style="cursor:pointer;width:14px;height:14px">
+              <input type="checkbox" ${_isDone?"checked":""} style="cursor:pointer;width:14px;height:14px">
             </td>
             <td style="font-size:12px">
-              <div style="font-weight:500;${t.status==="Done"?"text-decoration:line-through;color:var(--text-muted)":""}">${t.title}</div>
+              <div style="font-weight:500;${_isDone?"text-decoration:line-through;color:var(--text-muted)":""}">${t.title}</div>
               ${t.attachments&&t.attachments.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:2px"><i class="ti ti-paperclip" style="font-size:10px"></i> ${t.attachments.length} attachment</div>`:""}
             </td>
             <td style="font-size:11px">
