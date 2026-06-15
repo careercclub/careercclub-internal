@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -3200,12 +3200,6 @@ function renderDashCalendar() {
     if(!eventsByDate[p.tanggal]) eventsByDate[p.tanggal]=[];
     eventsByDate[p.tanggal].push({type:"event",data:p});
   });
-  (typeof tickets!=='undefined'?tickets:[]).forEach(t=>{
-    if(!t.deadline||t.status==='Done') return;
-    const dateISO=t.deadline.substring(0,10);
-    if(!eventsByDate[dateISO]) eventsByDate[dateISO]=[];
-    eventsByDate[dateISO].push({type:"ticket",data:t});
-  });
 
   const cells=[];
   for(let i=0;i<startWeekday;i++){cells.push({date:new Date(y,m,-(startWeekday-i-1)),inMonth:false});}
@@ -3227,7 +3221,6 @@ function renderDashCalendar() {
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#059669;display:inline-block"></span>Pre';
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#dc2626;display:inline-block;margin-left:3px"></span>H';
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#2563eb;display:inline-block;margin-left:3px"></span>Post';
-  html += '<span style="width:7px;height:7px;border-radius:2px;background:#c2410c;display:inline-block;margin-left:3px"></span>Ticket';
   html += '</div></div>';
   html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg);border-bottom:0.5px solid var(--border)">';
   dayNames.forEach(d=>{html+='<div style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase">'+d+'</div>';});
@@ -3254,10 +3247,6 @@ function renderDashCalendar() {
         var evName = it.data.nama.substring(0,15).replace(/"/g, "&quot;");
         var evId = it.data.id;
         html += "<div onclick=\"event.stopPropagation();switchPage('project');openProjectDetail('"+evId+"')\" title=\"" + evName + "\" style=\"background:var(--purple-accent);color:#fff;padding:2px 5px;border-radius:3px;font-size:9px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-broadcast\" style=\"font-size:8px\"></i> " + evName + "</div>";
-      } else if(it.type==="ticket"){
-        var tkt=it.data;
-        var safeTitle = (fmtTktNo(tkt)+' '+tkt.judul).replace(/"/g,"&quot;");
-        html += "<div draggable=\"true\" ondragstart=\"event.stopPropagation();calDragStartTkt(event,'"+tkt.id+"')\" onclick=\"event.stopPropagation();openTktDetail('"+tkt.id+"')\" title=\""+safeTitle+"\" style=\"background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-ticket\" style=\"font-size:8px\"></i> "+tkt.judul+"</div>";
       } else {
         var t=it.data;
         var isDone=t.status==="Done";
@@ -8228,9 +8217,9 @@ function prodListPageHTML(){
         <button class="btn btn-primary btn-sm" onclick="openBundlingModal(null)"><i class="ti ti-package"></i> Bundle</button>
       </div>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="filter-bar" style="margin-top:12px;margin-bottom:16px;flex-wrap:wrap">
       ${[['all','Semua'],['satuan','Satuan'],['bundling','Bundling']].map(([v,l])=>`
-        <div onclick="setProdTypeFilter('${v}')" id="prod-filter-${v}" class="filter-bar-btn" style="background:${prodTypeFilter===v?'#0f52ba':'var(--white)'};border-color:${prodTypeFilter===v?'#0f52ba':'var(--border-md)'};color:${prodTypeFilter===v?'#fff':'var(--text)'};font-weight:${prodTypeFilter===v?'600':'500'};cursor:pointer">${l}</div>`).join('')}
+        <div onclick="setProdTypeFilter('${v}')" id="prod-filter-${v}" class="filter-bar-btn" style="font-size:13px;padding:5px 14px;background:${prodTypeFilter===v?'#0f52ba':'var(--white)'};border-color:${prodTypeFilter===v?'#0f52ba':'var(--border-md)'};color:${prodTypeFilter===v?'#fff':'var(--text)'};font-weight:${prodTypeFilter===v?'600':'500'}">${l}</div>`).join('')}
     </div>
     <div id="prod-list-inner">
       ${filtered.length ? filtered.map(p=>prodListItemHTML(p)).join('') : `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-package" style="font-size:40px;display:block;margin-bottom:12px"></i><div style="font-size:14px">Belum ada produk</div></div>`}
@@ -8321,16 +8310,13 @@ function initProductPage(){
 function prodListItemHTML(p){
   const isBundling=(p.type||'satuan')==='bundling';
   const itemCount=(p.bundleItems||[]).length;
-  const accentMap={Live:'#3b6d11','Pre-launch':'#854F0B',Draft:'#888',Archived:'#aaa'};
-  const accent=accentMap[p.status]||'#888';
   const statusChip=prodStatusPill(p.status);
   const kategoriChip=isBundling?`<span class="pill pill-purple">Bundling</span>`:klasPill(p.klasifikasi);
   const metaRow=isBundling?`Bundling &middot; ${itemCount} produk`:`Satuan`;
   const isExp=_prodExpandedId===String(p.id);
-  const borderColor=isExp?'var(--purple-accent)':'var(--border)';
   const topRadius=isExp?'var(--radius) var(--radius) 0 0':'var(--radius)';
   return `<div id="prod-item-${p.id}" style="margin-bottom:8px">
-    <div onclick="toggleProdAccordion('${p.id}')" id="prod-card-${p.id}" style="background:var(--white);border-radius:${topRadius};border:0.5px solid ${borderColor};border-left:3.5px solid ${accent};padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .2s">
+    <div onclick="toggleProdAccordion('${p.id}')" id="prod-card-${p.id}" style="background:var(--white);border-radius:${topRadius};border:0.5px solid var(--border);padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px">
       <div style="min-width:0;flex:1">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
           <span style="font-size:14px;font-weight:700;color:var(--text)">${p.nama}</span>
@@ -8343,7 +8329,7 @@ function prodListItemHTML(p){
         <i id="prod-chevron-${p.id}" class="ti ti-chevron-down" style="color:var(--text-hint);font-size:14px;transition:transform .25s ease;${isExp?'transform:rotate(180deg)':''}"></i>
       </div>
     </div>
-    <div id="prod-accordion-${p.id}" style="max-height:${isExp?'4000px':'0'};overflow:hidden;transition:max-height .3s ease;border:0.5px solid ${borderColor};border-top:none;border-radius:0 0 var(--radius) var(--radius)"></div>
+    <div id="prod-accordion-${p.id}" style="max-height:${isExp?'4000px':'0'};overflow:hidden;transition:max-height .3s ease;border:0.5px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius)"></div>
   </div>`;
 }
 
@@ -8362,9 +8348,9 @@ function _prodAccordionCollapse(id){
   const panel=document.getElementById('prod-accordion-'+id);
   const chevron=document.getElementById('prod-chevron-'+id);
   const card=document.getElementById('prod-card-'+id);
-  if(panel){ panel.style.maxHeight='0'; panel.style.borderColor='var(--border)'; }
+  if(panel) panel.style.maxHeight='0';
   if(chevron) chevron.style.transform='';
-  if(card){ card.style.borderRadius='var(--radius)'; card.style.borderColor='var(--border)'; }
+  if(card) card.style.borderRadius='var(--radius)';
 }
 
 function _prodAccordionExpand(id){
@@ -8378,8 +8364,7 @@ function _prodAccordionExpand(id){
   activeKBSection=isBundling?'bundle-contents':'painpoints';
   panel.innerHTML=prodAccordionPanelHTML(p);
   panel.style.maxHeight='4000px';
-  panel.style.borderColor='var(--purple-accent)';
-  if(card){ card.style.borderRadius='var(--radius) var(--radius) 0 0'; card.style.borderColor='var(--purple-accent)'; }
+  if(card) card.style.borderRadius='var(--radius) var(--radius) 0 0';
   if(chevron) chevron.style.transform='rotate(180deg)';
   setTimeout(()=>{ const el=document.getElementById('prod-item-'+id); if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'}); },150);
 }
@@ -8408,8 +8393,8 @@ function prodAccordionPanelHTML(p){
     ?`<button class="btn btn-sm" onclick="openBundlingModal('${id}')"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button>`
     :`<button class="btn btn-sm" onclick="openProdModal('${id}')"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button>`;
   const mainContent=activeKBSection==='bundle-contents'?_bundleContentsHTML(p):renderKBSection(activeKBSection,p);
-  return `<div style="border-top:0.5px solid var(--purple-accent)">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg);border-bottom:0.5px solid var(--border)">
+  return `<div style="background:var(--bg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:0.5px solid var(--border)">
       <div style="font-size:12px;color:var(--text-muted);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${p.desc?p.desc.substring(0,80)+(p.desc.length>80?'…':''):''}</div>
       <div style="display:flex;gap:6px;flex-shrink:0">${editBtn}<button class="btn btn-sm" onclick="exportSingleProductJSON('${id}')"><i class="ti ti-download" style="font-size:11px"></i> Export KB</button></div>
     </div>
