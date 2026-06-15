@@ -3200,6 +3200,12 @@ function renderDashCalendar() {
     if(!eventsByDate[p.tanggal]) eventsByDate[p.tanggal]=[];
     eventsByDate[p.tanggal].push({type:"event",data:p});
   });
+  (typeof tickets!=='undefined'?tickets:[]).forEach(t=>{
+    if(!t.deadline||t.status==='Done'||t.linkedTaskId) return;
+    const dateISO=t.deadline.substring(0,10);
+    if(!eventsByDate[dateISO]) eventsByDate[dateISO]=[];
+    eventsByDate[dateISO].push({type:"ticket",data:t});
+  });
 
   const cells=[];
   for(let i=0;i<startWeekday;i++){cells.push({date:new Date(y,m,-(startWeekday-i-1)),inMonth:false});}
@@ -3221,6 +3227,7 @@ function renderDashCalendar() {
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#059669;display:inline-block"></span>Pre';
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#dc2626;display:inline-block;margin-left:3px"></span>H';
   html += '<span style="width:7px;height:7px;border-radius:2px;background:#2563eb;display:inline-block;margin-left:3px"></span>Post';
+  html += '<span style="width:7px;height:7px;border-radius:2px;background:#c2410c;display:inline-block;margin-left:3px"></span>Ticket';
   html += '</div></div>';
   html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg);border-bottom:0.5px solid var(--border)">';
   dayNames.forEach(d=>{html+='<div style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase">'+d+'</div>';});
@@ -3247,6 +3254,10 @@ function renderDashCalendar() {
         var evName = it.data.nama.substring(0,15).replace(/"/g, "&quot;");
         var evId = it.data.id;
         html += "<div onclick=\"event.stopPropagation();switchPage('project');openProjectDetail('"+evId+"')\" title=\"" + evName + "\" style=\"background:var(--purple-accent);color:#fff;padding:2px 5px;border-radius:3px;font-size:9px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-broadcast\" style=\"font-size:8px\"></i> " + evName + "</div>";
+      } else if(it.type==="ticket"){
+        var tkt=it.data;
+        var safeTitle=(fmtTktNo(tkt)+' '+tkt.judul).replace(/"/g,"&quot;");
+        html+="<div draggable=\"true\" ondragstart=\"event.stopPropagation();calDragStartTkt(event,'"+tkt.id+"')\" onclick=\"event.stopPropagation();openTktDetail('"+tkt.id+"')\" title=\""+safeTitle+"\" style=\"background:#ffedd5;color:#c2410c;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:500;cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\"><i class=\"ti ti-ticket\" style=\"font-size:8px\"></i> "+tkt.judul+"</div>";
       } else {
         var t=it.data;
         var isDone=t.status==="Done";
@@ -3295,7 +3306,7 @@ function renderDashUpcoming() {
   const taskItems=projectTasks.filter(t=>t.deadline&&t.status!=='Done'&&t.deadline>=todayISO&&t.deadline<=futureISO)
     .map(t=>({type:'task',deadline:t.deadline,title:t.title,phase:t.phase,projectId:t.projectId,id:t.id}));
   const tktItems=(typeof tickets!=='undefined'?tickets:[]).filter(t=>{
-    if(!t.deadline||t.status==='Done') return false;
+    if(!t.deadline||t.status==='Done'||t.linkedTaskId) return false;
     const dl=t.deadline.substring(0,10);
     return dl>=todayISO&&dl<=futureISO;
   }).map(t=>({type:'ticket',deadline:t.deadline.substring(0,10),title:t.judul,id:t.id}));
@@ -19680,41 +19691,23 @@ async function clSaveEdit(id) {
   const c = clData.find(x => _idEq(x.id, id));
   if (!c) return;
 
-  // Guard: modal must still be open with all fields present
-  const elPlatform  = document.getElementById('cle-platform');
-  const elJenis     = document.getElementById('cle-jenis');
-  const elLink      = document.getElementById('cle-link');
-  const elCopy      = document.getElementById('cle-copy');
-  const elViews     = document.getElementById('cle-views');
-  const elLikes     = document.getElementById('cle-likes');
-  const elComments  = document.getElementById('cle-comments');
-  const elShares    = document.getElementById('cle-shares');
-  const elNotes     = document.getElementById('cle-notes');
-  if (!elPlatform || !elJenis || !elLink || !elCopy || !elViews || !elLikes || !elComments || !elShares || !elNotes) {
-    showToast('Gagal simpan: form sudah ditutup', 'error');
-    return;
-  }
+  // Read ALL values immediately at the top before any async or modal-close can run
+  const platform    = document.getElementById('cle-platform')?.value ?? '';
+  const jenis       = document.getElementById('cle-jenis')?.value ?? '';
+  const link        = (document.getElementById('cle-link')?.value ?? '').trim();
+  const copywriting = (document.getElementById('cle-copy')?.value ?? '').trim();
+  const views       = parseInt(document.getElementById('cle-views')?.value) || 0;
+  const likesRaw    = document.getElementById('cle-likes')?.value ?? '';
+  const comments    = parseInt(document.getElementById('cle-comments')?.value) || 0;
+  const shares      = parseInt(document.getElementById('cle-shares')?.value) || 0;
+  const notes       = (document.getElementById('cle-notes')?.value ?? '').trim();
+  const labels      = window._clLabels || [];
 
   const updates = {
-    platform:    elPlatform.value,
-    jenis:       elJenis.value,
-    link:        elLink.value.trim(),
-    copywriting: elCopy.value.trim(),
-    views:       parseInt(elViews.value)||0,
+    platform, jenis, link, copywriting, views,
+    likes:    parseInt(likesRaw) || 0,
+    comments, shares, notes, labels,
   };
-  const likesRawEdit = elLikes.value;
-  if (likesRawEdit === '' || likesRawEdit === null || likesRawEdit === undefined) {
-    showToast('Likes wajib diisi', 'error');
-    elLikes.focus();
-    return;
-  }
-  Object.assign(updates, {
-    likes:       parseInt(likesRawEdit)||0,
-    comments:    parseInt(elComments.value)||0,
-    shares:      parseInt(elShares.value)||0,
-    notes:       elNotes.value.trim(),
-    labels:      window._clLabels || []
-  });
   const ok = await sb_updateContentLib(id, updates);
   if (!ok) { showToast('Gagal simpan', 'error'); return; }
   Object.assign(c, updates);
