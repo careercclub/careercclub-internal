@@ -4298,8 +4298,8 @@ async function handleLynkid(input){
           else if(wa.length<10) flags.push({type:"warn",msg:"WA aneh"});
           // Cek duplikat terhadap buyers existing DAN qcRows dari file sebelumnya
           const isDupExact=wa&&(
-            buyers.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||b.tanggal===tanggal))||
-            qcRows.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||b.tanggal===tanggal))
+            buyers.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||(b.tanggal||'').slice(0,10)===(tanggal||'').slice(0,10)))||
+            qcRows.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||(b.tanggal||'').slice(0,10)===(tanggal||'').slice(0,10)))
           );
           const isDupWA=!isDupExact&&wa&&(
             buyers.find(b=>b.wa===wa)||
