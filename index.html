@@ -4316,8 +4316,32 @@ async function handleLynkid(input){
     });
   }
   input.value="";
+  _dedupeQCRows(qcRows);
   openQC();
 }
+
+function _dedupeQCRows(rows){
+  const groups={};
+  rows.forEach((r,i)=>{
+    const key=(r.wa||'').trim()+'||'+(r.produk||'').trim();
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(i);
+  });
+  Object.values(groups).forEach(idxs=>{
+    if(idxs.length<=1) return;
+    const keepIdx=idxs.find(i=>(rows[i].paymentStatus||'').toUpperCase()==='SUCCESS')??idxs[0];
+    idxs.forEach(i=>{
+      if(i!==keepIdx){
+        rows[i].skip=true;
+        rows[i].flags=[{type:'err',msg:'Duplikat'}];
+      } else {
+        rows[i].skip=false;
+      }
+    });
+  });
+  return rows;
+}
+
 function openQC(){
   qcSelected=new Set(qcRows.map((r,i)=>r.skip?null:i).filter(i=>i!==null));
   renderQC();
