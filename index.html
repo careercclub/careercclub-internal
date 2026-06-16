@@ -3459,7 +3459,7 @@ function crmHTML(){
             <i class="ti ti-upload"></i>Upload file .xlsx dari Lynkid<br>
             <span style="font-size:10px;color:var(--text-hint)">Auto-parse WA → 628XXX · klasifikasi otomatis · QC preview</span>
           </div>
-          <input type="file" id="file-lynkid" accept=".xlsx,.csv" style="display:none" onchange="handleLynkid(this)">
+          <input type="file" id="file-lynkid" accept=".xlsx,.csv" multiple style="display:none" onchange="handleLynkid(this)">
         </div>
         <div>
           <p style="font-size:12px;font-weight:600;margin-bottom:10px">Upload hasil blast (format Lynkid)</p>
@@ -4274,35 +4274,49 @@ function _blastSaveSettings() {
 }
 
 async function handleLynkid(input){
-  const file=input.files[0];if(!file) return;
-  const reader=new FileReader();
-  reader.onload=async e=>{
-    const wb=XLSX.read(e.target.result,{type:"array"});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws);
-    qcRows=[];
-    rows.forEach((r,i)=>{
-      const status=r["Status"]||"";
-      const wa=normalizeWA(r["Buyer Phone (Opsional)"]);
-      const produk=r["Judul Barang"]||"";
-      const harga=parseFloat(r["Harga"]||r["Price"]||0);
-      const tanggal=_normalizeLynkidDate(r["Tanggal"]||"");
-      const notes=parseNotes(r["Notes (Opsional)"]||"");
-      const klasifikasi=getKlasifikasi(produk);
-      const flags=[];
-      if(!wa) flags.push({type:"err",msg:"WA kosong"});
-      else if(wa.length<10) flags.push({type:"warn",msg:"WA aneh"});
-      const isDupExact=wa&&buyers.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||b.tanggal===tanggal));
-      const isDupWA=!isDupExact&&wa&&buyers.find(b=>b.wa===wa);
-      if(isDupExact) flags.push({type:"err",msg:"Duplikat"});
-      else if(isDupWA) flags.push({type:"warn",msg:"Repeat buyer"});
-      if(klasifikasi==="Belum Diklasifikasi") flags.push({type:"warn",msg:"Klasifikasi belum ketemu"});
-      qcRows.push({idx:i,name:r["Buyer Name (opsional)"]||"",wa,email:r["Buyer Email"]||"",produk,klasifikasi,harga,notes,tanggal,paymentStatus:status,flags,skip:flags.some(f=>f.type==="err")});
+  const files=[...input.files];
+  if(!files.length) return;
+  buyers=await sb_loadBuyers();
+  qcRows=[];
+  for(const file of files){
+    await new Promise(resolve=>{
+      const reader=new FileReader();
+      reader.onload=e=>{
+        const wb=XLSX.read(e.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws);
+        rows.forEach((r,i)=>{
+          const status=r["Status"]||"";
+          const wa=normalizeWA(r["Buyer Phone (Opsional)"]);
+          const produk=r["Judul Barang"]||"";
+          const harga=parseFloat(r["Harga"]||r["Price"]||0);
+          const tanggal=_normalizeLynkidDate(r["Tanggal"]||"");
+          const notes=parseNotes(r["Notes (Opsional)"]||"");
+          const klasifikasi=getKlasifikasi(produk);
+          const flags=[];
+          if(!wa) flags.push({type:"err",msg:"WA kosong"});
+          else if(wa.length<10) flags.push({type:"warn",msg:"WA aneh"});
+          // Cek duplikat terhadap buyers existing DAN qcRows dari file sebelumnya
+          const isDupExact=wa&&(
+            buyers.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||b.tanggal===tanggal))||
+            qcRows.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||b.tanggal===tanggal))
+          );
+          const isDupWA=!isDupExact&&wa&&(
+            buyers.find(b=>b.wa===wa)||
+            qcRows.find(b=>b.wa===wa)
+          );
+          if(isDupExact) flags.push({type:"err",msg:"Duplikat"});
+          else if(isDupWA) flags.push({type:"warn",msg:"Repeat buyer"});
+          if(klasifikasi==="Belum Diklasifikasi") flags.push({type:"warn",msg:"Klasifikasi belum ketemu"});
+          qcRows.push({idx:qcRows.length,name:r["Buyer Name (opsional)"]||"",wa,email:r["Buyer Email"]||"",produk,klasifikasi,harga,notes,tanggal,paymentStatus:status,flags,skip:flags.some(f=>f.type==="err")});
+        });
+        resolve();
+      };
+      reader.readAsArrayBuffer(file);
     });
-    buyers=await sb_loadBuyers();
-    openQC();
-  };
-  reader.readAsArrayBuffer(file);input.value="";
+  }
+  input.value="";
+  openQC();
 }
 function openQC(){
   qcSelected=new Set(qcRows.map((r,i)=>r.skip?null:i).filter(i=>i!==null));
