@@ -1763,6 +1763,12 @@ const _ACT_MODULE_MAP = {
   tkt_people:                 'Settings',
   mt_story_list:              'Content Planning',
   kol_list:                   'Content Planning',
+  story_plan_links:           'Content Planning',
+  story_plan_dates:           'Content Planning',
+  story_plan_items:           'Content Planning',
+  carousel_plans:             'Content Planning',
+  carousel_cta_options:       'Content Planning',
+  carousel_plan_links:        'Content Planning',
 };
 
 // Tabel yang di-skip dari activity log (terlalu noisy / system tables)
@@ -2457,6 +2463,16 @@ async function sb_insertKOL(data) { return await sb_insert('kol_list', data); }
 async function sb_updateKOL(id, data) { return await sb_update('kol_list', id, data); }
 async function sb_deleteKOL(id) { return await sb_delete('kol_list', id); }
 
+/* ── STORY PLAN ── */
+async function sb_loadStoryPlanLinks(){ return await sb_load('story_plan_links',{order:'created_at',ascending:true}).catch(()=>[]); }
+async function sb_loadStoryPlanDates(){ return await sb_load('story_plan_dates',{order:'tanggal',ascending:true}).catch(()=>[]); }
+async function sb_loadStoryPlanItems(){ return await sb_load('story_plan_items',{order:'urutan',ascending:true}).catch(()=>[]); }
+
+/* ── CAROUSEL PLAN ── */
+async function sb_loadCarouselPlans(){ return await sb_load('carousel_plans',{order:'tanggal_posting',ascending:true}).catch(()=>[]); }
+async function sb_loadCarouselCTAOptions(){ return await sb_load('carousel_cta_options',{order:'created_at',ascending:true}).catch(()=>[]); }
+async function sb_loadCarouselPlanLinks(){ return await sb_load('carousel_plan_links',{order:'created_at',ascending:true}).catch(()=>[]); }
+
 async function sb_uploadContentPhoto(file, path) {
   const { data, error } = await _sb.storage.from('uploads').upload(path, file, { upsert: true });
   if (error) {
@@ -2758,6 +2774,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       talentPoolRows,
       mtStoryRows,
       kolRows,
+      spLinkRows,
+      spDateRows,
+      spItemRows,
+      cpPlanRows,
+      cpCTARows,
+      cpLinkRows,
     ] = await Promise.all([
       sb_loadDivisi(),
       sb_loadPeople(),
@@ -2792,6 +2814,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       sb_loadTalentPool().catch(() => []),
       sb_loadMTStoryList(),
       sb_loadKOLList(),
+      sb_loadStoryPlanLinks(),
+      sb_loadStoryPlanDates(),
+      sb_loadStoryPlanItems(),
+      sb_loadCarouselPlans(),
+      sb_loadCarouselCTAOptions(),
+      sb_loadCarouselPlanLinks(),
     ]);
 
     // ── MAP DATA ────────────────────────────────────────────────────────────
@@ -2889,6 +2917,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     _tpData = talentPoolRows;
     mtStoryList = mtStoryRows.map(r => ({...r, is_posted: r.is_posted || false}));
     kolList = kolRows;
+    storyPlanLinks = spLinkRows;
+    storyPlanDates = spDateRows;
+    storyPlanItems = spItemRows;
+    carouselPlans = cpPlanRows;
+    carouselCTAOptions = cpCTARows;
+    carouselPlanLinks = cpLinkRows;
 
     // Meta Ads
     try {
@@ -11955,6 +11989,10 @@ let evalIdCtr=5,editingEvalId=null,detailEvalId=null,evalTab="overview",evalDate
 let evalSortMode="combined"; // 'combined' | 'follows' | 'linktaps'
 let evalSearchQuery={Reel:"",Feed:"",Story:""};
 let evalMonthlyChartInstances={topPerf:null,follows:null,linktaps:null};
+let evalStoryTopMode="views"; // "views" | "buyers"
+let evalCalVisible=true;
+let evalCalMonth=new Date().getMonth();
+let evalCalYear=new Date().getFullYear();
 
 function evalDateFilter(c){if(evalDateRange===0)return true;if(evalDateRange==="custom"){if(!evalDateCustomStart||!evalDateCustomEnd)return true;const d=new Date(c.tanggal);return d>=new Date(evalDateCustomStart)&&d<=new Date(evalDateCustomEnd);};
 const cutoff=new Date();cutoff.setDate(cutoff.getDate()-evalDateRange);return new Date(c.tanggal)>=cutoff;}
@@ -12148,7 +12186,9 @@ function renderEvalOverview(c){
   /* Top 5 per format (pakai sort yang sama) */
   const top5Reels=all.filter(x=>x.format==="Reel").sort(sortFn).slice(0,5);
   const top5Carousel=all.filter(x=>x.format==="Carousel"||x.format==="Feed Photo").sort(sortFn).slice(0,5);
-  const top5Story=all.filter(x=>x.format==="Story").sort(sortFn).slice(0,5);
+  const storyAll=all.filter(x=>x.format==="Story");
+  const _igBuyers=buyers.filter(b=>b.sumber==='Instagram Story'&&evalDateFilter(b));
+  const _buyerByDate={};_igBuyers.forEach(b=>{const d=(b.tanggal||'').slice(0,10);if(d)_buyerByDate[d]=(_buyerByDate[d]||0)+1;});
 
   c.innerHTML=`${evalDateStripHTML()}
   <div class="sync-banner"><span style="font-size:20px">📱</span><div style="flex:1;min-width:200px"><div style="font-size:12px;font-weight:600;margin-bottom:2px">Import Meta Business Suite + Top-up Manual</div><div style="font-size:11px;color:var(--text-muted)">Upload CSV export dari Meta untuk bulk import. Metric advanced (NF reach, WTR, dll) bisa di-top-up manual per konten.</div></div><button class="btn btn-sm" onclick="openEvalImportModal()"><i class="ti ti-brand-meta"></i> Import Meta CSV</button><button class="btn btn-primary btn-sm" onclick="openEvalModal()"><i class="ti ti-plus"></i> Tambah Manual</button></div>
@@ -12178,10 +12218,21 @@ function renderEvalOverview(c){
 
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">${top6.length?top6.map((x,i)=>`<div class="card" style="cursor:pointer;margin-bottom:0;transition:border-color .15s;padding:12px" onclick="openEvalDetail('${x.id}')" onmouseenter="this.style.borderColor='var(--purple-accent)'" onmouseleave="this.style.borderColor=''"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:22px;height:22px;border-radius:50%;background:${i===0?"#0f52ba":"#e8f0fc"};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${i===0?"#fff":"#0a3d8f"};flex-shrink:0">${i+1}</div><div style="flex:1;font-size:12px;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;line-height:1.4">${x.judul}</div></div><div style="display:flex;gap:5px;align-items:center;margin-bottom:8px"><span class="fmt-tag fmt-${x.format.toLowerCase().replace(/ /g,"")}">${x.format}</span><span class="score-pill score-${x.sc.grade}">${x.sc.total}/100</span></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px"><div style="text-align:center;background:#e8f0fc;border-radius:6px;padding:4px"><div style="font-size:12px;font-weight:700;color:#0f52ba">${fmtN(x.follows)}</div><div style="font-size:9px;color:var(--text-muted)">FOLLOWS</div></div><div style="text-align:center;background:#e8f0fc;border-radius:6px;padding:4px"><div style="font-size:12px;font-weight:700;color:#0f52ba">${fmtN(x.linkTaps)}</div><div style="font-size:9px;color:var(--text-muted)">LINK TAPS</div></div><div style="text-align:center;background:var(--bg);border-radius:6px;padding:4px"><div style="font-size:12px;font-weight:700">${fmtN(x.reach||x.views)}</div><div style="font-size:9px;color:var(--text-muted)">REACH</div></div></div></div>`).join(""):'<div style="grid-column:span 3;text-align:center;padding:30px;color:var(--text-muted);font-size:12px">Belum ada konten dalam range ini</div>'}</div>
 
+  <div style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div style="font-size:13px;font-weight:600">📅 Kalender Posting</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;color:var(--text-muted)"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#0f52ba;margin-right:3px;vertical-align:middle"></span>Carousel&nbsp;<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--purple-mid);margin-right:3px;margin-left:6px;vertical-align:middle"></span>Reels</span>
+        <button onclick="evalCalVisible=!evalCalVisible;renderEvalTab('overview')" style="font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);cursor:pointer;color:var(--text-muted)">${evalCalVisible?'Sembunyikan':'Tampilkan'}</button>
+      </div>
+    </div>
+    ${evalCalVisible?renderEvalPostingCalendar():''}
+  </div>
+
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px;align-items:stretch">
     ${renderEvalTopFormatCard("🎬 Top 5 Reels",top5Reels,"Reel")}
     ${renderEvalTopFormatCard("🖼️ Top 5 Carousel",top5Carousel,"Feed")}
-    ${renderEvalTopFormatCard("⭕ Top 5 Story",top5Story,"Story")}
+    ${renderEvalTop5StoryCard(storyAll,_buyerByDate)}
   </div>
 
   `;
@@ -12194,11 +12245,83 @@ function renderEvalTopFormatCard(title,list,fmt){
   const head=`<div style="font-size:12px;font-weight:600;margin-bottom:8px;flex-shrink:0">${title}</div>`;
   const wrap=inner=>`<div class="card" style="margin-bottom:0;padding:12px;display:flex;flex-direction:column;height:100%;min-width:0;overflow:hidden">${head}<div style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:240px;max-height:240px">${inner}</div></div>`;
   if(!list.length)return wrap(`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:11px">Belum ada data</div>`);
-  const rows=list.map((x,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);cursor:pointer;min-width:0" onclick="openEvalDetail('${x.id}')"><div style="width:18px;height:18px;border-radius:50%;background:${i===0?"#0f52ba":"#e8f0fc"};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${i===0?"#fff":"#0a3d8f"};flex-shrink:0">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${x.judul}">${x.judul}</div><div style="display:flex;gap:8px;margin-top:2px"><span style="font-size:10px;color:#0f52ba;font-weight:600"><i class="ti ti-user-plus" style="font-size:9px"></i> ${fmtN(x.follows)}</span><span style="font-size:10px;color:#0f52ba;font-weight:600"><i class="ti ti-link" style="font-size:9px"></i> ${fmtN(x.linkTaps)}</span></div></div><span class="score-pill score-${x.sc.grade}" style="font-size:9px;padding:1px 5px;flex-shrink:0">${x.sc.total}</span></div>`).join("");
+  const rows=list.map((x,i)=>{
+    const hasUrl=x.url&&/^https?:\/\//.test(x.url);
+    const linkIcon=hasUrl
+      ?`<a href="${x.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#0f52ba;display:flex;align-items:center;flex-shrink:0;text-decoration:none;cursor:pointer" title="Buka di Instagram"><i class="ti ti-external-link" style="font-size:12px"></i></a>`
+      :`<span style="color:var(--text-muted);opacity:.3;display:flex;align-items:center;flex-shrink:0;cursor:default" title="Link tidak tersedia"><i class="ti ti-external-link" style="font-size:12px"></i></span>`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);cursor:pointer;min-width:0" onclick="openEvalDetail('${x.id}')"><div style="width:18px;height:18px;border-radius:50%;background:${i===0?"#0f52ba":"#e8f0fc"};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${i===0?"#fff":"#0a3d8f"};flex-shrink:0">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${x.judul}">${x.judul}</div><div style="display:flex;gap:8px;margin-top:2px"><span style="font-size:10px;color:#0f52ba;font-weight:600"><i class="ti ti-user-plus" style="font-size:9px"></i> ${fmtN(x.follows)}</span><span style="font-size:10px;color:#0f52ba;font-weight:600"><i class="ti ti-link" style="font-size:9px"></i> ${fmtN(x.linkTaps)}</span></div></div><span class="score-pill score-${x.sc.grade}" style="font-size:9px;padding:1px 5px;flex-shrink:0">${x.sc.total}</span>${linkIcon}</div>`;
+  }).join("");
   return wrap(rows);
 }
 
 function setEvalSortMode(m){evalSortMode=m;renderEvalTab("overview");}
+
+/* ── TOP 5 STORY CARD (Fix 1+3) ─────────────────────────────────── */
+function renderEvalTop5StoryCard(storyAll,buyerByDate){
+  const isViews=evalStoryTopMode!=='buyers';
+  const hasCRM=Object.keys(buyerByDate).length>0;
+  let list;
+  if(isViews){
+    list=[...storyAll].sort((a,b)=>(b.views||b.reach||0)-(a.views||a.reach||0)).slice(0,5);
+  }else{
+    list=[...storyAll].map(x=>({...x,_buyerCt:buyerByDate[(x.tanggal||'').slice(0,10)]||0})).sort((a,b)=>b._buyerCt-a._buyerCt).slice(0,5);
+  }
+  const tog=(mode,lbl)=>`<button onclick="evalStoryTopMode='${mode}';renderEvalTab('overview')" style="padding:2px 7px;font-size:9px;border-radius:20px;border:0.5px solid var(--border);background:${evalStoryTopMode===mode?'#0f52ba':'var(--white)'};color:${evalStoryTopMode===mode?'#fff':'var(--text-muted)'};cursor:pointer;outline:none;white-space:nowrap">${lbl}</button>`;
+  const head=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-shrink:0;flex-wrap:wrap;gap:4px"><div style="font-size:12px;font-weight:600;white-space:nowrap">⭕ Top 5 Story</div><div style="display:flex;gap:3px">${tog('views','👁 Views')}${tog('buyers','🛍 Buyers')}</div></div>`;
+  const wrap=inner=>`<div class="card" style="margin-bottom:0;padding:12px;display:flex;flex-direction:column;height:100%;min-width:0;overflow:hidden">${head}<div style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:240px;max-height:240px">${inner}</div></div>`;
+  if(!storyAll.length)return wrap(`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:11px">Belum ada data Story</div>`);
+  const rows=list.map((x,i)=>{
+    let metric;
+    if(isViews){metric=`<span style="font-size:10px;color:#0f52ba;font-weight:600"><i class="ti ti-eye" style="font-size:9px"></i> ${fmtN(x.views||x.reach)}</span>`;}
+    else if(!hasCRM){metric=`<span style="font-size:10px;color:var(--text-muted)">—</span>`;}
+    else{metric=`<span style="font-size:10px;color:var(--purple-mid);font-weight:600"><i class="ti ti-shopping-cart" style="font-size:9px"></i> ${x._buyerCt} buyer</span>`;}
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);cursor:pointer;min-width:0" onclick="openEvalDetail('${x.id}')"><div style="width:18px;height:18px;border-radius:50%;background:${i===0?'#0f52ba':'#e8f0fc'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${i===0?'#fff':'#0a3d8f'};flex-shrink:0">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${x.judul}">${x.judul}</div><div style="display:flex;gap:6px;align-items:center;margin-top:2px">${metric}<span style="font-size:9px;color:var(--text-muted)">${fmtDt(x.tanggal)}</span></div></div></div>`;
+  }).join('');
+  const crmNote=(!isViews&&!hasCRM)?`<div style="font-size:10px;color:var(--amber);text-align:center;padding:6px 0;border-top:0.5px solid var(--border);margin-top:4px">💡 Import data CRM dulu</div>`:'';
+  return wrap(rows+crmNote);
+}
+
+/* ── POSTING CALENDAR (Feat 4) ───────────────────────────────────── */
+function renderEvalPostingCalendar(){
+  const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  const monthLabel=monthNames[evalCalMonth]+" "+evalCalYear;
+  const calContent=evalContents.filter(x=>(x.format==="Reel"||x.format==="Carousel"||x.format==="Feed Photo")&&x.tanggal);
+  const contentByDate={};
+  calContent.forEach(x=>{
+    const d=new Date(x.tanggal);
+    if(isNaN(d.getTime()))return;
+    if(d.getFullYear()===evalCalYear&&d.getMonth()===evalCalMonth){
+      const key=evalCalYear+"-"+String(evalCalMonth+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+      if(!contentByDate[key])contentByDate[key]=[];
+      contentByDate[key].push(x);
+    }
+  });
+  const startDow=new Date(evalCalYear,evalCalMonth,1).getDay();
+  const totalDays=new Date(evalCalYear,evalCalMonth+1,0).getDate();
+  const today=new Date();
+  const dayLabels=["Min","Sen","Sel","Rab","Kam","Jum","Sab"].map(d=>`<div style="text-align:center;font-size:9px;font-weight:600;color:var(--text-muted);padding:4px 0">${d}</div>`).join("");
+  let cells="";
+  for(let i=0;i<startDow;i++)cells+=`<div></div>`;
+  for(let day=1;day<=totalDays;day++){
+    const dateKey=evalCalYear+"-"+String(evalCalMonth+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+    const posts=contentByDate[dateKey]||[];
+    const hasPosts=posts.length>0;
+    const isToday=today.getFullYear()===evalCalYear&&today.getMonth()===evalCalMonth&&today.getDate()===day;
+    let dots="";
+    posts.slice(0,3).forEach(p=>{
+      const col=p.format==="Reel"?"var(--purple-mid)":"#0f52ba";
+      dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0"></span>`;
+    });
+    if(posts.length>3)dots+=`<span style="font-size:7px;color:var(--text-muted);line-height:1">+${posts.length-3}</span>`;
+    const onclickAttr=hasPosts?`onclick="_evalCalClickDate('${dateKey}')"` :"";
+    cells+=`<div ${onclickAttr} style="min-height:44px;border-radius:6px;padding:3px 4px;border:1px solid ${isToday?"#0f52ba":"transparent"};background:${hasPosts?"var(--bg)":"transparent"};cursor:${hasPosts?"pointer":"default"}"><div style="font-size:10px;font-weight:${isToday?"700":"400"};color:${isToday?"#0f52ba":"var(--text)"};margin-bottom:2px;line-height:1.3">${day}</div><div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center">${dots}</div></div>`;
+  }
+  return `<div class="card" style="margin-bottom:0;padding:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_evalCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_evalCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div></div>`;
+}
+function _evalCalNav(delta){evalCalMonth+=delta;if(evalCalMonth>11){evalCalMonth=0;evalCalYear++;}else if(evalCalMonth<0){evalCalMonth=11;evalCalYear--;}renderEvalTab("overview");}
+function _evalCalClickDate(dateKey){const posts=evalContents.filter(x=>(x.format==="Reel"||x.format==="Carousel"||x.format==="Feed Photo")&&x.tanggal&&x.tanggal.startsWith(dateKey));if(!posts.length)return;if(posts.length===1){openEvalDetail(posts[0].id);return;}_evalCalShowPicker(dateKey,posts);}
+function _evalCalShowPicker(dateKey,posts){document.querySelectorAll('.eval-cal-picker').forEach(e=>e.remove());const el=document.createElement('div');el.className='modal-overlay eval-cal-picker';el.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px';el.onclick=()=>el.remove();const postsHtml=posts.map(p=>{const fmt=p.format.toLowerCase().replace(/ /g,'');return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;border:0.5px solid var(--border);margin-bottom:6px" onclick="this.closest('.eval-cal-picker').remove();openEvalDetail('${p.id}')"><span class="fmt-tag fmt-${fmt}">${p.format}</span><div style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.judul}</div></div>`;}).join('');el.innerHTML=`<div style="background:var(--white);border-radius:12px;padding:16px;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()"><div style="font-size:12px;font-weight:600;margin-bottom:10px">Konten pada ${fmtDt(dateKey)}</div>${postsHtml}<button onclick="this.closest('.eval-cal-picker').remove()" style="width:100%;padding:6px;font-size:11px;border:0.5px solid var(--border);border-radius:8px;background:var(--bg);cursor:pointer;margin-top:4px;color:var(--text-muted)">Tutup</button></div>`;document.body.appendChild(el);}
 
 function renderEvalMonthlyCharts(all){
   /* Build 6-month buckets — bulan ini & 5 bulan sebelumnya */
@@ -12989,6 +13112,22 @@ function openAdsDetail(id){
 // ── CONTENT PLANNING STATE ──────────────────────────────────────────────────
 let mtStoryList = [];
 let kolList = [];
+// Story Plan
+let storyPlanLinks = [];
+let storyPlanDates = [];
+let storyPlanItems = [];
+let _spCalMonth = new Date().getMonth();
+let _spCalYear = new Date().getFullYear();
+let _spCollapsed = new Set();
+// Carousel Plan
+let carouselPlans = [];
+let carouselCTAOptions = [];
+let carouselPlanLinks = [];
+let _cpCalMonth = new Date().getMonth();
+let _cpCalYear = new Date().getFullYear();
+let _cpCollapsed = new Set(); // expanded by default = not in set
+let _editingCarouselId = null;
+
 let _contentSubTab = 'carousel';
 let mtStoryFilter = 'all';
 let mtStorySearch = '';
@@ -13017,6 +13156,8 @@ function contentHTML(){
 function _contentSubTabHTML(tab){
   if(tab==='mt-story') return mtStoryPageHTML();
   if(tab==='kol-list') return kolListPageHTML();
+  if(tab==='story-plan') return storyPlanHTML();
+  if(tab==='carousel') return carouselPlanHTML();
   const labels={'carousel':'Carousel Plan','story-plan':'Story Plan'};
   return comingSoonHTML(labels[tab]||tab,'ti-layout-columns','Sedang dibangun — coming soon.');
 }
@@ -13029,6 +13170,412 @@ function switchContentTab(tab){
     el.classList.toggle('active',v===tab);
   });
   document.getElementById('content-tab-body').innerHTML=_contentSubTabHTML(tab);
+}
+
+// ══════════════════════════════════════════════════════════════
+// STORY PLAN MODULE
+// ══════════════════════════════════════════════════════════════
+
+/* Shared Quick Links component (used by Story Plan + Carousel Plan) */
+function _quickLinksHTML(prefix, links, lsKey){
+  const expanded=localStorage.getItem(lsKey)!=='0';
+  const chipsHTML=links.length
+    ?links.map(l=>`<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:0.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px"><a href="${l.url}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;display:flex;align-items:center;gap:4px">${l.label}<i class="ti ti-external-link" style="font-size:10px;color:var(--text-muted)"></i></a><button onclick="_qlDelete('${prefix}','${l.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;line-height:1;display:flex;align-items:center" title="Hapus">×</button></div>`).join('')
+    :`<span style="font-size:12px;color:var(--text-muted)">Belum ada link. Klik + untuk tambah.</span>`;
+  return `<div class="card" style="margin-bottom:14px;padding:14px 16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${expanded?'10':'0'}px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">🔗 Quick Links</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="_qlShowAdd('${prefix}')" id="${prefix}-ql-add-btn" style="width:22px;height:22px;border-radius:50%;border:0.5px solid var(--border);background:var(--white);cursor:pointer;display:${expanded?'flex':'none'};align-items:center;justify-content:center;font-size:15px;color:var(--text-muted)">+</button>
+        <button onclick="_qlToggle('${prefix}','${lsKey}')" style="font-size:11px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);cursor:pointer;color:var(--text-muted)">${expanded?'Sembunyikan':'Tampilkan'}</button>
+      </div>
+    </div>
+    <div id="${prefix}-ql-body" style="display:${expanded?'block':'none'}">
+      <div id="${prefix}-ql-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px">${chipsHTML}</div>
+      <div id="${prefix}-ql-form" style="display:none;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+        <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
+          <div style="flex:1;min-width:100px"><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Label</div><input id="${prefix}-ql-label" class="form-input" style="font-size:12px;height:32px" placeholder="cth: Template Story"></div>
+          <div style="flex:2;min-width:160px"><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">URL</div><input id="${prefix}-ql-url" class="form-input" style="font-size:12px;height:32px" placeholder="https://..." onkeydown="if(event.key==='Enter')_qlSave('${prefix}')"></div>
+          <button onclick="_qlSave('${prefix}')" class="btn btn-primary btn-sm" style="height:32px">Simpan</button>
+          <button onclick="_qlCancelAdd('${prefix}')" class="btn btn-sm" style="height:32px">Batal</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function _qlToggle(prefix,lsKey){
+  const body=document.getElementById(prefix+'-ql-body');
+  const btn=document.getElementById(prefix+'-ql-add-btn');
+  const toggleBtn=body?body.previousElementSibling.querySelector('button:last-child'):null;
+  if(!body)return;
+  const willShow=body.style.display==='none';
+  body.style.display=willShow?'block':'none';
+  if(btn)btn.style.display=willShow?'flex':'none';
+  if(toggleBtn)toggleBtn.textContent=willShow?'Sembunyikan':'Tampilkan';
+  localStorage.setItem(lsKey,willShow?'1':'0');
+}
+function _qlShowAdd(prefix){
+  const form=document.getElementById(prefix+'-ql-form');
+  const btn=document.getElementById(prefix+'-ql-add-btn');
+  if(form)form.style.display='block';
+  if(btn)btn.style.display='none';
+  setTimeout(()=>{const inp=document.getElementById(prefix+'-ql-label');if(inp)inp.focus();},50);
+}
+function _qlCancelAdd(prefix){
+  const form=document.getElementById(prefix+'-ql-form');
+  const btn=document.getElementById(prefix+'-ql-add-btn');
+  if(form){form.style.display='none';const lbl=document.getElementById(prefix+'-ql-label');const url=document.getElementById(prefix+'-ql-url');if(lbl)lbl.value='';if(url)url.value='';}
+  if(btn)btn.style.display='flex';
+}
+async function _qlSave(prefix){
+  const label=(document.getElementById(prefix+'-ql-label')||{}).value?.trim();
+  const url=(document.getElementById(prefix+'-ql-url')||{}).value?.trim();
+  if(!label||!url){showToast('Label & URL wajib diisi','error');return;}
+  if(!/^https?:\/\//.test(url)){showToast('URL harus diawali https://','error');return;}
+  const table=prefix==='sp'?'story_plan_links':'carousel_plan_links';
+  const row=await sb_insert(table,{label,url});
+  if(!row){showToast('Gagal simpan','error');return;}
+  if(prefix==='sp') storyPlanLinks.push({id:row.id,label,url});
+  else carouselPlanLinks.push({id:row.id,label,url});
+  _qlCancelAdd(prefix);
+  _qlRenderChips(prefix);
+  showToast('Link ditambah ✓');
+}
+async function _qlDelete(prefix,id){
+  if(!confirm('Hapus link ini?'))return;
+  const table=prefix==='sp'?'story_plan_links':'carousel_plan_links';
+  const ok=await sb_delete(table,id);
+  if(!ok){showToast('Gagal hapus','error');return;}
+  if(prefix==='sp') storyPlanLinks=storyPlanLinks.filter(l=>!_idEq(l.id,id));
+  else carouselPlanLinks=carouselPlanLinks.filter(l=>!_idEq(l.id,id));
+  _qlRenderChips(prefix);
+}
+function _qlRenderChips(prefix){
+  const el=document.getElementById(prefix+'-ql-chips');
+  if(!el)return;
+  const links=prefix==='sp'?storyPlanLinks:carouselPlanLinks;
+  el.innerHTML=links.length
+    ?links.map(l=>`<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:0.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px"><a href="${l.url}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;display:flex;align-items:center;gap:4px">${l.label}<i class="ti ti-external-link" style="font-size:10px;color:var(--text-muted)"></i></a><button onclick="_qlDelete('${prefix}','${l.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;line-height:1;display:flex;align-items:center" title="Hapus">×</button></div>`).join('')
+    :`<span style="font-size:12px;color:var(--text-muted)">Belum ada link. Klik + untuk tambah.</span>`;
+}
+
+/* ── STORY PLAN ─────────────────────────────────────────────────── */
+function storyPlanHTML(){
+  return `<div style="padding:20px">
+    ${_quickLinksHTML('sp',storyPlanLinks,'sp_links_visible')}
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">📅 Kalender Story</div>
+      <div id="sp-calendar">${_spCalendarHTML()}</div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">📋 Jadwal Posting</div>
+        <button onclick="_spOpenAddDateModal(null)" class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Tambah Tanggal</button>
+      </div>
+      <div id="sp-dates">${_spDatesHTML()}</div>
+    </div>
+  </div>`;
+}
+
+function _spCalendarHTML(){
+  const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  const monthLabel=monthNames[_spCalMonth]+" "+_spCalYear;
+  const dateItemCount={};
+  storyPlanDates.forEach(d=>{
+    const dt=new Date(d.tanggal);
+    if(isNaN(dt.getTime()))return;
+    if(dt.getFullYear()===_spCalYear&&dt.getMonth()===_spCalMonth){
+      const ct=storyPlanItems.filter(i=>i.date_id===d.id).length;
+      dateItemCount[d.tanggal]={dateId:d.id,count:ct};
+    }
+  });
+  const startDow=new Date(_spCalYear,_spCalMonth,1).getDay();
+  const totalDays=new Date(_spCalYear,_spCalMonth+1,0).getDate();
+  const today=new Date();
+  const dayLabels=["Min","Sen","Sel","Rab","Kam","Jum","Sab"].map(d=>`<div style="text-align:center;font-size:9px;font-weight:600;color:var(--text-muted);padding:4px 0">${d}</div>`).join("");
+  let cells="";
+  for(let i=0;i<startDow;i++) cells+=`<div></div>`;
+  for(let day=1;day<=totalDays;day++){
+    const dateKey=_spCalYear+"-"+String(_spCalMonth+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+    const info=dateItemCount[dateKey];
+    const isToday=today.getFullYear()===_spCalYear&&today.getMonth()===_spCalMonth&&today.getDate()===day;
+    const dotCount=info?Math.min(info.count||1,3):0;
+    let dots="";
+    for(let k=0;k<dotCount;k++) dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#0f52ba;flex-shrink:0"></span>`;
+    const hasPosts=!!info;
+    const onclickStr=hasPosts?`onclick="_spCalDayClick('${dateKey}','${info.dateId}',true)"` :`onclick="_spCalDayClick('${dateKey}','',false)"`;
+    cells+=`<div ${onclickStr} style="min-height:44px;border-radius:6px;padding:3px 4px;border:1px solid ${isToday?"#0f52ba":"transparent"};background:${hasPosts?"var(--bg)":"transparent"};cursor:pointer"><div style="font-size:10px;font-weight:${isToday?"700":"400"};color:${isToday?"#0f52ba":"var(--text)"};margin-bottom:2px;line-height:1.3">${day}</div><div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
+  }
+  return `<div class="card" style="padding:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_spCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_spCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div></div>`;
+}
+function _spCalNav(delta){_spCalMonth+=delta;if(_spCalMonth>11){_spCalMonth=0;_spCalYear++;}else if(_spCalMonth<0){_spCalMonth=11;_spCalYear--;}const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
+function _spCalDayClick(dateKey,dateId,hasPosts){
+  if(hasPosts){
+    if(_spCollapsed.has(dateId)){_spCollapsed.delete(dateId);_spRenderDates();}
+    setTimeout(()=>{const el=document.getElementById('sp-date-'+dateId);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},60);
+  }else{
+    _spOpenAddDateModal(dateKey);
+  }
+}
+
+function _spDatesHTML(){
+  if(!storyPlanDates.length) return `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:12px"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>Belum ada jadwal. Klik "+ Tambah Tanggal" untuk mulai.</div>`;
+  return storyPlanDates.map(d=>{
+    const items=storyPlanItems.filter(i=>i.date_id===d.id).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
+    const isCollapsed=_spCollapsed.has(d.id);
+    const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px" id="sp-item-row-${item.id}"><span style="width:16px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.teks||'').replace(/"/g,'&quot;')}" style="flex:1;height:30px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
+    return `<div class="card" id="sp-date-${d.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:${isCollapsed?'none':'0.5px solid var(--border)'}" onclick="_spToggleDateCard('${d.id}')"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><span style="font-size:13px;font-weight:600">${fmtDt(d.tanggal)}</span><span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:20px;font-weight:600">${items.length} story</span></div><button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:12px"></i></button></div><div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:12px 14px"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
+  }).join('');
+}
+function _spToggleDateCard(dateId){if(_spCollapsed.has(dateId))_spCollapsed.delete(dateId);else _spCollapsed.add(dateId);_spRenderDates();}
+function _spRenderDates(){const el=document.getElementById('sp-dates');if(el)el.innerHTML=_spDatesHTML();}
+function _spRenderCalendar(){const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
+
+function _spOpenAddDateModal(preDate){
+  document.querySelectorAll('.sp-date-modal').forEach(e=>e.remove());
+  const el=document.createElement('div');
+  el.className='modal-overlay sp-date-modal';
+  el.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px';
+  el.onclick=()=>el.remove();
+  const defaultDate=preDate||new Date().toISOString().slice(0,10);
+  el.innerHTML=`<div style="background:var(--white);border-radius:12px;padding:20px;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18)" onclick="event.stopPropagation()"><div style="font-size:13px;font-weight:700;margin-bottom:14px">Tambah Tanggal</div><div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="sp-new-date" class="form-input" value="${defaultDate}"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button onclick="this.closest('.sp-date-modal').remove()" class="btn btn-sm">Batal</button><button onclick="_spConfirmAddDate()" class="btn btn-primary btn-sm">Tambah</button></div></div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{const inp=document.getElementById('sp-new-date');if(inp)inp.focus();},50);
+}
+async function _spConfirmAddDate(){
+  const input=document.getElementById('sp-new-date');if(!input)return;
+  const tanggal=input.value;
+  if(!tanggal){showToast('Pilih tanggal dulu','error');return;}
+  const existing=storyPlanDates.find(d=>d.tanggal===tanggal);
+  if(existing){
+    document.querySelectorAll('.sp-date-modal').forEach(e=>e.remove());
+    if(_spCollapsed.has(existing.id)){_spCollapsed.delete(existing.id);_spRenderDates();}
+    setTimeout(()=>{const el=document.getElementById('sp-date-'+existing.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},60);
+    showToast('Tanggal ini sudah ada');return;
+  }
+  const row=await sb_insert('story_plan_dates',{tanggal});
+  if(!row){showToast('Gagal simpan','error');return;}
+  storyPlanDates.push({id:row.id,tanggal});
+  storyPlanDates.sort((a,b)=>a.tanggal>b.tanggal?1:-1);
+  document.querySelectorAll('.sp-date-modal').forEach(e=>e.remove());
+  _spRenderDates();_spRenderCalendar();
+  setTimeout(()=>{const el=document.getElementById('sp-date-'+row.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);
+}
+async function _spAddItem(dateId){
+  const items=storyPlanItems.filter(i=>i.date_id===dateId);
+  const urutan=items.length+1;
+  const row=await sb_insert('story_plan_items',{date_id:dateId,urutan,teks:''});
+  if(!row){showToast('Gagal tambah story','error');return;}
+  storyPlanItems.push({id:row.id,date_id:dateId,urutan,teks:''});
+  _spRenderDates();_spRenderCalendar();
+  setTimeout(()=>{const rowEl=document.getElementById('sp-item-row-'+row.id);if(rowEl){const inp=rowEl.querySelector('input');if(inp)inp.focus();}},60);
+}
+async function _spUpdateItem(itemId,teks){
+  const item=storyPlanItems.find(i=>_idEq(i.id,itemId));
+  if(!item||item.teks===teks)return;
+  const ok=await sb_update('story_plan_items',itemId,{teks});
+  if(ok)item.teks=teks;else showToast('Gagal simpan','error');
+}
+async function _spDeleteItem(itemId,dateId){
+  if(!confirm('Hapus story ini?'))return;
+  const ok=await sb_delete('story_plan_items',itemId);
+  if(!ok){showToast('Gagal hapus','error');return;}
+  storyPlanItems=storyPlanItems.filter(i=>!_idEq(i.id,itemId));
+  const remaining=storyPlanItems.filter(i=>i.date_id===dateId).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
+  remaining.forEach((item,idx)=>{item.urutan=idx+1;sb_update('story_plan_items',item.id,{urutan:idx+1}).catch(()=>{});});
+  _spRenderDates();_spRenderCalendar();
+}
+async function _spDeleteDate(dateId){
+  if(!confirm('Hapus tanggal ini beserta semua story-nya?'))return;
+  await Promise.all(storyPlanItems.filter(i=>i.date_id===dateId).map(i=>sb_delete('story_plan_items',i.id).catch(()=>{})));
+  const ok=await sb_delete('story_plan_dates',dateId);
+  if(!ok){showToast('Gagal hapus','error');return;}
+  storyPlanItems=storyPlanItems.filter(i=>i.date_id!==dateId);
+  storyPlanDates=storyPlanDates.filter(d=>!_idEq(d.id,dateId));
+  _spCollapsed.delete(dateId);
+  _spRenderDates();_spRenderCalendar();
+  showToast('Tanggal dihapus');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CAROUSEL PLAN MODULE
+// ══════════════════════════════════════════════════════════════
+
+function carouselPlanHTML(){
+  return `<div style="padding:20px">
+    ${_quickLinksHTML('cp',carouselPlanLinks,'cp_links_visible')}
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">📅 Kalender Carousel</div>
+      <div id="cp-calendar">${_cpCalendarHTML()}</div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">🖼️ Carousel Plans</div>
+        <button onclick="openCarouselPlanModal(null,null)" class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Tambah Plan</button>
+      </div>
+      <div id="cp-cards">${_cpCardsHTML()}</div>
+    </div>
+  </div>`;
+}
+
+const _cpFunnelColors={TOFU:'#0f52ba',MOFU:'#854F0B',BOFU:'#3b6d11'};
+const _cpFunnelBg={TOFU:'#e8f0fc',MOFU:'#fef3c7',BOFU:'#d1fae5'};
+const _cpStatusColors={Draft:'var(--text-muted)',['In Progress']:'#854F0B',Done:'#3b6d11'};
+const _cpStatusBg={Draft:'var(--bg)',['In Progress']:'#fef3c7',Done:'#d1fae5'};
+
+function _cpCalendarHTML(){
+  const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  const monthLabel=monthNames[_cpCalMonth]+" "+_cpCalYear;
+  const plansByDate={};
+  carouselPlans.forEach(p=>{
+    if(!p.tanggal_posting)return;
+    const dt=new Date(p.tanggal_posting);
+    if(isNaN(dt.getTime()))return;
+    if(dt.getFullYear()===_cpCalYear&&dt.getMonth()===_cpCalMonth){
+      const key=_cpCalYear+"-"+String(_cpCalMonth+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+      if(!plansByDate[key])plansByDate[key]=[];
+      plansByDate[key].push(p);
+    }
+  });
+  const startDow=new Date(_cpCalYear,_cpCalMonth,1).getDay();
+  const totalDays=new Date(_cpCalYear,_cpCalMonth+1,0).getDate();
+  const today=new Date();
+  const dayLabels=["Min","Sen","Sel","Rab","Kam","Jum","Sab"].map(d=>`<div style="text-align:center;font-size:9px;font-weight:600;color:var(--text-muted);padding:4px 0">${d}</div>`).join("");
+  let cells="";
+  for(let i=0;i<startDow;i++) cells+=`<div></div>`;
+  for(let day=1;day<=totalDays;day++){
+    const dateKey=_cpCalYear+"-"+String(_cpCalMonth+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+    const plans=plansByDate[dateKey]||[];
+    const hasPosts=plans.length>0;
+    const isToday=today.getFullYear()===_cpCalYear&&today.getMonth()===_cpCalMonth&&today.getDate()===day;
+    let dots="";
+    plans.slice(0,3).forEach(p=>{const col=_cpFunnelColors[p.funnel]||'#6b7280';dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0"></span>`;});
+    const onclickStr=hasPosts?`onclick="_cpCalDayClick('${dateKey}',true)"` :`onclick="_cpCalDayClick('${dateKey}',false)"`;
+    cells+=`<div ${onclickStr} style="min-height:44px;border-radius:6px;padding:3px 4px;border:1px solid ${isToday?"#0f52ba":"transparent"};background:${hasPosts?"var(--bg)":"transparent"};cursor:pointer"><div style="font-size:10px;font-weight:${isToday?"700":"400"};color:${isToday?"#0f52ba":"var(--text)"};margin-bottom:2px;line-height:1.3">${day}</div><div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
+  }
+  const legend=`<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">${Object.entries(_cpFunnelColors).map(([f,c])=>`<span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c}"></span>${f}</span>`).join('')}</div>`;
+  return `<div class="card" style="padding:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_cpCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_cpCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div>${legend}</div>`;
+}
+function _cpCalNav(delta){_cpCalMonth+=delta;if(_cpCalMonth>11){_cpCalMonth=0;_cpCalYear++;}else if(_cpCalMonth<0){_cpCalMonth=11;_cpCalYear--;}const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
+function _cpCalDayClick(dateKey,hasPosts){
+  if(hasPosts){
+    const first=carouselPlans.find(p=>p.tanggal_posting&&p.tanggal_posting.startsWith(dateKey));
+    if(first){
+      if(!_cpCollapsed.has(first.id)){} // already expanded
+      setTimeout(()=>{const el=document.getElementById('cp-card-'+first.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},60);
+    }
+  }else{
+    openCarouselPlanModal(null,dateKey);
+  }
+}
+
+function _cpCardsHTML(){
+  if(!carouselPlans.length) return `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:12px"><i class="ti ti-layout-columns" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>Belum ada carousel plan. Klik "+ Tambah Plan" untuk mulai.</div>`;
+  return carouselPlans.map(p=>{
+    const isExpanded=_cpCollapsed.has(p.id);
+    const funnel=p.funnel||'—';
+    const status=p.status||'Draft';
+    const fCol=_cpFunnelColors[funnel]||'#6b7280';
+    const fBg=_cpFunnelBg[funnel]||'var(--bg)';
+    const sCol=_cpStatusColors[status]||'var(--text-muted)';
+    const sBg=_cpStatusBg[status]||'var(--bg)';
+    const assignee=tktPeople.find(pe=>_idEq(pe.id,p.assignee_id));
+    const detailHTML=isExpanded?`<div style="padding:12px 14px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.brief_url?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Link Referensi</div><a href="${p.brief_url}" target="_blank" style="font-size:12px;color:#0f52ba;text-decoration:none;display:flex;align-items:center;gap:4px">${p.brief_url.length>50?p.brief_url.slice(0,50)+'…':p.brief_url}<i class="ti ti-external-link" style="font-size:10px"></i></a></div>`:''}${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
+    return `<div class="card" id="cp-card-${p.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer" onclick="_cpToggleCard('${p.id}')"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><i class="ti ti-layout-columns" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.judul||'Tanpa judul'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${fmtDt(p.tanggal_posting)}</div></div><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:700;flex-shrink:0">${funnel}</span><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:600;flex-shrink:0">${status}</span></div><i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0;margin-left:6px"></i></div>${detailHTML}</div>`;
+  }).join('');
+}
+function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
+function _cpRenderCards(){const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
+function _cpRenderCalendar(){const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
+async function _cpDeletePlan(id){
+  if(!confirm('Hapus plan ini?'))return;
+  const ok=await sb_delete('carousel_plans',id);
+  if(!ok){showToast('Gagal hapus','error');return;}
+  carouselPlans=carouselPlans.filter(p=>!_idEq(p.id,id));
+  _cpCollapsed.delete(id);
+  _cpRenderCards();_cpRenderCalendar();
+  showToast('Plan dihapus');
+}
+
+/* Carousel Plan Add/Edit Modal */
+function openCarouselPlanModal(id,preDate){
+  _editingCarouselId=id||null;
+  const plan=id?carouselPlans.find(p=>_idEq(p.id,id)):null;
+  document.querySelectorAll('.cp-plan-modal').forEach(e=>e.remove());
+  const el=document.createElement('div');
+  el.className='modal-overlay cp-plan-modal';
+  el.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  el.onclick=()=>el.remove();
+  const funnelOpts=['TOFU','MOFU','BOFU'].map(f=>`<option value="${f}" ${(plan?.funnel||'TOFU')===f?'selected':''}>${f}</option>`).join('');
+  const statusOpts=['Draft','In Progress','Done'].map(s=>`<option value="${s}" ${(plan?.status||'Draft')===s?'selected':''}>${s}</option>`).join('');
+  const ctaOpts=carouselCTAOptions.map(c=>`<option value="${c.label}" ${plan?.cta===c.label?'selected':''}>${c.label}</option>`).join('');
+  const mktPeople=tktPeople.filter(p=>{const div=tktDivisi.find(d=>d.id===p.divisiId);return div&&(div.nama||'').toLowerCase().includes('market');});
+  const assigneeOpts=mktPeople.map(p=>`<option value="${p.id}" ${_idEq(plan?.assignee_id,p.id)?'selected':''}>${p.nama}</option>`).join('');
+  const defaultDate=plan?.tanggal_posting||preDate||new Date().toISOString().slice(0,10);
+  el.innerHTML=`<div style="background:var(--white);border-radius:12px;padding:20px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <div style="font-size:14px;font-weight:700;margin-bottom:16px">${id?'Edit':'Tambah'} Carousel Plan</div>
+    <div class="form-group"><label class="form-label">Judul <span class="req-mark">*</span></label><input id="cp-form-judul" class="form-input" placeholder="Judul konten carousel..." value="${(plan?.judul||'').replace(/"/g,'&quot;')}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label class="form-label">Tanggal Posting</label><input type="date" id="cp-form-tanggal" class="form-input" value="${defaultDate}"></div>
+      <div class="form-group"><label class="form-label">Funnel</label><select id="cp-form-funnel" class="form-input">${funnelOpts}</select></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">CTA</label>
+      <div style="display:flex;gap:6px">
+        <select id="cp-form-cta" class="form-input" style="flex:1">${ctaOpts?`<option value="">— Pilih CTA —</option>${ctaOpts}`:`<option value="">Belum ada CTA master</option>`}</select>
+        <button onclick="_cpAddCTAOption()" class="btn btn-sm" style="white-space:nowrap;font-size:11px">+ CTA Baru</button>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Assignee</label><select id="cp-form-assignee" class="form-input"><option value="">— Pilih —</option>${assigneeOpts}</select></div>
+    <div class="form-group"><label class="form-label">Link Referensi <span style="font-size:10px;color:var(--text-muted)">(opsional)</span></label><input id="cp-form-brief" class="form-input" placeholder="Link referensi spesifik untuk konten ini (opsional)" value="${(plan?.brief_url||'').replace(/"/g,'&quot;')}"></div>
+    <div class="form-group"><label class="form-label">Status</label><select id="cp-form-status" class="form-input">${statusOpts}</select></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button onclick="this.closest('.cp-plan-modal').remove()" class="btn btn-sm">Batal</button>
+      <button onclick="_cpSavePlan()" class="btn btn-primary btn-sm">Simpan</button>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{const inp=document.getElementById('cp-form-judul');if(inp)inp.focus();},50);
+}
+async function _cpAddCTAOption(){
+  const label=prompt('Nama CTA baru:');
+  if(!label||!label.trim())return;
+  const row=await sb_insert('carousel_cta_options',{label:label.trim()});
+  if(!row){showToast('Gagal simpan CTA','error');return;}
+  carouselCTAOptions.push({id:row.id,label:label.trim()});
+  // Update the select in current modal
+  const sel=document.getElementById('cp-form-cta');
+  if(sel){const opt=document.createElement('option');opt.value=label.trim();opt.textContent=label.trim();opt.selected=true;sel.appendChild(opt);}
+  showToast('CTA ditambah ✓');
+}
+async function _cpSavePlan(){
+  const judul=(document.getElementById('cp-form-judul')||{}).value?.trim();
+  if(!judul){showToast('Judul wajib diisi','error');return;}
+  const payload={
+    judul,
+    tanggal_posting:(document.getElementById('cp-form-tanggal')||{}).value||null,
+    funnel:(document.getElementById('cp-form-funnel')||{}).value||'TOFU',
+    cta:(document.getElementById('cp-form-cta')||{}).value||null,
+    assignee_id:(document.getElementById('cp-form-assignee')||{}).value||null,
+    brief_url:(document.getElementById('cp-form-brief')||{}).value?.trim()||null,
+    status:(document.getElementById('cp-form-status')||{}).value||'Draft',
+  };
+  if(_editingCarouselId){
+    const ok=await sb_update('carousel_plans',_editingCarouselId,payload);
+    if(!ok){showToast('Gagal update','error');return;}
+    const idx=carouselPlans.findIndex(p=>_idEq(p.id,_editingCarouselId));
+    if(idx>=0) carouselPlans[idx]={...carouselPlans[idx],...payload};
+  }else{
+    const row=await sb_insert('carousel_plans',payload);
+    if(!row){showToast('Gagal simpan','error');return;}
+    carouselPlans.push({id:row.id,...payload});
+    carouselPlans.sort((a,b)=>(a.tanggal_posting||'')>(b.tanggal_posting||'')?1:-1);
+  }
+  document.querySelectorAll('.cp-plan-modal').forEach(e=>e.remove());
+  _cpRenderCards();_cpRenderCalendar();
+  showToast(_editingCarouselId?'Plan diupdate ✓':'Plan ditambah ✓');
+  _editingCarouselId=null;
 }
 
 function mtStoryPageHTML(){
@@ -13118,7 +13665,7 @@ function mtStoryCardHTML(s){
 function kolListPageHTML(){
   const q=kolSearch.toLowerCase();
   const filtered=kolList.filter(k=>{
-    if(q&&!(k.nama||'').toLowerCase().includes(q)&&!(k.username_ig||'').toLowerCase().includes(q)&&!(k.username_tiktok||'').toLowerCase().includes(q)) return false;
+    if(q&&!(k.nama||'').toLowerCase().includes(q)&&!(k.link_ig||k.username_ig||'').toLowerCase().includes(q)&&!(k.link_tiktok||k.username_tiktok||'').toLowerCase().includes(q)) return false;
     if(kolNicheFilter!=='all'&&(k.niche||'')!==kolNicheFilter) return false;
     return true;
   });
@@ -13147,7 +13694,7 @@ function _kolGridInner(filtered){
 function _refreshKOLGrid(){
   const q=kolSearch.toLowerCase();
   const filtered=kolList.filter(k=>{
-    if(q&&!(k.nama||'').toLowerCase().includes(q)&&!(k.username_ig||'').toLowerCase().includes(q)&&!(k.username_tiktok||'').toLowerCase().includes(q)) return false;
+    if(q&&!(k.nama||'').toLowerCase().includes(q)&&!(k.link_ig||k.username_ig||'').toLowerCase().includes(q)&&!(k.link_tiktok||k.username_tiktok||'').toLowerCase().includes(q)) return false;
     if(kolNicheFilter!=='all'&&(k.niche||'')!==kolNicheFilter) return false;
     return true;
   });
@@ -13169,8 +13716,10 @@ function kolCardHTML(k){
     ?`<img src="${k.foto_url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
     :`<div style="width:48px;height:48px;border-radius:50%;background:var(--purple-light);color:var(--purple-mid);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0">${initials}</div>`;
   const platforms=[];
-  if(k.username_ig) platforms.push(`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#fce4ec;color:#c2185b;font-weight:600">IG · @${k.username_ig}${k.followers_ig?` · ${_fmtFollowers(k.followers_ig)}`:''}</span>`);
-  if(k.username_tiktok) platforms.push(`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f3e5f5;color:#7b1fa2;font-weight:600">TT · @${k.username_tiktok}${k.followers_tiktok?` · ${_fmtFollowers(k.followers_tiktok)}`:''}</span>`);
+  const _igLink=k.link_ig||(k.username_ig?`https://instagram.com/${k.username_ig}`:null);
+  const _ttLink=k.link_tiktok||(k.username_tiktok?`https://tiktok.com/@${k.username_tiktok}`:null);
+  if(_igLink) platforms.push(`<a href="${_igLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;padding:2px 7px;border-radius:20px;background:#fce4ec;color:#c2185b;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:3px">IG${k.followers_ig?` · ${_fmtFollowers(k.followers_ig)}`:''}<i class="ti ti-external-link" style="font-size:9px"></i></a>`);
+  if(_ttLink) platforms.push(`<a href="${_ttLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f3e5f5;color:#7b1fa2;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:3px">TikTok${k.followers_tiktok?` · ${_fmtFollowers(k.followers_tiktok)}`:''}<i class="ti ti-external-link" style="font-size:9px"></i></a>`);
   if(k.linkedin_url) platforms.push(`<a href="${k.linkedin_url}" target="_blank" style="font-size:10px;padding:2px 7px;border-radius:20px;background:#e3f2fd;color:#1565c0;font-weight:600;text-decoration:none">LinkedIn</a>`);
   return `
     <div style="background:var(--white);border-radius:var(--radius);border:0.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
@@ -13319,9 +13868,9 @@ function openKOLModal(id){
   document.getElementById('kol-modal-title').textContent=k?'Edit KOL':'Tambah KOL';
   document.getElementById('kol-nama').value=k?k.nama||'':'';
   document.getElementById('kol-niche').value=k?k.niche||'':'';
-  document.getElementById('kol-ig').value=k?k.username_ig||'':'';
+  document.getElementById('kol-ig').value=k?k.link_ig||k.username_ig||'':'';
   document.getElementById('kol-followers-ig').value=k?k.followers_ig||'':'';
-  document.getElementById('kol-tiktok').value=k?k.username_tiktok||'':'';
+  document.getElementById('kol-tiktok').value=k?k.link_tiktok||k.username_tiktok||''  :'';
   document.getElementById('kol-followers-tiktok').value=k?k.followers_tiktok||'':'';
   document.getElementById('kol-linkedin').value=k?k.linkedin_url||'':'';
   document.getElementById('kol-rate-text').value=k?k.rate_card_text||'':'';
@@ -13382,9 +13931,9 @@ async function saveKOLModal(){
   const data={
     nama:document.getElementById('kol-nama').value.trim(),
     niche:document.getElementById('kol-niche').value.trim(),
-    username_ig:document.getElementById('kol-ig').value.trim(),
+    link_ig:document.getElementById('kol-ig').value.trim()||null,
     followers_ig:parseInt(document.getElementById('kol-followers-ig').value)||null,
-    username_tiktok:document.getElementById('kol-tiktok').value.trim(),
+    link_tiktok:document.getElementById('kol-tiktok').value.trim()||null,
     followers_tiktok:parseInt(document.getElementById('kol-followers-tiktok').value)||null,
     linkedin_url:document.getElementById('kol-linkedin').value.trim(),
     rate_card_text:document.getElementById('kol-rate-text').value.trim(),
@@ -21505,9 +22054,9 @@ async function gcalCreateEvent(taskId) {
       <div class="form-row" style="gap:12px">
         <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Nama <span style="color:var(--red)">*</span></label><input id="kol-nama" class="form-input" placeholder="Nama KOL"></div>
         <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Niche / Kategori</label><input id="kol-niche" class="form-input" placeholder="Lifestyle, Finance, Education..."></div>
-        <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Username Instagram</label><input id="kol-ig" class="form-input" placeholder="username (tanpa @)"></div>
+        <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Link Instagram</label><input id="kol-ig" class="form-input" placeholder="https://instagram.com/..."></div>
         <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Followers IG</label><input id="kol-followers-ig" class="form-input" type="number" placeholder="50000"></div>
-        <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Username TikTok</label><input id="kol-tiktok" class="form-input" placeholder="username (tanpa @)"></div>
+        <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Link TikTok</label><input id="kol-tiktok" class="form-input" placeholder="https://tiktok.com/@..."></div>
         <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Followers TikTok</label><input id="kol-followers-tiktok" class="form-input" type="number" placeholder="100000"></div>
       </div>
       <div><label class="form-label" style="text-transform:uppercase;letter-spacing:.4px">Link LinkedIn</label><input id="kol-linkedin" class="form-input" placeholder="https://linkedin.com/in/..."></div>
