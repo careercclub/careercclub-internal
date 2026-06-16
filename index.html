@@ -4248,7 +4248,7 @@ function _blastSaveSettings() {
   showToast('Settings tersimpan ✓');
 }
 
-function handleLynkid(input){
+async function handleLynkid(input){
   const file=input.files[0];if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
@@ -4274,6 +4274,7 @@ function handleLynkid(input){
       if(klasifikasi==="Belum Diklasifikasi") flags.push({type:"warn",msg:"Klasifikasi belum ketemu"});
       qcRows.push({idx:i,name:r["Buyer Name (opsional)"]||"",wa,email:r["Buyer Email"]||"",produk,klasifikasi,harga,notes,tanggal,paymentStatus:status,flags,skip:flags.some(f=>f.type==="err")});
     });
+    buyers=await sb_loadBuyers();
     openQC();
   };
   reader.readAsArrayBuffer(file);input.value="";
@@ -4350,6 +4351,7 @@ async function confirmImportCRM(){
   });
   // Save ke Supabase
   for(const b of toInsert){ await sb_insertBuyer(b); }
+  buyers=await sb_loadBuyers();
   closeQC();populateFilters();renderBuyers();renderCRMStats();
   showToast(`${added} buyer diimport${skipped>0?`, ${skipped} duplikat diskip`:""}`);
 }
