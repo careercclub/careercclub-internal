@@ -3000,6 +3000,19 @@ function normalizeWA(raw){
   if(!s.startsWith("62")) s="62"+s;
   return s;
 }
+function _normalizeLynkidDate(str){
+  if(!str) return '';
+  const s=String(str).trim();
+  // Already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  // DD-MM-YYYY HH:MM or DD-MM-YYYY
+  const m=s.match(/^(\d{2})-(\d{2})-(\d{4})/);
+  if(m){
+    const d=new Date(parseInt(m[3]),parseInt(m[2])-1,parseInt(m[1]));
+    if(!isNaN(d.getTime())) return toLocalDateISO(d);
+  }
+  return '';
+}
 function parseNotes(str){
   try{
     const o=JSON.parse(str);
@@ -4182,7 +4195,7 @@ function handleLynkid(input){
       const wa=normalizeWA(r["Buyer Phone (Opsional)"]);
       const produk=r["Judul Barang"]||"";
       const harga=parseFloat(r["Harga"]||r["Price"]||0);
-      const tanggal=r["Tanggal"]||"";
+      const tanggal=_normalizeLynkidDate(r["Tanggal"]||"");
       const notes=parseNotes(r["Notes (Opsional)"]||"");
       const klasifikasi=getKlasifikasi(produk);
       const flags=[];
@@ -11451,7 +11464,7 @@ function renderMonthlyCalendar(){
     eventsByDate[p.tanggal].push({type:"event",data:p});
   });
   (typeof tickets!=='undefined'?tickets:[]).forEach(t=>{
-    if(!t.deadline||t.status==='Done') return;
+    if(!t.deadline||t.status==='Done'||t.linkedTaskId) return;
     const dateISO=t.deadline.substring(0,10);
     if(!eventsByDate[dateISO]) eventsByDate[dateISO]=[];
     eventsByDate[dateISO].push({type:"ticket",data:t});
@@ -11573,7 +11586,7 @@ function renderMonthlyCalendar(){
             </div>
             <i class="ti ti-ticket" style="color:#c2410c;font-size:14px;flex-shrink:0"></i>
             <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:500;color:#c2410c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtTktNo(t)} — ${t.judul}</div>
+              <div style="font-size:12px;font-weight:500;color:#c2410c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.judul}<span style="font-size:10px;font-weight:400;color:#ea580c;margin-left:5px">${fmtTktNo(t)}</span></div>
               <div style="font-size:10px;color:#ea580c">${person.nama} · Deadline</div>
             </div>
             ${tktStatusPill(t.status)}
@@ -11929,7 +11942,15 @@ function evalScoreStory(c){
 function getEvalScore(c){if(c.format==="Reel")return evalScoreReel(c);if(c.format==="Story")return evalScoreStory(c);return evalScoreFeed(c);}
 function fmtN(n){if(!n&&n!==0)return"—";if(n>=1000000)return(n/1000000).toFixed(1)+"M";if(n>=1000)return(n/1000).toFixed(1)+"K";return String(Math.round(n));}
 function fmtP(n){return(n||0).toFixed(1)+"%";}
-function fmtDt(d){if(!d)return"—";return new Date(d).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});}
+function fmtDt(d){
+  if(!d||d==='Invalid Date')return"—";
+  // Parse YYYY-MM-DD without timezone shift
+  const m=String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m){const dt=new Date(+m[1],+m[2]-1,+m[3]);if(!isNaN(dt.getTime()))return dt.toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});}
+  const dt=new Date(d);
+  if(isNaN(dt.getTime()))return"—";
+  return dt.toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});
+}
 
 function evalDateStripHTML(){return`<div class="date-strip" style="margin-bottom:14px"><span style="font-size:11px;color:var(--text-muted);font-weight:600">Range:</span>${[7,30,90,0].map(d=>`<button class="date-btn ${evalDateRange===d?"active":""}" onclick="setEvalRange(${d})">${d===0?"Semua":d+" hari"}</button>`).join("")}<button class="date-btn ${evalDateRange==="custom"?"active":""}" onclick="setEvalRange('custom')">Custom</button>${evalDateRange==="custom"?`<input type="date" value="${evalDateCustomStart}" onchange="evalDateCustomStart=this.value;renderEvalTab(evalTab)" style="height:28px;font-size:11px;border-radius:20px;border:0.5px solid var(--border-md);padding:0 8px"><span style="font-size:11px;color:var(--text-muted)">–</span><input type="date" value="${evalDateCustomEnd}" onchange="evalDateCustomEnd=this.value;renderEvalTab(evalTab)" style="height:28px;font-size:11px;border-radius:20px;border:0.5px solid var(--border-md);padding:0 8px">`:""}</div>`;}
 function setEvalRange(r){evalDateRange=r;renderEvalTab(evalTab);}
@@ -12074,11 +12095,12 @@ function renderStoryVsBuyer(c){
   const igBuyerCount=igBuyers.length;
   const convRate=totalBuyers>0?(igBuyerCount/totalBuyers*100).toFixed(1):0;
 
-  // Group by date
+  // Group by date — normalize tanggal to YYYY-MM-DD regardless of storage format
+  const _svbNorm=t=>{if(!t)return'';const n=_normalizeLynkidDate(t);return n||''};
   const storyByDate={};
-  stories.forEach(s=>{const d=(s.tanggal||'').substring(0,10)||'unknown';if(!storyByDate[d])storyByDate[d]=[];storyByDate[d].push(s);});
+  stories.forEach(s=>{const d=_svbNorm(s.tanggal)||'unknown';if(!storyByDate[d])storyByDate[d]=[];storyByDate[d].push(s);});
   const buyerByDate={};
-  igBuyers.forEach(b=>{const d=(b.tanggal||'').substring(0,10)||'unknown';buyerByDate[d]=(buyerByDate[d]||0)+1;});
+  igBuyers.forEach(b=>{const d=_svbNorm(b.tanggal)||'unknown';buyerByDate[d]=(buyerByDate[d]||0)+1;});
 
   const allDates=[...new Set([...Object.keys(storyByDate),...Object.keys(buyerByDate)])].filter(d=>d&&d!=='unknown').sort((a,b)=>b<a?-1:1);
   if(buyerByDate['unknown']) allDates.push('unknown');
@@ -12108,7 +12130,7 @@ function _svbDayCardsHTML(allDates,storyByDate,buyerByDate){
   return allDates.map(date=>{
     const dayStories=storyByDate[date]||[];
     const dayBuyers=buyerByDate[date]||0;
-    const dateLabel=date==='unknown'?'Tanggal tidak diketahui':fmtDt(date);
+    const dateLabel=date==='unknown'?'Tanggal tidak diketahui':fmtDt(date)||'Tanggal tidak diketahui';
     return `<div class="card" style="margin-bottom:10px;padding:12px 16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:12px;font-weight:600;color:var(--text)">${dateLabel}</div>
