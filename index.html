@@ -1266,7 +1266,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
     </div>
     <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
       <button class="btn" onclick="closeQC()">Batal</button>
-      <button class="btn btn-primary" onclick="confirmImportCRM()"><i class="ti ti-check"></i> Import yang dicentang</button>
+      <button id="qc-import-btn" class="btn btn-primary" onclick="confirmImportCRM()"><i class="ti ti-check"></i> Import yang dicentang</button>
     </div>
   </div>
 </div>
@@ -2181,7 +2181,7 @@ async function sb_deleteProductKlasifikasi(id) { return await sb_delete('product
 
 // MASTER PRODUK (mapping nama produk Lynkid → klasifikasi)
 async function sb_loadMasterProduk() {
-  const rows = await sb_load('master_produk', { order: 'created_at', ascending: true });
+  const rows = await sb_load('master_produk', { order: 'nama', ascending: true });
   return rows.map(r => ({ id: r.id, nama: r.nama || '', klasifikasi: r.klasifikasi || 'Belum Diklasifikasi' }));
 }
 async function sb_insertMasterProdukRow(nama, klasifikasi) { return await sb_insert('master_produk', { nama, klasifikasi }); }
@@ -4407,24 +4407,30 @@ function qcChangeKlas(i,val){
   renderQC();
 }
 async function confirmImportCRM(){
-  let added=0,skipped=0;
-  const toInsert = [];
-  qcRows.forEach((r,i)=>{
-    if(!qcSelected.has(i)) return;
-    if(buyers.find(b=>b.wa===r.wa&&b.produk===r.produk&&(!r.tanggal||b.tanggal===r.tanggal))){skipped++;return;}
-    const newBuyer = {id:Date.now()+i,name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",paymentStatus:r.paymentStatus||'',talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
-    buyers.push(newBuyer);
-    toInsert.push(newBuyer);
-    if(!masterProduk.find(m=>m.nama.toLowerCase()===r.produk.toLowerCase())&&r.klasifikasi!=="Belum Diklasifikasi"){
-      masterProduk.push({id:Date.now()+i+999,nama:r.produk,klasifikasi:r.klasifikasi});
-    }
-    added++;
-  });
-  // Save ke Supabase
-  for(const b of toInsert){ await sb_insertBuyer(b); }
-  buyers=await sb_loadBuyers();
-  closeQC();populateFilters();renderBuyers();renderCRMStats();
-  showToast(`${added} buyer diimport${skipped>0?`, ${skipped} duplikat diskip`:""}`);
+  const btn=document.getElementById('qc-import-btn');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Mengimpor...';}
+  try{
+    let added=0,skipped=0;
+    const toInsert=[];
+    qcRows.forEach((r,i)=>{
+      if(!qcSelected.has(i)) return;
+      if(buyers.find(b=>b.wa===r.wa&&b.produk===r.produk&&(!r.tanggal||b.tanggal===r.tanggal))){skipped++;return;}
+      const newBuyer={id:Date.now()+i,name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",paymentStatus:r.paymentStatus||'',talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
+      buyers.push(newBuyer);
+      toInsert.push(newBuyer);
+      if(!masterProduk.find(m=>m.nama.toLowerCase()===r.produk.toLowerCase())&&r.klasifikasi!=="Belum Diklasifikasi"){
+        masterProduk.push({id:crypto.randomUUID(),nama:r.produk,klasifikasi:r.klasifikasi});
+      }
+      added++;
+    });
+    for(const b of toInsert){await sb_insertBuyer(b);}
+    buyers=await sb_loadBuyers();
+    closeQC();populateFilters();renderBuyers();renderCRMStats();
+    showToast(`${added} buyer diimport${skipped>0?`, ${skipped} duplikat diskip`:""}`);
+  }catch(err){
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Import yang dicentang';}
+    showToast('Gagal import: '+err.message);
+  }
 }
 function handleResult(input){
   const file=input.files[0];if(!file) return;
