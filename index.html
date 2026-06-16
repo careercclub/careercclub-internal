@@ -2179,6 +2179,15 @@ async function sb_insertProductKlasifikasi(name) {
 }
 async function sb_deleteProductKlasifikasi(id) { return await sb_delete('product_klasifikasi', id); }
 
+// MASTER PRODUK (mapping nama produk Lynkid → klasifikasi)
+async function sb_loadMasterProduk() {
+  const rows = await sb_load('master_produk', { order: 'created_at', ascending: true });
+  return rows.map(r => ({ id: r.id, nama: r.nama || '', klasifikasi: r.klasifikasi || 'Belum Diklasifikasi' }));
+}
+async function sb_insertMasterProdukRow(nama, klasifikasi) { return await sb_insert('master_produk', { nama, klasifikasi }); }
+async function sb_updateMasterProdukRow(id, fields) { return await sb_update('master_produk', id, fields); }
+async function sb_deleteMasterProdukRow(id) { return await sb_delete('master_produk', id); }
+
 // PRODUCT BUNDLES — schema: id, bundle_id, item_id, created_at
 async function sb_loadProductBundles() {
   return await sb_load('product_bundles', { order: 'created_at', ascending: true });
@@ -4338,12 +4347,26 @@ function renderMaster(){
       <button class="btn btn-sm btn-danger" onclick="deleteMaster('${m.id}')"><i class="ti ti-trash"></i></button>
     </div>`).join("");
 }
-function updateMaster(id,field,val){
-  const m=masterProduk.find(x=>x.id===id);if(m) m[field]=val;
+async function updateMaster(id,field,val){
+  const m=masterProduk.find(x=>String(x.id)===String(id));if(!m) return;
+  m[field]=val;
+  await sb_updateMasterProdukRow(id,{[field]:val}).catch(()=>{});
   if(field==="klasifikasi") renderMaster();
+  showToast('Tersimpan ✓');
 }
-function deleteMaster(id){masterProduk=masterProduk.filter(x=>x.id!==id);renderMaster();showToast("Produk dihapus dari master");}
-function addMasterRow(){masterProduk.push({id:Date.now(),nama:"Nama produk baru",klasifikasi:"Bundling Package"});renderMaster();}
+async function deleteMaster(id){
+  await sb_deleteMasterProdukRow(id).catch(()=>{});
+  masterProduk=masterProduk.filter(x=>String(x.id)!==String(id));
+  renderMaster();
+  showToast("Produk dihapus dari master");
+}
+async function addMasterRow(){
+  const nama="Nama produk baru";
+  const klasifikasi=KLASIFIKASI_LIST.find(k=>k!=="Belum Diklasifikasi")||"Belum Diklasifikasi";
+  const saved=await sb_insertMasterProdukRow(nama,klasifikasi).catch(()=>null);
+  masterProduk.push({id:saved?.id||Date.now(),nama,klasifikasi});
+  renderMaster();
+}
 
 // ─── DEALS (deal-based pipeline) ─────────────────────────────
 let deals = [];
@@ -9474,7 +9497,10 @@ function initSettingsTab(tab){
   const btn=document.getElementById("stab-"+tab);
   if(btn) btn.classList.add("active");
   const c=document.getElementById("settings-tab-content");
-  if(tab==="master-produk"){c.innerHTML=masterHTML();renderMaster();}
+  if(tab==="master-produk"){
+    c.innerHTML=masterHTML();
+    sb_loadMasterProduk().then(rows=>{if(rows.length)masterProduk=rows;renderMaster();}).catch(()=>renderMaster());
+  }
   else if(tab==="master-ticket"){
     c.innerHTML=masterTicketInnerHTML();
     setTimeout(()=>renderMasterTktTab("divisi"),30);
@@ -11955,10 +11981,10 @@ function fmtDt(d){
 function evalDateStripHTML(){return`<div class="date-strip" style="margin-bottom:14px"><span style="font-size:11px;color:var(--text-muted);font-weight:600">Range:</span>${[7,30,90,0].map(d=>`<button class="date-btn ${evalDateRange===d?"active":""}" onclick="setEvalRange(${d})">${d===0?"Semua":d+" hari"}</button>`).join("")}<button class="date-btn ${evalDateRange==="custom"?"active":""}" onclick="setEvalRange('custom')">Custom</button>${evalDateRange==="custom"?`<input type="date" value="${evalDateCustomStart}" onchange="evalDateCustomStart=this.value;renderEvalTab(evalTab)" style="height:28px;font-size:11px;border-radius:20px;border:0.5px solid var(--border-md);padding:0 8px"><span style="font-size:11px;color:var(--text-muted)">–</span><input type="date" value="${evalDateCustomEnd}" onchange="evalDateCustomEnd=this.value;renderEvalTab(evalTab)" style="height:28px;font-size:11px;border-radius:20px;border:0.5px solid var(--border-md);padding:0 8px">`:""}</div>`;}
 function setEvalRange(r){evalDateRange=r;renderEvalTab(evalTab);}
 
-function evalHTML(){return`<div class="tab-row" style="overflow-x:auto"><div class="tab active" id="etab-overview" onclick="switchEvalTab('overview',this)"><i class="ti ti-layout-dashboard" style="font-size:11px"></i> Overview</div><div class="tab" id="etab-reel" onclick="switchEvalTab('reel',this)">🎬 Reels</div><div class="tab" id="etab-feed" onclick="switchEvalTab('feed',this)">🖼️ Feed & Carousel</div><div class="tab" id="etab-story" onclick="switchEvalTab('story',this)">⭕ Story</div><div class="tab" id="etab-story-buyer" onclick="switchEvalTab('story-buyer',this)"><i class="ti ti-chart-dots" style="font-size:11px"></i> Story vs Buyer</div></div><div id="eval-tab-body"></div>`;}
+function evalHTML(){return`<div class="tab-row" style="overflow-x:auto"><div class="tab active" id="etab-overview" onclick="switchEvalTab('overview',this)"><i class="ti ti-layout-dashboard" style="font-size:11px"></i> Overview</div><div class="tab" id="etab-reel" onclick="switchEvalTab('reel',this)">🎬 Reels</div><div class="tab" id="etab-feed" onclick="switchEvalTab('feed',this)">🖼️ Feed & Carousel</div><div class="tab" id="etab-story-buyer" onclick="switchEvalTab('story-buyer',this)"><i class="ti ti-chart-dots" style="font-size:11px"></i> Story vs Buyer</div></div><div id="eval-tab-body"></div>`;}
 function initEval(){const c=document.getElementById("mainContent");c.innerHTML=evalHTML();renderEvalTab("overview");}
 function switchEvalTab(t,el){evalTab=t;document.querySelectorAll("#mainContent .tab").forEach(x=>x.classList.remove("active"));if(el)el.classList.add("active");else{const b=document.getElementById("etab-"+t);if(b)b.classList.add("active");}renderEvalTab(t);}
-function renderEvalTab(t){const c=document.getElementById("eval-tab-body");if(!c)return;if(t==="overview")renderEvalOverview(c);else if(t==="reel")renderEvalFormat(c,"Reel");else if(t==="feed")renderEvalFormat(c,"Feed");else if(t==="story")renderEvalFormat(c,"Story");else if(t==="story-buyer")renderStoryVsBuyer(c);}
+function renderEvalTab(t){const c=document.getElementById("eval-tab-body");if(!c)return;if(t==="overview")renderEvalOverview(c);else if(t==="reel")renderEvalFormat(c,"Reel");else if(t==="feed")renderEvalFormat(c,"Feed");else if(t==="story-buyer")renderStoryVsBuyer(c);}
 function evalFilteredBy(fmt){let list=evalContents.filter(evalDateFilter);if(fmt==="Reel")return list.filter(x=>x.format==="Reel");if(fmt==="Feed")return list.filter(x=>x.format==="Carousel"||x.format==="Feed Photo");if(fmt==="Story")return list.filter(x=>x.format==="Story");return list;}
 
 function renderEvalOverview(c){
