@@ -4415,7 +4415,7 @@ async function confirmImportCRM(){
     qcRows.forEach((r,i)=>{
       if(!qcSelected.has(i)) return;
       if(buyers.find(b=>b.wa===r.wa&&b.produk===r.produk&&(!r.tanggal||b.tanggal===r.tanggal))){skipped++;return;}
-      const newBuyer={id:Date.now()+i,name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",paymentStatus:r.paymentStatus||'',talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
+      const newBuyer={id:crypto.randomUUID(),name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",paymentStatus:r.paymentStatus||'',talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
       buyers.push(newBuyer);
       toInsert.push(newBuyer);
       if(!masterProduk.find(m=>m.nama.toLowerCase()===r.produk.toLowerCase())&&r.klasifikasi!=="Belum Diklasifikasi"){
