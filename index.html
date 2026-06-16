@@ -3715,18 +3715,38 @@ function downloadSelected(){
   selectedBuyers.clear();renderBuyers();renderCRMStats();
   showToast(`${rows.length} kontak didownload`);
 }
-async function deleteSelectedBuyers(){
-  const ids=[...selectedBuyers];
-  if(!ids.length){showToast("Pilih dulu buyer-nya");return;}
-  if(!confirm(`Hapus ${ids.length} buyer? Tindakan ini tidak bisa dibatalkan.`))return;
-  let ok=0,fail=0;
-  for(const id of ids){
-    try{ await sb_deleteBuyer(id); ok++; }catch(e){ fail++; }
-  }
-  buyers=buyers.filter(b=>!ids.includes(b.id));
-  selectedBuyers.clear();
-  renderBuyers();renderCRMStats();
-  showToast(`${ok} buyer dihapus${fail>0?`, ${fail} gagal`:""}`);
+function deleteSelectedBuyers(){
+  const selectedIds=[...selectedBuyers];
+  if(!selectedIds.length){showToast("Pilih dulu buyer-nya");return;}
+  const toDelete=buyers.filter(b=>selectedIds.includes(String(b.id))||selectedIds.includes(b.wa));
+  const personCount=selectedIds.length;
+  // Custom confirm modal (confirm() diblok di iOS Safari PWA mode)
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML=`<div style="background:var(--white);border-radius:14px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Hapus ${personCount} orang?</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Semua transaksi mereka akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="_del-cancel" class="btn" style="font-size:13px">Batal</button>
+      <button id="_del-ok" class="btn" style="font-size:13px;background:#ef4444;color:#fff;border-color:#ef4444">Ya, Hapus</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const close=()=>document.body.removeChild(ov);
+  document.getElementById('_del-cancel').onclick=close;
+  ov.addEventListener('click',e=>{if(e.target===ov)close();});
+  document.getElementById('_del-ok').onclick=async()=>{
+    close();
+    let ok=0,fail=0;
+    for(const b of toDelete){
+      try{await sb_deleteBuyer(b.id);ok++;}catch(e){fail++;}
+    }
+    const deletedIds=new Set(toDelete.map(b=>String(b.id)));
+    buyers=buyers.filter(b=>!deletedIds.has(String(b.id)));
+    selectedBuyers.clear();
+    renderBuyers();renderCRMStats();
+    showToast(`${ok} transaksi dihapus${fail>0?`, ${fail} gagal`:""}`);
+  };
 }
 function clearCRMFilters(){
   ["srch","f-klas","f-industri","f-tahap","f-status","f-pool","f-sumber","f-payment","f-riwayat"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
