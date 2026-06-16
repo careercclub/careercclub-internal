@@ -12281,13 +12281,8 @@ function toggleSvbDay(id){
 
 function _svbSetSort(val){
   _svbSort=val;
-  document.querySelectorAll('[id^="svbday_"]').forEach(el=>{
-    const hasBuyer=el.dataset.hasBuyer==='1';
-    el.style.display=hasBuyer?'block':'none';
-    const chev=document.getElementById('chev_'+el.id);
-    if(chev)chev.className=hasBuyer?'ti ti-chevron-down':'ti ti-chevron-right';
-  });
-  renderEvalTab('story-buyer');
+  const c=document.getElementById('eval-tab-body');
+  if(c)renderStoryVsBuyer(c);
 }
 
 function _svbToggleCal(){
@@ -12319,7 +12314,7 @@ function _svbRenderCal(buyerByDate){
     const hasBuyer=(buyerByDate&&buyerByDate[key]>0);
     cells+=`<div style="text-align:center;padding:3px 0">
       ${hasBuyer
-        ?`<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#0f52ba;color:#fff;font-size:12px;font-weight:600">${d}</span>`
+        ?`<span onclick="_svbJumpToDay('${key}')" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#0f52ba;color:#fff;font-size:12px;font-weight:600;cursor:pointer">${d}</span>`
         :`<span style="font-size:12px;color:var(--text)">${d}</span>`}
     </div>`;
   }
@@ -12329,6 +12324,16 @@ function _svbRenderCal(buyerByDate){
     <button onclick="_svbCalNav(1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:2px 6px">&#8250;</button>
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${cells}</div>`;
+}
+
+function _svbJumpToDay(dateKey){
+  const safeId='svbday_'+dateKey.replace(/[^a-zA-Z0-9]/g,'_');
+  const el=document.getElementById(safeId);
+  if(!el)return;
+  el.style.display='block';
+  const chev=document.getElementById('chev_'+safeId);
+  if(chev)chev.className='ti ti-chevron-down';
+  el.closest('.card')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function _svbCalNav(dir){
