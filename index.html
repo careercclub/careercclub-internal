@@ -3572,37 +3572,93 @@ function getFiltered(){
   if(frw==="sort") list=[...list].sort((a,b)=>b.riwayat.length-a.riwayat.length);
   return list;
 }
+function getGroupedBuyers(){
+  const q=(document.getElementById("srch")||{}).value?.toLowerCase()||"";
+  const fk=(document.getElementById("f-klas")||{}).value||"";
+  const fi=(document.getElementById("f-industri")||{}).value||"";
+  const ft=(document.getElementById("f-tahap")||{}).value||"";
+  const fs=(document.getElementById("f-status")||{}).value||"";
+  const fp=(document.getElementById("f-pool")||{}).value||"";
+  const fpy=(document.getElementById("f-payment")||{}).value||"";
+  const frw=(document.getElementById("f-riwayat")||{}).value||"";
+  const fsrc=(document.getElementById("f-sumber")||{}).value||"";
+
+  // 1. Filter individual rows (all except riwayat count which applies to groups)
+  const filtered=buyers.filter(b=>{
+    if(q&&!`${b.name}${b.wa}${b.email}`.toLowerCase().includes(q)) return false;
+    if(fk&&b.klasifikasi!==fk) return false;
+    if(fi&&!b.industri.includes(fi)) return false;
+    if(ft&&b.tahap!==ft) return false;
+    if(fs&&b.status!==fs) return false;
+    if(fp==="yes"&&!b.talentPool) return false;
+    if(fp==="no"&&b.talentPool) return false;
+    if(fpy==="none"&&b.paymentStatus) return false;
+    if(fpy&&fpy!=="none"&&b.paymentStatus!==fpy) return false;
+    if(fsrc&&b.sumber!==fsrc) return false;
+    return true;
+  });
+
+  // 2. Group by WA (fallback key = id if WA is empty)
+  const waMap=new Map();
+  filtered.forEach(b=>{
+    const key=b.wa||`__nowa_${b.id}`;
+    if(!waMap.has(key)) waMap.set(key,[]);
+    waMap.get(key).push(b);
+  });
+
+  // 3. Build group objects
+  const payOrder={FAILED:3,PENDING:2,SUCCESS:1,'':-1};
+  let groups=[...waMap.values()].map(rows=>{
+    const sorted=[...rows].sort((a,b)=>(b.tanggal||'0')<(a.tanggal||'0')?-1:1);
+    const latest=sorted[0];
+    const totalHarga=rows.reduce((s,r)=>s+(r.harga||0),0);
+    const txCount=rows.length;
+    const worstPay=rows.reduce((w,r)=>(payOrder[r.paymentStatus]||0)>(payOrder[w]||0)?r.paymentStatus:w,'');
+    const status=rows.some(r=>r.status==="Belum diblast")?"Belum diblast":latest.status;
+    const allTx=sorted.map(r=>({id:r.id,produk:r.produk,klasifikasi:r.klasifikasi||getKlasifikasi(r.produk),harga:r.harga||0,tanggal:r.tanggal,paymentStatus:r.paymentStatus}));
+    return {wa:latest.wa,primaryId:latest.id,ids:rows.map(r=>r.id),name:latest.name,email:latest.email,klasifikasi:latest.klasifikasi,industri:latest.industri,tahap:latest.tahap,sumber:latest.sumber,produk:latest.produk,totalHarga,txCount,paymentStatus:worstPay,status,talentPool:latest.talentPool,allTx};
+  });
+
+  // 4. Apply riwayat filter/sort on groups
+  if(frw==="gt1") groups=groups.filter(g=>g.txCount>1);
+  if(frw==="sort") groups=[...groups].sort((a,b)=>b.txCount-a.txCount);
+
+  return groups;
+}
 function syncCheckAll(){
-  const filtered=getFiltered();
+  const groups=getGroupedBuyers();
   const ca=document.getElementById("check-all");if(!ca) return;
-  const allSel=filtered.length>0&&filtered.every(b=>selectedBuyers.has(b.id));
-  const someSel=filtered.some(b=>selectedBuyers.has(b.id));
+  const allSel=groups.length>0&&groups.every(g=>selectedBuyers.has(String(g.primaryId)));
+  const someSel=groups.some(g=>selectedBuyers.has(String(g.primaryId)));
   ca.checked=allSel;ca.indeterminate=!allSel&&someSel;
 }
 function renderBuyers(){
-  const filtered=getFiltered();
+  const groups=getGroupedBuyers();
   const tbody=document.getElementById("buyer-tbody");if(!tbody) return;
-  tbody.innerHTML=filtered.map(b=>{
-    const sid=String(b.id);
+  tbody.innerHTML=groups.map(g=>{
+    const sid=String(g.primaryId);
+    const produkDisp=g.produk&&g.produk.length>20?g.produk.slice(0,20)+"…":g.produk||"—";
+    const industriDisp=(g.industri||"").split(",")[0].trim()||"—";
     return `
     <tr>
-      <td><input type="checkbox" data-id="${sid}" ${selectedBuyers.has(sid)||selectedBuyers.has(b.id)?"checked":""} onchange="toggleBuyer('${sid}',this)"></td>
-      <td title="${b.name}" style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openCustModal('${sid}')">${b.name||"-"}</td>
-      <td title="${b.wa}" style="font-size:11px;color:var(--text-muted)">${b.wa}</td>
-      <td style="font-size:11px;color:var(--text-muted)">${b.email||'<span style="color:var(--text-hint);font-style:italic">—</span>'}</td>
-      <td>${klasPill(b.klasifikasi)}</td>
-      <td title="${b.produk}" style="font-size:11px;color:var(--text-muted)">${b.produk.length>20?b.produk.slice(0,20)+"…":b.produk}</td>
-      <td style="font-size:11px">Rp${(b.harga/1000).toFixed(0)}k</td>
-      <td title="${b.industri}">${b.industri.split(",")[0].trim()}</td>
-      <td title="${b.tahap}" style="font-size:11px">${b.tahap}</td>
-      <td style="font-size:11px">${b.sumber}</td>
-      <td>${statusPill(b.status)}</td>
-      <td>${paymentPill(b.paymentStatus)}</td>
-      <td>${talentPill(b.talentPool)}</td>
-      <td><span style="font-size:11px;color:var(--purple-accent);cursor:pointer" onclick="showRiwayat('${sid}')">${b.riwayat.length}x</span></td>
+      <td><input type="checkbox" data-id="${sid}" ${selectedBuyers.has(sid)?"checked":""} onchange="toggleBuyer('${sid}',this)"></td>
+      <td title="${g.name}" style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openCustModal('${sid}')">${g.name||"-"}</td>
+      <td title="${g.wa}" style="font-size:11px;color:var(--text-muted)">${g.wa}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${g.email||'<span style="color:var(--text-hint);font-style:italic">—</span>'}</td>
+      <td>${klasPill(g.klasifikasi)}</td>
+      <td title="${g.produk}" style="font-size:11px;color:var(--text-muted)">${produkDisp}</td>
+      <td style="font-size:11px">Rp${(g.totalHarga/1000).toFixed(0)}k</td>
+      <td title="${g.industri}">${industriDisp}</td>
+      <td title="${g.tahap}" style="font-size:11px">${g.tahap||"—"}</td>
+      <td style="font-size:11px">${g.sumber||"—"}</td>
+      <td>${statusPill(g.status)}</td>
+      <td>${paymentPill(g.paymentStatus)}</td>
+      <td>${talentPill(g.talentPool)}</td>
+      <td><span style="font-size:11px;font-weight:600;color:${g.txCount>1?'var(--purple-accent)':'var(--text-muted)'};cursor:pointer" onclick="openCustModal('${sid}')">${g.txCount}x</span></td>
     </tr>`;
   }).join("");
-  document.getElementById("row-count").textContent=`${filtered.length} dari ${buyers.length} buyers`;
+  const uniqueTotal=[...new Set(buyers.map(b=>b.wa||String(b.id)))].length;
+  document.getElementById("row-count").textContent=`${groups.length} dari ${uniqueTotal} orang`;
   syncCheckAll();updateActionBar();
 }
 function showRiwayat(id){
@@ -3614,12 +3670,13 @@ function toggleBuyer(id,el){
   syncCheckAll();updateActionBar();
 }
 function toggleAll(el){
-  // Tandai/hapus semua yang terfilter, TANPA rebuild tabel
-  const filtered=getFiltered();
-  filtered.forEach(b=>{if(el.checked) selectedBuyers.add(b.id); else selectedBuyers.delete(b.id);});
+  const groups=getGroupedBuyers();
+  groups.forEach(g=>{
+    const sid=String(g.primaryId);
+    if(el.checked) selectedBuyers.add(sid); else selectedBuyers.delete(sid);
+  });
   document.querySelectorAll("#buyer-tbody input[type=checkbox]").forEach(cb=>{
-    const id=parseInt(cb.dataset.id);
-    cb.checked=selectedBuyers.has(id);
+    cb.checked=selectedBuyers.has(cb.dataset.id);
   });
   updateActionBar();
 }
@@ -4569,28 +4626,30 @@ let activeCustId=null;
 function openCustModal(id){
   activeCustId=id;
   const b=buyers.find(x=>_idEq(x.id,id));if(!b) return;
-  const init=(b.name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-  document.getElementById("cust-av").textContent=init;
-  document.getElementById("cust-nm").textContent=b.name||"—";
-  document.getElementById("cust-wa-disp").textContent=b.wa;
-  // deals milik customer ini
-  const custDeals=deals.filter(d=>d.buyerId===b.id);
-  document.getElementById("cust-stage-pill").innerHTML=custDeals.length>0
-    ?custDeals.map(d=>`${dealTipePill(d.tipe)} <span style="font-size:10px;color:var(--text-muted)">${d.stage}</span>`).join(" \u00a0")
+  const allRows=b.wa?buyers.filter(r=>r.wa===b.wa):[b];
+  const sortedRows=[...allRows].sort((a,z)=>(z.tanggal||'0')<(a.tanggal||'0')?-1:1);
+  const latest=sortedRows[0];
+  const totalSpend=allRows.reduce((s,r)=>s+(r.harga||0),0);
+  const allTx=sortedRows.map(r=>({produk:r.produk,klasifikasi:r.klasifikasi||getKlasifikasi(r.produk),harga:r.harga||0,tanggal:r.tanggal||'',paymentStatus:r.paymentStatus||''}));
+  const init=(latest.name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  document.getElementById('cust-av').textContent=init;
+  document.getElementById('cust-nm').textContent=latest.name||'—';
+  document.getElementById('cust-wa-disp').textContent=latest.wa;
+  const allIds=allRows.map(r=>r.id);
+  const custDeals=deals.filter(d=>allIds.some(rid=>_idEq(d.buyerId,rid)));
+  document.getElementById('cust-stage-pill').innerHTML=custDeals.length>0
+    ?custDeals.map(d=>`${dealTipePill(d.tipe)} <span style="font-size:10px;color:var(--text-muted)">${d.stage}</span>`).join('  ')
     :`<span style="font-size:11px;color:var(--text-hint)">Belum ada deal</span>`;
-  // editable fields
-  document.getElementById("ed-name").value=b.name||"";
-  document.getElementById("ed-wa").value=b.wa||"";
-  document.getElementById("ed-email").value=b.email||"";
-  document.getElementById("ed-industri").value=b.industri||"";
-  document.getElementById("ed-tahap").value=b.tahap||"";
-  document.getElementById("ed-sumber").value=b.sumber||"";
-  document.getElementById("ed-payment").value=b.paymentStatus||"";
-  document.getElementById("cust-produk").textContent=b.produk||"—";
-  const totalSpend=b.riwayat.reduce((s,r)=>s+r.harga,0);
-  document.getElementById("cust-spend").textContent=`Rp${totalSpend.toLocaleString("id-ID")}`;
-  // active deals list
-  document.getElementById("cust-deals").innerHTML=custDeals.length===0
+  document.getElementById('ed-name').value=latest.name||'';
+  document.getElementById('ed-wa').value=latest.wa||'';
+  document.getElementById('ed-email').value=latest.email||'';
+  document.getElementById('ed-industri').value=latest.industri||'';
+  document.getElementById('ed-tahap').value=latest.tahap||'';
+  document.getElementById('ed-sumber').value=latest.sumber||'';
+  document.getElementById('ed-payment').value=latest.paymentStatus||'';
+  document.getElementById('cust-produk').textContent=latest.produk||'—';
+  document.getElementById('cust-spend').textContent=`Rp${totalSpend.toLocaleString('id-ID')}`;
+  document.getElementById('cust-deals').innerHTML=custDeals.length===0
     ?`<div style="font-size:11px;color:var(--text-muted);padding:6px 0">Belum ada deal aktif — <span style="color:var(--purple-accent);cursor:pointer" onclick="closeCustModal();openNewDealModal()">+ buat deal</span></div>`
     :custDeals.map(d=>`
       <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="closeCustModal();openDealModal('${d.id}')">
@@ -4601,20 +4660,20 @@ function openCustModal(id){
         </div>
         <div style="font-size:10px;color:var(--text-muted);white-space:nowrap">${d.stage}</div>
         <i class="ti ti-chevron-right" style="font-size:12px;color:var(--text-hint)"></i>
-      </div>`).join("");
-  // riwayat
-  document.getElementById("cust-riwayat").innerHTML=b.riwayat.length===0
+      </div>`).join('');
+  document.getElementById('cust-riwayat').innerHTML=allTx.length===0
     ?`<div style="font-size:12px;color:var(--text-muted)">Belum ada riwayat</div>`
-    :[...b.riwayat].reverse().map(r=>`
+    :allTx.map(tx=>`
     <div class="riwayat-row">
       <div class="riwayat-dot"></div>
-      <div>
-        <div class="riwayat-produk">${r.produk}</div>
-        <div class="riwayat-meta">${klasPill(r.klasifikasi||getKlasifikasi(r.produk))} · Rp${r.harga.toLocaleString("id-ID")} · ${r.tanggal||""}</div>
+      <div style="flex:1;min-width:0">
+        <div class="riwayat-produk">${tx.produk}</div>
+        <div class="riwayat-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${klasPill(tx.klasifikasi)}${tx.tanggal?`<span>${fmtDt(tx.tanggal)}</span>`:''}<span>Rp${tx.harga.toLocaleString('id-ID')}</span>${tx.paymentStatus?paymentPill(tx.paymentStatus):''}</div>
       </div>
-    </div>`).join("");
-  document.getElementById("cust-modal").style.display="flex";
+    </div>`).join('');
+  document.getElementById('cust-modal').style.display='flex';
 }
+
 function closeCustModal(){
   document.getElementById("cust-modal").style.display="none";
   activeCustId=null;
