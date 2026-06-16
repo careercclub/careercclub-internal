@@ -2572,7 +2572,8 @@ function _evalRowToJS(d) {
     tapsForward: d.taps_forward, tapsBack: d.taps_back, exits: d.exits,
     replies: d.replies, stickersInteract: d.stickers_interact,
     hookRating: d.hook_rating, ctaEff: d.cta_eff || '',
-    win: d.win || '', improve: d.improve || '', action: d.action || ''
+    win: d.win || '', improve: d.improve || '', action: d.action || '',
+    thumbnailUrl: d.thumbnail_url || ''
   };
 }
 function _evalJSToRow(c) {
@@ -3381,6 +3382,7 @@ function crmHTML(){
         <select id="f-status" onchange="renderBuyers()"><option value="">Status blast</option><option>Belum diblast</option><option>Diblast</option><option>Sedang di-upsell</option><option>Sedang di-downsell</option><option>Sedang di-cross sell</option><option>Sudah convert — Upsell</option><option>Sudah convert — Downsell</option><option>Sudah convert — Cross sell</option></select>
         <select id="f-pool" onchange="renderBuyers()"><option value="">Talent pool</option><option value="yes">Sudah isi pool</option><option value="no">Belum isi pool</option></select>
         <select id="f-payment" onchange="renderBuyers()"><option value="">Payment</option><option value="SUCCESS">SUCCESS</option><option value="PENDING">PENDING</option><option value="FAILED">FAILED</option><option value="none">Belum ada status</option></select>
+        <select id="f-riwayat" onchange="renderBuyers()"><option value="">Riwayat</option><option value="gt1">&gt; 1x</option><option value="sort">Tertinggi</option></select>
         <button class="filter-bar-btn" onclick="clearCRMFilters()"><i class="ti ti-refresh" style="font-size:13px"></i></button>
       </div>
       <div class="action-bar" id="crm-action-bar" style="display:none">
@@ -3521,7 +3523,8 @@ function getFiltered(){
   const fs=(document.getElementById("f-status")||{}).value||"";
   const fp=(document.getElementById("f-pool")||{}).value||"";
   const fpy=(document.getElementById("f-payment")||{}).value||"";
-  return buyers.filter(b=>{
+  const frw=(document.getElementById("f-riwayat")||{}).value||"";
+  let list=buyers.filter(b=>{
     if(q&&!`${b.name}${b.wa}${b.email}`.toLowerCase().includes(q)) return false;
     if(fk&&b.klasifikasi!==fk) return false;
     if(fi&&!b.industri.includes(fi)) return false;
@@ -3531,8 +3534,11 @@ function getFiltered(){
     if(fp==="no"&&b.talentPool) return false;
     if(fpy==="none"&&b.paymentStatus) return false;
     if(fpy&&fpy!=="none"&&b.paymentStatus!==fpy) return false;
+    if(frw==="gt1"&&b.riwayat.length<=1) return false;
     return true;
   });
+  if(frw==="sort") list=[...list].sort((a,b)=>b.riwayat.length-a.riwayat.length);
+  return list;
 }
 function syncCheckAll(){
   const filtered=getFiltered();
@@ -3634,7 +3640,7 @@ async function deleteSelectedBuyers(){
   showToast(`${ok} buyer dihapus${fail>0?`, ${fail} gagal`:""}`);
 }
 function clearCRMFilters(){
-  ["srch","f-klas","f-industri","f-tahap","f-status","f-pool"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  ["srch","f-klas","f-industri","f-tahap","f-status","f-pool","f-payment","f-riwayat"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   renderBuyers();
 }
 function crmTab(tab){
@@ -11914,10 +11920,10 @@ function fmtDt(d){if(!d)return"—";return new Date(d).toLocaleDateString("id-ID
 function evalDateStripHTML(){return`<div class="date-strip" style="margin-bottom:14px"><span style="font-size:11px;color:var(--text-muted);font-weight:600">Range:</span>${[7,30,90,0].map(d=>`<button class="date-btn ${evalDateRange===d?"active":""}" onclick="setEvalRange(${d})">${d===0?"Semua":d+" hari"}</button>`).join("")}<button class="date-btn ${evalDateRange==="custom"?"active":""}" onclick="setEvalRange('custom')">Custom</button>${evalDateRange==="custom"?`<input type="date" value="${evalDateCustomStart}" onchange="evalDateCustomStart=this.value;renderEvalTab(evalTab)" style="height:28px;font-size:11px;border-radius:20px;border:0.5px solid var(--border-md);padding:0 8px"><span style="font-size:11px;color:var(--text-muted)">–</span><input type="date" value="${evalDateCustomEnd}" onchange="evalDateCustomEnd=this.value;renderEvalTab(evalTab)" style="height:28px;font-size:11px;border-radius:20px;border:0.5px solid var(--border-md);padding:0 8px">`:""}</div>`;}
 function setEvalRange(r){evalDateRange=r;renderEvalTab(evalTab);}
 
-function evalHTML(){return`<div class="tab-row" style="overflow-x:auto"><div class="tab active" id="etab-overview" onclick="switchEvalTab('overview',this)"><i class="ti ti-layout-dashboard" style="font-size:11px"></i> Overview</div><div class="tab" id="etab-reel" onclick="switchEvalTab('reel',this)">🎬 Reels</div><div class="tab" id="etab-feed" onclick="switchEvalTab('feed',this)">🖼️ Feed & Carousel</div><div class="tab" id="etab-story" onclick="switchEvalTab('story',this)">⭕ Story</div></div><div id="eval-tab-body"></div>`;}
+function evalHTML(){return`<div class="tab-row" style="overflow-x:auto"><div class="tab active" id="etab-overview" onclick="switchEvalTab('overview',this)"><i class="ti ti-layout-dashboard" style="font-size:11px"></i> Overview</div><div class="tab" id="etab-reel" onclick="switchEvalTab('reel',this)">🎬 Reels</div><div class="tab" id="etab-feed" onclick="switchEvalTab('feed',this)">🖼️ Feed & Carousel</div><div class="tab" id="etab-story" onclick="switchEvalTab('story',this)">⭕ Story</div><div class="tab" id="etab-story-buyer" onclick="switchEvalTab('story-buyer',this)"><i class="ti ti-chart-dots" style="font-size:11px"></i> Story vs Buyer</div></div><div id="eval-tab-body"></div>`;}
 function initEval(){const c=document.getElementById("mainContent");c.innerHTML=evalHTML();renderEvalTab("overview");}
 function switchEvalTab(t,el){evalTab=t;document.querySelectorAll("#mainContent .tab").forEach(x=>x.classList.remove("active"));if(el)el.classList.add("active");else{const b=document.getElementById("etab-"+t);if(b)b.classList.add("active");}renderEvalTab(t);}
-function renderEvalTab(t){const c=document.getElementById("eval-tab-body");if(!c)return;if(t==="overview")renderEvalOverview(c);else if(t==="reel")renderEvalFormat(c,"Reel");else if(t==="feed")renderEvalFormat(c,"Feed");else if(t==="story")renderEvalFormat(c,"Story");}
+function renderEvalTab(t){const c=document.getElementById("eval-tab-body");if(!c)return;if(t==="overview")renderEvalOverview(c);else if(t==="reel")renderEvalFormat(c,"Reel");else if(t==="feed")renderEvalFormat(c,"Feed");else if(t==="story")renderEvalFormat(c,"Story");else if(t==="story-buyer")renderStoryVsBuyer(c);}
 function evalFilteredBy(fmt){let list=evalContents.filter(evalDateFilter);if(fmt==="Reel")return list.filter(x=>x.format==="Reel");if(fmt==="Feed")return list.filter(x=>x.format==="Carousel"||x.format==="Feed Photo");if(fmt==="Story")return list.filter(x=>x.format==="Story");return list;}
 
 function renderEvalOverview(c){
@@ -12044,6 +12050,143 @@ function reRenderEvalFormat(fmt){
   if(!list.length){el.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12px">Belum ada konten dalam range ini</div>`;return;}
   el.innerHTML=`<div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto"><table><thead><tr><th style="width:200px">Konten</th><th style="width:70px">Score</th>${isStory?"<th>Views</th><th>Exits</th><th>Exit Rate</th><th>Taps Back</th><th>Replies</th><th>Link Taps</th>":isReel?"<th>Reach</th><th>WTR</th><th>NF%</th><th>Saves</th><th>Shares</th><th>Follows</th><th>Follow Rate</th><th>Link Taps</th>":"<th>Reach</th><th>Saves</th><th>Save Rate</th><th>Shares</th><th>Comments</th><th>Follows</th><th>Link Taps</th><th>NF%</th>"}<th style="width:120px">Action</th><th style="width:50px"></th></tr></thead><tbody>${list.map(x=>{const r=x.sc.rates||{};const followRate=x.reach>0?((x.follows||0)/x.reach*100):0;const exitRate=(x.views||x.reach||1)>0?((x.exits||0)/(x.views||x.reach||1)*100):0;return`<tr style="cursor:pointer" onclick="openEvalDetail('${x.id}')"><td style="font-weight:500;color:var(--purple-mid)" title="${x.judul}">${x.judul.length>26?x.judul.slice(0,26)+"…":x.judul}<div style="font-size:10px;color:var(--text-muted)">${fmtDt(x.tanggal)}</div></td><td><span class="score-pill score-${x.sc.grade}">${x.sc.total}</span></td>${isStory?`<td style="font-weight:600">${fmtN(x.views||x.reach)}</td><td style="font-weight:600;color:${exitRate<=15?"var(--green)":exitRate<=30?"var(--amber)":"var(--red)"}">${fmtN(x.exits)}</td><td style="font-weight:600;color:${exitRate<=15?"var(--green)":exitRate<=30?"var(--amber)":"var(--red)"}">${fmtP(exitRate)}</td><td style="color:${(r.tapsBackRate||0)>=10?"var(--green)":"inherit"};font-weight:600">${fmtN(x.tapsBack)}</td><td>${fmtN(x.replies)}</td><td style="color:var(--purple-mid);font-weight:600">${fmtN(x.linkTaps)}</td>`:isReel?`<td style="font-weight:600">${fmtN(x.reach)}</td><td style="font-weight:600;color:${(x.wtr||0)>=35?"var(--green)":(x.wtr||0)>=20?"var(--amber)":"var(--red)"}">${x.wtr||"—"}${x.wtr?"%":""}</td><td style="font-weight:600;color:${(x.nfPct||0)>=50?"var(--green)":"var(--text-muted)"}">${x.nfPct||0}%</td><td>${fmtN(x.saves)}</td><td>${fmtN(x.shares)}</td><td style="color:var(--purple-mid);font-weight:600">${fmtN(x.follows)}</td><td style="font-weight:600;color:${followRate>=1?"var(--green)":followRate>=0.5?"var(--amber)":"var(--text-muted)"}">${followRate.toFixed(2)}%</td><td style="color:var(--purple-mid);font-weight:600">${fmtN(x.linkTaps)}</td>`:`<td style="font-weight:600">${fmtN(x.reach)}</td><td style="font-weight:600">${fmtN(x.saves)}</td><td style="font-weight:600;color:${(r.saveRate||0)>=3?"var(--green)":(r.saveRate||0)>=1?"var(--amber)":"var(--red)"}">${fmtP(r.saveRate||0)}</td><td>${fmtN(x.shares)}</td><td>${fmtN(x.comments)}</td><td style="color:var(--purple-mid);font-weight:600">${fmtN(x.follows)}</td><td style="color:var(--purple-mid);font-weight:600">${fmtN(x.linkTaps)}</td><td style="font-weight:600;color:${(x.nfPct||0)>=50?"var(--green)":"var(--text-muted)"}">${x.nfPct||0}%</td>`}<td style="font-size:10px;color:var(--text-muted)">${x.action||"—"}</td><td><button class="btn btn-sm" onclick="event.stopPropagation();openEvalModal('${x.id}')"><i class="ti ti-edit"></i></button></td></tr>`;}).join("")}</tbody></table></div></div>`;}
 
+
+// ── STORY VS BUYER ──────────────────────────────────────────────────────────
+function renderStoryVsBuyer(c){
+  const stories=evalContents.filter(x=>x.format==='Story'&&evalDateFilter(x))
+    .sort((a,b)=>a.tanggal<b.tanggal?1:-1);
+  const igBuyers=buyers.filter(b=>b.sumber==='Instagram Story');
+  const totalBuyers=buyers.length;
+  const igBuyerCount=igBuyers.length;
+  const convRate=totalBuyers>0?(igBuyerCount/totalBuyers*100).toFixed(1):0;
+
+  // Group by date
+  const storyByDate={};
+  stories.forEach(s=>{const d=(s.tanggal||'').substring(0,10)||'unknown';if(!storyByDate[d])storyByDate[d]=[];storyByDate[d].push(s);});
+  const buyerByDate={};
+  igBuyers.forEach(b=>{const d=(b.tanggal||'').substring(0,10)||'unknown';buyerByDate[d]=(buyerByDate[d]||0)+1;});
+
+  const allDates=[...new Set([...Object.keys(storyByDate),...Object.keys(buyerByDate)])].filter(d=>d&&d!=='unknown').sort((a,b)=>b<a?-1:1);
+  if(buyerByDate['unknown']) allDates.push('unknown');
+
+  const hasStories=stories.length>0,hasBuyers=igBuyerCount>0;
+  let emptyNote='';
+  if(!hasStories&&!hasBuyers){
+    emptyNote=`<div style="text-align:center;padding:60px 0;color:var(--text-muted)"><i class="ti ti-chart-dots" style="font-size:36px;margin-bottom:12px;display:block;opacity:.4"></i><div style="font-size:13px;font-weight:600">Belum ada Story maupun Buyer dari Instagram Story</div><div style="font-size:12px;margin-top:6px">Tambahkan konten Story dan tandai sumber buyer sebagai "Instagram Story" di CRM</div></div>`;
+  } else if(!hasStories){
+    emptyNote=`<div style="text-align:center;padding:40px 0;color:var(--text-muted)"><i class="ti ti-player-stop" style="font-size:32px;margin-bottom:10px;display:block;opacity:.4"></i><div style="font-size:13px;font-weight:600">${igBuyerCount} buyer dari IG Story — belum ada konten Story</div><div style="font-size:12px;margin-top:4px">Tambahkan konten Story di tab "⭕ Story"</div></div>`;
+  } else if(!hasBuyers){
+    emptyNote=`<div style="text-align:center;padding:20px 0 12px;color:var(--text-muted)"><div style="font-size:12px">Belum ada buyer dengan sumber "Instagram Story" di CRM</div></div>`;
+  }
+
+  c.innerHTML=`${evalDateStripHTML()}
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px">
+    <div class="stat-card"><div class="stat-label">Total Buyer</div><div class="stat-val">${totalBuyers}</div><div style="font-size:11px;color:var(--text-muted);margin-top:3px">semua sumber</div></div>
+    <div class="stat-card"><div class="stat-label">Buyer dari IG Story</div><div class="stat-val" style="color:var(--purple-mid)">${igBuyerCount}</div><div style="font-size:11px;color:var(--text-muted);margin-top:3px">sumber Instagram Story</div></div>
+    <div class="stat-card"><div class="stat-label">Conversion Rate</div><div class="stat-val" style="color:var(--purple-mid)">${convRate}%</div><div style="font-size:11px;color:var(--text-muted);margin-top:3px">IG Story / Total</div></div>
+  </div>
+  ${emptyNote}
+  ${allDates.length?`<div style="font-size:13px;font-weight:600;margin-bottom:10px">Korelasi per Hari</div>${_svbDayCardsHTML(allDates,storyByDate,buyerByDate)}`:''}`;
+  _svbSetupPaste();
+}
+
+function _svbDayCardsHTML(allDates,storyByDate,buyerByDate){
+  return allDates.map(date=>{
+    const dayStories=storyByDate[date]||[];
+    const dayBuyers=buyerByDate[date]||0;
+    const dateLabel=date==='unknown'?'Tanggal tidak diketahui':fmtDt(date);
+    return `<div class="card" style="margin-bottom:10px;padding:12px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${dateLabel}</div>
+        ${dayBuyers>0?`<span style="background:#0f52ba;color:#fff;font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px">${dayBuyers} buyer</span>`:`<span style="background:var(--bg);color:var(--text-muted);font-size:11px;padding:2px 10px;border-radius:20px;border:0.5px solid var(--border)">0 buyer</span>`}
+      </div>
+      ${dayStories.length?dayStories.map(s=>_svbStoryRowHTML(s)).join(''):`<div style="font-size:11px;color:var(--text-muted);padding:4px 0">Tidak ada Story pada tanggal ini</div>`}
+    </div>`;
+  }).join('');
+}
+
+function _svbStoryRowHTML(s){
+  const sid=String(s.id);
+  const isPWA=window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches;
+  const thumb=s.thumbnailUrl
+    ?`<img src="${s.thumbnailUrl}" style="width:36px;height:64px;object-fit:cover;border-radius:4px;cursor:pointer;flex-shrink:0" onclick="_svbThumbFocus('${sid}');_svbThumbClick('${sid}')" title="Ganti thumbnail" />`
+    :`<div id="svb-thumb-${sid}" onclick="_svbThumbFocus('${sid}');_svbThumbClick('${sid}')" style="width:36px;height:64px;border:1.5px dashed var(--border-md);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:var(--bg)" title="Upload thumbnail"><i class="ti ti-photo-plus" style="font-size:14px;color:var(--text-muted)"></i></div>`;
+  const caption=s.judul||s.description||'—';
+  const views=s.views||s.reach||0;
+  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:0.5px solid var(--border)">
+    ${thumb}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${caption.replace(/"/g,'&quot;')}">${caption}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${views>0?fmtN(views)+' views':'—'}</div>
+    </div>
+    ${isPWA?`<button class="btn btn-sm" onclick="_svbThumbFocus('${sid}');_svbThumbPasteBtn('${sid}')" style="font-size:10px;padding:2px 8px;flex-shrink:0">Paste</button>`:''}
+  </div>`;
+}
+
+function _svbThumbFocus(sid){ window._svbFocusedSid=sid; }
+
+function _svbThumbClick(sid){
+  _svbThumbFocus(sid);
+  const input=document.createElement('input');
+  input.type='file';input.accept='image/*';
+  input.onchange=async e=>{const f=e.target.files[0];if(f)await _svbThumbUpload(f,sid);};
+  input.click();
+}
+
+async function _svbThumbPasteBtn(sid){
+  try{
+    const items=await navigator.clipboard.read();
+    for(const item of items){
+      for(const type of item.types){
+        if(type.startsWith('image/')){
+          const blob=await item.getType(type);
+          await _svbThumbUpload(blob,sid);
+          return;
+        }
+      }
+    }
+    showToast('Tidak ada gambar di clipboard','error');
+  }catch(e){showToast('Gagal baca clipboard: '+(e.message||e),'error');}
+}
+
+async function _svbThumbUpload(file,sid){
+  showToast('Mengupload thumbnail...','info');
+  const path='story-thumbnails/'+sid;
+  const uploadedPath=await sb_uploadContentPhoto(file,path);
+  if(!uploadedPath)return;
+  const url=sb_contentPhotoPublicUrl(uploadedPath);
+  // Update in-memory and persist
+  const s=evalContents.find(x=>String(x.id)===String(sid));
+  if(s){
+    s.thumbnailUrl=url;
+    await sb_update('content_evaluations',sid,{thumbnail_url:url}).catch(()=>{});
+  }
+  // Refresh DOM element
+  const el=document.getElementById('svb-thumb-'+sid);
+  if(el){
+    el.outerHTML=`<img src="${url}" style="width:36px;height:64px;object-fit:cover;border-radius:4px;cursor:pointer;flex-shrink:0" onclick="_svbThumbFocus('${sid}');_svbThumbClick('${sid}')" title="Ganti thumbnail" />`;
+  }
+  showToast('Thumbnail disimpan ✓');
+}
+
+function _svbSetupPaste(){
+  if(window._svbPasteHandler)document.removeEventListener('paste',window._svbPasteHandler);
+  window._svbPasteHandler=async e=>{
+    if(evalTab!=='story-buyer')return;
+    const items=e.clipboardData?.items;
+    if(!items)return;
+    for(const item of items){
+      if(item.type.startsWith('image/')){
+        const sid=window._svbFocusedSid;
+        if(!sid){showToast('Klik thumbnail story dulu, lalu paste','info');return;}
+        const f=item.getAsFile();
+        if(f)await _svbThumbUpload(f,sid);
+        return;
+      }
+    }
+  };
+  document.addEventListener('paste',window._svbPasteHandler);
+}
 
 // ── EVAL MODAL ──
 function openEvalModal(id,defaultFmt){editingEvalId=id||null;const c=id?evalContents.find(x=>x.id===id):null;const m=document.getElementById("eval-modal");if(!m)return;document.getElementById("em-label").textContent=c?"Edit Konten":"Tambah Konten";document.getElementById("em-delete-btn").style.display=c?"inline-flex":"none";const sv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=(v===null||v===undefined)?"":v;};sv("em-judul",c?.judul);sv("em-url",c?.url);sv("em-format",c?.format||defaultFmt||"Carousel");sv("em-tanggal",c?.tanggal);sv("em-topik",c?.topik);sv("em-followers",c?.followers);sv("em-views",c?.views);sv("em-reach",c?.reach);sv("em-nfpct",c?.nfPct);sv("em-fromhome",c?.fromHome);sv("em-fromprofile",c?.fromProfile);sv("em-fromother",c?.fromOther);sv("em-likes",c?.likes);sv("em-comments",c?.comments);sv("em-saves",c?.saves);sv("em-shares",c?.shares);sv("em-engaged",c?.engaged);sv("em-profilevisits",c?.profileVisits);sv("em-follows",c?.follows);sv("em-linktaps",c?.linkTaps);sv("em-watchtime",c?.watchtime);sv("em-wtr",c?.wtr);sv("em-duration",c?.duration);sv("em-replays",c?.replays);sv("em-dropoff",c?.dropoff);sv("em-tapsforward",c?.tapsForward);sv("em-tapsback",c?.tapsBack);sv("em-exits",c?.exits);sv("em-replies",c?.replies);sv("em-stickers",c?.stickersInteract);sv("em-hook",c?.hookRating||"");sv("em-ctaeff",c?.ctaEff||"");sv("em-win",c?.win);sv("em-improve",c?.improve);sv("em-action",c?.action||"");toggleEvalFormatFields();liveEvalScore();m.style.display="flex";}
