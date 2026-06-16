@@ -13141,7 +13141,7 @@ let _kolPasteHandler = null;
 
 function contentHTML(){
   return `<div style="display:flex;flex-direction:column;height:calc(100vh - 53px)">
-    <div style="background:var(--white);flex-shrink:0;padding:0 20px">
+    <div style="flex-shrink:0;padding:0 20px">
       <div class="tab-row" style="margin-bottom:0">
         ${[['carousel','ti-layout-columns','Carousel Plan'],['story-plan','ti-layout-rows','Story Plan'],['kol-list','ti-users','KOL List'],['mt-story','ti-star','MT Story List']].map(([v,icon,l])=>`
           <div onclick="switchContentTab('${v}')" id="ctab-${v}" class="tab${_contentSubTab===v?' active':''}"><i class="ti ${icon}" style="font-size:12px"></i> ${l}</div>`).join('')}
@@ -13179,19 +13179,18 @@ function switchContentTab(tab){
 /* Shared Quick Links component (used by Story Plan + Carousel Plan) */
 function _quickLinksHTML(prefix, links, lsKey){
   const expanded=localStorage.getItem(lsKey)!=='0';
-  const chipsHTML=links.length
-    ?links.map(l=>`<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:0.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px"><a href="${l.url}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;display:flex;align-items:center;gap:4px">${l.label}<i class="ti ti-external-link" style="font-size:10px;color:var(--text-muted)"></i></a><button onclick="_qlDelete('${prefix}','${l.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;line-height:1;display:flex;align-items:center" title="Hapus">×</button></div>`).join('')
-    :`<span style="font-size:12px;color:var(--text-muted)">Belum ada link. Klik + untuk tambah.</span>`;
-  return `<div class="card" style="margin-bottom:14px;padding:14px 16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${expanded?'10':'0'}px">
-      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">🔗 Quick Links</div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <button onclick="_qlShowAdd('${prefix}')" id="${prefix}-ql-add-btn" style="width:22px;height:22px;border-radius:50%;border:0.5px solid var(--border);background:var(--white);cursor:pointer;display:${expanded?'flex':'none'};align-items:center;justify-content:center;font-size:15px;color:var(--text-muted)">+</button>
-        <button onclick="_qlToggle('${prefix}','${lsKey}')" style="font-size:11px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);cursor:pointer;color:var(--text-muted)">${expanded?'Sembunyikan':'Tampilkan'}</button>
-      </div>
+  const chevron=expanded?'ti-chevron-up':'ti-chevron-down';
+  const total=links.length;
+  const rowsHTML=_qlBuildRows(prefix,links);
+  return `<div style="margin-bottom:16px;border-bottom:0.5px solid var(--border);padding-bottom:14px">
+    <div id="${prefix}-ql-hdr" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:${expanded?'10':'0'}px" onclick="_qlToggle('${prefix}','${lsKey}')">
+      <i class="ti ti-link" style="font-size:13px;color:var(--purple-accent)"></i>
+      <div style="font-size:12px;font-weight:700;flex:1">Links${total>0?` <span style="font-size:10px;color:var(--text-muted);font-weight:400">(${total})</span>`:''}</div>
+      <button onclick="event.stopPropagation();_qlShowAdd('${prefix}')" id="${prefix}-ql-add-btn" class="btn btn-sm" style="font-size:11px;padding:3px 8px;display:${expanded?'inline-flex':'none'};align-items:center;gap:3px"><i class="ti ti-plus" style="font-size:11px"></i></button>
+      <i id="${prefix}-ql-chevron" class="ti ${chevron}" style="font-size:13px;color:var(--text-muted)"></i>
     </div>
     <div id="${prefix}-ql-body" style="display:${expanded?'block':'none'}">
-      <div id="${prefix}-ql-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px">${chipsHTML}</div>
+      <div id="${prefix}-ql-chips">${rowsHTML}</div>
       <div id="${prefix}-ql-form" style="display:none;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
         <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
           <div style="flex:1;min-width:100px"><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Label</div><input id="${prefix}-ql-label" class="form-input" style="font-size:12px;height:32px" placeholder="cth: Template Story"></div>
@@ -13204,15 +13203,26 @@ function _quickLinksHTML(prefix, links, lsKey){
   </div>`;
 }
 
+function _qlBuildRows(prefix,links){
+  if(!links.length) return `<div style="font-size:12px;color:var(--text-muted);padding:6px 0;border-top:0.5px solid var(--border)">Belum ada link. Klik + untuk tambah.</div>`;
+  return links.map(l=>{
+    const hasUrl=l.url&&/^https?:\/\//.test(l.url);
+    const extBtn=hasUrl?`<a href="${l.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#0f52ba;display:flex;align-items:center;flex-shrink:0;text-decoration:none" title="Buka link"><i class="ti ti-external-link" style="font-size:12px"></i></a>`:'';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:0.5px solid var(--border)"><i class="ti ti-link" style="font-size:11px;color:var(--text-muted);flex-shrink:0"></i><div style="font-size:11px;font-weight:600;flex-shrink:0;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.label}">${l.label}</div><div style="font-size:10px;color:var(--text-muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.url}">${l.url}</div>${extBtn}<button onclick="event.stopPropagation();_qlDelete('${prefix}','${l.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:0;line-height:1;display:flex;align-items:center;flex-shrink:0" title="Hapus">×</button></div>`;
+  }).join('');
+}
+
 function _qlToggle(prefix,lsKey){
   const body=document.getElementById(prefix+'-ql-body');
-  const btn=document.getElementById(prefix+'-ql-add-btn');
-  const toggleBtn=body?body.previousElementSibling.querySelector('button:last-child'):null;
+  const addBtn=document.getElementById(prefix+'-ql-add-btn');
+  const chevron=document.getElementById(prefix+'-ql-chevron');
+  const hdr=document.getElementById(prefix+'-ql-hdr');
   if(!body)return;
   const willShow=body.style.display==='none';
   body.style.display=willShow?'block':'none';
-  if(btn)btn.style.display=willShow?'flex':'none';
-  if(toggleBtn)toggleBtn.textContent=willShow?'Sembunyikan':'Tampilkan';
+  if(addBtn)addBtn.style.display=willShow?'inline-flex':'none';
+  if(chevron){chevron.classList.toggle('ti-chevron-up',willShow);chevron.classList.toggle('ti-chevron-down',!willShow);}
+  if(hdr)hdr.style.marginBottom=willShow?'10px':'0';
   localStorage.setItem(lsKey,willShow?'1':'0');
 }
 function _qlShowAdd(prefix){
@@ -13226,7 +13236,7 @@ function _qlCancelAdd(prefix){
   const form=document.getElementById(prefix+'-ql-form');
   const btn=document.getElementById(prefix+'-ql-add-btn');
   if(form){form.style.display='none';const lbl=document.getElementById(prefix+'-ql-label');const url=document.getElementById(prefix+'-ql-url');if(lbl)lbl.value='';if(url)url.value='';}
-  if(btn)btn.style.display='flex';
+  if(btn)btn.style.display='inline-flex';
 }
 async function _qlSave(prefix){
   const label=(document.getElementById(prefix+'-ql-label')||{}).value?.trim();
@@ -13255,9 +13265,9 @@ function _qlRenderChips(prefix){
   const el=document.getElementById(prefix+'-ql-chips');
   if(!el)return;
   const links=prefix==='sp'?storyPlanLinks:carouselPlanLinks;
-  el.innerHTML=links.length
-    ?links.map(l=>`<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:0.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px"><a href="${l.url}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;display:flex;align-items:center;gap:4px">${l.label}<i class="ti ti-external-link" style="font-size:10px;color:var(--text-muted)"></i></a><button onclick="_qlDelete('${prefix}','${l.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;line-height:1;display:flex;align-items:center" title="Hapus">×</button></div>`).join('')
-    :`<span style="font-size:12px;color:var(--text-muted)">Belum ada link. Klik + untuk tambah.</span>`;
+  el.innerHTML=_qlBuildRows(prefix,links);
+  const hdr=el.closest('.card');
+  if(hdr){const cnt=hdr.querySelector('span[style*="font-size:10px"]');if(cnt){cnt.textContent=links.length?`(${links.length})`:'';}else if(links.length){const lbl=hdr.querySelector('div[style*="font-size:12px;font-weight:700"]');if(lbl)lbl.innerHTML=`Links <span style="font-size:10px;color:var(--text-muted);font-weight:400">(${links.length})</span>`;}}
 }
 
 /* ── STORY PLAN ─────────────────────────────────────────────────── */
@@ -13265,12 +13275,12 @@ function storyPlanHTML(){
   return `<div style="padding:20px">
     ${_quickLinksHTML('sp',storyPlanLinks,'sp_links_visible')}
     <div style="margin-bottom:14px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px">📅 Kalender Story</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-calendar" style="font-size:13px;color:var(--text-muted)"></i> Kalender Story</div>
       <div id="sp-calendar">${_spCalendarHTML()}</div>
     </div>
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:600">📋 Jadwal Posting</div>
+        <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px"><i class="ti ti-layout-rows" style="font-size:13px;color:var(--text-muted)"></i> Jadwal Posting</div>
         <button onclick="_spOpenAddDateModal(null)" class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Tambah Tanggal</button>
       </div>
       <div id="sp-dates">${_spDatesHTML()}</div>
@@ -13307,7 +13317,7 @@ function _spCalendarHTML(){
     const onclickStr=hasPosts?`onclick="_spCalDayClick('${dateKey}','${info.dateId}',true)"` :`onclick="_spCalDayClick('${dateKey}','',false)"`;
     cells+=`<div ${onclickStr} style="min-height:44px;border-radius:6px;padding:3px 4px;border:1px solid ${isToday?"#0f52ba":"transparent"};background:${hasPosts?"var(--bg)":"transparent"};cursor:pointer"><div style="font-size:10px;font-weight:${isToday?"700":"400"};color:${isToday?"#0f52ba":"var(--text)"};margin-bottom:2px;line-height:1.3">${day}</div><div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
   }
-  return `<div class="card" style="padding:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_spCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_spCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div></div>`;
+  return `<div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_spCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_spCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div></div>`;
 }
 function _spCalNav(delta){_spCalMonth+=delta;if(_spCalMonth>11){_spCalMonth=0;_spCalYear++;}else if(_spCalMonth<0){_spCalMonth=11;_spCalYear--;}const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
 function _spCalDayClick(dateKey,dateId,hasPosts){
@@ -13324,7 +13334,7 @@ function _spDatesHTML(){
   return storyPlanDates.map(d=>{
     const items=storyPlanItems.filter(i=>i.date_id===d.id).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
     const isCollapsed=_spCollapsed.has(d.id);
-    const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px" id="sp-item-row-${item.id}"><span style="width:16px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.teks||'').replace(/"/g,'&quot;')}" style="flex:1;height:30px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
+    const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px" id="sp-item-row-${item.id}"><span style="width:16px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.isi||'').replace(/"/g,'&quot;')}" style="flex:1;height:30px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
     return `<div class="card" id="sp-date-${d.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:${isCollapsed?'none':'0.5px solid var(--border)'}" onclick="_spToggleDateCard('${d.id}')"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><span style="font-size:13px;font-weight:600">${fmtDt(d.tanggal)}</span><span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:20px;font-weight:600">${items.length} story</span></div><button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:12px"></i></button></div><div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:12px 14px"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
   }).join('');
 }
@@ -13332,21 +13342,54 @@ function _spToggleDateCard(dateId){if(_spCollapsed.has(dateId))_spCollapsed.dele
 function _spRenderDates(){const el=document.getElementById('sp-dates');if(el)el.innerHTML=_spDatesHTML();}
 function _spRenderCalendar(){const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
 
+let _spModalStoryCount=3;
 function _spOpenAddDateModal(preDate){
   document.querySelectorAll('.sp-date-modal').forEach(e=>e.remove());
+  _spModalStoryCount=3;
   const el=document.createElement('div');
   el.className='modal-overlay sp-date-modal';
   el.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px';
   el.onclick=()=>el.remove();
   const defaultDate=preDate||new Date().toISOString().slice(0,10);
-  el.innerHTML=`<div style="background:var(--white);border-radius:12px;padding:20px;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18)" onclick="event.stopPropagation()"><div style="font-size:13px;font-weight:700;margin-bottom:14px">Tambah Tanggal</div><div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="sp-new-date" class="form-input" value="${defaultDate}"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button onclick="this.closest('.sp-date-modal').remove()" class="btn btn-sm">Batal</button><button onclick="_spConfirmAddDate()" class="btn btn-primary btn-sm">Tambah</button></div></div>`;
+  const storyInputs=[1,2,3].map(n=>`<div class="cust-field editable" style="margin-bottom:8px"><div class="cust-field-label">Story ${n}${n===1?' *':' (opsional)'}</div><input id="sp-story-${n}" class="cust-field-input" placeholder="Teks story ${n}..."></div>`).join('');
+  el.innerHTML=`<div style="background:var(--white);border-radius:12px;width:100%;max-width:420px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18)" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0">
+      <div style="font-size:14px;font-weight:700">Tambah Tanggal</div>
+      <button onclick="this.closest('.sp-date-modal').remove()" class="btn btn-sm"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:16px 20px;overflow-y:auto">
+      <div class="cust-field editable" style="margin-bottom:12px">
+        <div class="cust-field-label">Tanggal *</div>
+        <input type="date" id="sp-new-date" class="cust-field-input" value="${defaultDate}">
+      </div>
+      <div id="sp-modal-stories">${storyInputs}</div>
+      <button onclick="_spModalAddStory()" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:4px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah Story</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border);flex-shrink:0">
+      <button onclick="this.closest('.sp-date-modal').remove()" class="btn btn-sm">Batal</button>
+      <button onclick="_spConfirmAddDate()" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Simpan</button>
+    </div>
+  </div>`;
   document.body.appendChild(el);
   setTimeout(()=>{const inp=document.getElementById('sp-new-date');if(inp)inp.focus();},50);
+}
+function _spModalAddStory(){
+  _spModalStoryCount++;
+  const container=document.getElementById('sp-modal-stories');
+  if(!container)return;
+  const div=document.createElement('div');
+  div.className='cust-field editable';
+  div.style.marginBottom='8px';
+  div.innerHTML=`<div class="cust-field-label">Story ${_spModalStoryCount} (opsional)</div><input id="sp-story-${_spModalStoryCount}" class="cust-field-input" placeholder="Teks story ${_spModalStoryCount}...">`;
+  container.appendChild(div);
+  setTimeout(()=>{const inp=document.getElementById('sp-story-'+_spModalStoryCount);if(inp)inp.focus();},30);
 }
 async function _spConfirmAddDate(){
   const input=document.getElementById('sp-new-date');if(!input)return;
   const tanggal=input.value;
   if(!tanggal){showToast('Pilih tanggal dulu','error');return;}
+  const story1=(document.getElementById('sp-story-1')||{}).value?.trim()||'';
+  if(!story1){showToast('Story 1 wajib diisi','error');return;}
   const existing=storyPlanDates.find(d=>d.tanggal===tanggal);
   if(existing){
     document.querySelectorAll('.sp-date-modal').forEach(e=>e.remove());
@@ -13354,28 +13397,38 @@ async function _spConfirmAddDate(){
     setTimeout(()=>{const el=document.getElementById('sp-date-'+existing.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},60);
     showToast('Tanggal ini sudah ada');return;
   }
-  const row=await sb_insert('story_plan_dates',{tanggal});
-  if(!row){showToast('Gagal simpan','error');return;}
-  storyPlanDates.push({id:row.id,tanggal});
+  const dateRow=await sb_insert('story_plan_dates',{tanggal});
+  if(!dateRow){showToast('Gagal simpan tanggal','error');return;}
+  storyPlanDates.push({id:dateRow.id,tanggal});
   storyPlanDates.sort((a,b)=>a.tanggal>b.tanggal?1:-1);
+  // save story items
+  const texts=[];
+  for(let n=1;n<=_spModalStoryCount;n++){const v=(document.getElementById('sp-story-'+n)||{}).value?.trim()||'';if(v)texts.push(v);}
+  let urutan=1;
+  for(const isi of texts){
+    const r=await sb_insert('story_plan_items',{date_id:dateRow.id,urutan,isi});
+    if(r) storyPlanItems.push({id:r.id,date_id:dateRow.id,urutan,isi});
+    urutan++;
+  }
   document.querySelectorAll('.sp-date-modal').forEach(e=>e.remove());
   _spRenderDates();_spRenderCalendar();
-  setTimeout(()=>{const el=document.getElementById('sp-date-'+row.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);
+  showToast('Jadwal ditambah ✓');
+  setTimeout(()=>{const el=document.getElementById('sp-date-'+dateRow.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);
 }
 async function _spAddItem(dateId){
   const items=storyPlanItems.filter(i=>i.date_id===dateId);
   const urutan=items.length+1;
-  const row=await sb_insert('story_plan_items',{date_id:dateId,urutan,teks:''});
+  const row=await sb_insert('story_plan_items',{date_id:dateId,urutan,isi:''});
   if(!row){showToast('Gagal tambah story','error');return;}
-  storyPlanItems.push({id:row.id,date_id:dateId,urutan,teks:''});
+  storyPlanItems.push({id:row.id,date_id:dateId,urutan,isi:''});
   _spRenderDates();_spRenderCalendar();
   setTimeout(()=>{const rowEl=document.getElementById('sp-item-row-'+row.id);if(rowEl){const inp=rowEl.querySelector('input');if(inp)inp.focus();}},60);
 }
-async function _spUpdateItem(itemId,teks){
+async function _spUpdateItem(itemId,isi){
   const item=storyPlanItems.find(i=>_idEq(i.id,itemId));
-  if(!item||item.teks===teks)return;
-  const ok=await sb_update('story_plan_items',itemId,{teks});
-  if(ok)item.teks=teks;else showToast('Gagal simpan','error');
+  if(!item||item.isi===isi)return;
+  const ok=await sb_update('story_plan_items',itemId,{isi});
+  if(ok)item.isi=isi;else showToast('Gagal simpan','error');
 }
 async function _spDeleteItem(itemId,dateId){
   if(!confirm('Hapus story ini?'))return;
@@ -13406,12 +13459,12 @@ function carouselPlanHTML(){
   return `<div style="padding:20px">
     ${_quickLinksHTML('cp',carouselPlanLinks,'cp_links_visible')}
     <div style="margin-bottom:14px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px">📅 Kalender Carousel</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-calendar" style="font-size:13px;color:var(--text-muted)"></i> Kalender Carousel</div>
       <div id="cp-calendar">${_cpCalendarHTML()}</div>
     </div>
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:600">🖼️ Carousel Plans</div>
+        <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px"><i class="ti ti-layout-columns" style="font-size:13px;color:var(--text-muted)"></i> Carousel Plans</div>
         <button onclick="openCarouselPlanModal(null,null)" class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Tambah Plan</button>
       </div>
       <div id="cp-cards">${_cpCardsHTML()}</div>
@@ -13455,7 +13508,7 @@ function _cpCalendarHTML(){
     cells+=`<div ${onclickStr} style="min-height:44px;border-radius:6px;padding:3px 4px;border:1px solid ${isToday?"#0f52ba":"transparent"};background:${hasPosts?"var(--bg)":"transparent"};cursor:pointer"><div style="font-size:10px;font-weight:${isToday?"700":"400"};color:${isToday?"#0f52ba":"var(--text)"};margin-bottom:2px;line-height:1.3">${day}</div><div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
   }
   const legend=`<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">${Object.entries(_cpFunnelColors).map(([f,c])=>`<span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c}"></span>${f}</span>`).join('')}</div>`;
-  return `<div class="card" style="padding:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_cpCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_cpCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div>${legend}</div>`;
+  return `<div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_cpCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_cpCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div>${legend}</div>`;
 }
 function _cpCalNav(delta){_cpCalMonth+=delta;if(_cpCalMonth>11){_cpCalMonth=0;_cpCalYear++;}else if(_cpCalMonth<0){_cpCalMonth=11;_cpCalYear--;}const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
 function _cpCalDayClick(dateKey,hasPosts){
@@ -13513,26 +13566,49 @@ function openCarouselPlanModal(id,preDate){
   const mktPeople=tktPeople.filter(p=>{const div=tktDivisi.find(d=>d.id===p.divisiId);return div&&(div.nama||'').toLowerCase().includes('market');});
   const assigneeOpts=mktPeople.map(p=>`<option value="${p.id}" ${_idEq(plan?.assignee_id,p.id)?'selected':''}>${p.nama}</option>`).join('');
   const defaultDate=plan?.tanggal_posting||preDate||new Date().toISOString().slice(0,10);
-  el.innerHTML=`<div style="background:var(--white);border-radius:12px;padding:20px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
-    <div style="font-size:14px;font-weight:700;margin-bottom:16px">${id?'Edit':'Tambah'} Carousel Plan</div>
-    <div class="form-group"><label class="form-label">Judul <span class="req-mark">*</span></label><input id="cp-form-judul" class="form-input" placeholder="Judul konten carousel..." value="${(plan?.judul||'').replace(/"/g,'&quot;')}"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="form-group"><label class="form-label">Tanggal Posting</label><input type="date" id="cp-form-tanggal" class="form-input" value="${defaultDate}"></div>
-      <div class="form-group"><label class="form-label">Funnel</label><select id="cp-form-funnel" class="form-input">${funnelOpts}</select></div>
+  el.innerHTML=`<div style="background:var(--white);border-radius:12px;width:100%;max-width:480px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18)" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0">
+      <div style="font-size:14px;font-weight:700">${id?'Edit':'Tambah'} Carousel Plan</div>
+      <button onclick="this.closest('.cp-plan-modal').remove()" class="btn btn-sm"><i class="ti ti-x"></i></button>
     </div>
-    <div class="form-group">
-      <label class="form-label">CTA</label>
-      <div style="display:flex;gap:6px">
-        <select id="cp-form-cta" class="form-input" style="flex:1">${ctaOpts?`<option value="">— Pilih CTA —</option>${ctaOpts}`:`<option value="">Belum ada CTA master</option>`}</select>
-        <button onclick="_cpAddCTAOption()" class="btn btn-sm" style="white-space:nowrap;font-size:11px">+ CTA Baru</button>
+    <div style="padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:10px">
+      <div class="cust-field editable">
+        <div class="cust-field-label">Judul *</div>
+        <input id="cp-form-judul" class="cust-field-input" placeholder="Judul konten carousel..." value="${(plan?.judul||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="cust-field editable">
+          <div class="cust-field-label">Tanggal Posting</div>
+          <input type="date" id="cp-form-tanggal" class="cust-field-input" value="${defaultDate}">
+        </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Funnel</div>
+          <select id="cp-form-funnel" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">${funnelOpts}</select>
+        </div>
+      </div>
+      <div class="cust-field editable">
+        <div class="cust-field-label">CTA</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <select id="cp-form-cta" class="cust-field-input" style="border:none;background:transparent;padding:0;flex:1">${ctaOpts?`<option value="">— Pilih CTA —</option>${ctaOpts}`:`<option value="">Belum ada CTA master</option>`}</select>
+          <button onclick="_cpAddCTAOption()" class="btn btn-sm" style="white-space:nowrap;font-size:11px;flex-shrink:0">+ CTA Baru</button>
+        </div>
+      </div>
+      <div class="cust-field editable">
+        <div class="cust-field-label">Assignee</div>
+        <select id="cp-form-assignee" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="">— Pilih —</option>${assigneeOpts}</select>
+      </div>
+      <div class="cust-field editable">
+        <div class="cust-field-label">Link Referensi <span style="font-weight:400">(opsional)</span></div>
+        <input id="cp-form-brief" class="cust-field-input" placeholder="https://..." value="${(plan?.brief_url||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div class="cust-field editable">
+        <div class="cust-field-label">Status</div>
+        <select id="cp-form-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">${statusOpts}</select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Assignee</label><select id="cp-form-assignee" class="form-input"><option value="">— Pilih —</option>${assigneeOpts}</select></div>
-    <div class="form-group"><label class="form-label">Link Referensi <span style="font-size:10px;color:var(--text-muted)">(opsional)</span></label><input id="cp-form-brief" class="form-input" placeholder="Link referensi spesifik untuk konten ini (opsional)" value="${(plan?.brief_url||'').replace(/"/g,'&quot;')}"></div>
-    <div class="form-group"><label class="form-label">Status</label><select id="cp-form-status" class="form-input">${statusOpts}</select></div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border);flex-shrink:0">
       <button onclick="this.closest('.cp-plan-modal').remove()" class="btn btn-sm">Batal</button>
-      <button onclick="_cpSavePlan()" class="btn btn-primary btn-sm">Simpan</button>
+      <button onclick="_cpSavePlan()" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Simpan</button>
     </div>
   </div>`;
   document.body.appendChild(el);
