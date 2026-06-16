@@ -12172,10 +12172,14 @@ function reRenderEvalFormat(fmt){
 
 
 // ── STORY VS BUYER ──────────────────────────────────────────────────────────
+let _svbSort='recent'; // 'recent' | 'buyer'
+let _svbCalMonth=new Date().getMonth();
+let _svbCalYear=new Date().getFullYear();
+
 function renderStoryVsBuyer(c){
   const stories=evalContents.filter(x=>x.format==='Story'&&evalDateFilter(x))
     .sort((a,b)=>a.tanggal<b.tanggal?1:-1);
-  const igBuyers=buyers.filter(b=>b.sumber==='Instagram Story');
+  const igBuyers=buyers.filter(b=>b.sumber==='Instagram Story'&&evalDateFilter(b));
   const totalBuyers=buyers.length;
   const igBuyerCount=igBuyers.length;
   const convRate=totalBuyers>0?(igBuyerCount/totalBuyers*100).toFixed(1):0;
@@ -12207,23 +12211,124 @@ function renderStoryVsBuyer(c){
     <div class="stat-card"><div class="stat-label">Conversion Rate</div><div class="stat-val" style="color:var(--purple-mid)">${convRate}%</div><div style="font-size:11px;color:var(--text-muted);margin-top:3px">IG Story / Total</div></div>
   </div>
   ${emptyNote}
-  ${allDates.length?`<div style="font-size:13px;font-weight:600;margin-bottom:10px">Korelasi per Hari</div>${_svbDayCardsHTML(allDates,storyByDate,buyerByDate)}`:''}`;
+  ${allDates.length?`
+  <div id="svb-cal-wrap" style="margin-bottom:14px">
+    <div onclick="_svbToggleCal()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 12px;border-radius:10px;border:0.5px solid var(--border);background:var(--white);margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <i class="ti ti-calendar" style="font-size:14px;color:var(--text-muted)"></i>
+        <span style="font-size:13px;font-weight:600" id="svb-cal-header-label">Kalender</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:10px;color:#0f52ba"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#0f52ba;margin-right:3px;vertical-align:middle"></span>ada buyer</span>
+        <i class="ti ti-chevron-down" id="svb-cal-chev" style="font-size:13px;color:var(--text-muted)"></i>
+      </div>
+    </div>
+    <div id="svb-cal-body" style="display:none;border:0.5px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--white);margin-bottom:6px"></div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:600">Korelasi per Hari</div>
+    <div style="display:flex;gap:6px">
+      <button class="chip-sort-svb ${_svbSort==='recent'?'svb-sort-active':''}" onclick="_svbSetSort('recent')" style="display:flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:12px;border:0.5px solid var(--border);background:${_svbSort==='recent'?'var(--bg)':'var(--white)'};color:${_svbSort==='recent'?'var(--text)':'var(--text-muted)'};font-weight:${_svbSort==='recent'?'600':'400'};cursor:pointer;outline:none">
+        <i class="ti ti-clock" style="font-size:11px"></i> Terbaru
+      </button>
+      <button class="chip-sort-svb ${_svbSort==='buyer'?'svb-sort-active':''}" onclick="_svbSetSort('buyer')" style="display:flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:12px;border:0.5px solid var(--border);background:${_svbSort==='buyer'?'var(--bg)':'var(--white)'};color:${_svbSort==='buyer'?'var(--text)':'var(--text-muted)'};font-weight:${_svbSort==='buyer'?'600':'400'};cursor:pointer;outline:none">
+        <i class="ti ti-arrow-down" style="font-size:11px"></i> Buyer Terbanyak
+      </button>
+    </div>
+  </div>
+  ${_svbDayCardsHTML(allDates,storyByDate,buyerByDate)}`:''}`;
+  window._svbBuyerByDate=buyerByDate;
+  _svbRenderCal(buyerByDate);
   _svbSetupPaste();
 }
 
 function _svbDayCardsHTML(allDates,storyByDate,buyerByDate){
-  return allDates.map(date=>{
+  let sorted=[...allDates];
+  if(_svbSort==='buyer'){
+    sorted.sort((a,b)=>(buyerByDate[b]||0)-(buyerByDate[a]||0));
+  } else {
+    sorted.sort((a,b)=>b<a?-1:1);
+  }
+  return sorted.map(date=>{
     const dayStories=storyByDate[date]||[];
     const dayBuyers=buyerByDate[date]||0;
-    const dateLabel=date==='unknown'?'Tanggal tidak diketahui':fmtDt(date)||'Tanggal tidak diketahui';
-    return `<div class="card" style="margin-bottom:10px;padding:12px 16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:12px;font-weight:600;color:var(--text)">${dateLabel}</div>
+    const dateLabel=date==='unknown'?'Tanggal tidak diketahui':fmtDt(date)||date;
+    const safeId='svbday_'+date.replace(/[^a-zA-Z0-9]/g,'_');
+    const defaultOpen=dayBuyers>0;
+    return `<div class="card" style="margin-bottom:8px">
+      <div onclick="toggleSvbDay('${safeId}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="ti ti-chevron-${defaultOpen?'down':'right'}" id="chev_${safeId}" style="font-size:14px;color:var(--text-muted)"></i>
+          <span style="font-size:12px;font-weight:600">${dateLabel}</span>
+        </div>
         ${dayBuyers>0?`<span style="background:#0f52ba;color:#fff;font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px">${dayBuyers} buyer</span>`:`<span style="background:var(--bg);color:var(--text-muted);font-size:11px;padding:2px 10px;border-radius:20px;border:0.5px solid var(--border)">0 buyer</span>`}
       </div>
-      ${dayStories.length?dayStories.map(s=>_svbStoryRowHTML(s)).join(''):`<div style="font-size:11px;color:var(--text-muted);padding:4px 0">Tidak ada Story pada tanggal ini</div>`}
+      <div id="${safeId}" style="display:${defaultOpen?'block':'none'};padding:0 16px 12px;border-top:0.5px solid var(--border)">
+        ${dayStories.length?dayStories.map(s=>_svbStoryRowHTML(s)).join(''):`<div style="font-size:11px;color:var(--text-muted);padding:4px 0">Tidak ada Story pada tanggal ini</div>`}
+      </div>
     </div>`;
   }).join('');
+}
+
+function toggleSvbDay(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  const chev=document.getElementById('chev_'+id);
+  if(chev)chev.className=open?'ti ti-chevron-right':'ti ti-chevron-down';
+}
+
+function _svbSetSort(val){
+  _svbSort=val;
+  renderEvalTab('story-buyer');
+}
+
+function _svbToggleCal(){
+  const body=document.getElementById('svb-cal-body');
+  const chev=document.getElementById('svb-cal-chev');
+  if(!body)return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  if(chev)chev.className=open?'ti ti-chevron-down':'ti ti-chevron-up';
+}
+
+function _svbRenderCal(buyerByDate){
+  const body=document.getElementById('svb-cal-body');
+  const label=document.getElementById('svb-cal-header-label');
+  if(!body)return;
+  const monthNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const mn=monthNames[_svbCalMonth];
+  if(label)label.textContent='Kalender '+mn+' '+_svbCalYear;
+  const firstDay=new Date(_svbCalYear,_svbCalMonth,1).getDay();
+  const daysInMonth=new Date(_svbCalYear,_svbCalMonth+1,0).getDate();
+  let cells='';
+  dayNames.forEach(d=>{cells+=`<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-align:center;padding-bottom:4px">${d}</div>`;});
+  for(let i=0;i<firstDay;i++)cells+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const mm=String(_svbCalMonth+1).padStart(2,'0');
+    const dd=String(d).padStart(2,'0');
+    const key=`${_svbCalYear}-${mm}-${dd}`;
+    const hasBuyer=(buyerByDate&&buyerByDate[key]>0);
+    cells+=`<div style="text-align:center;padding:3px 0">
+      <div style="font-size:12px;color:var(--text)">${d}</div>
+      ${hasBuyer?`<div style="width:6px;height:6px;border-radius:50%;background:#0f52ba;margin:1px auto 0"></div>`:'<div style="width:6px;height:6px;margin:1px auto 0"></div>'}
+    </div>`;
+  }
+  body.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <button onclick="_svbCalNav(-1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:2px 6px">&#8249;</button>
+    <span style="font-size:12px;font-weight:600">${mn} ${_svbCalYear}</span>
+    <button onclick="_svbCalNav(1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:2px 6px">&#8250;</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${cells}</div>`;
+}
+
+function _svbCalNav(dir){
+  _svbCalMonth+=dir;
+  if(_svbCalMonth<0){_svbCalMonth=11;_svbCalYear--;}
+  if(_svbCalMonth>11){_svbCalMonth=0;_svbCalYear++;}
+  _svbRenderCal(window._svbBuyerByDate);
 }
 
 function _svbStoryRowHTML(s){
