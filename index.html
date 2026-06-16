@@ -1256,6 +1256,7 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
               <th style="width:155px">Produk (Lynkid)</th>
               <th style="width:155px">Klasifikasi</th>
               <th style="width:65px">Harga</th>
+              <th style="width:80px">Payment</th>
               <th>Flag</th>
             </tr>
           </thead>
@@ -3002,7 +3003,7 @@ function normalizeWA(raw){
 function parseNotes(str){
   try{
     const o=JSON.parse(str);
-    return{sumber:o["Kamu tau kita dari mana?"]||"",tahap:o["Kamu sedang berada di tahap mana saat ini?"]||"",industri:o["Kamu tertarik di bidang industri apa aja? (FMCG, Finance, Mining, dll)"]||""};
+    return{sumber:o["Kamu tau kita dari mana?"]||"",tahap:o["Kamu sedang berada di tahap mana saat ini?"]||"",industri:o["Kamu tertarik di bidang industri apa aja?"]||o["Kamu tertarik di bidang industri apa aja? (FMCG, Finance, Mining, dll)"]||""};
   }catch(e){return{sumber:"",tahap:"",industri:""};}
 }
 function statusPill(s){
@@ -3381,6 +3382,7 @@ function crmHTML(){
         <select id="f-tahap" onchange="renderBuyers()"><option value="">Tahap</option></select>
         <select id="f-status" onchange="renderBuyers()"><option value="">Status blast</option><option>Belum diblast</option><option>Diblast</option><option>Sedang di-upsell</option><option>Sedang di-downsell</option><option>Sedang di-cross sell</option><option>Sudah convert — Upsell</option><option>Sudah convert — Downsell</option><option>Sudah convert — Cross sell</option></select>
         <select id="f-pool" onchange="renderBuyers()"><option value="">Talent pool</option><option value="yes">Sudah isi pool</option><option value="no">Belum isi pool</option></select>
+        <select id="f-sumber" onchange="renderBuyers()"><option value="">Sumber</option></select>
         <select id="f-payment" onchange="renderBuyers()"><option value="">Payment</option><option value="SUCCESS">SUCCESS</option><option value="PENDING">PENDING</option><option value="FAILED">FAILED</option><option value="none">Belum ada status</option></select>
         <select id="f-riwayat" onchange="renderBuyers()"><option value="">Riwayat</option><option value="gt1">&gt; 1x</option><option value="sort">Tertinggi</option></select>
         <button class="filter-bar-btn" onclick="clearCRMFilters()"><i class="ti ti-refresh" style="font-size:13px"></i></button>
@@ -3508,12 +3510,18 @@ function renderCRMStats(){
   el.innerHTML=`<div class="stat-card"><div class="stat-label">Total Buyers</div><div class="stat-val">${total}</div></div><div class="stat-card"><div class="stat-label">Belum Isi Pool</div><div class="stat-val" style="color:var(--red)">${belumPool}</div></div><div class="stat-card"><div class="stat-label">Sedang Diblast</div><div class="stat-val" style="color:var(--blue)">${aktif}</div></div><div class="stat-card"><div class="stat-label">Sudah Convert</div><div class="stat-val" style="color:var(--green)">${convert}</div></div><div class="stat-card"><div class="stat-label">Minat FMCG</div><div class="stat-val">${fmcg}</div></div>`;
 }
 function populateFilters(){
-  const iSet=new Set(),tSet=new Set();
-  buyers.forEach(b=>{b.industri.split(",").forEach(i=>iSet.add(i.trim()));tSet.add(b.tahap);});
+  const iSet=new Set(),tSet=new Set(),sSet=new Set();
+  buyers.forEach(b=>{
+    b.industri.split(",").forEach(i=>{if(i.trim())iSet.add(i.trim());});
+    if(b.tahap)tSet.add(b.tahap);
+    if(b.sumber)sSet.add(b.sumber);
+  });
   const fi=document.getElementById("f-industri");
-  if(fi){fi.innerHTML='<option value="">Semua industri</option>';iSet.forEach(i=>fi.innerHTML+=`<option>${i}</option>`);}
+  if(fi){fi.innerHTML='<option value="">Semua industri</option>';[...iSet].sort().forEach(i=>fi.innerHTML+=`<option>${i}</option>`);}
   const ft=document.getElementById("f-tahap");
-  if(ft){ft.innerHTML='<option value="">Semua tahap</option>';tSet.forEach(t=>ft.innerHTML+=`<option>${t}</option>`);}
+  if(ft){ft.innerHTML='<option value="">Semua tahap</option>';[...tSet].sort().forEach(t=>ft.innerHTML+=`<option>${t}</option>`);}
+  const fs=document.getElementById("f-sumber");
+  if(fs){fs.innerHTML='<option value="">Sumber</option>';[...sSet].sort().forEach(s=>fs.innerHTML+=`<option>${s}</option>`);}
 }
 function getFiltered(){
   const q=(document.getElementById("srch")||{}).value?.toLowerCase()||"";
@@ -3524,6 +3532,7 @@ function getFiltered(){
   const fp=(document.getElementById("f-pool")||{}).value||"";
   const fpy=(document.getElementById("f-payment")||{}).value||"";
   const frw=(document.getElementById("f-riwayat")||{}).value||"";
+  const fsrc=(document.getElementById("f-sumber")||{}).value||"";
   let list=buyers.filter(b=>{
     if(q&&!`${b.name}${b.wa}${b.email}`.toLowerCase().includes(q)) return false;
     if(fk&&b.klasifikasi!==fk) return false;
@@ -3535,6 +3544,7 @@ function getFiltered(){
     if(fpy==="none"&&b.paymentStatus) return false;
     if(fpy&&fpy!=="none"&&b.paymentStatus!==fpy) return false;
     if(frw==="gt1"&&b.riwayat.length<=1) return false;
+    if(fsrc&&b.sumber!==fsrc) return false;
     return true;
   });
   if(frw==="sort") list=[...list].sort((a,b)=>b.riwayat.length-a.riwayat.length);
@@ -3640,7 +3650,7 @@ async function deleteSelectedBuyers(){
   showToast(`${ok} buyer dihapus${fail>0?`, ${fail} gagal`:""}`);
 }
 function clearCRMFilters(){
-  ["srch","f-klas","f-industri","f-tahap","f-status","f-pool","f-payment","f-riwayat"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  ["srch","f-klas","f-industri","f-tahap","f-status","f-pool","f-sumber","f-payment","f-riwayat"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   renderBuyers();
 }
 function crmTab(tab){
@@ -4172,15 +4182,18 @@ function handleLynkid(input){
       const wa=normalizeWA(r["Buyer Phone (Opsional)"]);
       const produk=r["Judul Barang"]||"";
       const harga=parseFloat(r["Harga"]||r["Price"]||0);
+      const tanggal=r["Tanggal"]||"";
       const notes=parseNotes(r["Notes (Opsional)"]||"");
       const klasifikasi=getKlasifikasi(produk);
       const flags=[];
-      if(status!=="SUCCESS") flags.push({type:"err",msg:"Bukan SUCCESS"});
       if(!wa) flags.push({type:"err",msg:"WA kosong"});
       else if(wa.length<10) flags.push({type:"warn",msg:"WA aneh"});
-      if(wa&&buyers.find(b=>b.wa===wa)) flags.push({type:"warn",msg:"Duplikat WA"});
+      const isDupExact=wa&&buyers.find(b=>b.wa===wa&&b.produk===produk&&(!tanggal||b.tanggal===tanggal));
+      const isDupWA=!isDupExact&&wa&&buyers.find(b=>b.wa===wa);
+      if(isDupExact) flags.push({type:"err",msg:"Duplikat"});
+      else if(isDupWA) flags.push({type:"warn",msg:"Repeat buyer"});
       if(klasifikasi==="Belum Diklasifikasi") flags.push({type:"warn",msg:"Klasifikasi belum ketemu"});
-      qcRows.push({idx:i,name:r["Buyer Name (opsional)"]||"",wa,email:r["Buyer Email"]||"",produk,klasifikasi,harga,notes,tanggal:r["Tanggal"]||"",flags,skip:flags.some(f=>f.type==="err")});
+      qcRows.push({idx:i,name:r["Buyer Name (opsional)"]||"",wa,email:r["Buyer Email"]||"",produk,klasifikasi,harga,notes,tanggal,paymentStatus:status,flags,skip:flags.some(f=>f.type==="err")});
     });
     openQC();
   };
@@ -4210,6 +4223,7 @@ function renderQC(){
       <td title="${r.produk}" style="font-size:11px">${r.produk.length>22?r.produk.slice(0,22)+"…":r.produk}</td>
       <td><select style="height:24px;font-size:11px;padding:0 4px;width:100%;border-radius:6px" onchange="qcChangeKlas(${i},this.value)" ${r.skip?"disabled":""}>${KLASIFIKASI_LIST.map(k=>`<option ${k===r.klasifikasi?"selected":""}>${k}</option>`).join("")}</select></td>
       <td style="font-size:11px">Rp${(r.harga/1000).toFixed(0)}k</td>
+      <td>${paymentPill(r.paymentStatus||"")}</td>
       <td>${flagHtml}</td>
     </tr>`;
   }).join("");
@@ -4246,8 +4260,8 @@ async function confirmImportCRM(){
   const toInsert = [];
   qcRows.forEach((r,i)=>{
     if(!qcSelected.has(i)) return;
-    if(buyers.find(b=>b.wa===r.wa)){skipped++;return;}
-    const newBuyer = {id:Date.now()+i,name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
+    if(buyers.find(b=>b.wa===r.wa&&b.produk===r.produk&&(!r.tanggal||b.tanggal===r.tanggal))){skipped++;return;}
+    const newBuyer = {id:Date.now()+i,name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",paymentStatus:r.paymentStatus||'',talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
     buyers.push(newBuyer);
     toInsert.push(newBuyer);
     if(!masterProduk.find(m=>m.nama.toLowerCase()===r.produk.toLowerCase())&&r.klasifikasi!=="Belum Diklasifikasi"){
