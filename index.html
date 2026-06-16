@@ -1223,12 +1223,12 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
             <i class="ti ti-bell" style="font-size:15px;color:var(--text-muted)"></i>
             <div class="notif-dot" id="notif-badge" style="display:none;position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#e53e3e;border-radius:50%;border:2px solid var(--white)"></div>
           </div>
-          <div id="notif-panel" style="display:none;position:fixed;right:12px;top:60px;width:min(340px,calc(100vw - 24px));background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9998;overflow:hidden">
+          <div id="notif-panel" style="display:none;position:fixed;right:12px;top:60px;width:min(340px,calc(100vw - 24px));background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9999;overflow:hidden;color:var(--text)">
             <div style="padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:13px;font-weight:700">Aktivitas Terbaru</div>
-              <button onclick="notifMarkRead()" style="font-size:10px;color:var(--purple-accent);background:none;border:none;cursor:pointer;font-weight:600">Tandai semua dibaca</button>
+              <div style="font-size:13px;font-weight:700;color:var(--text);-webkit-font-smoothing:antialiased">Aktivitas Terbaru</div>
+              <button onclick="notifMarkRead()" style="font-size:10px;color:var(--purple-accent);background:none;border:none;cursor:pointer;font-weight:600;-webkit-font-smoothing:antialiased">Tandai semua dibaca</button>
             </div>
-            <div id="notif-list" style="max-height:400px;overflow-y:auto"></div>
+            <div id="notif-list" style="max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch;color:var(--text)"></div>
           </div>
         </div>
         <div style="font-size:12px;color:var(--text-muted)">May 2026</div>
@@ -1893,8 +1893,8 @@ function notifRender() {
     const pad = n => String(n).padStart(2,'0');
     const fullTime = `${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
     const newBg = isNew ? 'background:#e8f0fc;' : '';
-    const textMain = isNew ? '#1a1a2e' : 'var(--text)';
-    const textSub  = isNew ? '#0a3d8f' : 'var(--text-muted)';
+    const textMain = isNew ? '#1a1a2e' : 'var(--text,#1a1a2e)';
+    const textSub  = isNew ? '#0a3d8f' : 'var(--text-muted,#666)';
     return `<div style="display:flex;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);${newBg}">
       <div style="width:30px;height:30px;border-radius:8px;background:${isNew?'var(--purple-accent)':'var(--bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
         <i class="ti ${icon}" style="font-size:14px;color:${isNew?'#fff':'var(--text-muted)'}"></i>
@@ -4734,7 +4734,7 @@ async function saveDeal(){
 
 async function deleteDeal(){
   if(!activeDealId) return;
-  if(!confirm("Hapus deal ini?")) return;
+  if(!await showConfirmDelete("Hapus deal ini?","Data deal akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("crm_deals",activeDealId);
   if(!ok) return;
   deals=deals.filter(x=>x.id!==activeDealId);
@@ -4843,6 +4843,24 @@ function comingSoonHTML(title, icon, desc){
 function showToast(msg){
   const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2500);
+}
+function showConfirmDelete(title,description){
+  return new Promise(resolve=>{
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+    const box=document.createElement('div');
+    box.style.cssText='background:var(--white,#fff);border-radius:14px;padding:24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.22)';
+    box.innerHTML=`<div style="font-size:14px;font-weight:700;margin-bottom:8px">${title}</div><div style="font-size:12px;color:var(--text-muted,#888);margin-bottom:20px">${description}</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="_scd-cancel" class="btn btn-sm" style="font-size:13px">Batal</button><button id="_scd-ok" class="btn btn-sm" style="font-size:13px;background:#c0392b;color:#fff;border-color:#c0392b">Ya, Hapus</button></div>`;
+    box.addEventListener('click',e=>e.stopPropagation());
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    const close=result=>{if(document.body.contains(ov))document.body.removeChild(ov);document.removeEventListener('keydown',_esc);resolve(result);};
+    ov.addEventListener('click',()=>close(false));
+    box.querySelector('#_scd-cancel').onclick=()=>close(false);
+    box.querySelector('#_scd-ok').onclick=()=>close(true);
+    const _esc=e=>{if(e.key==='Escape')close(false);};
+    document.addEventListener('keydown',_esc);
+  });
 }
 // ═══════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════
@@ -5368,7 +5386,7 @@ function addTktComment(id){
   autoSendCommentEmail(t, txt);
 }
 async function deleteTkt(id){
-  if(!confirm("Hapus ticket ini? Task terkait di Program juga akan ikut terhapus.")) return;
+  if(!await showConfirmDelete("Hapus ticket ini?","Task terkait di Program juga akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
   const tkt = tickets.find(x=>_idEq(x.id,id));
   // Hapus di Supabase
   if(tkt && typeof tkt.id==='string' && tkt.id.length>20){
@@ -5752,7 +5770,7 @@ async function saveDivisi(){
   renderMasterTktTab("divisi");
 }
 async function deleteDivisi(id){
-  if(!confirm("Hapus divisi ini?")) return;
+  if(!await showConfirmDelete("Hapus divisi ini?","Data divisi akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok = await sb_deleteDivisi(id);
   if(!ok){ showToast("Gagal hapus divisi"); return; }
   tktDivisi=tktDivisi.filter(x=>x.id!==id);
@@ -5840,7 +5858,7 @@ async function savePerson(){
   renderMasterTktTab("people");
 }
 async function deletePerson(id){
-  if(!confirm("Hapus person ini?")) return;
+  if(!await showConfirmDelete("Hapus person ini?","Data person akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok = await sb_deletePerson(id);
   if(!ok){ showToast("Gagal hapus people"); return; }
   tktPeople=tktPeople.filter(x=>x.id!==id);
@@ -5876,7 +5894,7 @@ async function saveTipe(){
   showToast("Tipe ditambahkan");renderMasterTktTab("tipe");
 }
 async function deleteTipe(id){
-  if(!confirm("Hapus tipe ini?")) return;
+  if(!await showConfirmDelete("Hapus tipe ini?","Data tipe akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok = await sb_deleteType(id);
   if(!ok){ showToast("Gagal hapus tipe"); return; }
   tktTypes=tktTypes.filter(x=>x.id!==id);
@@ -6176,7 +6194,7 @@ async function savePartnerField(id,field,val){
   p._saveTimer=setTimeout(()=>sb_update("partners",id,{[_partnerFieldToCol(field)]:val.trim()}),600);
 }
 async function deletePartner(id){
-  if(!confirm("Hapus partner ini?")) return;
+  if(!await showConfirmDelete("Hapus partner ini?","Data partner dan semua deal terkait akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("partners",id);
   if(!ok) return;
   partners=partners.filter(x=>x.id!==id);
@@ -6246,7 +6264,7 @@ async function savePartnerModal(){
 }
 async function deletePartnerFromModal(){
   if(!activePartnerId) return;
-  if(!confirm("Hapus partner ini?")) return;
+  if(!await showConfirmDelete("Hapus partner ini?","Data partner dan semua deal terkait akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("partners",activePartnerId);
   if(!ok) return;
   partners=partners.filter(x=>x.id!==activePartnerId);
@@ -6378,7 +6396,7 @@ async function savePDealField(id,field,val){
   d._saveTimer=setTimeout(()=>sb_update("partner_deals",id,{[col]:dbVal}),600);
 }
 async function deletePDeal(id){
-  if(!confirm("Hapus deal ini?")) return;
+  if(!await showConfirmDelete("Hapus deal ini?","Data deal akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("partner_deals",id);
   if(!ok) return;
   partnerDeals=partnerDeals.filter(x=>x.id!==id);
@@ -6461,7 +6479,7 @@ async function saveOutreachField(id,field,val){
   o._saveTimer=setTimeout(()=>sb_update("partner_outreach",id,{[field]:val.trim()}),600);
 }
 async function deleteOutreach(id){
-  if(!confirm("Hapus log ini?")) return;
+  if(!await showConfirmDelete("Hapus log outreach ini?","Data log akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("partner_outreach",id);
   if(!ok) return;
   outreachLog=outreachLog.filter(x=>x.id!==id);
@@ -6735,7 +6753,7 @@ async function saveOrgPartnerField(id,field,val){
   p._saveTimer=setTimeout(()=>sb_update("org_partners",id,{[_orgPartnerFieldToCol(field)]:val.trim()}),600);
 }
 async function deleteOrgPartner(id){
-  if(!confirm("Hapus org partner ini?")) return;
+  if(!await showConfirmDelete("Hapus org partner ini?","Data partner dan semua deal terkait akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("org_partners",id);
   if(!ok) return;
   orgPartners=orgPartners.filter(x=>x.id!==id);
@@ -6800,7 +6818,7 @@ async function saveOrgPartnerModal(){
 }
 async function deleteOrgPartnerFromModal(){
   if(!activeOrgPartnerId) return;
-  if(!confirm("Hapus partner ini?")) return;
+  if(!await showConfirmDelete("Hapus org partner ini?","Data partner dan semua deal terkait akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("org_partners",activeOrgPartnerId);
   if(!ok) return;
   orgPartners=orgPartners.filter(x=>x.id!==activeOrgPartnerId);
@@ -6888,7 +6906,7 @@ async function saveOpDealField(id,field,val){
   d._saveTimer=setTimeout(()=>sb_update("org_deals",id,{[col]:dbVal}),600);
 }
 async function deleteOpDeal(id){
-  if(!confirm("Hapus deal ini?")) return;
+  if(!await showConfirmDelete("Hapus deal ini?","Data deal akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("org_deals",id);
   if(!ok) return;
   orgPartnerDeals=orgPartnerDeals.filter(x=>x.id!==id);
@@ -6971,7 +6989,7 @@ async function saveOrgOutreachField(id,field,val){
   o._saveTimer=setTimeout(()=>sb_update("org_outreach",id,{[field]:val.trim()}),600);
 }
 async function deleteOrgOutreach(id){
-  if(!confirm("Hapus log ini?")) return;
+  if(!await showConfirmDelete("Hapus log outreach ini?","Data log akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_delete("org_outreach",id);
   if(!ok) return;
   orgOutreachLog=orgOutreachLog.filter(x=>x.id!==id);
@@ -7009,7 +7027,7 @@ function showToast(msg){
 
 async function deletePP(pid,ppid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  if(!confirm("Hapus data ini?")) return;
+  if(!await showConfirmDelete("Hapus data ini?","Data akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok = await sb_deleteProductPainPoint(ppid);
   if(!ok){showToast("Gagal hapus data","error");return;}
   p.painPoints=p.painPoints.filter(x=>String(x.id)!==String(ppid));
@@ -7366,7 +7384,7 @@ async function saveSubProductModal(){
 }
 
 async function deleteSubProduct(pid,spid){
-  if(!confirm('Hapus sub-produk ini?')) return;
+  if(!await showConfirmDelete("Hapus sub-produk ini?","Data sub-produk akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_deleteSubProduct(spid);
   if(!ok){showToast('Gagal hapus','error');return;}
   const p=products.find(x=>String(x.id)===String(pid));
@@ -7378,9 +7396,9 @@ async function deleteSubProduct(pid,spid){
 
 // ── PAIN POINTS ───────────────────────────────────────────────
 
-function deleteAsset(pid,aid){
+async function deleteAsset(pid,aid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  if(!confirm("Hapus aset ini?")) return;
+  if(!await showConfirmDelete("Hapus aset ini?","Data aset akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   p.assets=p.assets.filter(x=>x.id!==aid);
   document.getElementById("kb-section-content").innerHTML=renderKBSection("assets",p);
 }
@@ -7415,7 +7433,7 @@ function closeTaskModal(){
 let tmTempAttachments=[];
 
 async function deleteTask(taskId){
-  if(!confirm("Hapus task ini? Ticket terkait juga akan ikut terhapus.")) return;
+  if(!await showConfirmDelete("Hapus task ini?","Ticket terkait di sistem juga akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
   const t = projectTasks.find(x=>_idEq(x.id,taskId));
   if(t && typeof t.id==='string' && t.id.length>20){
     const ok = await sb_deleteTask(t.id);
@@ -7431,7 +7449,7 @@ async function deleteTask(taskId){
 // ── PROJECT MODAL ────────────────────────────────────────────
 
 async function ppDelete(id){
-  if(!confirm("Hapus entri ini?")) return;
+  if(!await showConfirmDelete("Hapus entri ini?","Data pain point akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   if(typeof id === 'string' && id.length > 20){
     const ok = await sb_deletePainPoint(id);
     if(!ok){ showToast('Gagal hapus entri','error'); return; }
@@ -7919,9 +7937,9 @@ async function confirmDuplicate(){
   initProjectTab("overview");
 }
 
-function deleteFeedback(pid,fid){
+async function deleteFeedback(pid,fid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  if(!confirm("Hapus feedback ini?")) return;
+  if(!await showConfirmDelete("Hapus feedback ini?","Data feedback akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   p.feedbacks=p.feedbacks.filter(x=>x.id!==fid);
   document.getElementById("kb-section-content").innerHTML=renderKBSection("feedback",p);
 }
@@ -8038,9 +8056,9 @@ const TASK_STATUS = ["Todo","On Progress","Done"];
 const TASK_PRIORITY = ["High","Med","Low"];
 const TASK_PHASE = ["Pre Event","Hari H","Post Event"];
 
-function deleteBenefit(pid,bid){
+async function deleteBenefit(pid,bid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  if(!confirm("Hapus benefit ini?")) return;
+  if(!await showConfirmDelete("Hapus benefit ini?","Data benefit akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   p.benefits=p.benefits.filter(x=>x.id!==bid);
   document.getElementById("kb-section-content").innerHTML=renderKBSection("benefits",p);
 }
@@ -8991,7 +9009,7 @@ async function addProductFeature(pid){
 }
 
 async function deleteProductFeature(pid,fid){
-  if(!confirm("Hapus fitur ini?")) return;
+  if(!await showConfirmDelete("Hapus fitur ini?","Data fitur produk akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_deleteProductFeature(fid);
   if(!ok){showToast("Gagal hapus fitur","error");return;}
   const p=products.find(x=>String(x.id)===String(pid));
@@ -9254,7 +9272,7 @@ async function saveBundlingModal(){
 }
 
 async function deleteBundlingProduct(id){
-  if(!confirm('Hapus bundle ini?')) return;
+  if(!await showConfirmDelete("Hapus bundle ini?","Data bundle akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const p=products.find(x=>String(x.id)===String(id));
   if(p){
     for(const b of (p.bundleItems||[])) await sb_deleteProductBundle(b.recordId);
@@ -9311,7 +9329,7 @@ function changeUpcomingFilter(days){
 }
 
 async function deleteProd(id){
-  if(!confirm("Hapus produk ini? Semua knowledge base-nya juga akan ikut terhapus.")) return;
+  if(!await showConfirmDelete("Hapus produk ini?","Semua knowledge base, fitur, dan data terkait akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok = await sb_deleteProduct(id);
   if(!ok){ showToast("Gagal hapus produk","error"); return; }
   products=products.filter(x=>String(x.id)!==String(id));
@@ -9566,7 +9584,7 @@ async function addPassionPoint(pid){
 
 async function deletePas(pid,pasid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  if(!confirm("Hapus passion point ini?")) return;
+  if(!await showConfirmDelete("Hapus passion point ini?","Data passion point akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok = await sb_deleteProductPassionPoint(pasid);
   if(!ok){showToast("Gagal hapus passion point","error");return;}
   p.passionPoints=(p.passionPoints||[]).filter(x=>String(x.id)!==String(pasid));
@@ -9746,7 +9764,7 @@ async function addKlasifikasi(){
 }
 
 async function deleteKlasifikasi(idx){
-  if(!confirm('Hapus klasifikasi ini?')) return;
+  if(!await showConfirmDelete("Hapus klasifikasi ini?","Data klasifikasi akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const klasData = (window._klasifikasiData||[])[idx];
   if(klasData&&klasData.id){
     const ok = await sb_deleteProductKlasifikasi(klasData.id);
@@ -9859,7 +9877,7 @@ async function addLinkTemplate(){
   showToast("Template ditambah");
 }
 async function deleteLinkTemplate(id){
-  if(!confirm("Hapus template ini?"))return;
+  if(!await showConfirmDelete("Hapus template ini?","Data template akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   const ok=await sb_deleteLinkTemplate(id);
   if(!ok){showToast("Gagal hapus","error");return;}
   eventLinkTemplates=eventLinkTemplates.filter(t=>!_idEq(t.id,id));
@@ -10361,7 +10379,7 @@ function submitPPForm(){
 }
 
 async function ppDeleteEntry(id){
-  if(!confirm('Hapus data ini?')) return;
+  if(!await showConfirmDelete("Hapus data ini?","Data pain point akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   // Sync delete to Supabase if it's a UUID (Supabase ID)
   if(typeof id === 'string' && id.length > 20){
     const ok = await sb_deletePainPoint(id);
@@ -10912,7 +10930,7 @@ function renderAssets(p){
 function closeProdModal(){document.getElementById("prod-modal").style.display="none";}
 
 async function deleteProjectEvent(id){
-  if(!confirm("Hapus event ini? Semua task & ticket terkait juga akan ikut terhapus.")) return;
+  if(!await showConfirmDelete("Hapus event ini?","Semua task dan ticket terkait juga akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
 
   // Hapus event di Supabase dulu — kalau gagal, jangan utak-atik state lokal
   const ok = await sb_deleteEvent(id);
@@ -11342,7 +11360,7 @@ async function saveRundownCell(projId,rowId,field,rawValue){
 }
 
 async function deleteRundownRow(projId,rowId){
-  if(!confirm('Hapus row ini?')) return;
+  if(!await showConfirmDelete("Hapus row ini?","Data rundown akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   const ok=await sb_deleteRundownRow(rowId);
   if(!ok){showToast('Gagal hapus','error');return;}
   const proj=projects.find(p=>_idEq(p.id,projId));
@@ -11399,7 +11417,7 @@ async function saveLinkItem(projId,idx){
   proj.links=links;gcalCloseModal();initProjectTab("tasks");showToast(idx!==null&&idx!==undefined&&idx!=="null"?"Link diupdate":"Link ditambah");
 }
 async function deleteLinkItem(projId,idx){
-  if(!confirm("Hapus link ini?"))return;
+  if(!await showConfirmDelete("Hapus link ini?","Link akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   const proj=projects.find(x=>_idEq(x.id,projId));if(!proj)return;
   const links=[...(proj.links||[])];links.splice(idx,1);
   const ok=await sb_updateEvent(projId,{links});if(!ok){showToast("Gagal hapus link","error");return;}
@@ -11970,8 +11988,8 @@ function applyMenuChanges(){
   renderSidebarFromConfig();
 }
 
-function resetMenuSections(){
-  if(!confirm('Reset menu ke default?')) return;
+async function resetMenuSections(){
+  if(!await showConfirmDelete("Reset menu ke default?","Urutan dan pengaturan menu kustom akan direset ke tampilan awal. Tindakan ini tidak bisa dibatalkan.")) return;
   localStorage.removeItem('ccc_menuSections');
   location.reload();
 }
@@ -12653,7 +12671,7 @@ try{
   closeEvalModal();renderEvalTab(evalTab);
 }catch(e){console.error('[saveEvalModal]',_sbErrInfo(e));showToast("Gagal save: "+(e?.message||"error"),"error");}
 }
-async function deleteEvalContent(){if(!editingEvalId)return;if(!confirm("Hapus konten ini?"))return;
+async function deleteEvalContent(){if(!editingEvalId)return;if(!await showConfirmDelete("Hapus konten ini?","Data konten dan semua metrik terkait akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   try{await sb_deleteEvalContentById(editingEvalId);
     evalContents=evalContents.filter(x=>x.id!==editingEvalId);
     closeEvalModal();renderEvalTab(evalTab);showToast("Konten dihapus");
@@ -12810,7 +12828,7 @@ async function confirmEvalImport(){
 function openEvalDetail(id){detailEvalId=id;const c=evalContents.find(x=>x.id===id);if(!c)return;const s=getEvalScore(c);const m=document.getElementById("eval-detail-modal");if(!m)return;document.getElementById("edd-title").textContent=c.judul;const _igl=document.getElementById("edd-iglink");if(_igl){if(c.url&&/^https?:\/\//.test(c.url)){_igl.href=c.url;_igl.style.display="inline-flex";}else{_igl.style.display="none";_igl.href="#";}}const gc={top:"var(--green)",good:"var(--teal)",avg:"var(--amber)",low:"#5f5e5a"};const gl={top:"Top Performer",good:"Performing Well",avg:"Average",low:"Needs Improvement"};const row=(l,v)=>`<div style="display:grid;grid-template-columns:150px 1fr;gap:8px;margin-bottom:6px;font-size:12px"><div style="color:var(--text-muted);font-weight:500">${l}</div><div>${v||"—"}</div></div>`;let metricsHTML="";if(c.format==="Story"){metricsHTML=`${row("Views",fmtN(c.views||c.reach))}${row("Taps Forward",fmtN(c.tapsForward))}${row("Taps Back",`<b style="color:${(s.rates?.tapsBackRate||0)>=10?"var(--green)":"inherit"}">${fmtN(c.tapsBack)}</b> (${fmtP(s.rates?.tapsBackRate||0)})`)}${row("Exits",`<b style="color:${(s.rates?.exitRate||0)<=15?"var(--green)":"var(--red)"}">${fmtN(c.exits)}</b> — Exit rate: ${fmtP(s.rates?.exitRate||0)}`)}${row("Replies",`${fmtN(c.replies)} (${fmtP(s.rates?.replyRate||0)})`)}${row("Link Taps",fmtN(c.linkTaps))}${row("Sticker Taps",fmtN(c.stickersInteract))}`;}else{metricsHTML=`${row("Views / Impressions",fmtN(c.views))}${row("Reach",fmtN(c.reach))}${row("Non-Follower Reach",`<b style="color:${(c.nfPct||0)>=50?"var(--green)":"inherit"}">${c.nfPct||0}%</b>`)}${row("Likes / Comments",`${fmtN(c.likes)} / ${fmtN(c.comments)}`)}${row("Saves",`<b style="color:${(s.rates?.saveRate||0)>=3?"var(--green)":"inherit"}">${fmtN(c.saves)}</b> (${fmtP(s.rates?.saveRate||0)})`)}${row("Shares",`${fmtN(c.shares)} (${fmtP(s.rates?.shareRate||0)})`)}${row("Follows dari post",`${fmtN(c.follows)} (${fmtP(s.rates?.followRate||0)})`)}${row("Link Taps",fmtN(c.linkTaps))}`;if(c.format==="Reel")metricsHTML+=`<div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-hint);margin-bottom:6px">Reel Metrics <span class="manual-flag">manual</span></div>${row("WTR",c.wtr?`<b style="color:${c.wtr>=35?"var(--green)":c.wtr>=20?"var(--amber)":"var(--red)"}">${c.wtr}%</b>`:"Belum diisi")}${row("Avg Watch Time",c.watchtime?c.watchtime+" detik":"Belum diisi")}${row("Drop-off detik ke-",c.dropoff||"—")}${row("Replays",fmtN(c.replays))}</div>`;}document.getElementById("edd-body").innerHTML=`<div style="background:var(--bg);border-radius:var(--radius);padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="text-align:center"><div style="font-size:40px;font-weight:700;color:${gc[s.grade]};line-height:1">${s.total}</div><div style="font-size:10px;color:var(--text-muted)">Score</div><span class="score-pill score-${s.grade}" style="margin-top:4px;display:inline-flex">${gl[s.grade]}</span></div><div style="flex:1;display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span class="fmt-tag fmt-${c.format.toLowerCase().replace(/ /g,"")}">${c.format}</span><span style="font-size:11px;color:var(--text-muted)">${fmtDt(c.tanggal)}</span>${c.topik?`<span style="font-size:11px;background:var(--purple-light);color:var(--purple-mid);padding:2px 8px;border-radius:20px">${c.topik}</span>`:""}${c.action?`<span style="font-size:11px;background:var(--teal-bg);color:var(--teal);padding:2px 8px;border-radius:20px">→ ${c.action}</span>`:""}</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:10px">Metrik Lengkap</div>${metricsHTML}</div><div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:10px">Auto Insights</div>${s.insights.map(i=>`<div class="insight-card insight-${i.type==="positive"?"positive":i.type==="warning"?"warning":"neutral"}"><i class="ti ti-${i.type==="positive"?"check":"alert-triangle"} insight-icon" style="color:${i.type==="positive"?"var(--green)":"var(--amber)"}"></i><div style="font-size:11px">${i.text}</div></div>`).join("")}${c.win?`<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:4px">✅ Yang Berhasil</div><div style="font-size:12px;background:var(--green-bg);border-radius:6px;padding:8px 10px">${c.win}</div></div>`:""}${c.improve?`<div style="margin-top:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--amber);margin-bottom:4px">🔧 Perlu Diperbaiki</div><div style="font-size:12px;background:var(--amber-bg);border-radius:6px;padding:8px 10px">${c.improve}</div></div>`:""}</div></div>`;m.style.display="flex";}
 function closeEvalDetail(){const m=document.getElementById("eval-detail-modal");if(m)m.style.display="none";}
 function editFromEvalDetail(){const id=detailEvalId;closeEvalDetail();openEvalModal(id);}
-async function deleteFromEvalDetail(){if(!confirm("Hapus konten ini?"))return;
+async function deleteFromEvalDetail(){if(!await showConfirmDelete("Hapus konten ini?","Data konten dan semua metrik terkait akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   try{await sb_deleteEvalContentById(detailEvalId);
     evalContents=evalContents.filter(x=>x.id!==detailEvalId);
     closeEvalDetail();renderEvalTab(evalTab);showToast("Konten dihapus");
@@ -13147,7 +13165,7 @@ function contentHTML(){
           <div onclick="switchContentTab('${v}')" id="ctab-${v}" class="tab${_contentSubTab===v?' active':''}"><i class="ti ${icon}" style="font-size:12px"></i> ${l}</div>`).join('')}
       </div>
     </div>
-    <div id="content-tab-body" style="flex:1;overflow-y:auto;background:var(--bg)">
+    <div id="content-tab-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg)">
       ${_contentSubTabHTML(_contentSubTab)}
     </div>
   </div>`;
@@ -13182,10 +13200,10 @@ function _quickLinksHTML(prefix, links, lsKey){
   const chevron=expanded?'ti-chevron-up':'ti-chevron-down';
   const total=links.length;
   const rowsHTML=_qlBuildRows(prefix,links);
-  return `<div style="margin-bottom:16px;border-bottom:0.5px solid var(--border);padding-bottom:14px">
+  return `<div style="margin-bottom:16px;background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:12px 16px">
     <div id="${prefix}-ql-hdr" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:${expanded?'10':'0'}px" onclick="_qlToggle('${prefix}','${lsKey}')">
       <i class="ti ti-link" style="font-size:13px;color:var(--purple-accent)"></i>
-      <div style="font-size:12px;font-weight:700;flex:1">Links${total>0?` <span style="font-size:10px;color:var(--text-muted);font-weight:400">(${total})</span>`:''}</div>
+      <div style="font-size:14px;font-weight:500;flex:1">Links${total>0?` <span style="font-size:11px;color:var(--text-muted);font-weight:400">(${total})</span>`:''}</div>
       <button onclick="event.stopPropagation();_qlShowAdd('${prefix}')" id="${prefix}-ql-add-btn" class="btn btn-sm" style="font-size:11px;padding:3px 8px;display:${expanded?'inline-flex':'none'};align-items:center;gap:3px"><i class="ti ti-plus" style="font-size:11px"></i></button>
       <i id="${prefix}-ql-chevron" class="ti ${chevron}" style="font-size:13px;color:var(--text-muted)"></i>
     </div>
@@ -13253,7 +13271,7 @@ async function _qlSave(prefix){
   showToast('Link ditambah ✓');
 }
 async function _qlDelete(prefix,id){
-  if(!confirm('Hapus link ini?'))return;
+  if(!await showConfirmDelete("Hapus link ini?","Link akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   const table=prefix==='sp'?'story_plan_links':'carousel_plan_links';
   const ok=await sb_delete(table,id);
   if(!ok){showToast('Gagal hapus','error');return;}
@@ -13352,7 +13370,7 @@ function _spOpenAddDateModal(preDate){
   el.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px';
   el.onclick=()=>el.remove();
   const defaultDate=preDate||new Date().toISOString().slice(0,10);
-  const storyInputs=[1,2,3].map(n=>`<div class="cust-field editable" style="margin-bottom:8px"><div class="cust-field-label">Story ${n}${n===1?' *':' (opsional)'}</div><input id="sp-story-${n}" class="cust-field-input" placeholder="Teks story ${n}..."></div>`).join('');
+  const storyInputs=[1,2,3].map(n=>`<div class="cust-field editable" style="margin-bottom:8px"><div class="cust-field-label">Story ${n}${n>1?' (opsional)':''}</div><input id="sp-story-${n}" class="cust-field-input" placeholder="Konteks / judul / objective story ${n}..."></div>`).join('');
   el.innerHTML=`<div style="background:var(--white);border-radius:12px;width:100%;max-width:420px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18)" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0">
       <div style="font-size:14px;font-weight:700">Tambah Tanggal</div>
@@ -13381,7 +13399,7 @@ function _spModalAddStory(){
   const div=document.createElement('div');
   div.className='cust-field editable';
   div.style.marginBottom='8px';
-  div.innerHTML=`<div class="cust-field-label">Story ${_spModalStoryCount} (opsional)</div><input id="sp-story-${_spModalStoryCount}" class="cust-field-input" placeholder="Teks story ${_spModalStoryCount}...">`;
+  div.innerHTML=`<div class="cust-field-label">Story ${_spModalStoryCount} (opsional)</div><input id="sp-story-${_spModalStoryCount}" class="cust-field-input" placeholder="Konteks / judul / objective story ${_spModalStoryCount}...">`;
   container.appendChild(div);
   setTimeout(()=>{const inp=document.getElementById('sp-story-'+_spModalStoryCount);if(inp)inp.focus();},30);
 }
@@ -13432,7 +13450,7 @@ async function _spUpdateItem(itemId,isi){
   if(ok)item.isi=isi;else showToast('Gagal simpan','error');
 }
 async function _spDeleteItem(itemId,dateId){
-  if(!confirm('Hapus story ini?'))return;
+  if(!await showConfirmDelete("Hapus story ini?","Teks story akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   const ok=await sb_delete('story_plan_items',itemId);
   if(!ok){showToast('Gagal hapus','error');return;}
   storyPlanItems=storyPlanItems.filter(i=>!_idEq(i.id,itemId));
@@ -13441,7 +13459,7 @@ async function _spDeleteItem(itemId,dateId){
   _spRenderDates();_spRenderCalendar();
 }
 async function _spDeleteDate(dateId){
-  if(!confirm('Hapus tanggal ini beserta semua story-nya?'))return;
+  if(!await showConfirmDelete("Hapus jadwal ini?","Semua story dalam jadwal ini akan ikut terhapus. Tindakan ini tidak bisa dibatalkan."))return;
   await Promise.all(storyPlanItems.filter(i=>i.date_id===dateId).map(i=>sb_delete('story_plan_items',i.id).catch(()=>{})));
   const ok=await sb_delete('story_plan_dates',dateId);
   if(!ok){showToast('Gagal hapus','error');return;}
@@ -13536,7 +13554,7 @@ function _cpCardsHTML(){
     const sCol=_cpStatusColors[status]||'var(--text-muted)';
     const sBg=_cpStatusBg[status]||'var(--bg)';
     const assignee=tktPeople.find(pe=>_idEq(pe.id,p.assignee_id));
-    const detailHTML=isExpanded?`<div style="padding:12px 14px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.brief_url?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Link Referensi</div><a href="${p.brief_url}" target="_blank" style="font-size:12px;color:#0f52ba;text-decoration:none;display:flex;align-items:center;gap:4px">${p.brief_url.length>50?p.brief_url.slice(0,50)+'…':p.brief_url}<i class="ti ti-external-link" style="font-size:10px"></i></a></div>`:''}${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
+    const detailHTML=isExpanded?`<div style="padding:12px 14px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
     return `<div class="card" id="cp-card-${p.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer" onclick="_cpToggleCard('${p.id}')"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><i class="ti ti-layout-columns" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.judul||'Tanpa judul'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${fmtDt(p.tanggal_posting)}</div></div><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:700;flex-shrink:0">${funnel}</span><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:600;flex-shrink:0">${status}</span></div><i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0;margin-left:6px"></i></div>${detailHTML}</div>`;
   }).join('');
 }
@@ -13544,7 +13562,7 @@ function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else 
 function _cpRenderCards(){const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpRenderCalendar(){const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
 async function _cpDeletePlan(id){
-  if(!confirm('Hapus plan ini?'))return;
+  if(!await showConfirmDelete("Hapus carousel plan ini?","Data plan akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   const ok=await sb_delete('carousel_plans',id);
   if(!ok){showToast('Gagal hapus','error');return;}
   carouselPlans=carouselPlans.filter(p=>!_idEq(p.id,id));
@@ -13600,10 +13618,6 @@ function openCarouselPlanModal(id,preDate){
         <select id="cp-form-assignee" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="">— Pilih —</option>${assigneeOpts}</select>
       </div>
       <div class="cust-field editable">
-        <div class="cust-field-label">Link Referensi <span style="font-weight:400">(opsional)</span></div>
-        <input id="cp-form-brief" class="cust-field-input" placeholder="https://..." value="${(plan?.brief_url||'').replace(/"/g,'&quot;')}">
-      </div>
-      <div class="cust-field editable">
         <div class="cust-field-label">Status</div>
         <select id="cp-form-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">${statusOpts}</select>
       </div>
@@ -13636,7 +13650,6 @@ async function _cpSavePlan(){
     funnel:(document.getElementById('cp-form-funnel')||{}).value||'TOFU',
     cta:(document.getElementById('cp-form-cta')||{}).value||null,
     assignee_id:(document.getElementById('cp-form-assignee')||{}).value||null,
-    brief_url:(document.getElementById('cp-form-brief')||{}).value?.trim()||null,
     status:(document.getElementById('cp-form-status')||{}).value||'Draft',
   };
   if(_editingCarouselId){
@@ -13924,7 +13937,7 @@ async function markMTStoryPosted(id){
 }
 
 async function deleteMTStory(id){
-  if(!confirm('Hapus MT Story ini?')) return;
+  if(!await showConfirmDelete("Hapus MT Story ini?","Data MT Story akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   await sb_deleteMTStory(id);
   mtStoryList=mtStoryList.filter(x=>String(x.id)!==String(id));
   _refreshMTStoryGrid();
@@ -14037,7 +14050,7 @@ async function saveKOLModal(){
 }
 
 async function deleteKOL(id){
-  if(!confirm('Hapus KOL ini?')) return;
+  if(!await showConfirmDelete("Hapus KOL ini?","Data KOL akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
   await sb_deleteKOL(id);
   kolList=kolList.filter(x=>String(x.id)!==String(id));
   _refreshKOLGrid();
@@ -15095,7 +15108,7 @@ async function daConfirmDelete(id) {
   window.populateYearFilter = populateYearFilter;
 
   async function deleteEntry(id) {
-    if(!confirm('Hapus loker ini?')) return;
+    if(!await showConfirmDelete("Hapus loker ini?","Data loker akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
     showLoading(true);
     try {
       const ok = await sb_deleteVacancy(id);
@@ -15273,7 +15286,7 @@ async function daConfirmDelete(id) {
   window.addIndustry = addIndustry;
 
   async function deleteIndustry(idx) {
-    if(!confirm('Hapus industri ini?')) return;
+    if(!await showConfirmDelete("Hapus industri ini?","Data industri akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
     const name = industries[idx];
     const inUse = data.some(d => d.industry === name);
     if(inUse) { alert('Tidak bisa dihapus — industri ini masih dipakai oleh beberapa loker.'); return; }
@@ -20142,7 +20155,7 @@ async function saveRes(id) {
 }
 
 async function deleteRes(id) {
-  if(!confirm('Hapus resource ini?'))return;
+  if(!await showConfirmDelete("Hapus resource ini?","Data resource akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   const ok=await sb_deleteResource(id);
   if(!ok){showToast('Gagal hapus','error');return;}
   resourcesData=resourcesData.filter(x=>!_idEq(x.id,id));
