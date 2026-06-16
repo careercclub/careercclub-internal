@@ -4329,15 +4329,23 @@ function _dedupeQCRows(rows){
   });
   Object.values(groups).forEach(idxs=>{
     if(idxs.length<=1) return;
-    const keepIdx=idxs.find(i=>(rows[i].paymentStatus||'').toUpperCase()==='SUCCESS')??idxs[0];
-    idxs.forEach(i=>{
-      if(i!==keepIdx){
+    let keepIdx=null;
+    for(const i of idxs){
+      if((rows[i].paymentStatus||'').toUpperCase()==='SUCCESS'){
+        keepIdx=i;
+        break;
+      }
+    }
+    if(keepIdx===null) keepIdx=idxs[0];
+    for(const i of idxs){
+      if(i===keepIdx){
+        rows[i].skip=false;
+        rows[i].flags=rows[i].flags.filter(f=>f.msg!=='Duplikat');
+      } else {
         rows[i].skip=true;
         rows[i].flags=[{type:'err',msg:'Duplikat'}];
-      } else {
-        rows[i].skip=false;
       }
-    });
+    }
   });
   return rows;
 }
