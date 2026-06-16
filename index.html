@@ -11391,10 +11391,15 @@ function renderEventLinks(proj) {
   const total = templates.length + adHocLinks.length;
   const isOpen = window._linksExpanded === proj.id;
   const chevron = isOpen ? "ti-chevron-up" : "ti-chevron-down";
-  const tmplHtml = templates.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--purple-light);border-radius:var(--radius)"><i class="ti ti-bookmark" style="font-size:12px;color:var(--purple-accent);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;color:var(--purple-mid)">${t.label}</div><div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.url}</div></div><a href="${t.url}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:3px 8px;flex-shrink:0"><i class="ti ti-external-link" style="font-size:11px"></i></a></div>`).join("");
-  const adhocHtml = adHocLinks.map((lk,idx) => `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border)"><i class="ti ti-link" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600">${lk.label}</div><div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lk.url}</div></div><a href="${lk.url}" target="_blank" class="btn btn-sm" style="font-size:10px;padding:3px 8px;flex-shrink:0"><i class="ti ti-external-link" style="font-size:11px"></i></a><button onclick="openEditLinkModal('${proj.id}',${idx})" class="btn btn-sm" style="font-size:10px;padding:3px 7px;flex-shrink:0"><i class="ti ti-edit" style="font-size:11px"></i></button><button onclick="deleteLinkItem('${proj.id}',${idx})" class="btn btn-sm" style="font-size:10px;padding:3px 7px;flex-shrink:0;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i></button></div>`).join("");
-  const body = isOpen ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${tmplHtml}${adhocHtml}</div>` : "";
-  return `<div class="card" style="margin-bottom:12px;padding:10px 16px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="window._linksExpanded=window._linksExpanded==='${proj.id}'?null:'${proj.id}';initProjectTab('tasks')"><i class="ti ti-link" style="font-size:13px;color:var(--purple-accent)"></i><div style="font-size:12px;font-weight:700;flex:1">Links ${total > 0 ? `<span style="font-size:10px;color:var(--text-muted);font-weight:400">(${total})</span>` : ""}</div><button onclick="event.stopPropagation();openAddLinkModal('${proj.id}')" class="btn btn-sm" style="font-size:11px;padding:3px 8px"><i class="ti ti-plus" style="font-size:11px"></i></button><i class="ti ${chevron}" style="font-size:13px;color:var(--text-muted)"></i></div>${body}</div>`;
+  const tmplChips = templates.map(t =>
+    `<div onclick="window.open('${t.url}','_blank')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;border:0.5px solid var(--border);background:var(--purple-light);font-size:12px;cursor:pointer;max-width:200px" title="${t.label}"><i class="ti ti-bookmark" style="font-size:11px;color:var(--purple-accent);flex-shrink:0"></i><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--purple-mid)">${t.label}</span></div>`
+  ).join("");
+  const adHocChips = adHocLinks.map((lk,idx) =>
+    `<div onclick="window.open('${lk.url}','_blank')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);font-size:12px;cursor:pointer;max-width:200px" title="${lk.label}"><i class="ti ti-link" style="font-size:11px;color:var(--text-muted);flex-shrink:0"></i><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lk.label}</span><button onclick="event.stopPropagation();deleteLinkItem('${proj.id}',${idx})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;display:flex;align-items:center;flex-shrink:0;margin-left:2px"><i class="ti ti-x" style="font-size:10px"></i></button></div>`
+  ).join("");
+  const addChip = `<div onclick="openAddLinkModal('${proj.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;border:0.5px dashed var(--border);color:var(--text-muted);font-size:12px;cursor:pointer"><i class="ti ti-plus" style="font-size:11px"></i><span style="white-space:nowrap">Tambah link</span></div>`;
+  const body = isOpen ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${tmplChips}${adHocChips}${addChip}</div>` : "";
+  return `<div class="card" style="margin-bottom:12px;padding:10px 16px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="window._linksExpanded=window._linksExpanded==='${proj.id}'?null:'${proj.id}';initProjectTab('tasks')"><i class="ti ti-link" style="font-size:13px;color:var(--purple-accent)"></i><div style="font-size:12px;font-weight:700;flex:1">Links ${total > 0 ? `<span style="font-size:10px;color:var(--text-muted);font-weight:400">(${total})</span>` : ""}</div><i class="ti ${chevron}" style="font-size:13px;color:var(--text-muted)"></i></div>${body}</div>`;
 }
 function openAddLinkModal(projId){_openLinkModal(projId,null);}
 function openEditLinkModal(projId,idx){_openLinkModal(projId,idx);}
@@ -13203,8 +13208,7 @@ function _quickLinksHTML(prefix, links, lsKey){
   return `<div style="margin-bottom:16px;background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:12px 16px">
     <div id="${prefix}-ql-hdr" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:${expanded?'10':'0'}px" onclick="_qlToggle('${prefix}','${lsKey}')">
       <i class="ti ti-link" style="font-size:13px;color:var(--purple-accent)"></i>
-      <div style="font-size:14px;font-weight:500;flex:1">Links${total>0?` <span style="font-size:11px;color:var(--text-muted);font-weight:400">(${total})</span>`:''}</div>
-      <button onclick="event.stopPropagation();_qlShowAdd('${prefix}')" id="${prefix}-ql-add-btn" class="btn btn-sm" style="font-size:11px;padding:3px 8px;display:${expanded?'inline-flex':'none'};align-items:center;gap:3px"><i class="ti ti-plus" style="font-size:11px"></i></button>
+      <div id="${prefix}-ql-cnt" style="font-size:14px;font-weight:500;flex:1">Links${total>0?` <span style="font-size:11px;color:var(--text-muted);font-weight:400">(${total})</span>`:''}</div>
       <i id="${prefix}-ql-chevron" class="ti ${chevron}" style="font-size:13px;color:var(--text-muted)"></i>
     </div>
     <div id="${prefix}-ql-body" style="display:${expanded?'block':'none'}">
@@ -13222,39 +13226,34 @@ function _quickLinksHTML(prefix, links, lsKey){
 }
 
 function _qlBuildRows(prefix,links){
-  if(!links.length) return `<div style="font-size:12px;color:var(--text-muted);padding:6px 0;border-top:0.5px solid var(--border)">Belum ada link. Klik + untuk tambah.</div>`;
-  return links.map(l=>{
+  const chips=links.map(l=>{
     const hasUrl=l.url&&/^https?:\/\//.test(l.url);
-    const extBtn=hasUrl?`<a href="${l.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#0f52ba;display:flex;align-items:center;flex-shrink:0;text-decoration:none" title="Buka link"><i class="ti ti-external-link" style="font-size:12px"></i></a>`:'';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:0.5px solid var(--border)"><i class="ti ti-link" style="font-size:11px;color:var(--text-muted);flex-shrink:0"></i><div style="font-size:11px;font-weight:600;flex-shrink:0;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.label}">${l.label}</div><div style="font-size:10px;color:var(--text-muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.url}">${l.url}</div>${extBtn}<button onclick="event.stopPropagation();_qlDelete('${prefix}','${l.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:0;line-height:1;display:flex;align-items:center;flex-shrink:0" title="Hapus">×</button></div>`;
+    const clickHandler=hasUrl?`onclick="window.open('${l.url}','_blank')"` :'';
+    return `<div ${clickHandler} style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;border:0.5px solid var(--border);background:var(--white);font-size:12px;cursor:${hasUrl?'pointer':'default'};max-width:200px" title="${l.label}"><i class="ti ti-external-link" style="font-size:11px;color:var(--text-muted);flex-shrink:0"></i><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.label}</span><button onclick="event.stopPropagation();_qlDelete('${prefix}','${l.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;display:flex;align-items:center;flex-shrink:0;margin-left:2px"><i class="ti ti-x" style="font-size:10px"></i></button></div>`;
   }).join('');
+  const addChip=`<div onclick="_qlShowAdd('${prefix}')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;border:0.5px dashed var(--border);color:var(--text-muted);font-size:12px;cursor:pointer"><i class="ti ti-plus" style="font-size:11px"></i><span style="white-space:nowrap">Tambah link</span></div>`;
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;padding-top:8px">${chips}${addChip}</div>`;
 }
 
 function _qlToggle(prefix,lsKey){
   const body=document.getElementById(prefix+'-ql-body');
-  const addBtn=document.getElementById(prefix+'-ql-add-btn');
   const chevron=document.getElementById(prefix+'-ql-chevron');
   const hdr=document.getElementById(prefix+'-ql-hdr');
   if(!body)return;
   const willShow=body.style.display==='none';
   body.style.display=willShow?'block':'none';
-  if(addBtn)addBtn.style.display=willShow?'inline-flex':'none';
   if(chevron){chevron.classList.toggle('ti-chevron-up',willShow);chevron.classList.toggle('ti-chevron-down',!willShow);}
   if(hdr)hdr.style.marginBottom=willShow?'10px':'0';
   localStorage.setItem(lsKey,willShow?'1':'0');
 }
 function _qlShowAdd(prefix){
   const form=document.getElementById(prefix+'-ql-form');
-  const btn=document.getElementById(prefix+'-ql-add-btn');
   if(form)form.style.display='block';
-  if(btn)btn.style.display='none';
   setTimeout(()=>{const inp=document.getElementById(prefix+'-ql-label');if(inp)inp.focus();},50);
 }
 function _qlCancelAdd(prefix){
   const form=document.getElementById(prefix+'-ql-form');
-  const btn=document.getElementById(prefix+'-ql-add-btn');
   if(form){form.style.display='none';const lbl=document.getElementById(prefix+'-ql-label');const url=document.getElementById(prefix+'-ql-url');if(lbl)lbl.value='';if(url)url.value='';}
-  if(btn)btn.style.display='inline-flex';
 }
 async function _qlSave(prefix){
   const label=(document.getElementById(prefix+'-ql-label')||{}).value?.trim();
@@ -13284,8 +13283,8 @@ function _qlRenderChips(prefix){
   if(!el)return;
   const links=prefix==='sp'?storyPlanLinks:carouselPlanLinks;
   el.innerHTML=_qlBuildRows(prefix,links);
-  const hdr=el.closest('.card');
-  if(hdr){const cnt=hdr.querySelector('span[style*="font-size:10px"]');if(cnt){cnt.textContent=links.length?`(${links.length})`:'';}else if(links.length){const lbl=hdr.querySelector('div[style*="font-size:12px;font-weight:700"]');if(lbl)lbl.innerHTML=`Links <span style="font-size:10px;color:var(--text-muted);font-weight:400">(${links.length})</span>`;}}
+  const cnt=document.getElementById(prefix+'-ql-cnt');
+  if(cnt)cnt.innerHTML=`Links${links.length?` <span style="font-size:11px;color:var(--text-muted);font-weight:400">(${links.length})</span>`:''}`;
 }
 
 /* ── STORY PLAN ─────────────────────────────────────────────────── */
@@ -13315,7 +13314,7 @@ function _spCalendarHTML(){
     if(isNaN(dt.getTime()))return;
     if(dt.getFullYear()===_spCalYear&&dt.getMonth()===_spCalMonth){
       const ct=storyPlanItems.filter(i=>i.date_id===d.id).length;
-      dateItemCount[d.tanggal]={dateId:d.id,count:ct};
+      dateItemCount[d.tanggal]={dateId:d.id,count:ct,status:d.status||'Draft'};
     }
   });
   const startDow=new Date(_spCalYear,_spCalMonth,1).getDay();
@@ -13330,13 +13329,14 @@ function _spCalendarHTML(){
     const isToday=today.getFullYear()===_spCalYear&&today.getMonth()===_spCalMonth&&today.getDate()===day;
     const dotCount=info?Math.min(info.count||1,3):0;
     let dots="";
-    for(let k=0;k<dotCount;k++) dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#0f52ba;flex-shrink:0"></span>`;
+    const dotColor=info?((info.status||'Draft')==='Done'?'#3b6d11':'#c0392b'):'#0f52ba';
+    for(let k=0;k<dotCount;k++) dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${dotColor};flex-shrink:0"></span>`;
     const hasPosts=!!info;
     const onclickStr=hasPosts?`onclick="_spCalDayClick('${dateKey}','${info.dateId}',true)"` :`onclick="_spCalDayClick('${dateKey}','',false)"`;
     const dateNum=isToday?`<div style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#0f52ba;margin-bottom:2px"><span style="font-size:11px;font-weight:700;color:#fff;line-height:1">${day}</span></div>`:`<div style="font-size:11px;color:var(--text);margin-bottom:2px;line-height:1.4;padding:0 2px">${day}</div>`;
     cells+=`<div ${onclickStr} style="min-height:40px;border-radius:6px;padding:3px 4px;cursor:pointer">${dateNum}<div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
   }
-  return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_spCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_spCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div></div>`;
+  return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_spCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_spCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div><div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c0392b"></span>Draft</span><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3b6d11"></span>Done</span></div></div>`;
 }
 function _spCalNav(delta){_spCalMonth+=delta;if(_spCalMonth>11){_spCalMonth=0;_spCalYear++;}else if(_spCalMonth<0){_spCalMonth=11;_spCalYear--;}const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
 function _spCalDayClick(dateKey,dateId,hasPosts){
@@ -13354,10 +13354,19 @@ function _spDatesHTML(){
     const items=storyPlanItems.filter(i=>i.date_id===d.id).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
     const isCollapsed=_spCollapsed.has(d.id);
     const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px" id="sp-item-row-${item.id}"><span style="width:16px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.isi||'').replace(/"/g,'&quot;')}" style="flex:1;height:30px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
-    return `<div class="card" id="sp-date-${d.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:${isCollapsed?'none':'0.5px solid var(--border)'}" onclick="_spToggleDateCard('${d.id}')"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><span style="font-size:13px;font-weight:600">${fmtDt(d.tanggal)}</span><span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:20px;font-weight:600">${items.length} story</span></div><button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:12px"></i></button></div><div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:12px 14px"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
+    return `<div class="card" id="sp-date-${d.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:${isCollapsed?'none':'0.5px solid var(--border)'}" onclick="_spToggleDateCard('${d.id}')"><div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${(d.status||'Draft')==='Done'?'checked':''} onclick="event.stopPropagation();_spToggleDone('${d.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><span style="font-size:13px;font-weight:600;text-decoration:${(d.status||'Draft')==='Done'?'line-through':'none'};color:${(d.status||'Draft')==='Done'?'var(--text-muted)':'var(--text)'}">${fmtDt(d.tanggal)}</span><span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:20px;font-weight:600">${items.length} story</span></div><button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:12px"></i></button></div><div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:12px 14px"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
   }).join('');
 }
 function _spToggleDateCard(dateId){if(_spCollapsed.has(dateId))_spCollapsed.delete(dateId);else _spCollapsed.add(dateId);_spRenderDates();}
+async function _spToggleDone(dateId,checked){
+  const newStatus=checked?'Done':'Draft';
+  const ok=await sb_update('story_plan_dates',dateId,{status:newStatus});
+  if(!ok){showToast('Gagal update','error');return;}
+  const date=storyPlanDates.find(d=>_idEq(d.id,dateId));
+  if(date)date.status=newStatus;
+  _spRenderDates();_spRenderCalendar();
+  showToast(checked?'Marked as Done ✓':'Dikembalikan ke Draft');
+}
 function _spRenderDates(){const el=document.getElementById('sp-dates');if(el)el.innerHTML=_spDatesHTML();}
 function _spRenderCalendar(){const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
 
@@ -13522,12 +13531,12 @@ function _cpCalendarHTML(){
     const hasPosts=plans.length>0;
     const isToday=today.getFullYear()===_cpCalYear&&today.getMonth()===_cpCalMonth&&today.getDate()===day;
     let dots="";
-    plans.slice(0,3).forEach(p=>{const col=_cpFunnelColors[p.funnel]||'#6b7280';dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0"></span>`;});
+    plans.slice(0,3).forEach(p=>{const dotColor=p.status==='Done'?'#3b6d11':'#c0392b';dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${dotColor};flex-shrink:0"></span>`;});
     const onclickStr=hasPosts?`onclick="_cpCalDayClick('${dateKey}',true)"` :`onclick="_cpCalDayClick('${dateKey}',false)"`;
     const dateNum=isToday?`<div style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#0f52ba;margin-bottom:2px"><span style="font-size:11px;font-weight:700;color:#fff;line-height:1">${day}</span></div>`:`<div style="font-size:11px;color:var(--text);margin-bottom:2px;line-height:1.4;padding:0 2px">${day}</div>`;
     cells+=`<div ${onclickStr} style="min-height:40px;border-radius:6px;padding:3px 4px;cursor:pointer">${dateNum}<div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
   }
-  const legend=`<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">${Object.entries(_cpFunnelColors).map(([f,c])=>`<span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c}"></span>${f}</span>`).join('')}</div>`;
+  const legend=`<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c0392b"></span>Draft</span><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3b6d11"></span>Done</span></div>`;
   return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_cpCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_cpCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div>${legend}</div>`;
 }
 function _cpCalNav(delta){_cpCalMonth+=delta;if(_cpCalMonth>11){_cpCalMonth=0;_cpCalYear++;}else if(_cpCalMonth<0){_cpCalMonth=11;_cpCalYear--;}const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
@@ -13555,12 +13564,21 @@ function _cpCardsHTML(){
     const sBg=_cpStatusBg[status]||'var(--bg)';
     const assignee=tktPeople.find(pe=>_idEq(pe.id,p.assignee_id));
     const detailHTML=isExpanded?`<div style="padding:12px 14px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
-    return `<div class="card" id="cp-card-${p.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer" onclick="_cpToggleCard('${p.id}')"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><i class="ti ti-layout-columns" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.judul||'Tanpa judul'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${fmtDt(p.tanggal_posting)}</div></div><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:700;flex-shrink:0">${funnel}</span><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:600;flex-shrink:0">${status}</span></div><i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0;margin-left:6px"></i></div>${detailHTML}</div>`;
+    return `<div class="card" id="cp-card-${p.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer" onclick="_cpToggleCard('${p.id}')"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><input type="checkbox" ${status==='Done'?'checked':''} onclick="event.stopPropagation();_cpToggleDone('${p.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-layout-columns" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:${status==='Done'?'line-through':'none'};color:${status==='Done'?'var(--text-muted)':'var(--text)'}">${p.judul||'Tanpa judul'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${fmtDt(p.tanggal_posting)}</div></div><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:700;flex-shrink:0">${funnel}</span><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:600;flex-shrink:0">${status}</span></div><i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0;margin-left:6px"></i></div>${detailHTML}</div>`;
   }).join('');
 }
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpRenderCards(){const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpRenderCalendar(){const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
+async function _cpToggleDone(id,checked){
+  const newStatus=checked?'Done':'Draft';
+  const ok=await sb_update('carousel_plans',id,{status:newStatus});
+  if(!ok){showToast('Gagal update','error');return;}
+  const plan=carouselPlans.find(p=>_idEq(p.id,id));
+  if(plan)plan.status=newStatus;
+  _cpRenderCards();_cpRenderCalendar();
+  showToast(checked?'Marked as Done ✓':'Dikembalikan ke Draft');
+}
 async function _cpDeletePlan(id){
   if(!await showConfirmDelete("Hapus carousel plan ini?","Data plan akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."))return;
   const ok=await sb_delete('carousel_plans',id);
