@@ -8064,7 +8064,7 @@ async function saveProdModal(){
     nama:document.getElementById("pm-nama").value.trim(),
     harga:parseInt(document.getElementById("pm-harga").value)||0,
     klasifikasi:document.getElementById("pm-klas").value,
-    status:document.getElementById("pm-status").value,
+    status:document.getElementById("prod-edit-status").value,
     desc:document.getElementById("pm-desc").value,
     landingUrl:document.getElementById("pm-url").value,
     type:'satuan',
@@ -8638,10 +8638,6 @@ function renderBenefits(p){
         <div style="width:22px;height:22px;border-radius:50%;background:var(--purple-light);color:var(--purple-mid);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px">${i+1}</div>
         <div style="flex:1;min-width:0">
           <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updateBenefit('${p.id}','${b.id}','text',this.value)">${b.text}</textarea>
-          <div style="display:flex;gap:10px;margin-top:5px;font-size:11px;color:var(--text-muted)">
-            <span>Segmen: <input style="border:none;background:transparent;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text);width:160px" value="${b.segment}" onchange="updateBenefit('${p.id}','${b.id}','segment',this.value)"></span>
-            <span>Bukti: <input style="border:none;background:transparent;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text);width:130px" value="${b.evidence}" onchange="updateBenefit('${p.id}','${b.id}','evidence',this.value)"></span>
-          </div>
         </div>
         <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:10px;flex-shrink:0" onclick="deleteBenefit('${p.id}','${b.id}')"><i class="ti ti-trash"></i></button>
       </div>
@@ -8928,7 +8924,7 @@ function openProdModal(id){
   const klasSelect=document.getElementById("pm-klas");
   klasSelect.innerHTML=KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi").map(k=>`<option>${k}</option>`).join("");
   klasSelect.value=p?p.klasifikasi:(KLASIFIKASI_LIST[0]||"");
-  document.getElementById("pm-status").value=p?p.status:"Draft";
+  document.getElementById("prod-edit-status").value=p?p.status:"Draft";
   document.getElementById("pm-desc").value=p?p.desc:"";
   document.getElementById("pm-url").value=p?p.landingUrl:"";
   document.getElementById("prod-delete-btn").style.display=p?"inline-flex":"none";
@@ -9276,9 +9272,6 @@ function renderPainPoints(p){
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           ${severityBadge(pp.severity)}
-          <span style="font-size:10px;color:var(--text-muted)">Sumber: 
-            <input style="border:none;background:transparent;font-size:10px;font-family:'DM Sans',sans-serif;color:var(--text-muted);width:100px" value="${pp.source}" onchange="updatePP('${p.id}','${pp.id}','source',this.value)">
-          </span>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
@@ -9304,16 +9297,13 @@ function renderPassionPoints(p){
     </div>
     ${_pas.length===0?`<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12px"><i class="ti ti-heart" style="font-size:24px;display:block;margin-bottom:8px;color:var(--pink)"></i>Belum ada passion point. Tambah sekarang.</div>`:""}
     ${_pas.map(pas=>`
-    <div style="background:var(--pink-bg);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+    <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:500;margin-bottom:6px;line-height:1.5">
           <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updatePas('${p.id}','${pas.id}','text',this.value)">${pas.text}</textarea>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           ${severityBadge(pas.severity)}
-          <span style="font-size:10px;color:var(--text-muted)">Sumber: 
-            <input style="border:none;background:transparent;font-size:10px;font-family:'DM Sans',sans-serif;color:var(--text-muted);width:100px" value="${pas.source}" onchange="updatePas('${p.id}','${pas.id}','source',this.value)">
-          </span>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
@@ -14631,7 +14621,7 @@ async function daConfirmDelete(id) {
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Status</div>
-          <select id="pm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
+          <select id="prod-edit-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
             <option>Draft</option><option>Pre-launch</option><option>Live</option><option>Archived</option>
           </select>
         </div>
