@@ -3722,19 +3722,22 @@ function deleteSelectedBuyers(){
   const personCount=selectedIds.length;
   // Custom confirm modal (confirm() diblok di iOS Safari PWA mode)
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  ov.innerHTML=`<div style="background:var(--white);border-radius:14px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18)">
-    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Hapus ${personCount} orang?</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Semua transaksi mereka akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.</div>
+  ov.id='_del-backdrop';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+  const box=document.createElement('div');
+  box.style.cssText='position:relative;z-index:99999;background:var(--white,#fff);border-radius:14px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.22)';
+  box.innerHTML=`<div style="font-size:14px;font-weight:600;margin-bottom:8px">Hapus ${personCount} orang?</div>
+    <div style="font-size:12px;color:var(--text-muted,#888);margin-bottom:20px">Semua transaksi mereka akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.</div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button id="_del-cancel" class="btn" style="font-size:13px">Batal</button>
       <button id="_del-ok" class="btn" style="font-size:13px;background:#ef4444;color:#fff;border-color:#ef4444">Ya, Hapus</button>
-    </div>
-  </div>`;
+    </div>`;
+  box.addEventListener('click',e=>e.stopPropagation());
+  ov.appendChild(box);
   document.body.appendChild(ov);
-  const close=()=>document.body.removeChild(ov);
+  const close=()=>{if(document.body.contains(ov))document.body.removeChild(ov);};
+  ov.addEventListener('click',close);
   document.getElementById('_del-cancel').onclick=close;
-  ov.addEventListener('click',e=>{if(e.target===ov)close();});
   document.getElementById('_del-ok').onclick=async()=>{
     close();
     let ok=0,fail=0;
@@ -3747,6 +3750,8 @@ function deleteSelectedBuyers(){
     renderBuyers();renderCRMStats();
     showToast(`${ok} transaksi dihapus${fail>0?`, ${fail} gagal`:""}`);
   };
+  const _delEsc=e=>{if(e.key==='Escape'){close();document.removeEventListener('keydown',_delEsc);}};
+  document.addEventListener('keydown',_delEsc);
 }
 function clearCRMFilters(){
   ["srch","f-klas","f-industri","f-tahap","f-status","f-pool","f-sumber","f-payment","f-riwayat"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
