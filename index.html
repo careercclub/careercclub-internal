@@ -3897,19 +3897,29 @@ function renderCRMAnalytics() {
       ${content}
     </div>`;
 
-  const repeatGroups = groups.filter(g => g.txCount > 1);
-  const repeatData = [
-    ['1x (new)', groups.filter(g=>g.txCount===1).length],
-    ...Object.entries(
-      repeatGroups.reduce((m,g)=>{ const k=`${g.txCount}x`; m[k]=(m[k]||0)+1; return m; },{})
-    ).sort((a,b)=>parseInt(b[0])-parseInt(a[0]))
-  ];
+  const txCountMap = {};
+  groups.forEach(g => {
+    const k = g.txCount === 1 ? '1x (new)' : `${g.txCount}x`;
+    txCountMap[k] = (txCountMap[k] || 0) + 1;
+  });
+  const repeatData = Object.entries(txCountMap)
+    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
 
   const klasData = freq(groups.map(g => g.klasifikasi));
   const poolFilled = groups.filter(g=>g.talentPool).length;
   const poolData = [['Sudah isi pool', poolFilled], ['Belum isi pool', total - poolFilled]];
   const tahapData = freq(groups.map(g => g.tahap).filter(Boolean));
-  const industriData = freq(groups.map(g => g.industri).filter(Boolean));
+  const freqMulti = (arr) => {
+    const m = {};
+    arr.forEach(v => {
+      if (!v) return;
+      v.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).forEach(item => {
+        m[item] = (m[item] || 0) + 1;
+      });
+    });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  };
+  const industriData = freqMulti(groups.map(g => g.industri));
   const sumberData = freq(groups.map(g => g.sumber).filter(Boolean));
   const paymentRaw = [];
   groups.forEach(g => { g.allTx.forEach(tx => { if(tx.paymentStatus) paymentRaw.push(tx.paymentStatus); }); });
