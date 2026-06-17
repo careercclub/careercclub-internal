@@ -1497,7 +1497,10 @@ window.lokerHTML = function lokerHTML() {
         <div class="chart-card">
           <div class="chart-title">Distribusi Industri</div>
           <div class="chart-sub">Breakdown kategori perusahaan</div>
-          <div class="chart-wrap"><canvas id="chartIndustry"></canvas></div>
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div class="chart-wrap" style="flex:0 0 180px;min-width:140px"><canvas id="chartIndustry"></canvas></div>
+            <div id="industryLegend" style="flex:1;min-width:140px;display:flex;flex-direction:column;gap:5px"></div>
+          </div>
         </div>
       </div>
       <div class="section-label" style="margin-top:16px">Ringkasan per Kategori</div>
@@ -12634,7 +12637,7 @@ function _svbDayCardsHTML(allDates,storyByDate,buyerByDate){
     const dayBuyers=buyerByDate[date]||0;
     const dateLabel=date==='unknown'?'Tanggal tidak diketahui':fmtDt(date)||date;
     const safeId='svbday_'+date.replace(/[^a-zA-Z0-9]/g,'_');
-    const defaultOpen=dayBuyers>0;
+    const defaultOpen=false;
     return `<div class="card" style="margin-bottom:8px">
       <div onclick="toggleSvbDay('${safeId}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer">
         <div style="display:flex;align-items:center;gap:8px">
@@ -15134,7 +15137,37 @@ async function daConfirmDelete(id) {
     Object.entries(icCompaniesByYear).forEach(([ind,set]) => icByYear[ind] = set.size);
     const iL = Object.keys(icByYear), iV = Object.values(icByYear);
     if(iL.length > 0) {
-      chartIndustry = new Chart(document.getElementById('chartIndustry'),{ type:'doughnut', data:{ labels:iL, datasets:[{ data:iV, backgroundColor:IND_COLORS.slice(0,iL.length), borderWidth:2, borderColor:'#fff' }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:8}}}, cutout:'60%' }});
+      const totalInd = iV.reduce((a,b)=>a+b,0);
+      const THRESHOLD = 0.02;
+      const paired = iL.map((l,i)=>({label:l,val:iV[i],color:IND_COLORS[i%IND_COLORS.length]}))
+        .sort((a,b)=>b.val-a.val);
+      const mainSlices = paired.filter(x=>x.val/totalInd >= THRESHOLD);
+      const otherSlices = paired.filter(x=>x.val/totalInd < THRESHOLD);
+      const finalLabels = mainSlices.map(x=>x.label);
+      const finalValues = mainSlices.map(x=>x.val);
+      const finalColors = mainSlices.map(x=>x.color);
+      if(otherSlices.length > 0){
+        finalLabels.push('Lainnya');
+        finalValues.push(otherSlices.reduce((a,x)=>a+x.val,0));
+        finalColors.push('#c8c6c0');
+      }
+      chartIndustry = new Chart(document.getElementById('chartIndustry'),{
+        type:'doughnut',
+        data:{ labels:finalLabels, datasets:[{ data:finalValues, backgroundColor:finalColors, borderWidth:2, borderColor:'#fff' }]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'60%' }
+      });
+      const legEl = document.getElementById('industryLegend');
+      if(legEl){
+        legEl.innerHTML = finalLabels.map((label,i) => {
+          const val = finalValues[i];
+          const pct = ((val/totalInd)*100).toFixed(1);
+          return `<div style="display:flex;align-items:center;gap:7px">
+            <div style="width:9px;height:9px;border-radius:2px;background:${finalColors[i]};flex-shrink:0"></div>
+            <span style="font-size:10px;color:#444;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${label}">${label}</span>
+            <span style="font-size:10px;color:#888;flex-shrink:0;font-weight:600">${pct}%</span>
+          </div>`;
+        }).join('');
+      }
     }
   }
 
