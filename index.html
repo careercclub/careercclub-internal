@@ -72,11 +72,65 @@ html,body,.app,.main,.sidebar,.content,.modal-body,.pipeline-wrap,.pipeline-card
   /* Tables — horizontal scroll */
   .mobile-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .mobile-table-wrap table{min-width:480px}
-  /* Resources */
-  .res-kat-card .res-item{flex-wrap:wrap}
-  .res-kat-card .res-item > div:nth-child(3){width:100%;padding-left:38px}
-  /* Overflow text fix */
-  .res-item a{word-break:break-all}
+  /* Resources redesign */
+  .res-group { margin-bottom: 20px; }
+  .res-group-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0 8px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .res-group-title {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-muted); letter-spacing: .05em; text-transform: uppercase;
+  }
+  .res-group-count {
+    font-size: 10px; color: var(--text-hint);
+    background: var(--bg); padding: 1px 7px; border-radius: 20px;
+  }
+  .res-item-new {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    background: var(--white);
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .res-item-new:hover .res-item-actions { opacity: 1; }
+  .res-item-icon {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .res-item-actions {
+    opacity: 0; display: flex; gap: 4px; flex-shrink: 0;
+    transition: opacity .15s;
+  }
+  .res-item-actions button {
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px;
+    border: 0.5px solid var(--border);
+    background: var(--white);
+    border-radius: var(--radius);
+    cursor: pointer; color: var(--text-muted);
+  }
+  .res-item-actions button:hover { background: var(--bg); }
+  .res-item-actions button.del:hover { color: var(--red); border-color: #f0a0a0; background: #fff5f5; }
+  .res-drag-handle {
+    width: 14px; flex-shrink: 0; color: var(--text-hint);
+    cursor: grab; opacity: .35; margin-top: 6px;
+    display: flex; align-items: center;
+  }
+  .res-icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px;
+    border: none; background: none; cursor: pointer;
+    color: var(--text-muted); border-radius: 4px; padding: 0;
+  }
+  .res-icon-btn:hover { background: var(--bg); color: var(--text); }
+  .res-item-new a { word-break: break-all; }
   /* Products email layout — left panel collapses on mobile */
   #prod-email-wrap{flex-direction:column;height:auto!important}
   #prod-left-panel{width:100%!important;max-height:200px;border-right:none!important;border-bottom:0.5px solid var(--border)}
@@ -3919,7 +3973,7 @@ function renderCRMAnalytics() {
     const m = {};
     arr.forEach(v => {
       if (!v) return;
-      v.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).forEach(item => {
+      v.split(/[,&]|\band\b/i).map(s => s.trim().toUpperCase()).filter(Boolean).forEach(item => {
         m[item] = (m[item] || 0) + 1;
       });
     });
@@ -18766,7 +18820,7 @@ function renderTpAnalytics() {
     const m = {};
     arr.forEach(v => {
       if (!v) return;
-      v.split(',').map(s=>s.trim()).filter(Boolean).forEach(item => { m[item]=(m[item]||0)+1; });
+      v.split(/[,&]|\band\b/i).map(s=>s.trim()).filter(Boolean).forEach(item => { m[item]=(m[item]||0)+1; });
     });
     return Object.entries(m).sort((a,b)=>b[1]-a[1]);
   };
@@ -19715,7 +19769,6 @@ function voucherStatus(v) {
   const now = new Date(); now.setHours(0,0,0,0);
   const end = new Date(v.periode_selesai); end.setHours(0,0,0,0);
   if (end < now) return 'expired';
-  if (v.kuota != null && v.terpakai >= v.kuota) return 'habis';
   return 'aktif';
 }
 
@@ -19791,8 +19844,6 @@ function renderVoucherOverview() {
   const aktif   = voucherData.filter(v => voucherStatus(v) === 'aktif').length;
   const habis   = voucherData.filter(v => voucherStatus(v) === 'habis').length;
   const expired = voucherData.filter(v => voucherStatus(v) === 'expired').length;
-  const totalTerpakai = voucherData.reduce((s,v) => s + (v.terpakai||0), 0);
-  const totalKuota    = voucherData.reduce((s,v) => s + (v.kuota||0), 0);
   const byTipe = {};
   VOUCHER_TIPE.forEach(t => { byTipe[t] = voucherData.filter(v => v.tipe === t); });
 
@@ -19803,7 +19854,6 @@ function renderVoucherOverview() {
       { label: 'Aktif',   val: aktif,   color: 'var(--green)', bg: 'var(--green-bg)' },
       { label: 'Habis',   val: habis,   color: 'var(--amber)', bg: 'var(--amber-bg)' },
       { label: 'Expired', val: expired, color: 'var(--red)',   bg: 'var(--red-bg)' },
-      { label: 'Terpakai/Kuota', val: `${totalTerpakai}/${totalKuota||'∞'}`, color: 'var(--text)', bg: 'var(--bg)' },
     ].map(c => `<div class="card" style="padding:10px 14px;background:${c.bg};flex:1;min-width:100px">
       <div style="font-size:10px;color:${c.color};font-weight:600;margin-bottom:2px">${c.label}</div>
       <div style="font-size:20px;font-weight:800;color:${c.color}">${c.val}</div>
@@ -19841,7 +19891,6 @@ function renderVoucherList() {
         const p = (window._allProducts||[]).find(p => p.id === id);
         return p ? p.nama : null;
       }).filter(Boolean);
-      const pct = v.kuota ? Math.round((v.terpakai/v.kuota)*100) : null;
       return `<div class="card" style="padding:12px 14px">
         <div style="display:flex;align-items:flex-start;gap:10px">
           <div style="flex:1;min-width:0">
@@ -19858,14 +19907,11 @@ function renderVoucherList() {
               ${v.min_transaksi?`<span>min ${fmtRp(v.min_transaksi)}</span>`:''}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <div style="font-size:11px;color:var(--text-muted)">Terpakai: <b style="color:var(--text)">${v.terpakai}</b>${v.kuota?` / ${v.kuota}`:' / ∞'}</div>
-              ${pct!==null?`<div style="flex:1;max-width:100px;height:4px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${Math.min(pct,100)}%;height:100%;background:${pct>=100?'var(--red)':pct>=70?'var(--amber)':'var(--green)'}"></div></div>`:''}
               ${productNames.length?`<div style="font-size:10px;color:var(--text-muted)">${productNames.join(' · ')}</div>`:''}
             </div>
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0;align-items:flex-start">
             <button onclick="openVoucherCalc('${v.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-calculator" style="font-size:11px"></i></button>
-            <button onclick="openUpdateTerpakai('${v.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-plus" style="font-size:11px"></i></button>
             <button onclick="openVoucherModal('${v.id}')" class="btn btn-sm" style="font-size:10px"><i class="ti ti-edit" style="font-size:11px"></i></button>
             <button onclick="deleteVoucher('${v.id}')" class="btn btn-sm" style="font-size:10px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i></button>
           </div>
@@ -19966,10 +20012,6 @@ function openVoucherModal(id) {
         </div>
       </div>
       <div>
-        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">KUOTA (kosong = unlimited)</label>
-        <input id="vc-kuota" type="number" value="${v&&v.kuota?v.kuota:''}" placeholder="unlimited" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
-      </div>
-      <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">PRODUK YANG BERLAKU</label>
         ${allProds.length ? `<div style="display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto;padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);background:var(--bg)">
           <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding-bottom:5px;border-bottom:0.5px solid var(--border)">
@@ -20010,7 +20052,6 @@ async function saveVoucher(id) {
   const diskon_persen   = parseInt(document.getElementById('vc-diskon').value) || 0;
   const maks_potongan   = document.getElementById('vc-maks').value ? parseInt(document.getElementById('vc-maks').value) : null;
   const min_transaksi   = parseInt(document.getElementById('vc-min').value) || 0;
-  const kuota           = document.getElementById('vc-kuota').value ? parseInt(document.getElementById('vc-kuota').value) : null;
   const notes           = document.getElementById('vc-notes').value.trim();
   const product_ids     = [...document.querySelectorAll('.vc-prod:checked')].map(cb => cb.value);
 
@@ -20018,9 +20059,7 @@ async function saveVoucher(id) {
     showToast('Nama, kode, dan periode wajib diisi', 'error'); return;
   }
 
-  const existing = id ? voucherData.find(x => _idEq(x.id, id)) : null;
-  const terpakai = existing ? existing.terpakai : 0;
-  const row = { nama_event, tipe, periode_mulai, periode_selesai, kode, diskon_persen, maks_potongan, min_transaksi, kuota, terpakai, product_ids, notes };
+  const row = { nama_event, tipe, periode_mulai, periode_selesai, kode, diskon_persen, maks_potongan, min_transaksi, product_ids, notes };
 
   if (id) {
     const ok = await sb_updateVoucher(id, row);
@@ -20159,17 +20198,17 @@ function renderResources() {
   el.innerHTML = `<div id="res-kat-list">
     ${uniqueKats.map(kat => {
       const items = groups[kat];
-      return `<div class="card res-kat-card" data-kat="${kat}" style="margin-bottom:14px;padding:0;overflow:hidden"
+      return `<div class="res-group" data-kat="${kat}"
         ondragover="resDragOverKat(event,'${kat}')"
         ondrop="resDropKat(event,'${kat}')"
         ondragend="resDragEnd()">
-        <div style="padding:10px 16px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
-          <i class="ti ti-grip-vertical" draggable="true" ondragstart="resDragStartKat(event,'${kat}')" style="font-size:14px;color:var(--text-hint);cursor:grab;flex-shrink:0"></i>
-          <i class="ti ti-folder" style="font-size:14px;color:var(--purple-accent)"></i>
-          <div style="font-size:13px;font-weight:700">${kat}</div>
-          <span style="font-size:10px;color:var(--text-muted);margin-left:4px">${items.length} item</span>
+        <div class="res-group-header">
+          <i class="ti ti-grip-vertical" draggable="true" ondragstart="resDragStartKat(event,'${kat}')" style="font-size:13px;color:var(--text-hint);cursor:grab;flex-shrink:0;opacity:.4"></i>
+          <i class="ti ti-folder" style="font-size:13px;color:#0f52ba"></i>
+          <span class="res-group-title">${kat}</span>
+          <span class="res-group-count">${items.length}</span>
         </div>
-        <div class="res-item-list" data-kat="${kat}" style="padding:10px 14px;display:flex;flex-direction:column;gap:8px"
+        <div class="res-item-list" data-kat="${kat}"
           ondragover="event.preventDefault()"
           ondrop="resDropItem(event,'${kat}')">
           ${items.map(r => renderResItem(r)).join('')}
@@ -20183,28 +20222,34 @@ function renderResItem(r) {
   const isCred = r.tipe === 'credential';
   const showP = resShowPass[r.id];
   return `
-  <div class="res-item" data-id="${r.id}" data-kat="${r.kategori}"
+  <div class="res-item-new" data-id="${r.id}" data-kat="${r.kategori}"
     ondragover="resDragOverItem(event,'${r.id}')"
     ondrop="resDropItem(event,'${r.kategori}')"
-    ondragend="resDragEnd()"
-    style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--white)">
-    <i class="ti ti-grip-vertical" draggable="true" ondragstart="resDragStartItem(event,'${r.id}','${r.kategori}')" style="font-size:13px;color:var(--text-hint);margin-top:2px;flex-shrink:0;cursor:grab"></i>
-    <div style="margin-top:2px;flex-shrink:0">
-      <i class="ti ${isCred ? 'ti-lock' : 'ti-link'}" style="font-size:14px;color:${isCred ? 'var(--amber)' : 'var(--purple-accent)'}"></i>
+    ondragend="resDragEnd()">
+    <div class="res-drag-handle">
+      <i class="ti ti-grip-vertical" draggable="true" ondragstart="resDragStartItem(event,'${r.id}','${r.kategori}')" style="font-size:13px"></i>
+    </div>
+    <div class="res-item-icon">
+      <i class="ti ${isCred ? 'ti-lock' : 'ti-link'}" style="font-size:14px;color:${isCred ? 'var(--amber)' : '#0f52ba'}"></i>
     </div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:700;margin-bottom:4px">${r.nama}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-muted)">
-        ${r.url ? `<a href="${r.url}" target="_blank" style="color:var(--purple-accent);display:flex;align-items:center;gap:3px"><i class="ti ti-external-link" style="font-size:10px"></i> ${r.url.replace(/https?:\/\//,'').split('/')[0]}</a>` : ''}
-        ${isCred && r.username ? `<span><i class="ti ti-user" style="font-size:10px"></i> ${r.username}</span>` : ''}
-        ${isCred && r.email ? `<span><i class="ti ti-mail" style="font-size:10px"></i> ${r.email}</span>` : ''}
-        ${isCred && r.password ? `<span style="display:flex;align-items:center;gap:4px"><i class="ti ti-key" style="font-size:10px"></i><span style="font-family:monospace;letter-spacing:1px">${showP ? r.password : '••••••••'}</span><button onclick="resShowPass['${r.id}']=!resShowPass['${r.id}'];renderResources()" style="background:none;border:none;cursor:pointer;padding:0;color:var(--text-muted);font-size:10px"><i class="ti ${showP ? 'ti-eye-off' : 'ti-eye'}"></i></button><button onclick="navigator.clipboard.writeText('${r.password.replace(/'/g,"\\'")}').then(()=>showToast('Password disalin'))" style="background:none;border:none;cursor:pointer;padding:0;color:var(--text-muted);font-size:10px"><i class="ti ti-copy"></i></button></span>` : ''}
-        ${r.notes ? `<span style="color:var(--text-hint);font-style:italic">${r.notes}</span>` : ''}
+      <div style="font-size:13px;font-weight:500;margin-bottom:5px;color:var(--text)">${r.nama}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11px;color:var(--text-muted)">
+        ${r.url ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-external-link" style="font-size:10px"></i><a href="${r.url}" target="_blank" style="color:#0f52ba">${r.url.replace(/https?:\/\//,'').split('/')[0]}</a></span>` : ''}
+        ${r.username ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-user" style="font-size:10px"></i> ${r.username}</span>` : ''}
+        ${r.email ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-mail" style="font-size:10px"></i> ${r.email}</span>` : ''}
+        ${r.password ? `<span style="display:flex;align-items:center;gap:3px">
+          <i class="ti ti-key" style="font-size:10px;color:var(--amber)"></i>
+          <span style="font-family:monospace;letter-spacing:1px">${showP ? r.password : '••••••••'}</span>
+          <button class="res-icon-btn" onclick="resShowPass['${r.id}']=!resShowPass['${r.id}'];renderResources()"><i class="ti ${showP ? 'ti-eye-off' : 'ti-eye'}" style="font-size:11px"></i></button>
+          <button class="res-icon-btn" onclick="navigator.clipboard.writeText('${r.password.replace(/'/g,"\\'")}').then(()=>showToast('Password disalin'))"><i class="ti ti-copy" style="font-size:11px"></i></button>
+        </span>` : ''}
       </div>
+      ${r.notes ? `<div style="font-size:11px;color:var(--text-hint);font-style:italic;margin-top:3px">${r.notes}</div>` : ''}
     </div>
-    <div style="display:flex;gap:4px;flex-shrink:0">
-      <button onclick="openResModal('${r.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px"><i class="ti ti-edit" style="font-size:11px"></i></button>
-      <button onclick="deleteRes('${r.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i></button>
+    <div class="res-item-actions">
+      <button onclick="openResModal('${r.id}')" title="Edit"><i class="ti ti-edit" style="font-size:12px"></i></button>
+      <button class="del" onclick="deleteRes('${r.id}')" title="Hapus"><i class="ti ti-trash" style="font-size:12px"></i></button>
     </div>
   </div>`;
 }
@@ -20256,7 +20301,7 @@ function resDragStartItem(e, id, kat) {
 function resDragOverItem(e, id) {
   if (resDragType !== 'item') return;
   e.preventDefault(); e.stopPropagation();
-  const el = document.querySelector(`.res-item[data-id="${id}"]`);
+  const el = document.querySelector(`.res-item-new[data-id="${id}"]`);
   if (el) el.style.outline = '2px solid var(--purple-accent)';
 }
 
@@ -20264,7 +20309,7 @@ function resDropItem(e, targetKat) {
   e.preventDefault(); e.stopPropagation();
   if (resDragType !== 'item' || !resDragId) { resDragEnd(); return; }
   // Find drop target item
-  const target = e.target.closest('.res-item');
+  const target = e.target.closest('.res-item-new');
   const targetId = target?.dataset?.id;
   // Move dragged item
   const dragIdx = resourcesData.findIndex(r => String(r.id) === String(resDragId));
@@ -20286,7 +20331,7 @@ function resDropItem(e, targetKat) {
 
 function resDragEnd() {
   resDragId = null; resDragKat = null; resDragType = null;
-  document.querySelectorAll('.res-kat-card,.res-item').forEach(el => el.style.outline = '');
+  document.querySelectorAll('.res-group,.res-item-new').forEach(el => el.style.outline = '');
 }
 
 async function resSaveOrder() {
