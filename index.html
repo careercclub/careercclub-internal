@@ -177,7 +177,7 @@ html,body,.app,.main,.sidebar,.content,.modal-body,.pipeline-wrap,.pipeline-card
 .cl-dd-new-row button{padding:5px 10px;border-radius:var(--radius);border:0.5px solid var(--purple-mid);background:var(--purple-light);color:var(--purple-dark);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
 .notif-btn{width:32px;height:32px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
 .notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;background:#e24b4a;border-radius:50%;border:1.5px solid var(--white)}
-.content{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0;padding:18px 22px;background:var(--bg)}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0;padding:18px 22px;background:var(--bg);overscroll-behavior-y:contain}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
 .stat-card{background:var(--white);border-radius:var(--radius);padding:14px;border:0.5px solid var(--border)}
 .stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
@@ -703,6 +703,12 @@ body{ font-family: 'DM Sans', sans-serif; background: #f0f2ff; min-height: 100vh
   .pipeline-wrap { height:auto !important; flex-direction:column; overflow-x:hidden; overflow-y:auto; padding-bottom:0; }
   .pipeline-col { min-width:0 !important; width:100% !important; flex-shrink:0; }
   .pipeline-cards { max-height:200px; overflow-y:auto; }
+body.pwa-mode .pipeline-wrap,
+body.pwa-mode .pipeline-cards,
+body.pwa-mode .modal-body,
+body.pwa-mode .cust-body {
+  overscroll-behavior-y: contain;
+}
 
   /* ── CONTENT PLANNING ── */
   .tab-row { overflow-x:auto; flex-wrap:nowrap !important; }
@@ -832,6 +838,10 @@ body.pwa-mode .mobile-menu-btn { display: none !important; }
 body.pwa-mode .main { margin-left: 0 !important; }
 body.pwa-mode .pwa-bottom-nav { display: flex; }
 body.pwa-mode .content { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }
+body.pwa-mode .content {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
 body.pwa-mode .topbar {
   background: #0a3d8f !important; color: #fff !important;
   padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px)) !important;
@@ -967,7 +977,7 @@ body.pwa-mode #notif-panel .notif-action-color { color: inherit !important; }
 
 /* Fix 5: Scroll to top button — naik di atas bottom nav */
 body.pwa-mode #scroll-top-btn {
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
   right: 16px !important;
   width: 36px !important;
   height: 36px !important;
@@ -1108,10 +1118,17 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
   [style*="grid-template-columns: 1fr 1fr 1fr"],
   [style*="grid-template-columns:1fr 1fr 1fr 1fr"],
   [style*="grid-template-columns:2fr 1fr"],
-  [style*="grid-template-columns:repeat(3"],
-  [style*="grid-template-columns: repeat(3"],
+  [style*="grid-template-columns:repeat(3"]:not(.stats-grid),
+  [style*="grid-template-columns: repeat(3"]:not(.stats-grid),
   [style*="grid-template-columns:repeat(4"] {
     grid-template-columns: 1fr !important;
+  }
+  body.pwa-mode .stats-grid[data-cols="3"] {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  body.pwa-mode .stats-grid[data-cols="3"] .stat-card {
+    padding: 10px 12px !important;
   }
   /* Stats grid 5 & 4 kolom → 2 kolom */
   [style*="grid-template-columns:repeat(5,1fr)"],
@@ -1202,6 +1219,46 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
   }
   .filter-row > * { flex: 1 1 100% !important; }
 }
+
+/* ── Custom Dropdown (global) ── */
+.cdd-wrap { position: relative; width: 100%; }
+.cdd-trigger {
+  width: 100%; padding: 8px 36px 8px 10px;
+  border: 0.5px solid var(--border-md);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 13px; color: var(--text);
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px;
+  outline: none; text-align: left;
+  transition: border-color .15s, box-shadow .15s;
+}
+.cdd-trigger:focus, .cdd-trigger.open {
+  border-color: #0f52ba;
+  box-shadow: 0 0 0 3px rgba(15,82,186,.1);
+}
+.cdd-trigger-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdd-trigger-icon { font-size: 14px; color: var(--text-muted); flex-shrink: 0; transition: transform .15s; }
+.cdd-trigger.open .cdd-trigger-icon { transform: rotate(180deg); }
+.cdd-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  border: 0.5px solid var(--border-md);
+  border-radius: var(--radius);
+  background: var(--white);
+  z-index: 9999;
+  max-height: 220px; overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,.1);
+}
+.cdd-option {
+  padding: 9px 12px; font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  color: var(--text);
+}
+.cdd-option:hover { background: var(--bg); }
+.cdd-option.selected { color: #0f52ba; font-weight: 500; }
+.cdd-option.selected .cdd-check { opacity: 1; }
+.cdd-check { opacity: 0; color: #0f52ba; font-size: 13px; flex-shrink: 0; }
+.cdd-empty { padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
@@ -3417,8 +3474,8 @@ function dashCalToday() {
 }
 
 function renderDashUpcoming() {
+  if (document.body.classList.contains('pwa-mode') && window.innerWidth <= 600) return;
   const upEl=document.getElementById('dash-upcoming');
-  if (upEl && upEl.dataset.pwaRendered === '1') return;
   const today=new Date(); today.setHours(0,0,0,0);
   const future=new Date(today); future.setDate(future.getDate()+7);
   const todayISO=toLocalDateISO(today);
@@ -5051,6 +5108,130 @@ function showToast(msg){
   const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2500);
 }
+
+function buildDropdown({ id, options = [], value = '', placeholder = 'Pilih...', onChange = null, allowCustom = false }) {
+  const wrId = `cdd-${id}`;
+  const panelId = `cddp-${id}`;
+  const triggerId = `cddt-${id}`;
+  const searchId = `cdds-${id}`;
+
+  let currentVal = value;
+
+  const getLabel = (v) => v || placeholder;
+
+  const html = `
+  <div class="cdd-wrap" id="${wrId}">
+    <button type="button" class="cdd-trigger" id="${triggerId}"
+      onclick="_cddToggle('${id}')"
+      onkeydown="_cddKeydown(event,'${id}')">
+      <span class="cdd-trigger-text" id="cddt-label-${id}">${getLabel(currentVal)}</span>
+      <i class="ti ti-chevron-down cdd-trigger-icon" aria-hidden="true"></i>
+    </button>
+    <div class="cdd-panel" id="${panelId}" style="display:none">
+      ${allowCustom || options.length > 6 ? `<div style="padding:6px 8px;border-bottom:0.5px solid var(--border)">
+        <input id="${searchId}" type="text" placeholder="Cari atau ketik baru..."
+          style="width:100%;padding:6px 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"
+          oninput="_cddSearch('${id}',this.value)"
+          onkeydown="_cddSearchKey(event,'${id}')">
+      </div>` : ''}
+      <div id="cdd-opts-${id}">
+        ${options.length === 0 ? `<div class="cdd-empty">Belum ada opsi</div>` :
+          options.map(opt => `
+          <div class="cdd-option${opt === currentVal ? ' selected' : ''}" onclick="_cddSelect('${id}','${opt.replace(/'/g, "\\'")}')">
+            ${opt}
+            <i class="ti ti-check cdd-check" aria-hidden="true"></i>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  window._cddState = window._cddState || {};
+  window._cddState[id] = { options, value: currentVal, placeholder, onChange, allowCustom };
+
+  return html;
+}
+
+function _cddToggle(id) {
+  const panel = document.getElementById(`cddp-${id}`);
+  const trigger = document.getElementById(`cddt-${id}`);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  document.querySelectorAll('.cdd-panel').forEach(p => { p.style.display = 'none'; });
+  document.querySelectorAll('.cdd-trigger').forEach(t => t.classList.remove('open'));
+  if (!isOpen) {
+    panel.style.display = 'block';
+    trigger.classList.add('open');
+    const search = document.getElementById(`cdds-${id}`);
+    if (search) setTimeout(() => search.focus(), 50);
+  }
+}
+
+function _cddSelect(id, val) {
+  const state = window._cddState?.[id];
+  if (!state) return;
+  state.value = val;
+  const label = document.getElementById(`cddt-label-${id}`);
+  if (label) label.textContent = val || state.placeholder;
+  document.querySelectorAll(`#cdd-opts-${id} .cdd-option`).forEach(el => {
+    el.classList.toggle('selected', el.textContent.trim().startsWith(val));
+  });
+  const panel = document.getElementById(`cddp-${id}`);
+  const trigger = document.getElementById(`cddt-${id}`);
+  if (panel) panel.style.display = 'none';
+  if (trigger) trigger.classList.remove('open');
+  if (typeof state.onChange === 'function') state.onChange(val);
+}
+
+function _cddGetValue(id) {
+  return window._cddState?.[id]?.value || '';
+}
+
+function _cddSetValue(id, val) {
+  _cddSelect(id, val);
+}
+
+function _cddSearch(id, query) {
+  const state = window._cddState?.[id];
+  if (!state) return;
+  const q = query.toLowerCase().trim();
+  const container = document.getElementById(`cdd-opts-${id}`);
+  if (!container) return;
+  const filtered = q ? state.options.filter(o => o.toLowerCase().includes(q)) : state.options;
+  const showCustom = state.allowCustom && q && !state.options.some(o => o.toLowerCase() === q);
+  container.innerHTML = filtered.map(opt => `
+    <div class="cdd-option${opt === state.value ? ' selected' : ''}" onclick="_cddSelect('${id}','${opt.replace(/'/g, "\\'")}')">
+      ${opt}<i class="ti ti-check cdd-check" aria-hidden="true"></i>
+    </div>`).join('') +
+    (showCustom ? `<div class="cdd-option" style="color:var(--text-muted);font-style:italic" onclick="_cddSelect('${id}','${query.replace(/'/g, "\\'")}')">
+      <i class="ti ti-plus" style="font-size:11px"></i> Tambah "${query}"
+    </div>` : '') +
+    (filtered.length === 0 && !showCustom ? `<div class="cdd-empty">Tidak ditemukan</div>` : '');
+}
+
+function _cddSearchKey(e, id) {
+  if (e.key === 'Escape') { _cddToggle(id); }
+  if (e.key === 'Enter') {
+    const q = e.target.value.trim();
+    if (q) _cddSelect(id, q);
+  }
+}
+
+function _cddKeydown(e, id) {
+  if (e.key === 'Escape') {
+    const panel = document.getElementById(`cddp-${id}`);
+    const trigger = document.getElementById(`cddt-${id}`);
+    if (panel) panel.style.display = 'none';
+    if (trigger) trigger.classList.remove('open');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.cdd-wrap')) {
+    document.querySelectorAll('.cdd-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.cdd-trigger').forEach(t => t.classList.remove('open'));
+  }
+});
+
 function showConfirmDelete(title,description){
   return new Promise(resolve=>{
     const ov=document.createElement('div');
@@ -5165,15 +5346,18 @@ function ticketsHTML(){
       <div class="tab-row" style="border:none;margin:0">
         <div class="tab active" id="ttab-all" onclick="tktTab('all',this)">Semua</div>
         <div class="tab" id="ttab-open" onclick="tktTab('open',this)">Todo</div>
-        <div class="tab" id="ttab-inprogress" onclick="tktTab('inprogress',this)">In Progress</div>
         <div class="tab" id="ttab-done" onclick="tktTab('done',this)">Done</div>
       </div>
-      <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-        <input type="text" id="tkt-search" placeholder="Cari ticket..." style="min-width:160px" oninput="renderTickets()">
-        <select id="tkt-f-div" onchange="renderTickets()"><option value="">Semua divisi</option>${tktDivisi.map(d=>`<option value="${d.id}">${d.nama}</option>`).join("")}</select>
-        <select id="tkt-f-prio" onchange="renderTickets()"><option value="">Semua prioritas</option>${tktPrioList.map(p=>`<option>${p}</option>`).join("")}</select>
-        <button class="btn btn-primary" onclick="openNewTktModal()"><i class="ti ti-plus"></i> Buat Ticket</button>
-        <button class="btn" onclick="switchPage('masterTicket',null)" style="font-size:11px"><i class="ti ti-adjustments"></i> Master Data</button>
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+        <div style="display:flex;gap:7px;align-items:center">
+          <input type="text" id="tkt-search" placeholder="Cari ticket..." style="flex:1;min-width:0" oninput="renderTickets()">
+          <button class="btn btn-primary" style="flex-shrink:0;white-space:nowrap" onclick="openNewTktModal()"><i class="ti ti-plus"></i> Buat Ticket</button>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="tkt-f-div" onchange="renderTickets()" style="flex:1;min-width:0;font-size:12px;height:30px;padding:0 8px;border-radius:var(--radius);border:0.5px solid var(--border-md);background:var(--bg);color:var(--text)"><option value="">Semua divisi</option>${tktDivisi.map(d=>`<option value="${d.id}">${d.nama}</option>`).join("")}</select>
+          <select id="tkt-f-prio" onchange="renderTickets()" style="flex:1;min-width:0;font-size:12px;height:30px;padding:0 8px;border-radius:var(--radius);border:0.5px solid var(--border-md);background:var(--bg);color:var(--text)"><option value="">Semua prioritas</option>${tktPrioList.map(p=>`<option>${p}</option>`).join("")}</select>
+          <button class="btn" onclick="switchPage('masterTicket',null)" style="flex-shrink:0;font-size:11px;height:30px"><i class="ti ti-adjustments"></i> Master Data</button>
+        </div>
       </div>
     </div>
     <div>
@@ -5196,12 +5380,10 @@ function tktTab(tab,el){
 function renderTickets(){
   // stats
   const todo=tickets.filter(t=>t.status==="Todo").length;
-  const inprog=tickets.filter(t=>t.status==="In Progress").length;
   const done=tickets.filter(t=>t.status==="Done").length;
   const statsEl=document.getElementById("tkt-stats");
   if(statsEl) statsEl.innerHTML=`
     <div class="tkt-stat"><div class="tkt-stat-icon" style="background:#F1EFE8"><i class="ti ti-circle-dashed" style="color:#5F5E5A"></i></div><div><div class="tkt-stat-val" style="color:#5F5E5A">${todo}</div><div class="tkt-stat-label">Todo</div></div></div>
-    <div class="tkt-stat"><div class="tkt-stat-icon" style="background:#FAEEDA"><i class="ti ti-loader" style="color:#854F0B"></i></div><div><div class="tkt-stat-val" style="color:#854F0B">${inprog}</div><div class="tkt-stat-label">In Progress</div></div></div>
     <div class="tkt-stat"><div class="tkt-stat-icon" style="background:#EAF3DE"><i class="ti ti-circle-check" style="color:#3B6D11"></i></div><div><div class="tkt-stat-val" style="color:#3B6D11">${done}</div><div class="tkt-stat-label">Done</div></div></div>`;
 
   const search=(document.getElementById("tkt-search")?.value||"").toLowerCase();
@@ -5211,7 +5393,6 @@ function renderTickets(){
   const visible=getVisibleTickets();
   let filtered=visible.filter(t=>{
     if(tktActiveTab==="open" && t.status!=="Todo") return false;
-    if(tktActiveTab==="inprogress" && t.status!=="In Progress") return false;
     if(tktActiveTab==="done" && t.status!=="Done") return false;
     if(search && !t.judul.toLowerCase().includes(search) && !String(t.id).includes(search)) return false;
     if(fDiv){
@@ -9727,20 +9908,16 @@ function renderPainPoints(p){
     </div>
     ${_pp.length===0?`<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12px"><i class="ti ti-alert-circle" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada pain point. Tambah sekarang.</div>`:""}
     ${_pp.map(pp=>`
-    <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;margin-bottom:6px;line-height:1.5">
-          <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updatePP('${p.id}','${pp.id}','text',this.value)">${pp.text}</textarea>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          ${severityBadge(pp.severity)}
-        </div>
+    <div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:6px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <textarea style="flex:1;min-width:0;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updatePP('${p.id}','${pp.id}','text',this.value)">${pp.text}</textarea>
+        <button onclick="deletePP('${p.id}','${pp.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-        <select style="font-size:10px;padding:2px 4px;border-radius:5px;width:55px" onchange="updatePP('${p.id}','${pp.id}','severity',this.value)">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${severityBadge(pp.severity)}
+        <select style="font-size:11px;padding:2px 6px;border-radius:5px;border:0.5px solid var(--border-md);background:var(--white);color:var(--text);height:22px" onchange="updatePP('${p.id}','${pp.id}','severity',this.value)">
           ${PROD_SEVERITY.map(s=>`<option ${s===pp.severity?"selected":""}>${s}</option>`).join("")}
         </select>
-        <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:10px" onclick="deletePP('${p.id}','${pp.id}')"><i class="ti ti-trash"></i></button>
       </div>
     </div>`).join("")}
   </div>`;
@@ -9759,20 +9936,16 @@ function renderPassionPoints(p){
     </div>
     ${_pas.length===0?`<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12px"><i class="ti ti-heart" style="font-size:24px;display:block;margin-bottom:8px;color:var(--pink)"></i>Belum ada passion point. Tambah sekarang.</div>`:""}
     ${_pas.map(pas=>`
-    <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;margin-bottom:6px;line-height:1.5">
-          <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updatePas('${p.id}','${pas.id}','text',this.value)">${pas.text}</textarea>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          ${severityBadge(pas.severity)}
-        </div>
+    <div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:6px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <textarea style="flex:1;min-width:0;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updatePas('${p.id}','${pas.id}','text',this.value)">${pas.text}</textarea>
+        <button onclick="deletePas('${p.id}','${pas.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-        <select style="font-size:10px;padding:2px 4px;border-radius:5px;width:55px" onchange="updatePas('${p.id}','${pas.id}','severity',this.value)">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${severityBadge(pas.severity)}
+        <select style="font-size:11px;padding:2px 6px;border-radius:5px;border:0.5px solid var(--border-md);background:var(--white);color:var(--text);height:22px" onchange="updatePas('${p.id}','${pas.id}','severity',this.value)">
           ${PROD_SEVERITY.map(s=>`<option ${s===pas.severity?"selected":""}>${s}</option>`).join("")}
         </select>
-        <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:10px" onclick="deletePas('${p.id}','${pas.id}')"><i class="ti ti-trash"></i></button>
       </div>
     </div>`).join("")}
   </div>`;
@@ -10633,13 +10806,13 @@ function fcAnalyticsHTML() {
         <div style="font-size:13px;font-weight:700">Analytics Free Class</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Upload file CSV dari Google Sheets atau import via URL</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:var(--purple);color:white;font-size:12px;font-weight:600;cursor:pointer">
-          <i class="ti ti-upload"></i> Upload CSV
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius);background:var(--purple);color:white;font-size:12px;font-weight:500;cursor:pointer;height:30px">
+          <i class="ti ti-upload" style="font-size:12px"></i> Upload CSV
           <input type="file" accept=".csv" style="display:none" onchange="fcHandleFile(this)">
         </label>
-        <button class="btn btn-sm" onclick="fcOpenImport()"><i class="ti ti-link"></i> Import URL</button>
-        <button class="btn btn-sm" onclick="exportFCAnalyticsJSON()"><i class="ti ti-download"></i> Export JSON</button>
+        <button class="btn btn-sm" onclick="fcOpenImport()" style="height:30px;font-size:12px"><i class="ti ti-link" style="font-size:12px"></i> Import URL</button>
+        <button class="btn btn-sm" onclick="exportFCAnalyticsJSON()" style="height:30px;font-size:12px"><i class="ti ti-download" style="font-size:12px"></i> Export JSON</button>
       </div>
     </div>
     <div id="fc-import-section" style="display:none">
@@ -10940,15 +11113,19 @@ function fcRenderCharts() {
     }).join('');
 
     const isLast = idx === sorted.length - 1;
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:${isLast?'none':'0.5px solid var(--border)'}">
-      <div style="font-size:12px;color:var(--text);flex:0 0 220px;line-height:1.3">${r.label}${r.n < total ? ` <span style="font-size:9px;color:var(--text-muted)">(n=${r.n})</span>` : ''}</div>
-      <div style="flex:1;min-width:80px">
-        <div style="background:var(--bg);border-radius:4px;height:7px">
-          <div style="width:${barPct}%;height:7px;border-radius:4px;background:${ratingColor(r.avg)}"></div>
-        </div>
+    return `<div style="padding:9px 0;border-bottom:${isLast?'none':'0.5px solid var(--border)'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+        <div style="font-size:12px;color:var(--text);line-height:1.3;flex:1;min-width:0">${r.label}${r.n < total ? ` <span style="font-size:9px;color:var(--text-muted)">(n=${r.n})</span>` : ''}</div>
+        <div style="font-size:14px;font-weight:700;color:${ratingColor(r.avg)};flex-shrink:0">${r.avg.toFixed(2)}</div>
       </div>
-      <div style="font-size:14px;font-weight:700;color:${ratingColor(r.avg)};flex:0 0 38px;text-align:right">${r.avg.toFixed(2)}</div>
-      <div style="display:flex;gap:4px;flex:0 0 auto">${distPills}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="background:var(--bg);border-radius:4px;height:6px">
+            <div style="width:${barPct}%;height:6px;border-radius:4px;background:${ratingColor(r.avg)}"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:3px;flex-shrink:0">${distPills}</div>
+      </div>
     </div>`;
   }).join('');
 
@@ -13385,7 +13562,7 @@ function contentHTML(){
   return `<div style="display:flex;flex-direction:column;height:calc(100vh - 53px)">
     <div style="flex-shrink:0;padding:0 20px">
       <div class="tab-row" style="margin-bottom:0">
-        ${[['carousel','ti-layout-columns','Carousel Plan'],['story-plan','ti-layout-rows','Story Plan'],['kol-list','ti-users','KOL List'],['mt-story','ti-star','MT Story List']].map(([v,icon,l])=>`
+        ${[['carousel','ti-layout-columns','Carousel Plan'],['story-plan','ti-layout-rows','Story Plan'],['kol-list','ti-users','KOL List'],['mt-story','ti-star','MT Story']].map(([v,icon,l])=>`
           <div onclick="switchContentTab('${v}')" id="ctab-${v}" class="tab${_contentSubTab===v?' active':''}"><i class="ti ${icon}" style="font-size:12px"></i> ${l}</div>`).join('')}
       </div>
     </div>
@@ -13508,7 +13685,7 @@ function _qlRenderChips(prefix){
 
 /* ── STORY PLAN ─────────────────────────────────────────────────── */
 function storyPlanHTML(){
-  return `<div style="padding:20px">
+  return `<div style="padding:12px 14px">
     ${_quickLinksHTML('sp',storyPlanLinks,'sp_links_visible')}
     <div style="margin-bottom:14px">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-calendar" style="font-size:13px;color:var(--text-muted)"></i> Kalender Story</div>
@@ -13553,9 +13730,9 @@ function _spCalendarHTML(){
     const hasPosts=!!info;
     const onclickStr=hasPosts?`onclick="_spCalDayClick('${dateKey}','${info.dateId}',true)"` :`onclick="_spCalDayClick('${dateKey}','',false)"`;
     const dateNum=isToday?`<div style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#0f52ba;margin-bottom:2px"><span style="font-size:11px;font-weight:700;color:#fff;line-height:1">${day}</span></div>`:`<div style="font-size:11px;color:var(--text);margin-bottom:2px;line-height:1.4;padding:0 2px">${day}</div>`;
-    cells+=`<div ${onclickStr} style="min-height:40px;border-radius:6px;padding:3px 4px;cursor:pointer">${dateNum}<div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
+    cells+=`<div ${onclickStr} style="min-height:32px;border-radius:6px;padding:2px 3px;cursor:pointer">${dateNum}<div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
   }
-  return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_spCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_spCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div><div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c0392b"></span>Draft</span><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3b6d11"></span>Done</span></div></div>`;
+  return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:10px 12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_spCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_spCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div><div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c0392b"></span>Draft</span><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3b6d11"></span>Done</span></div></div>`;
 }
 function _spCalNav(delta){_spCalMonth+=delta;if(_spCalMonth>11){_spCalMonth=0;_spCalYear++;}else if(_spCalMonth<0){_spCalMonth=11;_spCalYear--;}const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
 function _spCalDayClick(dateKey,dateId,hasPosts){
@@ -13572,8 +13749,8 @@ function _spDatesHTML(){
   return storyPlanDates.map(d=>{
     const items=storyPlanItems.filter(i=>i.date_id===d.id).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
     const isCollapsed=_spCollapsed.has(d.id);
-    const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px" id="sp-item-row-${item.id}"><span style="width:16px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.isi||'').replace(/"/g,'&quot;')}" style="flex:1;height:30px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
-    return `<div class="card" id="sp-date-${d.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:${isCollapsed?'none':'0.5px solid var(--border)'}" onclick="_spToggleDateCard('${d.id}')"><div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${(d.status||'Draft')==='Done'?'checked':''} onclick="event.stopPropagation();_spToggleDone('${d.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><span style="font-size:13px;font-weight:600;text-decoration:${(d.status||'Draft')==='Done'?'line-through':'none'};color:${(d.status||'Draft')==='Done'?'var(--text-muted)':'var(--text)'}">${fmtDt(d.tanggal)}</span><span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:20px;font-weight:600">${items.length} story</span></div><button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:12px"></i></button></div><div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:12px 14px"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
+    const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px" id="sp-item-row-${item.id}"><span style="width:14px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.isi||'').replace(/"/g,'&quot;')}" style="flex:1;height:26px;padding:0 7px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
+    return `<div class="card" id="sp-date-${d.id}" style="margin-bottom:6px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;border-bottom:${isCollapsed?'none':'0.5px solid var(--border)'}" onclick="_spToggleDateCard('${d.id}')"><div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${(d.status||'Draft')==='Done'?'checked':''} onclick="event.stopPropagation();_spToggleDone('${d.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><span style="font-size:13px;font-weight:600;text-decoration:${(d.status||'Draft')==='Done'?'line-through':'none'};color:${(d.status||'Draft')==='Done'?'var(--text-muted)':'var(--text)'}">${fmtDt(d.tanggal)}</span><span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:20px;font-weight:600">${items.length} story</span></div><button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:12px"></i></button></div><div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:8px 12px"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
   }).join('');
 }
 function _spToggleDateCard(dateId){if(_spCollapsed.has(dateId))_spCollapsed.delete(dateId);else _spCollapsed.add(dateId);_spRenderDates();}
@@ -13703,7 +13880,7 @@ async function _spDeleteDate(dateId){
 // ══════════════════════════════════════════════════════════════
 
 function carouselPlanHTML(){
-  return `<div style="padding:20px">
+  return `<div style="padding:12px 14px">
     ${_quickLinksHTML('cp',carouselPlanLinks,'cp_links_visible')}
     <div style="margin-bottom:14px">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-calendar" style="font-size:13px;color:var(--text-muted)"></i> Kalender Carousel</div>
@@ -13753,10 +13930,10 @@ function _cpCalendarHTML(){
     plans.slice(0,3).forEach(p=>{const dotColor=p.status==='Done'?'#3b6d11':'#c0392b';dots+=`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${dotColor};flex-shrink:0"></span>`;});
     const onclickStr=hasPosts?`onclick="_cpCalDayClick('${dateKey}',true)"` :`onclick="_cpCalDayClick('${dateKey}',false)"`;
     const dateNum=isToday?`<div style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#0f52ba;margin-bottom:2px"><span style="font-size:11px;font-weight:700;color:#fff;line-height:1">${day}</span></div>`:`<div style="font-size:11px;color:var(--text);margin-bottom:2px;line-height:1.4;padding:0 2px">${day}</div>`;
-    cells+=`<div ${onclickStr} style="min-height:40px;border-radius:6px;padding:3px 4px;cursor:pointer">${dateNum}<div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
+    cells+=`<div ${onclickStr} style="min-height:32px;border-radius:6px;padding:2px 3px;cursor:pointer">${dateNum}<div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div></div>`;
   }
   const legend=`<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c0392b"></span>Draft</span><span style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3b6d11"></span>Done</span></div>`;
-  return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_cpCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_cpCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div>${legend}</div>`;
+  return `<div style="background:var(--white);border:0.5px solid var(--border);border-radius:12px;padding:10px 12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><button onclick="_cpCalNav(-1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-left" style="font-size:12px"></i></button><div style="font-size:12px;font-weight:600">${monthLabel}</div><button onclick="_cpCalNav(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><i class="ti ti-chevron-right" style="font-size:12px"></i></button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${dayLabels}${cells}</div>${legend}</div>`;
 }
 function _cpCalNav(delta){_cpCalMonth+=delta;if(_cpCalMonth>11){_cpCalMonth=0;_cpCalYear++;}else if(_cpCalMonth<0){_cpCalMonth=11;_cpCalYear--;}const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
 function _cpCalDayClick(dateKey,hasPosts){
@@ -13782,8 +13959,8 @@ function _cpCardsHTML(){
     const sCol=_cpStatusColors[status]||'var(--text-muted)';
     const sBg=_cpStatusBg[status]||'var(--bg)';
     const assignee=tktPeople.find(pe=>_idEq(pe.id,p.assignee_id));
-    const detailHTML=isExpanded?`<div style="padding:12px 14px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
-    return `<div class="card" id="cp-card-${p.id}" style="margin-bottom:10px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer" onclick="_cpToggleCard('${p.id}')"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><input type="checkbox" ${status==='Done'?'checked':''} onclick="event.stopPropagation();_cpToggleDone('${p.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-layout-columns" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:${status==='Done'?'line-through':'none'};color:${status==='Done'?'var(--text-muted)':'var(--text)'}">${p.judul||'Tanpa judul'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${fmtDt(p.tanggal_posting)}</div></div><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:700;flex-shrink:0">${funnel}</span><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:600;flex-shrink:0">${status}</span></div><i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0;margin-left:6px"></i></div>${detailHTML}</div>`;
+    const detailHTML=isExpanded?`<div style="padding:8px 12px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
+    return `<div class="card" id="cp-card-${p.id}" style="margin-bottom:6px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer" onclick="_cpToggleCard('${p.id}')"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><input type="checkbox" ${status==='Done'?'checked':''} onclick="event.stopPropagation();_cpToggleDone('${p.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-layout-columns" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:${status==='Done'?'line-through':'none'};color:${status==='Done'?'var(--text-muted)':'var(--text)'}">${p.judul||'Tanpa judul'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${fmtDt(p.tanggal_posting)}</div></div><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:700;flex-shrink:0">${funnel}</span><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:600;flex-shrink:0">${status}</span></div><i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0;margin-left:6px"></i></div>${detailHTML}</div>`;
   }).join('');
 }
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
@@ -14603,8 +14780,7 @@ function daOpenUploadModal(prefillFile) {
       <div id="da-preview-area" style="display:none;flex-wrap:wrap;gap:8px"></div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">KATEGORI</label>
-        <input id="da-kategori" list="da-kat-list" placeholder="cth: Cover Workshop, Poster Seminar" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-        <datalist id="da-kat-list">${cats.map(c=>`<option value="${c}">`).join('')}</datalist>
+        ${buildDropdown({ id: 'da-kategori', options: cats, value: '', placeholder: 'Pilih atau ketik kategori...', allowCustom: true })}
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NAMA (opsional)</label>
@@ -14680,7 +14856,7 @@ function daRemoveFile(idx) {
 
 async function daDoUpload() {
   const files = window._daFiles || [];
-  const kategori = document.getElementById('da-kategori')?.value.trim();
+  const kategori = _cddGetValue('da-kategori');
   const nama = document.getElementById('da-nama')?.value.trim() || '';
   const link = document.getElementById('da-link')?.value.trim() || '';
   const notes = document.getElementById('da-notes')?.value.trim() || '';
@@ -14783,8 +14959,7 @@ function daOpenEditModal(id) {
     <div style="display:flex;flex-direction:column;gap:11px">
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">KATEGORI</label>
-        <input id="dae-kategori" list="dae-kat-list" value="${a.kategori}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-        <datalist id="dae-kat-list">${cats.map(c=>`<option value="${c}">`).join('')}</datalist>
+        ${buildDropdown({ id: 'dae-kategori', options: cats, value: a.kategori, placeholder: 'Pilih kategori...', allowCustom: true })}
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NAMA</label>
@@ -14809,7 +14984,7 @@ function daOpenEditModal(id) {
 async function daSaveEdit(id) {
   const a = daAssets.find(x => _idEq(x.id, id));
   if (!a) return;
-  const kategori = document.getElementById('dae-kategori').value.trim();
+  const kategori = _cddGetValue('dae-kategori');
   const nama = document.getElementById('dae-nama').value.trim();
   const link = document.getElementById('dae-link').value.trim();
   const notes = document.getElementById('dae-notes').value.trim();
@@ -21556,7 +21731,7 @@ async function gcalCreateEvent(taskId) {
   (function(){
     const ptr = document.getElementById('pwaPullIndicator');
     if(!ptr) return;
-    let startY = 0, curY = 0, pulling = false;
+    let startY = 0, startX = 0, curY = 0, pulling = false;
     const threshold = 70, maxPull = 140;
     function resetPtr(){
       ptr.classList.remove('show');
@@ -21572,6 +21747,7 @@ async function gcalCreateEvent(taskId) {
       if(!sc) return;
       if(sc.scrollTop > 0) { startY = 0; return; }
       startY = e.touches ? e.touches[0].clientY : 0;
+      startX = e.touches ? e.touches[0].clientX : 0;
       curY = startY;
       pulling = false;
       ptr.querySelector('.label').textContent = 'Pull to refresh';
@@ -21580,15 +21756,17 @@ async function gcalCreateEvent(taskId) {
     function onTouchMove(e){
       if(!startY) return;
       curY = e.touches ? e.touches[0].clientY : curY;
-      const delta = Math.max(0, curY - startY);
+      const curX = e.touches ? e.touches[0].clientX : startX;
+      const deltaY = Math.max(0, curY - startY);
+      const deltaX = Math.abs(curX - startX);
+      if(deltaX > deltaY * 1.5) return;
+      const delta = deltaY;
       if(delta<=0) return;
       const sc = document.getElementById('mainContent');
       if(sc && sc.scrollTop>0) return;
-      // prevent native overscroll
       e.preventDefault && e.preventDefault();
       pulling = true;
       const d = Math.min(delta, maxPull);
-      // translate indicator slightly based on pull distance
       ptr.style.transform = `translateX(-50%) translateY(${Math.min(6, d/12)}px)`;
       ptr.style.opacity = 1;
       if(d > threshold) ptr.querySelector('.label').textContent = 'Release to refresh';
