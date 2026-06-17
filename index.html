@@ -3429,6 +3429,7 @@ function crmHTML(){
       <div class="tab" id="tab-btn-pipeline" onclick="crmTab('pipeline')"><i class="ti ti-layout-kanban" style="font-size:12px"></i> Pipeline</div>
       <div class="tab" id="tab-btn-blast" onclick="crmTab('blast')"><i class="ti ti-send" style="font-size:12px"></i> Email Blast</div>
       <div class="tab" id="tab-btn-import" onclick="crmTab('import')">Import</div>
+      <div class="tab" id="tab-btn-analytics" onclick="crmTab('analytics')"><i class="ti ti-chart-bar" style="font-size:12px"></i> Analytics</div>
     </div>
     <div id="crm-buyers">
       <div class="filter-bar">
@@ -3505,6 +3506,7 @@ function crmHTML(){
         </div>
       </div>
     </div>
+    <div id="crm-analytics" style="display:none"></div>
   </div>`;
 }
 
@@ -3801,7 +3803,7 @@ function clearCRMFilters(){
   renderBuyers();
 }
 function crmTab(tab){
-  ["buyers","pipeline","blast","import"].forEach(t=>{
+  ["buyers","pipeline","blast","import","analytics"].forEach(t=>{
     const btn=document.getElementById(`tab-btn-${t}`);
     const el=document.getElementById(`crm-${t}`);
     if(btn) btn.classList.toggle("active",t===tab);
@@ -3809,8 +3811,140 @@ function crmTab(tab){
   });
   if(tab==="pipeline") requestAnimationFrame(()=>renderPipeline());
   if(tab==="blast") requestAnimationFrame(()=>renderEmailBlast());
+  if(tab==="analytics") requestAnimationFrame(()=>renderCRMAnalytics());
 }
 
+
+function renderCRMAnalytics() {
+  const el = document.getElementById('crm-analytics');
+  if (!el) return;
+
+  const allBuyers = buyers;
+  if (!allBuyers.length) {
+    el.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted)">Belum ada data CRM.</div>`;
+    return;
+  }
+
+  const waMap = new Map();
+  allBuyers.forEach(b => {
+    const key = normalizeWA(b.wa) || b.id;
+    if (!waMap.has(key)) waMap.set(key, []);
+    waMap.get(key).push(b);
+  });
+  const payOrder = {FAILED:3,PENDING:2,SUCCESS:1,'':-1};
+  const groups = [...waMap.values()].map(rows => {
+    const sorted = [...rows].sort((a,b)=>(b.tanggal||'0')<(a.tanggal||'0')?-1:1);
+    const latest = sorted[0];
+    const txCount = rows.length;
+    const worstPay = rows.reduce((w,r)=>(payOrder[r.paymentStatus]||0)>(payOrder[w]||0)?r.paymentStatus:w,'');
+    const allTx = sorted.map(r=>({produk:r.produk,klasifikasi:r.klasifikasi||getKlasifikasi(r.produk),harga:r.harga||0,tanggal:r.tanggal,paymentStatus:r.paymentStatus}));
+    return { ...latest, txCount, allTx, paymentStatus: worstPay };
+  });
+
+  const total = groups.length;
+  const freq = (arr) => {
+    const m = {};
+    arr.forEach(v => { if (v) m[v] = (m[v]||0)+1; });
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  };
+  const pct = (n, t) => ((n/t)*100).toFixed(1);
+  const COLORS = ['#0f52ba','#a78bfa','#818cf8','#c4b5fd','#ddd6fe','#4f46e5','#f59e0b','#10b981','#ef4444','#3b82f6','#ec4899','#14b8a6'];
+
+  const donut = (entries, totalN, maxSlices=8) => {
+    const slices = entries.slice(0, maxSlices);
+    const otherCount = entries.slice(maxSlices).reduce((a,b)=>a+b[1],0);
+    if (otherCount > 0) slices.push(['Lainnya', otherCount]);
+    const cx=80,cy=80,r=60,ri=36;
+    let startAngle=-Math.PI/2, paths='', legends='';
+    slices.forEach(([label,count],i)=>{
+      const angle=(count/totalN)*2*Math.PI;
+      const endAngle=startAngle+angle;
+      const x1=cx+r*Math.cos(startAngle),y1=cy+r*Math.sin(startAngle);
+      const x2=cx+r*Math.cos(endAngle),y2=cy+r*Math.sin(endAngle);
+      const xi1=cx+ri*Math.cos(startAngle),yi1=cy+ri*Math.sin(startAngle);
+      const xi2=cx+ri*Math.cos(endAngle),yi2=cy+ri*Math.sin(endAngle);
+      const large=angle>Math.PI?1:0;
+      const col=COLORS[i%COLORS.length];
+      paths+=`<path d="M${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${xi2},${yi2} A${ri},${ri} 0 ${large},0 ${xi1},${yi1} Z" fill="${col}" stroke="var(--white)" stroke-width="1.5"><title>${label}: ${count} (${pct(count,totalN)}%)</title></path>`;
+      legends+=`<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-body)"><div style="width:8px;height:8px;border-radius:2px;background:${col};flex-shrink:0"></div><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px" title="${label}">${label}</span><span style="color:var(--text-muted);margin-left:auto;padding-left:4px">${pct(count,totalN)}%</span></div>`;
+      startAngle=endAngle;
+    });
+    return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><svg width="160" height="160" viewBox="0 0 160 160">${paths}</svg><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px">${legends}</div></div>`;
+  };
+
+  const hbar = (entries, totalN, maxBars=10) => {
+    const items = entries.slice(0, maxBars);
+    const maxVal = items[0]?.[1]||1;
+    return `<div style="display:flex;flex-direction:column;gap:6px">${items.map(([label,count])=>`
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:10px;color:var(--text-body);width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${label}">${label}</div>
+        <div style="flex:1;background:var(--bg);border-radius:20px;overflow:hidden;height:14px">
+          <div style="height:100%;background:#0f52ba;border-radius:20px;width:${(count/maxVal*100).toFixed(1)}%;transition:width .3s"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);width:52px;text-align:right;flex-shrink:0">${count} (${pct(count,totalN)}%)</div>
+      </div>`).join('')}</div>`;
+  };
+
+  const card = (title, icon, content) => `
+    <div class="card" style="padding:16px 18px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--text-body)">
+        <i class="ti ${icon}" style="color:#0f52ba"></i> ${title}
+        <span style="margin-left:auto;font-size:10px;font-weight:400;color:var(--text-muted)">${total} data</span>
+      </div>
+      ${content}
+    </div>`;
+
+  const repeatGroups = groups.filter(g => g.txCount > 1);
+  const repeatData = [
+    ['1x (new)', groups.filter(g=>g.txCount===1).length],
+    ...Object.entries(
+      repeatGroups.reduce((m,g)=>{ const k=`${g.txCount}x`; m[k]=(m[k]||0)+1; return m; },{})
+    ).sort((a,b)=>parseInt(b[0])-parseInt(a[0]))
+  ];
+
+  const klasData = freq(groups.map(g => g.klasifikasi));
+  const poolFilled = groups.filter(g=>g.talentPool).length;
+  const poolData = [['Sudah isi pool', poolFilled], ['Belum isi pool', total - poolFilled]];
+  const tahapData = freq(groups.map(g => g.tahap).filter(Boolean));
+  const industriData = freq(groups.map(g => g.industri).filter(Boolean));
+  const sumberData = freq(groups.map(g => g.sumber).filter(Boolean));
+  const paymentRaw = [];
+  groups.forEach(g => { g.allTx.forEach(tx => { if(tx.paymentStatus) paymentRaw.push(tx.paymentStatus); }); });
+  const paymentData = freq(paymentRaw);
+
+  el.innerHTML = `
+  <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:13px;font-weight:600">Analytics CRM</div>
+      <div style="font-size:11px;color:var(--text-muted)">${total} buyers</div>
+    </div>
+    <button class="btn btn-sm" onclick="exportCRMAnalyticsJSON()">
+      <i class="ti ti-download"></i> Export JSON
+    </button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+    ${card('Repeat Order', 'ti-repeat', hbar(repeatData, total, 10))}
+    ${card('Klasifikasi Produk', 'ti-tag', donut(klasData, total))}
+    ${card('Talent Pool Status', 'ti-user-check', donut(poolData, total))}
+    ${card('Tahapan', 'ti-stairs', hbar(tahapData, total, 10))}
+    ${card('Industri Diminati', 'ti-building-factory', hbar(industriData, total, 10))}
+    ${card('Sumber', 'ti-source-code', donut(sumberData, total))}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px">
+    ${card('Status Payment', 'ti-credit-card', donut(paymentData, paymentRaw.length))}
+  </div>`;
+}
+
+function exportCRMAnalyticsJSON() {
+  if (!buyers || !buyers.length) { showToast('Belum ada data', 'error'); return; }
+  const blob = new Blob([JSON.stringify(buyers, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `crm-analytics-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Export berhasil ✓');
+}
 
 // ═══════════════════════════════════════════
 // EMAIL BLAST MODULE
@@ -10432,6 +10566,7 @@ function fcAnalyticsHTML() {
           <input type="file" accept=".csv" style="display:none" onchange="fcHandleFile(this)">
         </label>
         <button class="btn btn-sm" onclick="fcOpenImport()"><i class="ti ti-link"></i> Import URL</button>
+        <button class="btn btn-sm" onclick="exportFCAnalyticsJSON()"><i class="ti ti-download"></i> Export JSON</button>
       </div>
     </div>
     <div id="fc-import-section" style="display:none">
@@ -10456,6 +10591,17 @@ function fcAnalyticsHTML() {
 function fcOpenImport() {
   const sec = document.getElementById('fc-import-section');
   if (sec) sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+}
+
+function exportFCAnalyticsJSON() {
+  if (!_fcData || !_fcData.length) { showToast('Belum ada data Free Class', 'error'); return; }
+  const blob = new Blob([JSON.stringify(_fcData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `free-class-analytics-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Export berhasil ✓');
 }
 
 async function fcHandleFile(input) {
@@ -18588,9 +18734,14 @@ function renderTpAnalytics() {
   const ipkRangeData   = Object.entries(ipkRanges).filter(([,v])=>v>0);
 
   c.innerHTML = `
-  <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+  <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <div style="font-size:13px;font-weight:600">Ringkasan Talent Pool</div>
-    <div style="font-size:11px;color:var(--text-muted)">${total} peserta · IPK rata-rata <b>${ipkAvg}</b></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:11px;color:var(--text-muted)">${total} peserta</div>
+      <button class="btn btn-sm" onclick="exportTpAnalyticsJSON()">
+        <i class="ti ti-download"></i> Export JSON
+      </button>
+    </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
     ${card('Domisili', 'ti-map-pin', donut(domisiliData, total))}
@@ -18608,6 +18759,18 @@ function renderTpAnalytics() {
   <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px">
     ${card('Target Industri MT', 'ti-building-factory', hbar(targetData, total, 15))}
   </div>`;
+}
+
+function exportTpAnalyticsJSON() {
+  const data = _tpData;
+  if (!data || !data.length) { showToast('Belum ada data', 'error'); return; }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `talent-pool-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Export berhasil ✓');
 }
 
 function renderTpBlast() {
