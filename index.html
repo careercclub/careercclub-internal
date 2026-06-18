@@ -3158,7 +3158,12 @@ let qcRows=[],qcSelected=new Set();
 
 function normalizeWA(raw){
   if(!raw) return "";
-  let s=String(raw).replace(/\D/g,"");
+  const trimmed=String(raw).trim();
+  // Nomor internasional non-Indonesia (contoh: +86xxx, +1xxx) — simpan apa adanya tanpa prefix 62
+  if(trimmed.startsWith('+') && !trimmed.startsWith('+62')){
+    return trimmed.replace(/\D/g,'');
+  }
+  let s=trimmed.replace(/\D/g,"");
   if(s.startsWith("0")) s="62"+s.slice(1);
   if(!s.startsWith("62")) s="62"+s;
   return s;
@@ -18818,7 +18823,7 @@ async function tpConfirmImport() {
       const wa = String(r.wa).replace(/\s/g,'');
       if (wa.length < 9)
         rowFlags.push({ field: 'No WA', nilai: r.wa, masalah: 'Terlalu pendek' });
-      else if (!wa.startsWith('08') && !wa.startsWith('+62') && !wa.startsWith('62'))
+      else if (!wa.startsWith('08') && !wa.startsWith('+62') && !wa.startsWith('62') && !wa.startsWith('+') )
         rowFlags.push({ field: 'No WA', nilai: r.wa, masalah: 'Bukan format 08/+62' });
     }
     if (r.email && !r.email.includes('@'))
@@ -18952,7 +18957,7 @@ async function _tpDoImport(rows) {
       const wa = String(r.wa).replace(/\s/g,'');
       if (wa.length < 9) {
         flags.push({ row, nama, field: 'No WA', nilai: r.wa, masalah: 'Terlalu pendek' });
-      } else if (!wa.startsWith('08') && !wa.startsWith('+62') && !wa.startsWith('62')) {
+      } else if (!wa.startsWith('08') && !wa.startsWith('+62') && !wa.startsWith('62') && !wa.startsWith('+')) {
         flags.push({ row, nama, field: 'No WA', nilai: r.wa, masalah: 'Format tidak dikenali (bukan 08xx/+62xx)' });
       }
     }
