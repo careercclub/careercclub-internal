@@ -14040,10 +14040,10 @@ function _cpCardsHTML(){
       <span style="font-size:11px;color:var(--text-muted)">Carousel</span>
       ${assignee?`<span style="font-size:10px;color:var(--text-hint)">·</span><i class="ti ti-user" style="font-size:11px;color:var(--text-hint)"></i><span style="font-size:11px;color:var(--text-muted)">${assignee.nama}</span>`:''}
     </div>
-    <div style="margin-top:6px">
+    <div id="cp-link-wrap-${p.id}">
       ${p.link_brief
-        ? `<a href="${p.link_brief}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:#0f52ba;text-decoration:none;padding:5px 10px;border-radius:6px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:13px"></i> Link Brief <i class="ti ti-external-link" style="font-size:11px;opacity:.7"></i></a>`
-        : `<button onclick="event.stopPropagation();_cpOpenModal('${p.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:400;color:var(--text-muted);padding:5px 10px;border-radius:6px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:12px"></i> Tambah link brief</button>`
+        ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px"><a href="${p.link_brief}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:#0f52ba;text-decoration:none;padding:5px 10px;border-radius:6px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:13px"></i> Link Brief <i class="ti ti-external-link" style="font-size:11px;opacity:.7"></i></a><button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="width:24px;height:24px;border:0.5px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center" title="Ganti link"><i class="ti ti-pencil" style="font-size:11px"></i></button></div>`
+        : `<div style="margin-top:6px"><button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:400;color:var(--text-muted);padding:5px 10px;border-radius:6px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:12px"></i> Tambah link brief</button></div>`
       }
     </div>
   </div>
@@ -14177,6 +14177,43 @@ async function _cpSavePlan(){
   _cpRenderCards();_cpRenderCalendar();
   showToast(_editingCarouselId?'Plan diupdate ✓':'Plan ditambah ✓');
   _editingCarouselId=null;
+}
+
+function _cpShowLinkBriefInput(id){
+  const wrap=document.getElementById('cp-link-wrap-'+id);
+  if(!wrap)return;
+  wrap.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+    <i class="ti ti-link" style="font-size:13px;color:var(--text-muted);flex-shrink:0"></i>
+    <input id="cp-link-input-${id}" type="url" placeholder="https://..." style="flex:1;height:28px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)" onkeydown="if(event.key==='Enter')_cpSaveLinkBrief('${id}');if(event.key==='Escape')_cpRenderLinkBrief('${id}',null)" onclick="event.stopPropagation()">
+    <button onclick="event.stopPropagation();_cpSaveLinkBrief('${id}')" style="height:28px;padding:0 10px;border-radius:var(--radius);border:none;background:#0f52ba;color:#fff;font-size:12px;cursor:pointer;flex-shrink:0">Simpan</button>
+    <button onclick="event.stopPropagation();_cpRenderLinkBrief('${id}',null)" style="height:28px;padding:0 8px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;font-size:12px;cursor:pointer;flex-shrink:0;color:var(--text-muted)">Batal</button>
+  </div>`;
+  setTimeout(()=>document.getElementById('cp-link-input-'+id)?.focus(),50);
+}
+
+async function _cpSaveLinkBrief(id){
+  const val=document.getElementById('cp-link-input-'+id)?.value?.trim()||null;
+  const ok=await sb_update('carousel_plans',id,{link_brief:val});
+  if(!ok){showToast('Gagal simpan link','error');return;}
+  const plan=carouselPlans.find(p=>_idEq(p.id,id));
+  if(plan) plan.link_brief=val;
+  _cpRenderLinkBrief(id,val);
+  showToast('Link brief disimpan ✓');
+}
+
+function _cpRenderLinkBrief(id,url){
+  const wrap=document.getElementById('cp-link-wrap-'+id);
+  if(!wrap)return;
+  if(url){
+    wrap.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+      <a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:#0f52ba;text-decoration:none;padding:5px 10px;border-radius:6px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:13px"></i> Link Brief <i class="ti ti-external-link" style="font-size:11px;opacity:.7"></i></a>
+      <button onclick="event.stopPropagation();_cpShowLinkBriefInput('${id}')" style="width:24px;height:24px;border:0.5px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center" title="Ganti link"><i class="ti ti-pencil" style="font-size:11px"></i></button>
+    </div>`;
+  }else{
+    wrap.innerHTML=`<div style="margin-top:6px">
+      <button onclick="event.stopPropagation();_cpShowLinkBriefInput('${id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:400;color:var(--text-muted);padding:5px 10px;border-radius:6px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:12px"></i> Tambah link brief</button>
+    </div>`;
+  }
 }
 
 function mtStoryPageHTML(){
