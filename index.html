@@ -13750,7 +13750,29 @@ function _spDatesHTML(){
     const items=storyPlanItems.filter(i=>i.date_id===d.id).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
     const isCollapsed=_spCollapsed.has(d.id);
     const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px" id="sp-item-row-${item.id}"><span style="width:14px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.isi||'').replace(/"/g,'&quot;')}" style="flex:1;height:26px;padding:0 7px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
-    return `<div class="card" id="sp-date-${d.id}" style="margin-bottom:6px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;border-bottom:${isCollapsed?'none':'0.5px solid var(--border)'}" onclick="_spToggleDateCard('${d.id}')"><div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${(d.status||'Draft')==='Done'?'checked':''} onclick="event.stopPropagation();_spToggleDone('${d.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0"></i><span style="font-size:13px;font-weight:600;text-decoration:${(d.status||'Draft')==='Done'?'line-through':'none'};color:${(d.status||'Draft')==='Done'?'var(--text-muted)':'var(--text)'}">${fmtDt(d.tanggal)}</span><span style="font-size:10px;background:var(--purple-light);color:var(--purple-mid);padding:2px 7px;border-radius:20px;font-weight:600">${items.length} story</span></div><button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:12px"></i></button></div><div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:8px 12px"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
+    const spBorderCol=(d.status||'Draft')==='Done'?'#3B6D11':'#888780';
+    const spStatusBg=(d.status||'Draft')==='Done'?'#d1fae5':'var(--bg)';
+    const spStatusCol=(d.status||'Draft')==='Done'?'#3b6d11':'var(--text-muted)';
+    return `<div id="sp-date-${d.id}" style="margin-bottom:6px;background:var(--white);border:0.5px solid var(--border);border-left:3px solid ${spBorderCol};border-radius:0 var(--radius-lg) var(--radius-lg) 0;overflow:hidden">
+  <div style="padding:10px 14px;cursor:pointer" onclick="_spToggleDateCard('${d.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <input type="checkbox" ${(d.status||'Draft')==='Done'?'checked':''} onclick="event.stopPropagation();_spToggleDone('${d.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11">
+        <span style="font-size:13px;font-weight:500;text-decoration:${(d.status||'Draft')==='Done'?'line-through':'none'};color:${(d.status||'Draft')==='Done'?'var(--text-muted)':'var(--text)'}">${fmtDt(d.tanggal)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#e8f0fc;color:#185FA5;font-weight:500">${items.length} story</span>
+        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${spStatusBg};color:${spStatusCol};font-weight:500">${d.status||'Draft'}</span>
+        <i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted)"></i>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <i class="ti ti-file-text" style="font-size:11px;color:var(--text-hint)"></i>
+      <span style="font-size:11px;color:var(--text-muted)">${items.length} story direncanakan</span>
+      ${(d.status||'Draft')==='Done'?`<span style="font-size:10px;color:var(--text-hint)">·</span><span style="font-size:11px;color:#3b6d11;font-weight:500">Selesai diposting</span>`:''}
+    </div>
+  </div>
+  <div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:8px 12px;border-top:0.5px solid var(--border)"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
   }).join('');
 }
 function _spToggleDateCard(dateId){if(_spCollapsed.has(dateId))_spCollapsed.delete(dateId);else _spCollapsed.add(dateId);_spRenderDates();}
@@ -13900,6 +13922,7 @@ const _cpFunnelColors={TOFU:'#0f52ba',MOFU:'#854F0B',BOFU:'#3b6d11'};
 const _cpFunnelBg={TOFU:'#e8f0fc',MOFU:'#fef3c7',BOFU:'#d1fae5'};
 const _cpStatusColors={Draft:'var(--text-muted)',['In Progress']:'#854F0B',Done:'#3b6d11'};
 const _cpStatusBg={Draft:'var(--bg)',['In Progress']:'#fef3c7',Done:'#d1fae5'};
+const _cpStatusBorder={Draft:'#888780',['In Progress']:'#854F0B',Done:'#3B6D11'};
 
 function _cpCalendarHTML(){
   const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -13960,7 +13983,31 @@ function _cpCardsHTML(){
     const sBg=_cpStatusBg[status]||'var(--bg)';
     const assignee=tktPeople.find(pe=>_idEq(pe.id,p.assignee_id));
     const detailHTML=isExpanded?`<div style="padding:8px 12px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
-    return `<div class="card" id="cp-card-${p.id}" style="margin-bottom:6px;padding:0;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer" onclick="_cpToggleCard('${p.id}')"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><input type="checkbox" ${status==='Done'?'checked':''} onclick="event.stopPropagation();_cpToggleDone('${p.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11"><i class="ti ti-layout-columns" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:${status==='Done'?'line-through':'none'};color:${status==='Done'?'var(--text-muted)':'var(--text)'}">${p.judul||'Tanpa judul'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${fmtDt(p.tanggal_posting)}</div></div><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:700;flex-shrink:0">${funnel}</span><span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:600;flex-shrink:0">${status}</span></div><i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted);flex-shrink:0;margin-left:6px"></i></div>${detailHTML}</div>`;
+    const borderCol=_cpStatusBorder[status]||'#888780';
+    return `<div id="cp-card-${p.id}" style="margin-bottom:6px;background:var(--white);border:0.5px solid var(--border);border-left:3px solid ${borderCol};border-radius:0 var(--radius-lg) var(--radius-lg) 0;overflow:hidden">
+  <div style="padding:10px 14px;cursor:pointer" onclick="_cpToggleCard('${p.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <input type="checkbox" ${status==='Done'?'checked':''} onclick="event.stopPropagation();_cpToggleDone('${p.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:${status==='Done'?'line-through':'none'};color:${status==='Done'?'var(--text-muted)':'var(--text)'}">${p.judul||'Tanpa judul'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:600">${funnel}</span>
+        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:500">${status}</span>
+        <i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted)"></i>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <i class="ti ti-calendar" style="font-size:11px;color:var(--text-hint)"></i>
+      <span style="font-size:11px;color:var(--text-muted)">${fmtDt(p.tanggal_posting)||'—'}</span>
+      <span style="font-size:10px;color:var(--text-hint)">·</span>
+      <i class="ti ti-layout-columns" style="font-size:11px;color:var(--text-hint)"></i>
+      <span style="font-size:11px;color:var(--text-muted)">Carousel</span>
+      ${assignee?`<span style="font-size:10px;color:var(--text-hint)">·</span><i class="ti ti-user" style="font-size:11px;color:var(--text-hint)"></i><span style="font-size:11px;color:var(--text-muted)">${assignee.nama}</span>`:''}
+    </div>
+  </div>
+  ${detailHTML}
+</div>`;
   }).join('');
 }
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
@@ -19997,7 +20044,6 @@ async function initVoucher() {
       periode_mulai: v.periode_mulai, periode_selesai: v.periode_selesai,
       kode: v.kode, diskon_persen: v.diskon_persen || 0,
       maks_potongan: v.maks_potongan || null, min_transaksi: v.min_transaksi || 0,
-      kuota: v.kuota || null, terpakai: v.terpakai || 0,
       product_ids: (v.product_ids || []).map(String), notes: v.notes || '',
       created_at: v.created_at
     }));
@@ -20094,43 +20140,6 @@ function renderVoucherList() {
       </div>`;
     }).join('')}
   </div>`;
-}
-
-function openUpdateTerpakai(id) {
-  const v = voucherData.find(x => _idEq(x.id, id));
-  if (!v) return;
-  const modal = document.getElementById('gcal-modal');
-  modal.style.display = 'flex';
-  modal.innerHTML = `
-  <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <i class="ti ti-chart-bar" style="font-size:18px;color:var(--purple-accent)"></i>
-      <div>
-        <div style="font-size:14px;font-weight:700">Update Terpakai</div>
-        <div style="font-size:11px;color:var(--text-muted)">${v.kode} · Sekarang: ${v.terpakai}${v.kuota?' / '+v.kuota:''}</div>
-      </div>
-      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
-    </div>
-    <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUMLAH TERPAKAI</label>
-      <input id="vt-terpakai" type="number" value="${v.terpakai}" min="0" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-      <button onclick="gcalCloseModal()" class="btn" style="font-size:12px">Batal</button>
-      <button onclick="saveTerpakai('${id}')" class="btn btn-primary" style="font-size:12px">Simpan</button>
-    </div>
-  </div>`;
-}
-
-async function saveTerpakai(id) {
-  const terpakai = parseInt(document.getElementById('vt-terpakai').value) || 0;
-  const ok = await sb_updateVoucher(id, { terpakai });
-  if (!ok) { showToast('Gagal update', 'error'); return; }
-  const v = voucherData.find(x => _idEq(x.id, id));
-  if (v) v.terpakai = terpakai;
-  gcalCloseModal();
-  renderVoucherTab();
-  showToast('Terpakai diupdate');
 }
 
 function openVoucherModal(id) {
