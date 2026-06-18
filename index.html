@@ -4410,7 +4410,10 @@ async function _blastSend() {
   if (!apiKey) { showToast('API Key belum diset — buka tab Settings', 'error'); return; }
 
   const scheduled = document.getElementById('bl-schedule')?.value;
-  const ok = window.confirm('Kirim ke ' + recipients.length + ' penerima?' + (scheduled ? ' | Dijadwalkan: ' + scheduled : ' | Kirim sekarang'));
+  const ok = await showConfirmDelete(
+    'Kirim ke ' + recipients.length + ' penerima?',
+    scheduled ? 'Dijadwalkan: ' + scheduled : 'Email akan dikirim sekarang. Tindakan ini tidak bisa dibatalkan.'
+  );
   if (!ok) return;
 
   showToast('Mengirim... mohon tunggu ⏳');
@@ -4503,8 +4506,8 @@ function _blastUseTemplate(idx) {
   }, 100);
 }
 
-function _blastDeleteTemplate(idx) {
-  if (!confirm('Hapus template "' + _blastTemplates[idx].nama + '"?')) return;
+async function _blastDeleteTemplate(idx) {
+  if (!await showConfirmDelete('Hapus template ini?', 'Template "' + _blastTemplates[idx].nama + '" akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.')) return;
   _blastTemplates.splice(idx, 1);
   saveBlastTemplates();
   renderEmailBlast();
@@ -5244,8 +5247,21 @@ function showConfirmDelete(title,description){
     const ov=document.createElement('div');
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
     const box=document.createElement('div');
-    box.style.cssText='background:var(--white,#fff);border-radius:14px;padding:24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.22)';
-    box.innerHTML=`<div style="font-size:14px;font-weight:700;margin-bottom:8px">${title}</div><div style="font-size:12px;color:var(--text-muted,#888);margin-bottom:20px">${description}</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="_scd-cancel" class="btn btn-sm" style="font-size:13px">Batal</button><button id="_scd-ok" class="btn btn-sm" style="font-size:13px;background:#c0392b;color:#fff;border-color:#c0392b">Ya, Hapus</button></div>`;
+    box.style.cssText='background:var(--white,#fff);border-radius:16px;padding:24px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.22)';
+    box.innerHTML=`
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
+        <div style="width:36px;height:36px;border-radius:50%;background:#FEE2E2;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-trash" style="font-size:16px;color:#DC2626"></i>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--text,#111);margin-bottom:4px">${title}</div>
+          <div style="font-size:12px;color:var(--text-muted,#888);line-height:1.5">${description}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="_scd-cancel" style="padding:8px 18px;border-radius:8px;border:0.5px solid var(--border,#e0e0e0);background:var(--white,#fff);font-size:13px;font-weight:500;color:var(--text,#111);cursor:pointer">Batal</button>
+        <button id="_scd-ok" style="padding:8px 18px;border-radius:8px;border:none;background:#DC2626;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Ya, Hapus</button>
+      </div>`;
     box.addEventListener('click',e=>e.stopPropagation());
     ov.appendChild(box);
     document.body.appendChild(ov);
@@ -14024,6 +14040,12 @@ function _cpCardsHTML(){
       <span style="font-size:11px;color:var(--text-muted)">Carousel</span>
       ${assignee?`<span style="font-size:10px;color:var(--text-hint)">·</span><i class="ti ti-user" style="font-size:11px;color:var(--text-hint)"></i><span style="font-size:11px;color:var(--text-muted)">${assignee.nama}</span>`:''}
     </div>
+    <div style="margin-top:6px">
+      ${p.link_brief
+        ? `<a href="${p.link_brief}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:#0f52ba;text-decoration:none;padding:5px 10px;border-radius:6px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:13px"></i> Link Brief <i class="ti ti-external-link" style="font-size:11px;opacity:.7"></i></a>`
+        : `<button onclick="event.stopPropagation();_cpOpenModal('${p.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:400;color:var(--text-muted);padding:5px 10px;border-radius:6px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:12px"></i> Tambah link brief</button>`
+      }
+    </div>
   </div>
   ${detailHTML}
 </div>`;
@@ -14101,6 +14123,13 @@ function openCarouselPlanModal(id,preDate){
         <div class="cust-field-label">Status</div>
         <select id="cp-form-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">${statusOpts}</select>
       </div>
+        <div class="cust-field editable">
+          <div class="cust-field-label">Link Brief <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-hint);font-size:10px">(opsional)</span></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <i class="ti ti-link" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i>
+            <input id="cp-form-link-brief" class="cust-field-input" style="flex:1" placeholder="https://docs.google.com/..." value="${(plan?.link_brief||'').replace(/"/g,'&quot;')}">
+          </div>
+        </div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border);flex-shrink:0">
       <button onclick="this.closest('.cp-plan-modal').remove()" class="btn btn-sm">Batal</button>
@@ -14131,6 +14160,7 @@ async function _cpSavePlan(){
     cta:(document.getElementById('cp-form-cta')||{}).value||null,
     assignee_id:(document.getElementById('cp-form-assignee')||{}).value||null,
     status:(document.getElementById('cp-form-status')||{}).value||'Draft',
+    link_brief:(document.getElementById('cp-form-link-brief')||{}).value?.trim()||null,
   };
   if(_editingCarouselId){
     const ok=await sb_update('carousel_plans',_editingCarouselId,payload);
