@@ -7894,7 +7894,6 @@ function renderBundleKBSection(section,bundleProd){
               <span style="color:${sevColor};font-size:10px;font-weight:700;margin-top:1px;flex-shrink:0">${sev}</span>
               <div style="flex:1">${e.text}</div>
             </div>
-            ${e.source?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">Sumber: ${e.source}</div>`:''}
           </div>`;
         }
         if(section==='benefits'||section==='features'){
@@ -20750,9 +20749,15 @@ var resDragType = null; // 'item' | 'kat'
 async function initResources() {
   resShowPass = {};
   resourcesData = (await sb_loadResources()).map(r => ({
-    id: r.id, kategori: r.kategori, tipe: r.tipe || 'link',
-    nama: r.nama, username: r.username || '', password: r.password || '',
-    email: r.email || '', url: r.url || '', notes: r.notes || '',
+    id: r.id,
+    kategori: r.kategori || r.category || 'Umum',
+    tipe: r.tipe || r.type || 'link',
+    nama: r.nama || r.title || r.name || '',
+    username: r.username || '',
+    password: r.password || '',
+    email: r.email || '',
+    url: r.url || '',
+    notes: r.notes || r.catatan || '',
     urutan: r.urutan || 0
   }));
   resourcesData.sort((a,b) => a.urutan - b.urutan);
@@ -20803,32 +20808,38 @@ function renderResItem(r) {
   if (!r || !r.id) return '';
   const isCred = r.tipe === 'credential';
   const showP = resShowPass[r.id];
-  const safeName = (r.nama||'Tanpa nama').replace(/`/g,'\\`');
+  const nama = r.nama || r.title || r.name || '(Tanpa nama)';
+  const url = r.url || '';
+  const email = r.email || '';
+  const username = r.username || '';
+  const password = r.password || '';
+  const notes = r.notes || '';
+  const kategori = r.kategori || 'Umum';
   return `
-  <div class="res-item-new" data-id="${r.id}" data-kat="${r.kategori}"
+  <div class="res-item-new" data-id="${r.id}" data-kat="${kategori}"
     ondragover="resDragOverItem(event,'${r.id}')"
-    ondrop="resDropItem(event,'${r.kategori}')"
+    ondrop="resDropItem(event,'${kategori}')"
     ondragend="resDragEnd()">
     <div class="res-drag-handle">
-      <i class="ti ti-grip-vertical" draggable="true" ondragstart="resDragStartItem(event,'${r.id}','${r.kategori}')" style="font-size:13px"></i>
+      <i class="ti ti-grip-vertical" draggable="true" ondragstart="resDragStartItem(event,'${r.id}','${kategori}')" style="font-size:13px"></i>
     </div>
     <div class="res-item-icon">
       <i class="ti ${isCred ? 'ti-lock' : 'ti-link'}" style="font-size:14px;color:${isCred ? 'var(--amber)' : '#0f52ba'}"></i>
     </div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:500;margin-bottom:5px;color:var(--text)">${r.nama||'Tanpa nama'}</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:5px;color:var(--text)">${nama}</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11px;color:var(--text-muted)">
-        ${r.url ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-external-link" style="font-size:10px"></i><a href="${r.url}" target="_blank" style="color:#0f52ba">${r.url.replace(/https?:\/\//,'').split('/')[0]}</a></span>` : ''}
-        ${r.username ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-user" style="font-size:10px"></i> ${r.username}</span>` : ''}
-        ${r.email ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-mail" style="font-size:10px"></i> ${r.email}</span>` : ''}
-        ${r.password ? `<span style="display:flex;align-items:center;gap:3px">
+        ${url ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-external-link" style="font-size:10px"></i><a href="${url}" target="_blank" style="color:#0f52ba">${url.replace(/https?:\/\//,'').split('/')[0]}</a></span>` : ''}
+        ${username ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-user" style="font-size:10px"></i> ${username}</span>` : ''}
+        ${email ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-mail" style="font-size:10px"></i> ${email}</span>` : ''}
+        ${password ? `<span style="display:flex;align-items:center;gap:3px">
           <i class="ti ti-key" style="font-size:10px;color:var(--amber)"></i>
-          <span style="font-family:monospace;letter-spacing:1px">${showP ? r.password : '••••••••'}</span>
+          <span style="font-family:monospace;letter-spacing:1px">${showP ? password : '••••••••'}</span>
           <button class="res-icon-btn" onclick="resShowPass['${r.id}']=!resShowPass['${r.id}'];renderResources()"><i class="ti ${showP ? 'ti-eye-off' : 'ti-eye'}" style="font-size:11px"></i></button>
-          <button class="res-icon-btn" onclick="navigator.clipboard.writeText('${r.password.replace(/'/g,"\\'")}').then(()=>showToast('Password disalin'))"><i class="ti ti-copy" style="font-size:11px"></i></button>
+          <button class="res-icon-btn" onclick="navigator.clipboard.writeText('${password.replace(/'/g,"\\'")}').then(()=>showToast('Password disalin'))"><i class="ti ti-copy" style="font-size:11px"></i></button>
         </span>` : ''}
       </div>
-      ${r.notes ? `<div style="font-size:11px;color:var(--text-hint);font-style:italic;margin-top:3px">${r.notes}</div>` : ''}
+      ${notes ? `<div style="font-size:11px;color:var(--text-hint);font-style:italic;margin-top:3px">${notes}</div>` : ''}
     </div>
     <div class="res-item-actions">
       <button onclick="openResModal('${r.id}')" title="Edit"><i class="ti ti-edit" style="font-size:12px"></i></button>
