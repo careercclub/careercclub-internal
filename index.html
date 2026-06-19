@@ -6664,14 +6664,14 @@ function openPartnerModal(id){
   if(!p) return;
   document.getElementById("pm-title").textContent=isNew?"Tambah Partner Baru":p.name;
   document.getElementById("pm-name").value=p.name;
-  document.getElementById("pm-category").value=p.category||"";
-  document.getElementById("pm-tier").value=p.tier||"Standard";
+  document.getElementById("pm-category-cdd").innerHTML=buildDropdown({id:'pm-category',options:['MT Program Company','HR Services Company'],value:p.category||'',placeholder:'— Pilih —'});
+  document.getElementById("pm-tier-cdd").innerHTML=buildDropdown({id:'pm-tier',options:['Strategic','Standard'],value:p.tier||'Standard'});
+  document.getElementById("pm-status-cdd").innerHTML=buildDropdown({id:'pm-status',options:['Approached','Sales Meet','Negotiation','Closed Deal','Closed Lost'],value:p.status||'Approached'});
   document.getElementById("pm-pic").value=p.pic;
   document.getElementById("pm-pos").value=p.pos;
   document.getElementById("pm-wa").value=p.wa;
   document.getElementById("pm-email").value=p.email||"";
   document.getElementById("pm-li").value=p.li||"";
-  document.getElementById("pm-status").value=p.status||"Approached";
   document.getElementById("pm-scope").value=p.scope;
   document.getElementById("pm-notes").value=p.notes;
   document.getElementById("pm-inputdate").value=p.inputDate||"";
@@ -6684,12 +6684,12 @@ async function savePartnerModal(){
   if(!name){showToast("Nama wajib diisi");return;}
   const jsData={
     name,type:"Corporate",
-    category:document.getElementById("pm-category").value,
+    category:_cddGetValue("pm-category")||'',
     pic:document.getElementById("pm-pic").value,pos:document.getElementById("pm-pos").value,
     wa:document.getElementById("pm-wa").value,email:document.getElementById("pm-email").value,
     li:document.getElementById("pm-li").value,
-    tier:document.getElementById("pm-tier").value,
-    status:document.getElementById("pm-status").value,scope:document.getElementById("pm-scope").value,
+    tier:_cddGetValue("pm-tier")||'Standard',
+    status:_cddGetValue("pm-status")||'Approached',scope:document.getElementById("pm-scope").value,
     notes:document.getElementById("pm-notes").value,inputDate:document.getElementById("pm-inputdate").value,
   };
   const rowData=_partnerJSToRow(jsData);
@@ -7215,14 +7215,14 @@ function openOrgPartnerModal(id){
   if(!p) return;
   document.getElementById("opm-title").textContent=isNew?"Tambah Org Partner Baru":p.name;
   document.getElementById("opm-name").value=p.name;
-  document.getElementById("opm-category").value=p.category||"";
-  document.getElementById("opm-tier").value=p.tier||"Standard";
+  document.getElementById("opm-category-cdd").innerHTML=buildDropdown({id:'opm-category',options:OP_CATEGORIES,value:p.category||'',placeholder:'— Pilih —'});
+  document.getElementById("opm-tier-cdd").innerHTML=buildDropdown({id:'opm-tier',options:OP_TIERS,value:p.tier||'Standard'});
+  document.getElementById("opm-status-cdd").innerHTML=buildDropdown({id:'opm-status',options:OP_STATUSES,value:p.status||'Approached'});
   document.getElementById("opm-pic").value=p.pic;
   document.getElementById("opm-pos").value=p.pos;
   document.getElementById("opm-wa").value=p.wa;
   document.getElementById("opm-email").value=p.email||"";
   document.getElementById("opm-li").value=p.li||"";
-  document.getElementById("opm-status").value=p.status||"Approached";
   document.getElementById("opm-scope").value=p.scope;
   document.getElementById("opm-notes").value=p.notes;
   document.getElementById("opm-inputdate").value=p.inputDate||"";
@@ -7235,14 +7235,14 @@ async function saveOrgPartnerModal(){
   if(!name){showToast("Nama wajib diisi");return;}
   const jsData={
     name,
-    category:document.getElementById("opm-category").value,
+    category:_cddGetValue("opm-category")||'',
     pic:document.getElementById("opm-pic").value,
     pos:document.getElementById("opm-pos").value,
     wa:document.getElementById("opm-wa").value,
     email:document.getElementById("opm-email").value,
     li:document.getElementById("opm-li").value,
-    tier:document.getElementById("opm-tier").value,
-    status:document.getElementById("opm-status").value,
+    tier:_cddGetValue("opm-tier")||'Standard',
+    status:_cddGetValue("opm-status")||'Approached',
     scope:document.getElementById("opm-scope").value,
     notes:document.getElementById("opm-notes").value,
     inputDate:document.getElementById("opm-inputdate").value,
@@ -8768,8 +8768,8 @@ async function saveProdModal(){
   const data={
     nama:document.getElementById("pm-nama").value.trim(),
     harga:parseInt(document.getElementById("pm-harga").value)||0,
-    klasifikasi:document.getElementById("pm-klas").value,
-    status:document.getElementById("prod-edit-status").value,
+    klasifikasi:_cddGetValue("pm-klas")||'',
+    status:_cddGetValue("prod-edit-status")||'Draft',
     desc:document.getElementById("pm-desc").value,
     landingUrl:document.getElementById("pm-url").value,
     type:'satuan',
@@ -9626,10 +9626,9 @@ function openProdModal(id){
   document.getElementById("prod-modal-title").textContent=p?"Edit Produk":"Produk Baru";
   document.getElementById("pm-nama").value=p?p.nama:"";
   document.getElementById("pm-harga").value=p?p.harga:"";
-  const klasSelect=document.getElementById("pm-klas");
-  klasSelect.innerHTML=KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi").map(k=>`<option>${k}</option>`).join("");
-  klasSelect.value=p?p.klasifikasi:(KLASIFIKASI_LIST[0]||"");
-  document.getElementById("prod-edit-status").value=p?p.status:"Draft";
+  const klasOpts=KLASIFIKASI_LIST.filter(k=>k!=="Belum Diklasifikasi");
+  document.getElementById("pm-klas-cdd").innerHTML=buildDropdown({id:'pm-klas',options:klasOpts,value:p?p.klasifikasi:(klasOpts[0]||'')});
+  document.getElementById("prod-edit-status-cdd").innerHTML=buildDropdown({id:'prod-edit-status',options:['Draft','Pre-launch','Live','Archived'],value:p?p.status:'Draft'});
   document.getElementById("pm-desc").value=p?p.desc:"";
   document.getElementById("pm-url").value=p?p.landingUrl:"";
   document.getElementById("prod-delete-btn").style.display=p?"inline-flex":"none";
@@ -9644,7 +9643,7 @@ function openBundlingModal(id){
   document.getElementById('bm-title').textContent=p?'Edit Bundle':'Bundle Baru';
   document.getElementById('bm-nama').value=p?p.nama:'';
   document.getElementById('bm-harga').value=p?p.harga:'';
-  document.getElementById('bm-status').value=p?p.status:'Active';
+  document.getElementById('bm-status-cdd').innerHTML=buildDropdown({id:'bm-status',options:['Active','Draft','Archived'],value:p?p.status:'Active'});
   document.getElementById('bm-desc').value=p?p.desc:'';
   const selectedIds=p?(p.bundleItems||[]).map(b=>String(b.itemId)):[];
   document.getElementById('bm-product-list').innerHTML=satuanProducts.map(x=>`
@@ -9683,7 +9682,7 @@ async function saveBundlingModal(){
   const nama=document.getElementById('bm-nama').value.trim();
   if(!nama){showToast('Nama bundle wajib diisi');return;}
   const harga=parseFloat(document.getElementById('bm-harga').value)||0;
-  const status=document.getElementById('bm-status').value;
+  const status=_cddGetValue('bm-status')||'Active';
   const desc=document.getElementById('bm-desc').value.trim();
   const checkedIds=[...document.querySelectorAll('#bm-product-list input[type=checkbox]:checked')].map(el=>el.value);
   const data={nama,harga,status,desc,type:'bundling',klasifikasi:'',landingUrl:''};
@@ -10295,7 +10294,7 @@ function ciRemoveTarget(idx) {
 
 
 function linkTemplatesSettingsHTML(){
-  return `<div style="margin-top:16px"><div style="font-size:13px;font-weight:700;margin-bottom:12px">Link Template per Jenis Program</div><div id="lkt-list"></div><div class="card" style="margin-top:12px;padding:16px"><div style="font-size:12px;font-weight:600;margin-bottom:10px">+ Tambah Template</div><div style="display:flex;flex-direction:column;gap:8px"><select id="lkt-jenis" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><option value="Free Class Series">Free Class Series</option><option value="CCA">Career Chaser's Academy</option></select><input id="lkt-label" placeholder="Label (cth: Link Slido)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><input id="lkt-url" placeholder="URL (https://...)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><button onclick="addLinkTemplate()" class="btn btn-primary" style="font-size:12px">Tambah</button></div></div></div>`;
+  return `<div style="margin-top:16px"><div style="font-size:13px;font-weight:700;margin-bottom:12px">Link Template per Jenis Program</div><div id="lkt-list"></div><div class="card" style="margin-top:12px;padding:16px"><div style="font-size:12px;font-weight:600;margin-bottom:10px">+ Tambah Template</div><div style="display:flex;flex-direction:column;gap:8px"><div id="lkt-jenis-cdd">${buildDropdown({id:'lkt-jenis',options:['Free Class Series','CCA'],value:'Free Class Series'})}</div><input id="lkt-label" placeholder="Label (cth: Link Slido)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><input id="lkt-url" placeholder="URL (https://...)" style="padding:8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)"><button onclick="addLinkTemplate()" class="btn btn-primary" style="font-size:12px">Tambah</button></div></div></div>`;
 }
 async function initLinkTemplatesSettings(){
   renderLinkTemplatesList();
@@ -10308,7 +10307,7 @@ function renderLinkTemplatesList(){
   el.innerHTML=Object.entries(groups).map(([jenis,items])=>`<div class="card" style="margin-bottom:10px;padding:14px 16px"><div style="font-size:11px;font-weight:700;color:var(--purple-mid);margin-bottom:10px">${jenis}</div><div style="display:flex;flex-direction:column;gap:6px">${items.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border)"><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600">${t.label}</div><div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.url}</div></div><button onclick="deleteLinkTemplate('${t.id}')" class="btn btn-sm" style="font-size:10px;padding:3px 7px;color:var(--red);flex-shrink:0"><i class="ti ti-trash" style="font-size:11px"></i></button></div>`).join("")}</div></div>`).join("");
 }
 async function addLinkTemplate(){
-  const jenis=document.getElementById("lkt-jenis").value;
+  const jenis=_cddGetValue("lkt-jenis")||'Free Class Series';
   const label=document.getElementById("lkt-label").value.trim();
   const url=document.getElementById("lkt-url").value.trim();
   if(!label||!url){showToast("Label & URL wajib diisi","error");return;}
@@ -10751,9 +10750,9 @@ function openPPForm(){
   var container = document.getElementById('pp-tab-content');
   if(!container) return;
 
-  var platOpts = (ppMasterPlatforms||[]).map(function(p){return '<option>'+p+'</option>';}).join('');
-  var katOpts  = (ppMasterKategori||[]).map(function(k){return '<option>'+k+'</option>';}).join('');
-  var bulanOpts= ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'].map(function(m){return '<option>'+m+'</option>';}).join('');
+  var platList = ppMasterPlatforms||[];
+  var katList  = ppMasterKategori||[];
+  var bulanList= ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
   var el = document.createElement('div');
   el.id = 'pp-add-form';
@@ -10769,9 +10768,9 @@ function openPPForm(){
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Komentar / Diskusi *</label>
     <textarea id="pf-komentar" style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;resize:vertical;min-height:70px;font-family:inherit;margin-bottom:10px" placeholder="Paste komentar dari TikTok, IG, X..."></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
-      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Platform *</label><select id="pf-platform" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">${platOpts}</select></div>
-      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Bulan *</label><select id="pf-bulan" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">${bulanOpts}</select></div>
-      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Kategori *</label><select id="pf-kategori" style="width:100%;height:34px;padding:0 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px">${katOpts}</select></div>
+      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Platform *</label>${buildDropdown({id:'pf-platform',options:platList,value:platList[0]||''})}</div>
+      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Bulan *</label>${buildDropdown({id:'pf-bulan',options:bulanList,value:bulanList[0]||''})}</div>
+      <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Kategori *</label>${buildDropdown({id:'pf-kategori',options:katList,value:katList[0]||''})}</div>
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
       <div style="flex:1"><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Labels</label>${ppDDWidget('pf', [])}</div>
@@ -10808,9 +10807,9 @@ function ppCloseAddForm(){
 }
 function submitPPForm(){
   var comment = (document.getElementById('pf-komentar')||{}).value||'';
-  var platform = (document.getElementById('pf-platform')||{}).value||'';
-  var bulan = (document.getElementById('pf-bulan')||{}).value||'';
-  var kategori = (document.getElementById('pf-kategori')||{}).value||'';
+  var platform = _cddGetValue('pf-platform')||'';
+  var bulan = _cddGetValue('pf-bulan')||'';
+  var kategori = _cddGetValue('pf-kategori')||'';
   if(!comment.trim()){ showToast('Komentar wajib diisi','error'); return; }
   var labelEl = document.getElementById('pp-dd-picked-pf');
   var labels = labelEl ? JSON.parse(labelEl.value||'[]') : [];
@@ -13118,17 +13117,17 @@ function _svbSetupPaste(){
 }
 
 // ── EVAL MODAL ──
-function openEvalModal(id,defaultFmt){editingEvalId=id||null;const c=id?evalContents.find(x=>x.id===id):null;const m=document.getElementById("eval-modal");if(!m)return;document.getElementById("em-label").textContent=c?"Edit Konten":"Tambah Konten";document.getElementById("em-delete-btn").style.display=c?"inline-flex":"none";const sv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=(v===null||v===undefined)?"":v;};sv("em-judul",c?.judul);sv("em-url",c?.url);sv("em-format",c?.format||defaultFmt||"Carousel");sv("em-tanggal",c?.tanggal);sv("em-topik",c?.topik);sv("em-followers",c?.followers);sv("em-views",c?.views);sv("em-reach",c?.reach);sv("em-nfpct",c?.nfPct);sv("em-fromhome",c?.fromHome);sv("em-fromprofile",c?.fromProfile);sv("em-fromother",c?.fromOther);sv("em-likes",c?.likes);sv("em-comments",c?.comments);sv("em-saves",c?.saves);sv("em-shares",c?.shares);sv("em-engaged",c?.engaged);sv("em-profilevisits",c?.profileVisits);sv("em-follows",c?.follows);sv("em-linktaps",c?.linkTaps);sv("em-watchtime",c?.watchtime);sv("em-wtr",c?.wtr);sv("em-duration",c?.duration);sv("em-replays",c?.replays);sv("em-dropoff",c?.dropoff);sv("em-tapsforward",c?.tapsForward);sv("em-tapsback",c?.tapsBack);sv("em-exits",c?.exits);sv("em-replies",c?.replies);sv("em-stickers",c?.stickersInteract);sv("em-hook",c?.hookRating||"");sv("em-ctaeff",c?.ctaEff||"");sv("em-win",c?.win);sv("em-improve",c?.improve);sv("em-action",c?.action||"");toggleEvalFormatFields();liveEvalScore();m.style.display="flex";}
+function openEvalModal(id,defaultFmt){editingEvalId=id||null;const c=id?evalContents.find(x=>x.id===id):null;const m=document.getElementById("eval-modal");if(!m)return;document.getElementById("em-label").textContent=c?"Edit Konten":"Tambah Konten";document.getElementById("em-delete-btn").style.display=c?"inline-flex":"none";const sv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=(v===null||v===undefined)?"":v;};sv("em-judul",c?.judul);sv("em-url",c?.url);document.getElementById("em-format-cdd").innerHTML=buildDropdown({id:'em-format',options:['Carousel','Feed Photo','Reel','Story'],value:c?.format||defaultFmt||'Carousel',onChange:(val)=>{toggleEvalFormatFields();liveEvalScore();}});sv("em-tanggal",c?.tanggal);sv("em-topik",c?.topik);sv("em-followers",c?.followers);sv("em-views",c?.views);sv("em-reach",c?.reach);sv("em-nfpct",c?.nfPct);sv("em-fromhome",c?.fromHome);sv("em-fromprofile",c?.fromProfile);sv("em-fromother",c?.fromOther);sv("em-likes",c?.likes);sv("em-comments",c?.comments);sv("em-saves",c?.saves);sv("em-shares",c?.shares);sv("em-engaged",c?.engaged);sv("em-profilevisits",c?.profileVisits);sv("em-follows",c?.follows);sv("em-linktaps",c?.linkTaps);sv("em-watchtime",c?.watchtime);sv("em-wtr",c?.wtr);sv("em-duration",c?.duration);sv("em-replays",c?.replays);sv("em-dropoff",c?.dropoff);sv("em-tapsforward",c?.tapsForward);sv("em-tapsback",c?.tapsBack);sv("em-exits",c?.exits);sv("em-replies",c?.replies);sv("em-stickers",c?.stickersInteract);document.getElementById("em-hook-cdd").innerHTML=buildDropdown({id:'em-hook',options:['1 — Lemah','2 — Biasa','3 — Cukup','4 — Kuat','5 — Sangat kuat'],value:c?.hookRating?c.hookRating+' — '+['','Lemah','Biasa','Cukup','Kuat','Sangat kuat'][c.hookRating]||'':'',placeholder:'—'});document.getElementById("em-ctaeff-cdd").innerHTML=buildDropdown({id:'em-ctaeff',options:['high','med','low'],value:c?.ctaEff||'',placeholder:'—'});document.getElementById("em-action-cdd").innerHTML=buildDropdown({id:'em-action',options:['Boost ke Meta Ads','Jadiin template konten serupa','Repurpose jadi format lain','Archive'],value:c?.action||'',placeholder:'Pilih action...'});sv("em-win",c?.win);sv("em-improve",c?.improve);toggleEvalFormatFields();liveEvalScore();m.style.display="flex";}
 function closeEvalModal(){const m=document.getElementById("eval-modal");if(m)m.style.display="none";}
-function toggleEvalFormatFields(){const fmt=document.getElementById("em-format")?.value;const rs=document.getElementById("em-reel-sec"),ss=document.getElementById("em-story-sec"),fs=document.getElementById("em-feed-sec");if(rs)rs.style.display=fmt==="Reel"?"block":"none";if(ss)ss.style.display=fmt==="Story"?"block":"none";if(fs)fs.style.display=(fmt==="Carousel"||fmt==="Feed Photo")?"block":"none";}
+function toggleEvalFormatFields(){const fmt=_cddGetValue("em-format")||'Carousel';const rs=document.getElementById("em-reel-sec"),ss=document.getElementById("em-story-sec"),fs=document.getElementById("em-feed-sec");if(rs)rs.style.display=fmt==="Reel"?"block":"none";if(ss)ss.style.display=fmt==="Story"?"block":"none";if(fs)fs.style.display=(fmt==="Carousel"||fmt==="Feed Photo")?"block":"none";}
 function liveEvalScore(){const gv=id=>{const e=document.getElementById(id);return e?e.value:"";};
 const gi=id=>{const e=document.getElementById(id);return e?parseFloat(e.value)||0:0;};
-const fmt=gv("em-format");const tmp={format:fmt,reach:gi("em-reach"),views:gi("em-views"),nfPct:gi("em-nfpct"),likes:gi("em-likes"),comments:gi("em-comments"),saves:gi("em-saves"),shares:gi("em-shares"),follows:gi("em-follows"),linkTaps:gi("em-linktaps"),profileVisits:gi("em-profilevisits"),followers:gi("em-followers")||1,wtr:gi("em-wtr"),tapsForward:gi("em-tapsforward"),tapsBack:gi("em-tapsback"),exits:gi("em-exits"),replies:gi("em-replies"),stickersInteract:gi("em-stickers")};const prev=document.getElementById("em-score-preview");if(!prev)return;const hasData=tmp.reach>0||tmp.views>0||tmp.saves>0||tmp.exits>0;if(!hasData){prev.innerHTML=`<div style="font-size:11px;color:var(--text-muted);text-align:center">Isi metrik untuk lihat evaluasi otomatis</div>`;return;};
+const fmt=_cddGetValue("em-format")||'Carousel';const tmp={format:fmt,reach:gi("em-reach"),views:gi("em-views"),nfPct:gi("em-nfpct"),likes:gi("em-likes"),comments:gi("em-comments"),saves:gi("em-saves"),shares:gi("em-shares"),follows:gi("em-follows"),linkTaps:gi("em-linktaps"),profileVisits:gi("em-profilevisits"),followers:gi("em-followers")||1,wtr:gi("em-wtr"),tapsForward:gi("em-tapsforward"),tapsBack:gi("em-tapsback"),exits:gi("em-exits"),replies:gi("em-replies"),stickersInteract:gi("em-stickers")};const prev=document.getElementById("em-score-preview");if(!prev)return;const hasData=tmp.reach>0||tmp.views>0||tmp.saves>0||tmp.exits>0;if(!hasData){prev.innerHTML=`<div style="font-size:11px;color:var(--text-muted);text-align:center">Isi metrik untuk lihat evaluasi otomatis</div>`;return;};
 const s=getEvalScore(tmp);const gc={top:"var(--green)",good:"var(--teal)",avg:"var(--amber)",low:"#5f5e5a"};const gl={top:"Top Performer",good:"Performing Well",avg:"Average",low:"Needs Improvement"};prev.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><div style="font-size:32px;font-weight:700;color:${gc[s.grade]}">${s.total}</div><div><div style="font-size:10px;color:var(--text-muted)">Content Score</div><span class="score-pill score-${s.grade}">${gl[s.grade]}</span></div><div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">${fmt!=="Story"?`<div style="text-align:center;background:var(--white);border-radius:6px;padding:4px 8px;border:0.5px solid var(--border)"><div style="font-size:11px;font-weight:700;color:${(s.rates?.saveRate||0)>=3?"var(--green)":(s.rates?.saveRate||0)>=1?"var(--amber)":"var(--red)"}">${fmtP(s.rates?.saveRate||0)}</div><div style="font-size:9px;color:var(--text-muted)">SAVE RATE</div></div>`:""}${fmt==="Reel"?`<div style="text-align:center;background:var(--white);border-radius:6px;padding:4px 8px;border:0.5px solid var(--border)"><div style="font-size:11px;font-weight:700;color:${(tmp.wtr||0)>=35?"var(--green)":(tmp.wtr||0)>=20?"var(--amber)":"var(--red)"}">${tmp.wtr||0}%</div><div style="font-size:9px;color:var(--text-muted)">WTR</div></div>`:""}${fmt==="Story"?`<div style="text-align:center;background:var(--white);border-radius:6px;padding:4px 8px;border:0.5px solid var(--border)"><div style="font-size:11px;font-weight:700;color:${(s.rates?.exitRate||0)<=15?"var(--green)":(s.rates?.exitRate||0)<=30?"var(--amber)":"var(--red)"}">${fmtP(s.rates?.exitRate||0)}</div><div style="font-size:9px;color:var(--text-muted)">EXIT RATE</div></div>`:""}</div></div>${s.insights.slice(0,3).map(i=>`<div style="display:flex;gap:7px;font-size:11px;padding:5px 0;border-top:0.5px solid var(--border)"><i class="ti ti-${i.type==="positive"?"check":"alert-triangle"}" style="color:${i.type==="positive"?"var(--green)":"var(--amber)"};flex-shrink:0;font-size:13px;margin-top:1px"></i>${i.text}</div>`).join("")}`;}
 async function saveEvalModal(){const gv=id=>{const e=document.getElementById(id);return e?e.value:"";};
 const gi=id=>{const e=document.getElementById(id);return e?parseFloat(e.value)||null:null;};
 const judul=gv("em-judul").trim();if(!judul){showToast("Judul konten wajib diisi","error");return;};
-const data={judul,url:gv("em-url"),format:gv("em-format"),tanggal:gv("em-tanggal"),topik:gv("em-topik"),followers:gi("em-followers"),views:gi("em-views"),reach:gi("em-reach"),nfPct:gi("em-nfpct"),fromHome:gi("em-fromhome"),fromProfile:gi("em-fromprofile"),fromOther:gi("em-fromother"),likes:gi("em-likes"),comments:gi("em-comments"),saves:gi("em-saves"),shares:gi("em-shares"),engaged:gi("em-engaged"),profileVisits:gi("em-profilevisits"),follows:gi("em-follows"),linkTaps:gi("em-linktaps"),watchtime:gi("em-watchtime"),wtr:gi("em-wtr"),duration:gi("em-duration"),replays:gi("em-replays"),dropoff:gi("em-dropoff"),tapsForward:gi("em-tapsforward"),tapsBack:gi("em-tapsback"),exits:gi("em-exits"),replies:gi("em-replies"),stickersInteract:gi("em-stickers"),hookRating:gi("em-hook"),ctaEff:gv("em-ctaeff"),win:gv("em-win"),improve:gv("em-improve"),action:gv("em-action")};
+const data={judul,url:gv("em-url"),format:_cddGetValue("em-format")||'Carousel',tanggal:gv("em-tanggal"),topik:gv("em-topik"),followers:gi("em-followers"),views:gi("em-views"),reach:gi("em-reach"),nfPct:gi("em-nfpct"),fromHome:gi("em-fromhome"),fromProfile:gi("em-fromprofile"),fromOther:gi("em-fromother"),likes:gi("em-likes"),comments:gi("em-comments"),saves:gi("em-saves"),shares:gi("em-shares"),engaged:gi("em-engaged"),profileVisits:gi("em-profilevisits"),follows:gi("em-follows"),linkTaps:gi("em-linktaps"),watchtime:gi("em-watchtime"),wtr:gi("em-wtr"),duration:gi("em-duration"),replays:gi("em-replays"),dropoff:gi("em-dropoff"),tapsForward:gi("em-tapsforward"),tapsBack:gi("em-tapsback"),exits:gi("em-exits"),replies:gi("em-replies"),stickersInteract:gi("em-stickers"),hookRating:parseInt(_cddGetValue("em-hook"))||null,ctaEff:_cddGetValue("em-ctaeff")||null,win:gv("em-win"),improve:gv("em-improve"),action:_cddGetValue("em-action")||null};
 try{
   if(editingEvalId){
     await sb_updateEvalContentById(editingEvalId,data);
@@ -14148,23 +14147,23 @@ function openCarouselPlanModal(id,preDate){
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Funnel</div>
-          <select id="cp-form-funnel" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">${funnelOpts}</select>
+          ${buildDropdown({id:'cp-form-funnel',options:['TOFU','MOFU','BOFU'],value:plan?.funnel||'TOFU'})}
         </div>
       </div>
       <div class="cust-field editable">
         <div class="cust-field-label">CTA</div>
         <div style="display:flex;align-items:center;gap:6px">
-          <select id="cp-form-cta" class="cust-field-input" style="border:none;background:transparent;padding:0;flex:1">${ctaOpts?`<option value="">— Pilih CTA —</option>${ctaOpts}`:`<option value="">Belum ada CTA master</option>`}</select>
+          <div style="flex:1">${buildDropdown({id:'cp-form-cta',options:carouselCTAOptions.map(c=>c.label),value:plan?.cta||'',placeholder:'— Pilih CTA —'})}</div>
           <button onclick="_cpAddCTAOption()" class="btn btn-sm" style="white-space:nowrap;font-size:11px;flex-shrink:0">+ CTA Baru</button>
         </div>
       </div>
       <div class="cust-field editable">
         <div class="cust-field-label">Assignee</div>
-        <select id="cp-form-assignee" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="">— Pilih —</option>${assigneeOpts}</select>
+        ${buildDropdown({id:'cp-form-assignee',options:mktPeople.map(p=>p.nama),value:mktPeople.find(p=>_idEq(plan?.assignee_id,p.id))?.nama||'',placeholder:'— Pilih —'})}
       </div>
       <div class="cust-field editable">
         <div class="cust-field-label">Status</div>
-        <select id="cp-form-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">${statusOpts}</select>
+        ${buildDropdown({id:'cp-form-status',options:['Draft','In Progress','Done'],value:plan?.status||'Draft'})}
       </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Link Brief <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-hint);font-size:10px">(opsional)</span></div>
@@ -14188,9 +14187,7 @@ async function _cpAddCTAOption(){
   const row=await sb_insert('carousel_cta_options',{label:label.trim()});
   if(!row){showToast('Gagal simpan CTA','error');return;}
   carouselCTAOptions.push({id:row.id,label:label.trim()});
-  // Update the select in current modal
-  const sel=document.getElementById('cp-form-cta');
-  if(sel){const opt=document.createElement('option');opt.value=label.trim();opt.textContent=label.trim();opt.selected=true;sel.appendChild(opt);}
+  _cddState['cp-form-cta'] && (_cddState['cp-form-cta'].options = carouselCTAOptions.map(c=>c.label)); _cddSearch('cp-form-cta','');
   showToast('CTA ditambah ✓');
 }
 async function _cpSavePlan(){
@@ -14199,10 +14196,10 @@ async function _cpSavePlan(){
   const payload={
     judul,
     tanggal_posting:(document.getElementById('cp-form-tanggal')||{}).value||null,
-    funnel:(document.getElementById('cp-form-funnel')||{}).value||'TOFU',
-    cta:(document.getElementById('cp-form-cta')||{}).value||null,
-    assignee_id:(document.getElementById('cp-form-assignee')||{}).value||null,
-    status:(document.getElementById('cp-form-status')||{}).value||'Draft',
+    funnel:_cddGetValue('cp-form-funnel')||'TOFU',
+    cta:_cddGetValue('cp-form-cta')||null,
+    assignee_id:(mktPeople.find(p=>p.nama===_cddGetValue('cp-form-assignee'))?.id)||null,
+    status:_cddGetValue('cp-form-status')||'Draft',
     link_brief:(document.getElementById('cp-form-link-brief')||{}).value?.trim()||null,
   };
   if(_editingCarouselId){
@@ -14827,15 +14824,11 @@ function daSendToContentLib(id) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PLATFORM</label>
-          <select id="cl-platform" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
-            ${CL_PLATFORM.map(p => `<option value="${p}">${p}</option>`).join('')}
-          </select>
+          <div id="cl-platform-cdd">${buildDropdown({id:'cl-platform',options:CL_PLATFORM,value:CL_PLATFORM[0]||''})}</div>
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JENIS KONTEN</label>
-          <select id="cl-jenis" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
-            ${CL_JENIS.map(j => `<option value="${j}">${j}</option>`).join('')}
-          </select>
+          <div id="cl-jenis-cdd">${buildDropdown({id:'cl-jenis',options:CL_JENIS,value:CL_JENIS[0]||''})}</div>
         </div>
       </div>
       <div>
@@ -14887,8 +14880,8 @@ function daSendToContentLib(id) {
 async function clDoSendFromDA(daId) {
   const a = daAssets.find(x => _idEq(x.id, daId));
   if (!a) return;
-  const platform    = document.getElementById('cl-platform').value;
-  const jenis       = document.getElementById('cl-jenis').value;
+  const platform = _cddGetValue('cl-platform')||'';
+  const jenis = _cddGetValue('cl-jenis')||'';
   const link        = document.getElementById('cl-link')?.value.trim()||'';
   const copywriting = document.getElementById('cl-copy')?.value.trim()||'';
   const views       = parseInt(document.getElementById('cl-views').value)||0;
@@ -15340,14 +15333,14 @@ async function daConfirmDelete(id) {
     <div class="modal-body" style="padding:16px 20px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Nama Perusahaan</div><input class="cust-field-input" id="pm-name" placeholder="contoh: PT Unilever Indonesia"></div>
-        <div class="cust-field editable"><div class="cust-field-label">Category</div><select id="pm-category" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="">— Pilih —</option><option value="MT Program Company">MT Program Company</option><option value="HR Services Company">HR Services Company</option></select></div>
-        <div class="cust-field editable"><div class="cust-field-label">Tier</div><select id="pm-tier" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="Strategic">Strategic</option><option value="Standard">Standard</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Category</div><div id="pm-category-cdd"></div></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tier</div><div id="pm-tier-cdd"></div></div>
         <div class="cust-field editable"><div class="cust-field-label">Nama Kontak</div><input class="cust-field-input" id="pm-pic" placeholder="Nama PIC"></div>
         <div class="cust-field editable"><div class="cust-field-label">Role</div><input class="cust-field-input" id="pm-pos" placeholder="HR Manager, Kadiv Career, dll"></div>
         <div class="cust-field editable"><div class="cust-field-label">Phone Number</div><input class="cust-field-input" id="pm-wa" placeholder="+62..."></div>
         <div class="cust-field editable"><div class="cust-field-label">Email</div><input class="cust-field-input" id="pm-email" placeholder="email@company.com"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">LinkedIn URL</div><input class="cust-field-input" id="pm-li" placeholder="https://linkedin.com/in/..."></div>
-        <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><select id="pm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option>Approached</option><option>Sales Meet</option><option>Negotiation</option><option>Closed Deal</option><option>Closed Lost</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><div id="pm-status-cdd"></div></div>
         <div class="cust-field editable"><div class="cust-field-label">Tanggal Input</div><input class="cust-field-input" id="pm-inputdate" type="date"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Scope Kolaborasi</div><input class="cust-field-input" id="pm-scope" placeholder="Webinar, job posting, promo bundling..."></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Catatan Internal</div><textarea id="pm-notes" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Notes..."></textarea></div>
@@ -15371,14 +15364,14 @@ async function daConfirmDelete(id) {
     <div class="modal-body" style="padding:16px 20px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Nama Organisasi / Kampus</div><input class="cust-field-input" id="opm-name" placeholder="contoh: BEM FEB UI, Career Center Unpad..."></div>
-        <div class="cust-field editable"><div class="cust-field-label">Tipe</div><select id="opm-category" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="">— Pilih —</option><option value="BEM / Organisasi Mahasiswa">BEM / Organisasi Mahasiswa</option><option value="Career Center">Career Center</option><option value="Himpunan Mahasiswa">Himpunan Mahasiswa</option><option value="Unit Kemahasiswaan">Unit Kemahasiswaan</option><option value="Lainnya">Lainnya</option></select></div>
-        <div class="cust-field editable"><div class="cust-field-label">Tier</div><select id="opm-tier" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option value="Strategic">Strategic</option><option value="Standard">Standard</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tipe</div><div id="opm-category-cdd"></div></div>
+        <div class="cust-field editable"><div class="cust-field-label">Tier</div><div id="opm-tier-cdd"></div></div>
         <div class="cust-field editable"><div class="cust-field-label">Nama Kontak (PIC)</div><input class="cust-field-input" id="opm-pic" placeholder="Nama PIC / Ketua / Staff"></div>
         <div class="cust-field editable"><div class="cust-field-label">Role / Jabatan</div><input class="cust-field-input" id="opm-pos" placeholder="Ketua BEM, Staff Career, dll"></div>
         <div class="cust-field editable"><div class="cust-field-label">Phone / WhatsApp</div><input class="cust-field-input" id="opm-wa" placeholder="+62..."></div>
         <div class="cust-field editable"><div class="cust-field-label">Email</div><input class="cust-field-input" id="opm-email" placeholder="email@organisasi.com"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">LinkedIn / Instagram URL</div><input class="cust-field-input" id="opm-li" placeholder="https://linkedin.com/in/... atau instagram.com/..."></div>
-        <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><select id="opm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"><option>Approached</option><option>Sales Meet</option><option>Negotiation</option><option>Closed Deal</option><option>Closed Lost</option></select></div>
+        <div class="cust-field editable"><div class="cust-field-label">Status Pipeline</div><div id="opm-status-cdd"></div></div>
         <div class="cust-field editable"><div class="cust-field-label">Tanggal Input</div><input class="cust-field-input" id="opm-inputdate" type="date"></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Scope Kolaborasi</div><input class="cust-field-input" id="opm-scope" placeholder="Promo webinar, sharing session, bundling, dll..."></div>
         <div class="cust-field editable" style="grid-column:1/-1"><div class="cust-field-label">Catatan Internal</div><textarea id="opm-notes" class="cust-field-input" rows="2" style="resize:vertical" placeholder="Notes..."></textarea></div>
@@ -16170,7 +16163,7 @@ async function daConfirmDelete(id) {
       <div class="form-sec">
         <div class="form-sec-title">Info Konten</div>
         <div class="form-row-2">
-          <div><label class="fl">Format *</label><select id="em-format" class="form-select-eval" onchange="toggleEvalFormatFields();liveEvalScore()"><option>Carousel</option><option>Feed Photo</option><option>Reel</option><option>Story</option></select></div>
+          <div><label class="fl">Format *</label><div id="em-format-cdd"></div></div>
           <div><label class="fl">Tanggal Post</label><input type="date" id="em-tanggal" class="form-input-eval"></div>
         </div>
         <div class="form-field-e"><label class="fl">Judul / Caption *</label><input id="em-judul" class="form-input-eval" placeholder="Judul atau hook caption"></div>
@@ -16254,12 +16247,12 @@ async function daConfirmDelete(id) {
       <div class="form-sec">
         <div class="form-sec-title">Analisis Manual</div>
         <div class="form-row-2">
-          <div><label class="fl">Hook Rating (1-5)</label><select id="em-hook" class="form-select-eval"><option value="">—</option><option value="1">1 — Lemah</option><option value="2">2 — Biasa</option><option value="3">3 — Cukup</option><option value="4">4 — Kuat</option><option value="5">5 — Sangat kuat</option></select></div>
-          <div><label class="fl">CTA Effectiveness</label><select id="em-ctaeff" class="form-select-eval"><option value="">—</option><option value="high">High</option><option value="med">Medium</option><option value="low">Low</option></select></div>
+          <div><label class="fl">Hook Rating (1-5)</label><div id="em-hook-cdd"></div></div>
+          <div><label class="fl">CTA Effectiveness</label><div id="em-ctaeff-cdd"></div></div>
         </div>
         <div class="form-field-e"><label class="fl">Yang Berhasil</label><textarea id="em-win" class="form-textarea-eval" placeholder="Apa yang bekerja baik dari konten ini?"></textarea></div>
         <div class="form-field-e"><label class="fl">Perlu Diperbaiki</label><textarea id="em-improve" class="form-textarea-eval" placeholder="Apa yang bisa dioptimasi?"></textarea></div>
-        <div><label class="fl">Action Item</label><select id="em-action" class="form-select-eval"><option value="">Pilih action...</option><option>Boost ke Meta Ads</option><option>Jadiin template konten serupa</option><option>Repurpose jadi format lain</option><option>Archive</option></select></div>
+        <div><label class="fl">Action Item</label><div id="em-action-cdd"></div></div>
       </div>
     </div>
     <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border)">
@@ -16344,13 +16337,11 @@ async function daConfirmDelete(id) {
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Status</div>
-          <select id="prod-edit-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Draft</option><option>Pre-launch</option><option>Live</option><option>Archived</option>
-          </select>
+          <div id="prod-edit-status-cdd"></div>
         </div>
         <div class="cust-field editable" style="grid-column:1/-1">
           <div class="cust-field-label">Klasifikasi</div>
-          <select id="pm-klas" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%"></select>
+          <div id="pm-klas-cdd"></div>
         </div>
         <div class="cust-field editable" style="grid-column:1/-1">
           <div class="cust-field-label">Landing Page URL</div>
@@ -16389,9 +16380,7 @@ async function daConfirmDelete(id) {
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Status</div>
-          <select id="bm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Active</option><option>Draft</option><option>Archived</option>
-          </select>
+          <div id="bm-status-cdd"></div>
         </div>
         <div class="cust-field editable" style="grid-column:1/-1">
           <div class="cust-field-label">Deskripsi</div>
@@ -20967,15 +20956,11 @@ function clOpenUploadModal(prefillFile) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PLATFORM</label>
-          <select id="cl-platform" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
-            ${CL_PLATFORM.map(p => `<option value="${p}">${p}</option>`).join('')}
-          </select>
+          <div id="cl-platform-cdd">${buildDropdown({id:'cl-platform',options:CL_PLATFORM,value:CL_PLATFORM[0]||''})}</div>
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JENIS KONTEN</label>
-          <select id="cl-jenis" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
-            ${CL_JENIS.map(j => `<option value="${j}">${j}</option>`).join('')}
-          </select>
+          <div id="cl-jenis-cdd">${buildDropdown({id:'cl-jenis',options:CL_JENIS,value:CL_JENIS[0]||''})}</div>
         </div>
       </div>
       <div>
@@ -21184,8 +21169,8 @@ function clDDConfirmNew() {
 // ── End custom label dropdown ────────────────────────────────────
 
 async function clDoUpload() {
-  const platform = document.getElementById('cl-platform').value;
-  const jenis    = document.getElementById('cl-jenis').value;
+  const platform = _cddGetValue('cl-platform')||'';
+  const jenis    = _cddGetValue('cl-jenis')||'';
   const link     = document.getElementById('cl-link').value.trim();
   const copywriting = document.getElementById('cl-copy').value.trim();
   const views    = parseInt(document.getElementById('cl-views').value)||0;
