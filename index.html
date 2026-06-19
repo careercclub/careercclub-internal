@@ -5459,7 +5459,7 @@ function renderTickets(){
 
   // update nav badge
   const badge=document.querySelector(".nav-item .nav-badge.red");
-  if(badge) badge.textContent=todo+inprog;
+  if(badge) badge.textContent=todo;
 }
 
 async function toggleTktDone(id){
@@ -14198,7 +14198,7 @@ async function _cpSavePlan(){
     tanggal_posting:(document.getElementById('cp-form-tanggal')||{}).value||null,
     funnel:_cddGetValue('cp-form-funnel')||'TOFU',
     cta:_cddGetValue('cp-form-cta')||null,
-    assignee_id:(mktPeople.find(p=>p.nama===_cddGetValue('cp-form-assignee'))?.id)||null,
+    assignee_id:(tktPeople.find(p=>p.nama===_cddGetValue('cp-form-assignee'))?.id)||null,
     status:_cddGetValue('cp-form-status')||'Draft',
     link_brief:(document.getElementById('cp-form-link-brief')||{}).value?.trim()||null,
   };
