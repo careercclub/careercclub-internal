@@ -5868,31 +5868,56 @@ function _gcalOpenTicketModal(tktId){
   const person=getPersonById(t.assignedToId);
   const requester=getPersonById(t.requesterId);
   const dateVal=t.deadline?t.deadline.substring(0,10):new Date().toISOString().substring(0,10);
-  const startDt=dateVal+'T09:00';
-  const endDt=dateVal+'T10:00';
   const allPeople=(window.tktPeople||[]).filter(p=>p.email&&p.id!==t.assignedToId&&p.id!==t.requesterId);
   const modal=document.getElementById('gcal-modal');
   modal.style.display='flex';
   modal.innerHTML=`
   <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.18);position:relative">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-      <i class="ti ti-brand-google" style="font-size:20px;color:#4285F4"></i>
-      <div style="font-size:15px;font-weight:700">Add Ticket to Google Calendar</div>
-      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+      <div style="width:32px;height:32px;border-radius:8px;background:#E8F0FE;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ti-brand-google" style="font-size:18px;color:#4285F4"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Tambah ke Google Calendar</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:1px" id="gcal-modal-sub">All-day event</div>
+      </div>
+      <button onclick="gcalCloseModal()" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:var(--radius);background:none;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center"><i class="ti ti-x" style="font-size:13px"></i></button>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUDUL EVENT</label>
         <input id="gcal-title" value="${t.judul}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">MULAI</label>
-          <input id="gcal-start" type="datetime-local" value="${startDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      <div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Tanggal Mulai</label>
+            <input id="gcal-start" type="date" value="${dateVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Tanggal Selesai</label>
+            <input id="gcal-end" type="date" value="${dateVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+          </div>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">SELESAI</label>
-          <input id="gcal-end" type="datetime-local" value="${endDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        <div id="gcal-time-fields" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+            <div>
+              <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Jam Mulai</label>
+              <input id="gcal-start-time" type="time" value="09:00" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Jam Selesai</label>
+              <input id="gcal-end-time" type="time" value="10:00" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+            </div>
+          </div>
+        </div>
+        <div onclick="gcalToggleTime()" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg);border-radius:var(--radius);cursor:pointer;margin-top:8px">
+          <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
+            <i class="ti ti-clock" style="font-size:14px"></i> Tambah waktu spesifik
+          </span>
+          <div id="gcal-time-toggle" style="width:32px;height:18px;border-radius:20px;background:var(--border-md);position:relative;transition:background .2s;flex-shrink:0">
+            <div id="gcal-time-knob" style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+          </div>
         </div>
       </div>
       <div>
@@ -5937,8 +5962,22 @@ async function gcalCreateTicketEvent(tktId){
   if(person&&person.email) attendees.push({email:person.email,displayName:person.nama});
   if(requester&&requester.email&&requester.email!==person.email) attendees.push({email:requester.email,displayName:requester.nama});
   document.querySelectorAll('.gcal-cc:checked').forEach(cb=>attendees.push({email:cb.value,displayName:cb.dataset.name}));
-  const toISO=s=>new Date(s).toISOString();
-  const body={summary:title,description:desc,start:{dateTime:toISO(startRaw),timeZone:'Asia/Jakarta'},end:{dateTime:toISO(endRaw),timeZone:'Asia/Jakarta'},attendees};
+  const useTime=document.getElementById('gcal-time-fields')?.style.display!=='none';
+  let startObj,endObj;
+  if(useTime){
+    const startTime=document.getElementById('gcal-start-time')?.value||'09:00';
+    const endTime=document.getElementById('gcal-end-time')?.value||'10:00';
+    const toISO=s=>new Date(s).toISOString();
+    startObj={dateTime:toISO(startRaw+'T'+startTime),timeZone:'Asia/Jakarta'};
+    endObj={dateTime:toISO(endRaw+'T'+endTime),timeZone:'Asia/Jakarta'};
+  }else{
+    const endDateAdj=new Date(endRaw);
+    endDateAdj.setDate(endDateAdj.getDate()+1);
+    const endAdjStr=endDateAdj.toISOString().substring(0,10);
+    startObj={date:startRaw};
+    endObj={date:endAdjStr};
+  }
+  const body={summary:title,description:desc,start:startObj,end:endObj,attendees};
   try{
     const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all',{method:'POST',headers:{'Authorization':'Bearer '+gcalAccessToken,'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok) throw new Error((await res.json()).error?.message||'API error');
@@ -13821,6 +13860,7 @@ async function _spToggleDone(dateId,checked){
   if(!ok){showToast('Gagal update','error');return;}
   const date=storyPlanDates.find(d=>_idEq(d.id,dateId));
   if(date)date.status=newStatus;
+  if(checked) _spCollapsed.add(dateId);
   _spRenderDates();_spRenderCalendar();
   showToast(checked?'Marked as Done ✓':'Dikembalikan ke Draft');
 }
@@ -21553,19 +21593,21 @@ function _gcalOpenModal(taskId) {
   const allAssigneeIds = new Set(assigneeIds);
   const allPeople = (window.tktPeople || []).filter(p => p.email && !allAssigneeIds.has(p.id));
 
-  // Hitung waktu default: due_date jam 09:00–10:00
   const dateVal = t.deadline ? t.deadline.substring(0, 10) : new Date().toISOString().substring(0, 10);
-  const startDt = dateVal + 'T09:00';
-  const endDt   = dateVal + 'T10:00';
 
   const modal = document.getElementById('gcal-modal');
   modal.style.display = 'flex';
   modal.innerHTML = `
   <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.18);position:relative">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-      <i class="ti ti-brand-google" style="font-size:20px;color:#4285F4"></i>
-      <div style="font-size:15px;font-weight:700">Add to Google Calendar</div>
-      <button onclick="gcalCloseModal()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)"><i class="ti ti-x"></i></button>
+      <div style="width:32px;height:32px;border-radius:8px;background:#E8F0FE;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ti-brand-google" style="font-size:18px;color:#4285F4"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Tambah ke Google Calendar</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:1px" id="gcal-modal-sub">All-day event</div>
+      </div>
+      <button onclick="gcalCloseModal()" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:var(--radius);background:none;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center"><i class="ti ti-x" style="font-size:13px"></i></button>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:12px">
@@ -21573,14 +21615,36 @@ function _gcalOpenModal(taskId) {
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUDUL EVENT</label>
         <input id="gcal-title" value="${t.title}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">MULAI</label>
-          <input id="gcal-start" type="datetime-local" value="${startDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+      <div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Tanggal Mulai</label>
+            <input id="gcal-start" type="date" value="${dateVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Tanggal Selesai</label>
+            <input id="gcal-end" type="date" value="${dateVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+          </div>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">SELESAI</label>
-          <input id="gcal-end" type="datetime-local" value="${endDt}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)">
+        <div id="gcal-time-fields" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+            <div>
+              <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Jam Mulai</label>
+              <input id="gcal-start-time" type="time" value="09:00" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Jam Selesai</label>
+              <input id="gcal-end-time" type="time" value="10:00" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+            </div>
+          </div>
+        </div>
+        <div onclick="gcalToggleTime()" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg);border-radius:var(--radius);cursor:pointer;margin-top:8px">
+          <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
+            <i class="ti ti-clock" style="font-size:14px"></i> Tambah waktu spesifik
+          </span>
+          <div id="gcal-time-toggle" style="width:32px;height:18px;border-radius:20px;background:var(--border-md);position:relative;transition:background .2s;flex-shrink:0">
+            <div id="gcal-time-knob" style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+          </div>
         </div>
       </div>
       <div>
@@ -21620,6 +21684,25 @@ function gcalCloseModal() {
   gcalPendingTaskId = null;
 }
 
+function gcalToggleTime(){
+  const fields=document.getElementById('gcal-time-fields');
+  const toggle=document.getElementById('gcal-time-toggle');
+  const knob=document.getElementById('gcal-time-knob');
+  const sub=document.getElementById('gcal-modal-sub');
+  const isOn=fields.style.display!=='none';
+  if(isOn){
+    fields.style.display='none';
+    toggle.style.background='var(--border-md)';
+    knob.style.left='2px';
+    if(sub) sub.textContent='All-day event';
+  }else{
+    fields.style.display='block';
+    toggle.style.background='#0f52ba';
+    knob.style.left='16px';
+    if(sub) sub.textContent='Event dengan waktu spesifik';
+  }
+}
+
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') gcalCloseModal();
 });
@@ -21645,11 +21728,26 @@ async function gcalCreateEvent(taskId) {
     attendees.push({ email: cb.value, displayName: cb.dataset.name });
   });
 
+  const useTime = document.getElementById('gcal-time-fields')?.style.display !== 'none';
+  let startObj, endObj;
+  if (useTime) {
+    const startTime = document.getElementById('gcal-start-time')?.value || '09:00';
+    const endTime   = document.getElementById('gcal-end-time')?.value   || '10:00';
+    const toISO = s => new Date(s).toISOString();
+    startObj = { dateTime: toISO(startRaw + 'T' + startTime), timeZone: 'Asia/Jakarta' };
+    endObj   = { dateTime: toISO(endRaw   + 'T' + endTime),   timeZone: 'Asia/Jakarta' };
+  } else {
+    const endDateAdj = new Date(endRaw);
+    endDateAdj.setDate(endDateAdj.getDate() + 1);
+    const endAdjStr = endDateAdj.toISOString().substring(0, 10);
+    startObj = { date: startRaw };
+    endObj   = { date: endAdjStr };
+  }
   const event = {
     summary: title,
     description: desc,
-    start: { dateTime: new Date(startRaw).toISOString(), timeZone: 'Asia/Jakarta' },
-    end:   { dateTime: new Date(endRaw).toISOString(),   timeZone: 'Asia/Jakarta' },
+    start: startObj,
+    end: endObj,
     attendees,
     reminders: { useDefault: false, overrides: [
       { method: 'popup', minutes: 1440 },
