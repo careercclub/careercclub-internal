@@ -12591,6 +12591,7 @@ var menuSections = [
     { page: "tickets",   label: "Tickets" },
     { page: "partner",   label: "B2B Partnership" },
     { page: "orgpartner", label: "Org Partnership" },
+    { page: "collaborator", label: "Collaborator" },
     { page: "design",    label: "Graphic Design" },
     { page: "resources", label: "Resources" }
   ]},
@@ -12598,7 +12599,7 @@ var menuSections = [
 ];
 
 function loadMenuSections(){
-  var MENU_VERSION = 'v18_collaborator';
+  var MENU_VERSION = 'v19_collaborator_nav';
   var savedVersion = localStorage.getItem('ccc_menuVersion');
   if(savedVersion !== MENU_VERSION){
     // Config outdated or first run - clear and use default
@@ -12631,8 +12632,9 @@ var pageIconMap = {
   design:    'ti-palette',
   contentlib: 'ti-bookmark',
   voucher:   'ti-ticket',
-  resources: 'ti-key',
-  settings:  'ti-settings'
+  resources:    'ti-key',
+  collaborator: 'ti-star',
+  settings:     'ti-settings'
 };
 
 var pageBadgeMap = {
