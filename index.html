@@ -7779,6 +7779,7 @@ function settingsHTML(){
     <div class="tab" id="stab-link-templates" onclick="initSettingsTab('link-templates')"><i class="ti ti-link" style="font-size:12px"></i> Link Template</div>
     <div class="tab" id="stab-ci-lists" onclick="initSettingsTab('ci-lists')"><i class="ti ti-building-store" style="font-size:12px"></i> Competitor Intel</div>
     <div class="tab" id="stab-klasifikasi" onclick="initSettingsTab('klasifikasi')"><i class="ti ti-tag" style="font-size:12px"></i> Klasifikasi Produk</div>
+    <div class="tab" id="stab-content-planning" onclick="initSettingsTab('content-planning')"><i class="ti ti-layout-columns" style="font-size:12px"></i> Content Planning</div>
   </div>
   <div id="settings-tab-content"></div>`;
 }
@@ -10357,6 +10358,7 @@ function initSettingsTab(tab){
   else if(tab==="menu"){c.innerHTML=getMenuSettingsHTML();}
   else if(tab==="ci-lists"){c.innerHTML=ciListsSettingsHTML();}
   else if(tab==="klasifikasi"){c.innerHTML=klasifikasiSettingsHTML();}
+  else if(tab==="content-planning"){c.innerHTML=contentPlanningSettingsHTML();renderCTAMaster();}
 }
 
 
@@ -10422,6 +10424,59 @@ async function deleteKlasifikasi(idx){
   KLASIFIKASI_LIST.splice(idx, 1);
   renderKlasList();
   showToast('Klasifikasi dihapus');
+}
+
+function contentPlanningSettingsHTML(){
+  return `<div style="max-width:520px">
+    <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">Master CTA Carousel</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">List CTA yang tersedia di form Carousel Plan.</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="cta-master-input" type="text" placeholder="Tambah CTA baru..." style="flex:1;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)" onkeydown="if(event.key==='Enter')addCTAMaster()">
+      <button class="btn btn-primary btn-sm" onclick="addCTAMaster()"><i class="ti ti-plus"></i> Tambah</button>
+    </div>
+    <div id="cta-master-list" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>`;
+}
+
+function renderCTAMaster(){
+  const el=document.getElementById('cta-master-list');
+  if(!el)return;
+  if(!carouselCTAOptions.length){
+    el.innerHTML=`<div style="font-size:12px;color:var(--text-muted);padding:12px 0">Belum ada CTA. Tambah di atas.</div>`;
+    return;
+  }
+  el.innerHTML=carouselCTAOptions.map(c=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border)">
+      <span style="font-size:13px;color:var(--text)">${c.label}</span>
+      <button onclick="deleteCTAMaster('${c.id}')" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:var(--radius);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)" onmouseover="this.style.color='var(--red)';this.style.borderColor='#f7c1c1'" onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'">
+        <i class="ti ti-trash" style="font-size:12px"></i>
+      </button>
+    </div>`).join('');
+}
+
+async function addCTAMaster(){
+  const input=document.getElementById('cta-master-input');
+  const label=(input?.value||'').trim();
+  if(!label){showToast('Tulis CTA dulu','error');return;}
+  if(carouselCTAOptions.some(c=>c.label.toLowerCase()===label.toLowerCase())){showToast('CTA sudah ada','error');return;}
+  const row=await sb_insert('carousel_cta_options',{label});
+  if(!row?.id){showToast('Gagal tambah CTA','error');return;}
+  carouselCTAOptions.push({id:row.id,label});
+  if(input)input.value='';
+  renderCTAMaster();
+  showToast('CTA ditambahkan ✓');
+  logActivity('SETTINGS','TAMBAH CTA',label);
+}
+
+async function deleteCTAMaster(id){
+  const cta=carouselCTAOptions.find(c=>String(c.id)===String(id));
+  if(!await showConfirmDelete('Hapus CTA ini?',`"${cta?.label||''}" akan dihapus permanen dari master data.`))return;
+  const ok=await sb_delete('carousel_cta_options',id);
+  if(!ok){showToast('Gagal hapus','error');return;}
+  carouselCTAOptions=carouselCTAOptions.filter(c=>String(c.id)!==String(id));
+  renderCTAMaster();
+  showToast('CTA dihapus');
+  logActivity('SETTINGS','HAPUS CTA',cta?.label||id);
 }
 
 function ciListsSettingsHTML() {
@@ -20712,8 +20767,9 @@ function renderResources() {
   const groups = {};
   const katOrder = [];
   resourcesData.forEach(r => {
-    if (!groups[r.kategori]) { groups[r.kategori] = []; katOrder.push(r.kategori); }
-    groups[r.kategori].push(r);
+    const kat = r.kategori || 'Tanpa Kategori';
+    if (!groups[kat]) { groups[kat] = []; katOrder.push(kat); }
+    groups[kat].push({...r, kategori: kat});
   });
   const uniqueKats = [...new Set(katOrder)];
 
@@ -20741,8 +20797,10 @@ function renderResources() {
 }
 
 function renderResItem(r) {
+  if (!r || !r.id) return '';
   const isCred = r.tipe === 'credential';
   const showP = resShowPass[r.id];
+  const safeName = (r.nama||'Tanpa nama').replace(/`/g,'\\`');
   return `
   <div class="res-item-new" data-id="${r.id}" data-kat="${r.kategori}"
     ondragover="resDragOverItem(event,'${r.id}')"
@@ -20755,7 +20813,7 @@ function renderResItem(r) {
       <i class="ti ${isCred ? 'ti-lock' : 'ti-link'}" style="font-size:14px;color:${isCred ? 'var(--amber)' : '#0f52ba'}"></i>
     </div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:500;margin-bottom:5px;color:var(--text)">${r.nama}</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:5px;color:var(--text)">${r.nama||'Tanpa nama'}</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11px;color:var(--text-muted)">
         ${r.url ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-external-link" style="font-size:10px"></i><a href="${r.url}" target="_blank" style="color:#0f52ba">${r.url.replace(/https?:\/\//,'').split('/')[0]}</a></span>` : ''}
         ${r.username ? `<span style="display:flex;align-items:center;gap:3px"><i class="ti ti-user" style="font-size:10px"></i> ${r.username}</span>` : ''}
@@ -20797,8 +20855,9 @@ function resDropKat(e, targetKat) {
   const groups = {};
   const katOrder = [];
   resourcesData.forEach(r => {
-    if (!groups[r.kategori]) { groups[r.kategori] = []; katOrder.push(r.kategori); }
-    groups[r.kategori].push(r);
+    const kat = r.kategori || 'Tanpa Kategori';
+    if (!groups[kat]) { groups[kat] = []; katOrder.push(kat); }
+    groups[kat].push({...r, kategori: kat});
   });
   const uniqueKats = [...new Set(katOrder)];
   const fromIdx = uniqueKats.indexOf(resDragKat);
