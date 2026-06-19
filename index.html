@@ -8533,9 +8533,12 @@ function openTaskModal(taskId,projId){
   setText("tm-title-label",t?"Edit Task":"Task Baru");
   setVal("tm-title",t?t.title:"");
   setVal("tm-desc",t?(t.desc||""):"");
-  setVal("tm-phase",t?t.phase:"Pre Event");
-  setVal("tm-status",t?t.status:"Todo");
-  setVal("tm-priority",t?t.priority:"Med");
+  document.getElementById("tm-phase-wrap").innerHTML=buildDropdown({id:"tm-phase",options:["Pre Event","Hari H","Post Event"],value:"Pre Event"});
+  document.getElementById("tm-status-wrap").innerHTML=buildDropdown({id:"tm-status",options:["Todo","On Progress","Done"],value:"Todo"});
+  document.getElementById("tm-priority-wrap").innerHTML=buildDropdown({id:"tm-priority",options:["High","Med","Low"],value:"Med"});
+  _cddSetValue("tm-phase",t?t.phase:"Pre Event");
+  _cddSetValue("tm-status",t?t.status:"Todo");
+  _cddSetValue("tm-priority",t?t.priority:"Med");
   setVal("tm-deadline",t?(t.deadline||""):"");
 
   // populate assignee chip picker
@@ -9287,9 +9290,9 @@ async function saveTaskModal(){
   const data={
     title:document.getElementById("tm-title").value.trim(),
     desc:document.getElementById("tm-desc").value.trim(),
-    phase:document.getElementById("tm-phase").value,
-    status:document.getElementById("tm-status").value,
-    priority:document.getElementById("tm-priority").value,
+    phase:_cddGetValue("tm-phase")||'Pre Event',
+    status:_cddGetValue("tm-status")||'Todo',
+    priority:_cddGetValue("tm-priority")||'Med',
     deadline:document.getElementById("tm-deadline").value,
     assigneeId: (window._tmAssigneeIds && window._tmAssigneeIds[0]) || null,
     assigneeIds: window._tmAssigneeIds || [],
@@ -10054,12 +10057,15 @@ function openProjectModal(id){
   const p=id?projects.find(x=>x.id===id):null;
   document.getElementById("pjm-title-label").textContent=p?"Edit Event":"Event Baru";
   document.getElementById("pjm-nama").value=p?p.nama:"";
-  document.getElementById("pjm-jenis").value=p?(p.jenis_program||""):"";
+  document.getElementById("pjm-jenis-wrap").innerHTML=buildDropdown({id:"pjm-jenis",options:["","CCA","Webinar","Workshop","Bootcamp","Seminar"],value:"",placeholder:"— Pilih jenis —"});
+  document.getElementById("pjm-platform-wrap").innerHTML=buildDropdown({id:"pjm-platform",options:["Zoom","Google Meet","Offline"],value:"Zoom"});
+  document.getElementById("pjm-status-wrap").innerHTML=buildDropdown({id:"pjm-status",options:["Planning","On Progress","Done","Cancelled"],value:"Planning",onChange:(val)=>{const done=val==="Done";document.getElementById("pjm-post-section").style.display=done?"block":"none";const tgt=document.getElementById("pjm-target").value;if(done)document.getElementById("pjm-target-display").textContent=(tgt||"—")+" peserta";}});
+  _cddSetValue("pjm-jenis",p?(p.jenis_program||""):"");
   document.getElementById("pjm-tanggal").value=p?p.tanggal:"";
   document.getElementById("pjm-waktu").value=p?p.waktu:"19:00";
-  document.getElementById("pjm-platform").value=p?p.platform:"Zoom";
+  _cddSetValue("pjm-platform",p?p.platform:"Zoom");
   document.getElementById("pjm-speaker").value=p?p.speaker:"";
-  document.getElementById("pjm-status").value=p?p.status:"Planning";
+  _cddSetValue("pjm-status",p?p.status:"Planning");
   document.getElementById("pjm-target").value=p?(p.target||p.targetPeserta||200):200;
   document.getElementById("pjm-capaian").value=p?(p.capaian_peserta||""):"";
   document.getElementById("pjm-notes-post").value=p?(p.notes_post||""):"";
@@ -10067,13 +10073,7 @@ function openProjectModal(id){
   const isDone = p && p.status === 'Done';
   document.getElementById("pjm-post-section").style.display = isDone ? 'block' : 'none';
   if (isDone) document.getElementById("pjm-target-display").textContent = (p.target||p.targetPeserta||'—') + ' peserta';
-  // Toggle status change listener
-  document.getElementById("pjm-status").onchange = function() {
-    const done = this.value === 'Done';
-    document.getElementById("pjm-post-section").style.display = done ? 'block' : 'none';
-    const tgt = document.getElementById("pjm-target").value;
-    if (done) document.getElementById("pjm-target-display").textContent = (tgt||'—') + ' peserta';
-  };  const delBtn=document.getElementById("pjm-delete-btn");
+  const delBtn=document.getElementById("pjm-delete-btn");
   delBtn.style.display=p?"inline-flex":"none";
   delBtn.onclick=()=>deleteProjectEvent(id);
   document.getElementById("project-modal").dataset.projId=id||"";
@@ -11597,12 +11597,12 @@ async function saveProjectModal(){
   const id=document.getElementById("project-modal").dataset.projId || "";
   const data={
     nama:document.getElementById("pjm-nama").value.trim(),
-    jenis_program:document.getElementById("pjm-jenis").value||null,
+    jenis_program:_cddGetValue("pjm-jenis")||null,
     tanggal:document.getElementById("pjm-tanggal").value,
     waktu:document.getElementById("pjm-waktu").value,
-    platform:document.getElementById("pjm-platform").value,
+    platform:_cddGetValue("pjm-platform")||'Zoom',
     speaker:document.getElementById("pjm-speaker").value,
-    status:document.getElementById("pjm-status").value,
+    status:_cddGetValue("pjm-status")||'Planning',
     target:parseInt(document.getElementById("pjm-target").value)||0,
     linkZoom: null,
     deskripsi: null,
@@ -16496,23 +16496,17 @@ async function daConfirmDelete(id) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
           <div class="cust-field-label">Phase</div>
-          <select id="tm-phase" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Pre Event</option><option>Hari H</option><option>Post Event</option>
-          </select>
+          <div id="tm-phase-wrap"></div>
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Status</div>
-          <select id="tm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Todo</option><option>On Progress</option><option>Done</option>
-          </select>
+          <div id="tm-status-wrap"></div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
           <div class="cust-field-label">Priority</div>
-          <select id="tm-priority" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>High</option><option>Med</option><option>Low</option>
-          </select>
+          <div id="tm-priority-wrap"></div>
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Deadline</div>
@@ -16565,11 +16559,7 @@ async function daConfirmDelete(id) {
       </div>
       <div class="cust-field editable" style="margin-bottom:10px">
         <div class="cust-field-label">Jenis Program</div>
-        <select id="pjm-jenis" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-          <option value="">— Pilih Jenis —</option>
-          <option value="CCA">Career Chaser's Academy</option>
-          <option value="Free Class Series">Free Class Series</option>
-        </select>
+        <div id="pjm-jenis-wrap"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
@@ -16584,15 +16574,11 @@ async function daConfirmDelete(id) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
           <div class="cust-field-label">Platform</div>
-          <select id="pjm-platform" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Zoom</option><option>Google Meet</option><option>Offline</option>
-          </select>
+          <div id="pjm-platform-wrap"></div>
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Status</div>
-          <select id="pjm-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option>Planning</option><option>On Progress</option><option>Done</option><option>Cancelled</option>
-          </select>
+          <div id="pjm-status-wrap"></div>
         </div>
       </div>
       <div class="cust-field editable" style="margin-bottom:10px">
