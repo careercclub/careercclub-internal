@@ -1265,6 +1265,31 @@ input[type=number]:focus,input[type=url]:focus{outline:none;border-color:var(--p
 .cdd-option.selected .cdd-check { opacity: 1; }
 .cdd-check { opacity: 0; color: #0f52ba; font-size: 13px; flex-shrink: 0; }
 .cdd-empty { padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
+
+/* ── Custom Date Picker (global) ── */
+.dp-trigger{width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);background:var(--bg);font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;outline:none;text-align:left;transition:border-color .15s,box-shadow .15s}
+.dp-trigger:focus,.dp-trigger.open{border-color:#0f52ba;box-shadow:0 0 0 3px rgba(15,82,186,.1)}
+.dp-trigger-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-trigger.placeholder{color:var(--text-muted)}
+.dp-panel{position:absolute;top:calc(100% + 4px);left:0;width:260px;border:0.5px solid var(--border-md);border-radius:var(--radius-lg);background:var(--white);z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.dp-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:0.5px solid var(--border)}
+.dp-month-label{font-size:13px;font-weight:500;color:var(--text)}
+.dp-nav-btn{width:26px;height:26px;border:0.5px solid var(--border);border-radius:var(--radius);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.dp-nav-btn:hover{background:var(--bg)}
+.dp-grid{padding:8px}
+.dp-dow-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.dp-dow{font-size:10px;font-weight:500;text-align:center;color:var(--text-muted);padding:3px 0}
+.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-day{height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius);font-size:12px;cursor:pointer;color:var(--text)}
+.dp-day:hover{background:var(--bg)}
+.dp-day.dp-other{color:var(--text-hint)}
+.dp-day.dp-today{font-weight:500;color:#0f52ba}
+.dp-day.dp-selected{background:#0f52ba;color:#fff;font-weight:500}
+.dp-day.dp-selected:hover{background:#0d48a8}
+.dp-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.dp-clear-btn{font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0}
+.dp-clear-btn:hover{color:var(--text)}
+.dp-today-btn{font-size:12px;color:#0f52ba;background:none;border:none;cursor:pointer;font-weight:500;padding:0}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
@@ -5219,6 +5244,169 @@ function _cddGetValue(id) {
 function _cddSetValue(id, val) {
   _cddSelect(id, val);
 }
+
+window._dpState = window._dpState || {};
+
+function buildDatePicker({ id, value = '', placeholder = 'Pilih tanggal...', onChange = null }) {
+  const wrId = `dp-wrap-${id}`;
+  const panelId = `dp-panel-${id}`;
+  const triggerId = `dp-trigger-${id}`;
+  window._dpState[id] = { value, placeholder, onChange, viewYear: null, viewMonth: null };
+  const label = value ? _dpFormatLabel(value) : '';
+  return `<div style="position:relative" id="${wrId}">
+    <button type="button" id="${triggerId}" class="dp-trigger${!value?' placeholder':''}" onclick="_dpToggle('${id}')" onkeydown="_dpKeydown(event,'${id}')">
+      <i class="ti ti-calendar" style="font-size:14px;color:var(--text-muted)" aria-hidden="true"></i>
+      <span class="dp-trigger-text" id="dp-label-${id}">${label||placeholder}</span>
+      <i class="ti ti-chevron-down" style="font-size:13px;color:var(--text-muted)" id="dp-chev-${id}" aria-hidden="true"></i>
+    </button>
+    <div class="dp-panel" id="${panelId}" style="display:none"></div>
+  </div>`;
+}
+
+function _dpFormatLabel(val) {
+  if (!val) return '';
+  const d = new Date(val + 'T00:00:00');
+  if (isNaN(d)) return val;
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function _dpToggle(id) {
+  const panel = document.getElementById(`dp-panel-${id}`);
+  const trigger = document.getElementById(`dp-trigger-${id}`);
+  const chev = document.getElementById(`dp-chev-${id}`);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  document.querySelectorAll('.dp-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.dp-trigger').forEach(t => { t.classList.remove('open'); });
+  document.querySelectorAll('[id^="dp-chev-"]').forEach(c => c.className = 'ti ti-chevron-down');
+  if (!isOpen) {
+    const state = window._dpState[id];
+    const now = new Date();
+    const base = state.value ? new Date(state.value + 'T00:00:00') : now;
+    state.viewYear = base.getFullYear();
+    state.viewMonth = base.getMonth();
+    _dpRenderPanel(id);
+    panel.style.display = 'block';
+    trigger.classList.add('open');
+    if (chev) chev.className = 'ti ti-chevron-up';
+  }
+}
+
+function _dpRenderPanel(id) {
+  const panel = document.getElementById(`dp-panel-${id}`);
+  if (!panel) return;
+  const state = window._dpState[id];
+  const { viewYear, viewMonth, value } = state;
+  const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+  let cells = '';
+  for (let i = firstDay - 1; i >= 0; i--) {
+    cells += `<div class="dp-day dp-other">${daysInPrev - i}</div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const curr = new Date(viewYear, viewMonth, d);
+    const isToday = curr.getTime() === today.getTime();
+    const isSelected = dateStr === value;
+    cells += `<div class="dp-day${isToday?' dp-today':''}${isSelected?' dp-selected':''}" onclick="_dpSelect('${id}','${dateStr}')">${d}</div>`;
+  }
+  const remaining = 42 - firstDay - daysInMonth;
+  for (let d = 1; d <= remaining; d++) {
+    cells += `<div class="dp-day dp-other">${d}</div>`;
+  }
+  panel.innerHTML = `
+    <div class="dp-header">
+      <button class="dp-nav-btn" onclick="_dpNav('${id}',-1)" aria-label="Bulan sebelumnya"><i class="ti ti-chevron-left" style="font-size:12px"></i></button>
+      <span class="dp-month-label">${monthNames[viewMonth]} ${viewYear}</span>
+      <button class="dp-nav-btn" onclick="_dpNav('${id}',1)" aria-label="Bulan berikutnya"><i class="ti ti-chevron-right" style="font-size:12px"></i></button>
+    </div>
+    <div class="dp-grid">
+      <div class="dp-dow-row">
+        <div class="dp-dow">Min</div><div class="dp-dow">Sen</div><div class="dp-dow">Sel</div>
+        <div class="dp-dow">Rab</div><div class="dp-dow">Kam</div><div class="dp-dow">Jum</div><div class="dp-dow">Sab</div>
+      </div>
+      <div class="dp-days">${cells}</div>
+    </div>
+    <div class="dp-footer">
+      <button class="dp-clear-btn" onclick="_dpClear('${id}')">Hapus</button>
+      <button class="dp-today-btn" onclick="_dpSelect('${id}','${today.toISOString().slice(0,10)}')">Hari ini</button>
+    </div>`;
+}
+
+function _dpNav(id, dir) {
+  const state = window._dpState[id];
+  if (!state) return;
+  state.viewMonth += dir;
+  if (state.viewMonth > 11) { state.viewMonth = 0; state.viewYear++; }
+  if (state.viewMonth < 0) { state.viewMonth = 11; state.viewYear--; }
+  _dpRenderPanel(id);
+}
+
+function _dpSelect(id, dateStr) {
+  const state = window._dpState[id];
+  if (!state) return;
+  state.value = dateStr;
+  const label = document.getElementById(`dp-label-${id}`);
+  const trigger = document.getElementById(`dp-trigger-${id}`);
+  const panel = document.getElementById(`dp-panel-${id}`);
+  const chev = document.getElementById(`dp-chev-${id}`);
+  if (label) label.textContent = _dpFormatLabel(dateStr);
+  if (trigger) trigger.classList.remove('placeholder');
+  if (panel) panel.style.display = 'none';
+  if (trigger) trigger.classList.remove('open');
+  if (chev) chev.className = 'ti ti-chevron-down';
+  if (typeof state.onChange === 'function') state.onChange(dateStr);
+}
+
+function _dpClear(id) {
+  const state = window._dpState[id];
+  if (!state) return;
+  state.value = '';
+  const label = document.getElementById(`dp-label-${id}`);
+  const trigger = document.getElementById(`dp-trigger-${id}`);
+  const panel = document.getElementById(`dp-panel-${id}`);
+  const chev = document.getElementById(`dp-chev-${id}`);
+  if (label) label.textContent = state.placeholder;
+  if (trigger) { trigger.classList.add('placeholder'); trigger.classList.remove('open'); }
+  if (panel) panel.style.display = 'none';
+  if (chev) chev.className = 'ti ti-chevron-down';
+  if (typeof state.onChange === 'function') state.onChange('');
+}
+
+function _dpGetValue(id) { return window._dpState[id]?.value || ''; }
+
+function _dpSetValue(id, val) {
+  const state = window._dpState[id];
+  if (!state) return;
+  state.value = val || '';
+  const label = document.getElementById(`dp-label-${id}`);
+  const trigger = document.getElementById(`dp-trigger-${id}`);
+  if (label) label.textContent = val ? _dpFormatLabel(val) : state.placeholder;
+  if (trigger) { trigger.classList.toggle('placeholder', !val); }
+}
+
+function _dpKeydown(e, id) {
+  if (e.key === 'Escape') {
+    const panel = document.getElementById(`dp-panel-${id}`);
+    const trigger = document.getElementById(`dp-trigger-${id}`);
+    const chev = document.getElementById(`dp-chev-${id}`);
+    if (panel) panel.style.display = 'none';
+    if (trigger) trigger.classList.remove('open');
+    if (chev) chev.className = 'ti ti-chevron-down';
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[id^="dp-wrap-"]')) {
+    document.querySelectorAll('.dp-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.dp-trigger').forEach(t => t.classList.remove('open'));
+    document.querySelectorAll('[id^="dp-chev-"]').forEach(c => c.className = 'ti ti-chevron-down');
+  }
+});
 
 function _cddSearch(id, query) {
   const state = window._cddState?.[id];
@@ -19680,8 +19868,8 @@ function _tpBlastUseTemplate(idx) {
   setTimeout(() => { const sel = document.getElementById('tpbl-tpl'); if (sel) { sel.value = String(idx); _tpBlastLoadTemplate(); } }, 100);
 }
 
-function _tpBlastDeleteTemplate(idx) {
-  if (!confirm('Hapus template "' + _tpBlastTemplates[idx].nama + '"?')) return;
+async function _tpBlastDeleteTemplate(idx) {
+  if (!await showConfirmDelete('Hapus template ini?', 'Template "' + (_tpBlastTemplates[idx]?.nama||'') + '" akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.')) return;
   _tpBlastTemplates.splice(idx, 1);
   _saveTpBlastTemplates();
   renderTpBlast();
