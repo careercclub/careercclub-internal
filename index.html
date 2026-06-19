@@ -9916,13 +9916,16 @@ async function saveBundlingModal(){
   }
   const bp=products.find(x=>String(x.id)===String(bundleId));
   if(bp){Object.assign(bp,data);bp.bundleItems=newBundleItems;}
+  closeBundlingModal();
   activeProdId=String(bundleId);
   prodView='detail';
   activeKBSection='bundle-contents';
-  closeBundlingModal();
-  const wrapB=document.getElementById('prod-page-content');
-  if(wrapB) wrapB.innerHTML=prodDetailPageHTML(bundleId);
-  showToast(editId?'Bundle diperbarui':'Bundle dibuat');
+  showToast(editId?'Bundle diperbarui ✓':'Bundle dibuat ✓');
+  requestAnimationFrame(()=>{
+    const wrapB=document.getElementById('prod-page-content');
+    if(wrapB) wrapB.innerHTML=prodDetailPageHTML(bundleId);
+    else _refreshProdRightPanel(bundleId);
+  });
 }
 
 async function deleteBundlingProduct(id){
