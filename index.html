@@ -5523,24 +5523,17 @@ function openTktDetail(id){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
           <div class="cust-field-label">Status</div>
-          <select id="tkt-edit-status" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            ${tktStatusList.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}
-          </select>
+          ${buildDropdown({id:'tkt-edit-status',options:tktStatusList,value:t.status||'Todo'})}
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Prioritas</div>
-          <select id="tkt-edit-prio" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            ${["High","Med","Low"].map(s=>`<option ${s===t.prioritas?"selected":""}>${s}</option>`).join("")}
-          </select>
+          ${buildDropdown({id:'tkt-edit-prio',options:['High','Med','Low'],value:t.prioritas||'Med'})}
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="cust-field editable">
           <div class="cust-field-label">Divisi</div>
-          <select id="tkt-edit-divisi" class="cust-field-input" style="border:none;background:transparent;padding:0;width:100%">
-            <option value="">— Pilih divisi —</option>
-            ${tktDivisi.map(d=>`<option value="${d.id}" ${_idEq(d.id,t.divisiId)?"selected":""}>${d.nama}</option>`).join("")}
-          </select>
+          ${buildDropdown({id:'tkt-edit-divisi',options:tktDivisi.map(d=>d.nama),value:tktDivisi.find(d=>_idEq(d.id,t.divisiId))?.nama||'',placeholder:'— Pilih divisi —'})}
         </div>
         <div class="cust-field editable">
           <div class="cust-field-label">Deadline</div>
@@ -5669,12 +5662,12 @@ async function saveTktDetail(id){
   const t=tickets.find(x=>_idEq(x.id,id));if(!t) return;
   const judulEl=document.getElementById('tkt-edit-judul');
   if(judulEl){const v=judulEl.value.trim();if(v) t.judul=v;}
-  const newStatus=document.getElementById('tkt-edit-status').value;
+  const newStatus=_cddGetValue('tkt-edit-status')||'Todo';
   const oldStatus=t.status;
   t.status=newStatus;
-  t.prioritas=document.getElementById('tkt-edit-prio').value;
-  const divisiEl=document.getElementById('tkt-edit-divisi');
-  if(divisiEl&&divisiEl.value) t.divisiId=divisiEl.value;
+  t.prioritas=_cddGetValue('tkt-edit-prio')||'Med';
+  const divisiNama=_cddGetValue('tkt-edit-divisi');
+  if(divisiNama){ const divObj=tktDivisi.find(d=>d.nama===divisiNama); if(divObj) t.divisiId=divObj.id; }
   t.deadline=document.getElementById('tkt-edit-deadline').value||null;
   const descEl=document.getElementById('tkt-edit-desc');
   if(descEl) t.deskripsi=descEl.value;
@@ -7640,7 +7633,7 @@ function fmtDateShort(iso){
 
 async function addPainPoint(pid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  const newEntry={text:"Tulis customer insight di sini...",severity:"Med",source:"Asumsi"};
+  const newEntry={nama:"",text:"",severity:"Med",source:"Asumsi"};
   const saved = await sb_insertProductPainPoint(p.id, newEntry);
   if(!saved||!saved.id){showToast("Gagal tambah data","error");return;}
   p.painPoints.push({id:saved.id,...newEntry});
@@ -9979,7 +9972,10 @@ function renderPainPoints(p){
     ${_pp.map(pp=>`
     <div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:6px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
-        <textarea style="flex:1;min-width:0;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updatePP('${p.id}','${pp.id}','text',this.value)">${pp.text}</textarea>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+          <input style="width:100%;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0;outline:none" placeholder="Nama pain point..." value="${pp.nama||''}" onchange="updatePP('${p.id}','${pp.id}','nama',this.value)">
+          <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--text-muted);resize:none;line-height:1.5;padding:0" rows="2" placeholder="Deskripsi (opsional)..." onchange="updatePP('${p.id}','${pp.id}','text',this.value)">${pp.text||''}</textarea>
+        </div>
         <button onclick="deletePP('${p.id}','${pp.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -10007,7 +10003,10 @@ function renderPassionPoints(p){
     ${_pas.map(pas=>`
     <div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:6px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
-        <textarea style="flex:1;min-width:0;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updatePas('${p.id}','${pas.id}','text',this.value)">${pas.text}</textarea>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+          <input style="width:100%;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0;outline:none" placeholder="Nama passion point..." value="${pas.nama||''}" onchange="updatePas('${p.id}','${pas.id}','nama',this.value)">
+          <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--text-muted);resize:none;line-height:1.5;padding:0" rows="2" placeholder="Deskripsi (opsional)..." onchange="updatePas('${p.id}','${pas.id}','text',this.value)">${pas.text||''}</textarea>
+        </div>
         <button onclick="deletePas('${p.id}','${pas.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -10022,7 +10021,7 @@ function renderPassionPoints(p){
 
 async function addPassionPoint(pid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  const newEntry={text:"Tulis passion point di sini...",severity:"Med",source:"Feedback"};
+  const newEntry={nama:"",text:"",severity:"Med",source:"Feedback"};
   const saved = await sb_insertProductPassionPoint(p.id, newEntry);
   if(!saved||!saved.id){showToast("Gagal tambah passion point","error");return;}
   if(!p.passionPoints) p.passionPoints=[];
