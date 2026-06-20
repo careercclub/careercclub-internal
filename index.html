@@ -8506,6 +8506,7 @@ let activeProdId = null;
 let activeKBSection = "painpoints";
 let prodTypeFilter = "all";
 let prodKlasFilter = "all";
+let prodSortOrder = "none";
 let prodView = "list";
 let productTab = "list";
 let _prodExpandedId = null;
@@ -9014,6 +9015,8 @@ function _getFilteredProducts(){
   if(prodTypeFilter==='satuan') result=result.filter(p=>(p.type||'satuan')==='satuan');
   else if(prodTypeFilter==='bundling') result=result.filter(p=>(p.type||'satuan')==='bundling');
   if(prodKlasFilter!=='all') result=result.filter(p=>(p.klasifikasi||'Belum Diklasifikasi')===prodKlasFilter);
+  if(prodSortOrder==='desc') result=[...result].sort((a,b)=>(b.harga||0)-(a.harga||0)||(a.nama||'').localeCompare(b.nama||''));
+  else if(prodSortOrder==='asc') result=[...result].sort((a,b)=>(a.harga||0)-(b.harga||0)||(a.nama||'').localeCompare(b.nama||''));
   return result;
 }
 
@@ -9038,6 +9041,12 @@ function setProdTypeFilter(f){
 
 function setProdKlasFilter(f){
   prodKlasFilter=f;
+  _refreshProdListPanel();
+}
+
+function toggleProdSort(){
+  if(prodSortOrder==='none'||prodSortOrder==='asc') prodSortOrder='desc';
+  else if(prodSortOrder==='desc') prodSortOrder='asc';
   _refreshProdListPanel();
 }
 
@@ -9146,7 +9155,7 @@ function prodListPageHTML(){
   <div style="background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px">
       <div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:4px">Products KB</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px">Products</div>
         <div id="prod-meta-stats" style="font-size:13px;color:var(--text-muted)">${total} total &middot; ${satuanCount} satuan &middot; ${bundlingCount} bundling</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
@@ -9154,13 +9163,17 @@ function prodListPageHTML(){
         <button class="btn btn-primary btn-sm" onclick="openBundlingModal(null)"><i class="ti ti-package"></i> Bundle</button>
       </div>
     </div>
-    <div class="filter-bar" style="margin-top:12px;margin-bottom:6px;flex-wrap:nowrap;overflow-x:auto">
+    <div style="display:flex;align-items:center;gap:6px;margin-top:12px;margin-bottom:6px;flex-wrap:nowrap;overflow-x:auto">
       ${[['all','Semua'],['satuan','Satuan'],['bundling','Bundling']].map(([v,l])=>`
         <div onclick="setProdTypeFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;background:${prodTypeFilter===v?'#0f52ba':'var(--white)'};border-color:${prodTypeFilter===v?'#0f52ba':'var(--border-md)'};color:${prodTypeFilter===v?'#fff':'var(--text)'};font-weight:${prodTypeFilter===v?'600':'500'}">${l}</div>`).join('')}
     </div>
-    <div class="filter-bar" style="margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto">
       ${[['all','Semua label'],...KLASIFIKASI_LIST.filter(k=>k!=='Belum Diklasifikasi').map(k=>[k,k]),['Belum Diklasifikasi','Belum Diklasifikasi']].map(([v,l])=>`
-        <div onclick="setProdKlasFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;background:${prodKlasFilter===v?'var(--purple-light)':'var(--white)'};border-color:${prodKlasFilter===v?'var(--purple-mid)':'var(--border-md)'};color:${prodKlasFilter===v?'var(--purple-mid)':'var(--text)'};font-weight:${prodKlasFilter===v?'600':'500'}">${l}</div>`).join('')}
+        <div onclick="setProdKlasFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;background:${prodKlasFilter===v?'#EEEDFE':'var(--white)'};border-color:${prodKlasFilter===v?'#534AB7':'var(--border-md)'};color:${prodKlasFilter===v?'#3C3489':'var(--text)'};font-weight:${prodKlasFilter===v?'600':'500'}">${l}</div>`).join('')}
+      <div onclick="toggleProdSort()" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;border:0.5px solid ${prodSortOrder!=='none'?'#BA7517':'var(--border-md)'};background:${prodSortOrder!=='none'?'#FAEEDA':'var(--white)'};color:${prodSortOrder!=='none'?'#633806':'var(--text)'};font-size:12px;font-weight:${prodSortOrder!=='none'?'600':'500'};cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:auto">
+        <i class="ti ti-arrows-sort" style="font-size:12px"></i>
+        ${prodSortOrder==='desc'?'Harga: Tertinggi':prodSortOrder==='asc'?'Harga: Terendah':'Sort Harga'}
+      </div>
     </div>
     <div id="prod-list-inner">
       ${filtered.length ? filtered.map(p=>prodListItemHTML(p)).join('') : `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-package" style="font-size:40px;display:block;margin-bottom:12px"></i><div style="font-size:14px">Belum ada produk</div></div>`}
@@ -9265,7 +9278,7 @@ function prodListItemHTML(p){
         <div style="font-size:12px;color:var(--text-muted)">${metaRow}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <div style="font-size:12px;color:var(--text-muted)">Rp ${p.harga.toLocaleString('id-ID')}</div>
+        <div style="font-size:16px;font-weight:500;color:var(--text)">Rp ${p.harga.toLocaleString('id-ID')}</div>
         <i id="prod-chevron-${p.id}" class="ti ti-chevron-down" style="color:var(--text-hint);font-size:14px;transition:transform .25s ease;${isExp?'transform:rotate(180deg)':''}"></i>
       </div>
     </div>
@@ -10039,6 +10052,8 @@ async function duplicateProduct(id){
     ...feats.map(r=>sb_insert('product_features',{product_id:newId,title:r.title||'',description:r.description||'',links:r.links||[]})),
   ]);
   await loadProducts();
+  prodTypeFilter='all';
+  prodKlasFilter='all';
   _refreshProdListPanel();
   showToast('Produk berhasil diduplikat ✓');
   logActivity('PRODUCTS','DUPLIKAT',p.nama);
