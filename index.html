@@ -5480,7 +5480,10 @@ function showConfirmDelete(title,description){
     ov.addEventListener('click',()=>close(false));
     box.querySelector('#_scd-cancel').onclick=()=>close(false);
     box.querySelector('#_scd-ok').onclick=()=>close(true);
-    const _esc=e=>{if(e.key==='Escape')close(false);};
+    const _esc=e=>{
+      if(e.key==='Escape') close(false);
+      if(e.key==='Enter'){e.preventDefault();close(true);}
+    };
     document.addEventListener('keydown',_esc);
   });
 }
