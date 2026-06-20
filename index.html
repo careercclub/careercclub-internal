@@ -5480,6 +5480,7 @@ function showConfirmDelete(title,description){
     ov.addEventListener('click',()=>close(false));
     box.querySelector('#_scd-cancel').onclick=()=>close(false);
     box.querySelector('#_scd-ok').onclick=()=>close(true);
+    setTimeout(()=>box.querySelector('#_scd-ok').focus(),50);
     const _esc=e=>{
       if(e.key==='Escape') close(false);
       if(e.key==='Enter'){e.preventDefault();close(true);}
