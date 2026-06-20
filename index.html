@@ -2273,7 +2273,7 @@ async function sb_insertProductPainPoint(productId, data) {
 }
 async function sb_updateProductPainPoint(id, data) {
   return await sb_update('product_pain_points', id, {
-    text: data.text || '', severity: data.severity || 'Med', source: data.source || ''
+    nama: data.nama || '', text: data.text || '', severity: data.severity || 'Med', source: data.source || ''
   });
 }
 async function sb_deleteProductPainPoint(id) { return await sb_delete('product_pain_points', id); }
@@ -2292,7 +2292,7 @@ async function sb_insertProductPassionPoint(productId, data) {
 }
 async function sb_updateProductPassionPoint(id, data) {
   return await sb_update('product_passion_points', id, {
-    text: data.text || '', severity: data.severity || 'Med', source: data.source || ''
+    nama: data.nama || '', text: data.text || '', severity: data.severity || 'Med', source: data.source || ''
   });
 }
 async function sb_deleteProductPassionPoint(id) { return await sb_delete('product_passion_points', id); }
