@@ -8506,7 +8506,7 @@ let activeProdId = null;
 let activeKBSection = "painpoints";
 let prodTypeFilter = "all";
 let prodKlasFilter = "all";
-let prodSortOrder = "none";
+let prodSortOrder = "desc";
 let prodView = "list";
 let productTab = "list";
 let _prodExpandedId = null;
@@ -9163,11 +9163,11 @@ function prodListPageHTML(){
         <button class="btn btn-primary btn-sm" onclick="openBundlingModal(null)"><i class="ti ti-package"></i> Bundle</button>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:12px;margin-bottom:6px;flex-wrap:nowrap;overflow-x:auto">
+    <div style="display:flex;align-items:center;gap:6px;margin-top:12px;margin-bottom:6px;flex-wrap:nowrap;overflow-x:auto;user-select:none">
       ${[['all','Semua'],['satuan','Satuan'],['bundling','Bundling']].map(([v,l])=>`
-        <div onclick="setProdTypeFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;background:${prodTypeFilter===v?'#0f52ba':'var(--white)'};border-color:${prodTypeFilter===v?'#0f52ba':'var(--border-md)'};color:${prodTypeFilter===v?'#fff':'var(--text)'};font-weight:${prodTypeFilter===v?'600':'500'}">${l}</div>`).join('')}
+        <div onclick="setProdTypeFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;cursor:pointer;background:${prodTypeFilter===v?'#0f52ba':'var(--white)'};border-color:${prodTypeFilter===v?'#0f52ba':'var(--border-md)'};color:${prodTypeFilter===v?'#fff':'var(--text)'};font-weight:${prodTypeFilter===v?'600':'500'}">${l}</div>`).join('')}
     </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto;user-select:none">
       ${[['all','Semua label'],...KLASIFIKASI_LIST.filter(k=>k!=='Belum Diklasifikasi').map(k=>[k,k]),['Belum Diklasifikasi','Belum Diklasifikasi']].map(([v,l])=>`
         <div onclick="setProdKlasFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;background:${prodKlasFilter===v?'#EEEDFE':'var(--white)'};border-color:${prodKlasFilter===v?'#534AB7':'var(--border-md)'};color:${prodKlasFilter===v?'#3C3489':'var(--text)'};font-weight:${prodKlasFilter===v?'600':'500'}">${l}</div>`).join('')}
       <div onclick="toggleProdSort()" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;border:0.5px solid ${prodSortOrder!=='none'?'#BA7517':'var(--border-md)'};background:${prodSortOrder!=='none'?'#FAEEDA':'var(--white)'};color:${prodSortOrder!=='none'?'#633806':'var(--text)'};font-size:12px;font-weight:${prodSortOrder!=='none'?'600':'500'};cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:auto">
