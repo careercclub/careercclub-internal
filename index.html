@@ -9465,16 +9465,18 @@ function switchKBSection(section,id){
   activeKBSection=section;
   const p=products.find(x=>String(x.id)===String(id));
   if(!p) return;
-  // Horizontal tab style (accordion) — border-bottom active indicator
+  // Cari elemen dalam konteks produk yang diklik — bukan getElementById global
+  const prodAccordion=document.getElementById('prod-accordion-'+id);
+  const scope=prodAccordion||document;
   ["painpoints","passionpoints","benefits","features","subproducts","assets","feedback","bundle-contents"].forEach(k=>{
-    const el=document.getElementById("kbmenu-"+k);
+    const el=scope.querySelector('#kbmenu-'+k);
     if(!el) return;
     const active=k===section;
     el.style.borderBottom=active?'2px solid var(--purple-accent)':'2px solid transparent';
     el.style.color=active?'var(--purple-mid)':'var(--text-muted)';
     el.style.fontWeight=active?'600':'400';
   });
-  const contentEl=document.getElementById("kb-section-content");
+  const contentEl=scope.querySelector('#kb-section-content');
   if(!contentEl) return;
   contentEl.innerHTML=section==='bundle-contents'?_bundleContentsHTML(p):renderKBSection(section,p);
 }
@@ -12579,6 +12581,7 @@ var menuSections = [
   { label: "Operations",  items: [
     { page: "project",   label: "Program" },
     { page: "product",   label: "Products" },
+    { page: "collaborator", label: "Collaborator" },
     { page: "crm",       label: "CRM" },
     { page: "talentpool",  label: "Talent Pool" },
     { page: "loker",     label: "Job Vacancy MT" }
@@ -12591,7 +12594,6 @@ var menuSections = [
     { page: "tickets",   label: "Tickets" },
     { page: "partner",   label: "B2B Partnership" },
     { page: "orgpartner", label: "Org Partnership" },
-    { page: "collaborator", label: "Collaborator" },
     { page: "design",    label: "Graphic Design" },
     { page: "resources", label: "Resources" }
   ]},
@@ -12599,7 +12601,7 @@ var menuSections = [
 ];
 
 function loadMenuSections(){
-  var MENU_VERSION = 'v19_collaborator_nav';
+  var MENU_VERSION = 'v20_collaborator_ops';
   var savedVersion = localStorage.getItem('ccc_menuVersion');
   if(savedVersion !== MENU_VERSION){
     // Config outdated or first run - clear and use default
@@ -22401,6 +22403,7 @@ function openCollabPhotoUpload(id){
       <button class="pwa-more-item" onclick="pwaMoreNav('crm')"><i class="ti ti-users"></i><span>CRM</span></button>
       <button class="pwa-more-item" onclick="pwaMoreNav('talentpool')"><i class="ti ti-user-star"></i><span>Talent Pool</span></button>
       <button class="pwa-more-item" onclick="pwaMoreNav('loker')"><i class="ti ti-briefcase"></i><span>Job Vacancy</span></button>
+      <button class="pwa-more-item" onclick="pwaMoreNav('collaborator')"><i class="ti ti-star"></i><span>Collaborator</span></button>
       <button class="pwa-more-item" onclick="pwaMoreNav('tickets')"><i class="ti ti-ticket"></i><span>Tiket</span></button>
     </div>
     <div class="pwa-more-section-title">Intelligence</div>
@@ -22412,7 +22415,6 @@ function openCollabPhotoUpload(id){
     <div class="pwa-more-grid">
       <button class="pwa-more-item" onclick="pwaMoreNav('product')"><i class="ti ti-package"></i><span>Products</span></button>
       <button class="pwa-more-item" onclick="pwaMoreNav('resources')"><i class="ti ti-key"></i><span>Resources</span></button>
-      <button class="pwa-more-item" onclick="pwaMoreNav('collaborator')"><i class="ti ti-star"></i><span>Collaborator</span></button>
       <button class="pwa-more-item" onclick="pwaMoreNav('settings')"><i class="ti ti-settings"></i><span>Settings</span></button>
     </div>
   </div>
