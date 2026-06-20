@@ -2930,7 +2930,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       partnerDealRows, partnerRows, outreachRows,
       orgDealRows, orgPartnerRows, orgOutreachRows,
       dealRows, prodRows, allPP, allPas,
-      allProdFeatures, allFeatLinks, klasifikasiRows, bundleRows,
+      allProdFeatures, allBenefits, allFeatLinks, klasifikasiRows, bundleRows,
       allSubProds, allSubProdLinks,
       allRundownRows,
       evalRows,
@@ -2967,6 +2967,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       sb_load('product_pain_points', { order: 'created_at', ascending: true }),
       sb_load('product_passion_points', { order: 'created_at', ascending: true }),
       sb_load('product_features', { order: 'created_at', ascending: true }).catch(() => []),
+      sb_load('product_benefits', { order: 'created_at', ascending: true }).catch(() => []),
       sb_loadAllFeatureLinks(),
       sb_loadProductKlasifikasi().catch(() => []),
       sb_loadProductBundles().catch(() => []),
@@ -3049,8 +3050,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     products = prodRows.map(p => ({
       ...p,
-      painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, nama: d.nama || '', text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
-      passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, nama: d.nama || '', text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
+      painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, nama: d.nama || '', text: d.text || '' })),
+      passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, nama: d.nama || '', text: d.text || '' })),
+      benefits: (allBenefits||[]).filter(r => String(r.product_id) === String(p.id)).map(d => ({ id: d.id, nama: d.nama || '', text: d.text || '' })),
       features: allProdFeatures.filter(r => String(r.product_id) === String(p.id)).map(d => ({ id: d.id, name: d.name || '', description: d.description || '', links: allFeatLinks.filter(l => String(l.feature_id) === String(d.id)).map(l => ({ id: l.id, label: l.label || '', url: l.url || '' })) })),
       bundleItems: bundleRows.filter(r => String(r.bundle_id) === String(p.id)).map(r => ({ recordId: r.id, itemId: String(r.item_id) })),
       subProducts: allSubProds.filter(r => String(r.product_id) === String(p.id)).map(sp => ({
@@ -8664,11 +8666,15 @@ function initProjectTab(tab){
 
 // ── TAB 1: OVERVIEW ─────────────────────────────────────────
 
-function addBenefit(pid){
+async function addBenefit(pid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  p.benefits.push({id:Date.now(),text:"Tulis benefit di sini...",segment:"",evidence:""});
+  const saved=await sb_insert('product_benefits',{product_id:pid,nama:'',text:''});
+  if(!saved){showToast('Gagal tambah benefit','error');return;}
+  if(!p.benefits) p.benefits=[];
+  p.benefits.push({id:saved.id,nama:'',text:''});
   document.getElementById("kb-section-content").innerHTML=renderKBSection("benefits",p);
   showToast("Benefit ditambahkan");
+  logActivity('PRODUCTS','ADD_BENEFIT',p.nama);
 }
 
 function closeProjectModal(){document.getElementById("project-modal").style.display="none";}
@@ -8721,8 +8727,10 @@ const TASK_PHASE = ["Pre Event","Hari H","Post Event"];
 async function deleteBenefit(pid,bid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
   if(!await showConfirmDelete("Hapus benefit ini?","Data benefit akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
-  p.benefits=p.benefits.filter(x=>x.id!==bid);
+  await sb_delete('product_benefits',bid);
+  p.benefits=p.benefits.filter(x=>String(x.id)!==String(bid));
   document.getElementById("kb-section-content").innerHTML=renderKBSection("benefits",p);
+  logActivity('PRODUCTS','DELETE_BENEFIT',p.nama);
 }
 
 // ── ASSETS ───────────────────────────────────────────────────
@@ -8868,7 +8876,7 @@ function openDuplicateModal(sourceId){
 function updateBenefit(pid,bid,field,val){
   const p=products.find(x=>String(x.id)===String(pid));
   const b=p&&p.benefits.find(x=>String(x.id)===String(bid));
-  if(b) b[field]=val;
+  if(b){ b[field]=val; sb_update('product_benefits',bid,{[field]:val}); }
 }
 
 function sendTaskInvite(taskId){
@@ -9575,13 +9583,14 @@ function renderBenefits(p){
       </div>
       <button class="btn btn-primary btn-sm" onclick="addBenefit('${p.id}')"><i class="ti ti-plus"></i> Tambah</button>
     </div>
-    ${p.benefits.length===0?`<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12px"><i class="ti ti-star" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada benefit terdokumentasi.</div>`:""}
-    ${p.benefits.map((b,i)=>`
+    ${(p.benefits||[]).length===0?`<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12px"><i class="ti ti-star" style="font-size:24px;display:block;margin-bottom:8px"></i>Belum ada benefit terdokumentasi.</div>`:""}
+    ${(p.benefits||[]).map((b,i)=>`
     <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px">
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div style="width:22px;height:22px;border-radius:50%;background:var(--purple-light);color:var(--purple-mid);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px">${i+1}</div>
         <div style="flex:1;min-width:0">
-          <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" onchange="updateBenefit('${p.id}','${b.id}','text',this.value)">${b.text}</textarea>
+          <input type="text" placeholder="Judul benefit..." style="width:100%;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0 0 4px 0;margin-bottom:6px" value="${(b.nama||'').replace(/"/g,'&quot;')}" onchange="updateBenefit('${p.id}','${b.id}','nama',this.value)">
+          <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--text);resize:none;line-height:1.5;padding:0" rows="2" placeholder="Deskripsi benefit..." onchange="updateBenefit('${p.id}','${b.id}','text',this.value)">${b.text||''}</textarea>
         </div>
         <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:10px;flex-shrink:0" onclick="deleteBenefit('${p.id}','${b.id}')"><i class="ti ti-trash"></i></button>
       </div>
@@ -9729,10 +9738,11 @@ async function exportSingleProductJSON(id){
   const btn=document.querySelector(`[onclick="exportSingleProductJSON('${id}')"]`);
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> ...';}
   try{
-    const [allPP,allPas,allFeat]=await Promise.all([
+    const [allPP,allPas,allFeat,allBen]=await Promise.all([
       sb_load('product_pain_points',{order:'created_at',ascending:true}),
       sb_load('product_passion_points',{order:'created_at',ascending:true}),
       sb_load('product_features',{order:'created_at',ascending:true}),
+      sb_load('product_benefits',{order:'created_at',ascending:true}).catch(()=>[]),
     ]);
     const data={
       nama:p.nama,
@@ -9750,6 +9760,9 @@ async function exportSingleProductJSON(id){
       product_features:allFeat
         .filter(r=>String(r.product_id)===String(p.id))
         .map(d=>({name:d.name||'',description:d.description||''})),
+      product_benefits:allBen
+        .filter(r=>String(r.product_id)===String(p.id))
+        .map(d=>({nama:d.nama||'',text:d.text||''})),
     };
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
@@ -10046,9 +10059,9 @@ async function duplicateProduct(id){
     sb_load('product_features',{eq:{product_id:id}}).catch(()=>[]),
   ]);
   await Promise.all([
-    ...pps.map(r=>sb_insert('product_pain_points',{product_id:newId,nama:r.nama||'',text:r.text||'',severity:r.severity||'Med',source:r.source||''})),
-    ...pass.map(r=>sb_insert('product_passion_points',{product_id:newId,nama:r.nama||'',text:r.text||'',severity:r.severity||'Med',source:r.source||''})),
-    ...bens.map(r=>sb_insert('product_benefits',{product_id:newId,text:r.text||'',category:r.category||''})),
+    ...pps.map(r=>sb_insert('product_pain_points',{product_id:newId,nama:r.nama||'',text:r.text||''})),
+    ...pass.map(r=>sb_insert('product_passion_points',{product_id:newId,nama:r.nama||'',text:r.text||''})),
+    ...bens.map(r=>sb_insert('product_benefits',{product_id:newId,nama:r.nama||'',text:r.text||''})),
     ...feats.map(r=>sb_insert('product_features',{product_id:newId,title:r.title||'',description:r.description||'',links:r.links||[]})),
   ]);
   await loadProducts();
