@@ -8505,6 +8505,7 @@ let products = [];
 let activeProdId = null;
 let activeKBSection = "painpoints";
 let prodTypeFilter = "all";
+let prodKlasFilter = "all";
 let prodView = "list";
 let productTab = "list";
 let _prodExpandedId = null;
@@ -9009,9 +9010,11 @@ async function saveProdModal(){
 }
 
 function _getFilteredProducts(){
-  if(prodTypeFilter==='satuan') return products.filter(p=>(p.type||'satuan')==='satuan');
-  if(prodTypeFilter==='bundling') return products.filter(p=>(p.type||'satuan')==='bundling');
-  return products;
+  let result=products;
+  if(prodTypeFilter==='satuan') result=result.filter(p=>(p.type||'satuan')==='satuan');
+  else if(prodTypeFilter==='bundling') result=result.filter(p=>(p.type||'satuan')==='bundling');
+  if(prodKlasFilter!=='all') result=result.filter(p=>(p.klasifikasi||'Belum Diklasifikasi')===prodKlasFilter);
+  return result;
 }
 
 function setProdTypeFilter(f){
@@ -9031,6 +9034,11 @@ function setProdTypeFilter(f){
   li.innerHTML=filtered.length
     ? filtered.map(p=>prodListItemHTML(p)).join('')
     : `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-package" style="font-size:40px;display:block;margin-bottom:12px"></i><div style="font-size:14px">Belum ada produk</div></div>`;
+}
+
+function setProdKlasFilter(f){
+  prodKlasFilter=f;
+  _refreshProdListPanel();
 }
 
 function _refreshProdListPanel(){
@@ -9146,9 +9154,13 @@ function prodListPageHTML(){
         <button class="btn btn-primary btn-sm" onclick="openBundlingModal(null)"><i class="ti ti-package"></i> Bundle</button>
       </div>
     </div>
-    <div class="filter-bar" style="margin-top:12px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="filter-bar" style="margin-top:12px;margin-bottom:6px;flex-wrap:nowrap;overflow-x:auto">
       ${[['all','Semua'],['satuan','Satuan'],['bundling','Bundling']].map(([v,l])=>`
-        <div onclick="setProdTypeFilter('${v}')" id="prod-filter-${v}" class="filter-bar-btn" style="font-size:13px;padding:5px 14px;background:${prodTypeFilter===v?'#0f52ba':'var(--white)'};border-color:${prodTypeFilter===v?'#0f52ba':'var(--border-md)'};color:${prodTypeFilter===v?'#fff':'var(--text)'};font-weight:${prodTypeFilter===v?'600':'500'}">${l}</div>`).join('')}
+        <div onclick="setProdTypeFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;background:${prodTypeFilter===v?'#0f52ba':'var(--white)'};border-color:${prodTypeFilter===v?'#0f52ba':'var(--border-md)'};color:${prodTypeFilter===v?'#fff':'var(--text)'};font-weight:${prodTypeFilter===v?'600':'500'}">${l}</div>`).join('')}
+    </div>
+    <div class="filter-bar" style="margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto">
+      ${[['all','Semua label'],...KLASIFIKASI_LIST.filter(k=>k!=='Belum Diklasifikasi').map(k=>[k,k]),['Belum Diklasifikasi','Belum Diklasifikasi']].map(([v,l])=>`
+        <div onclick="setProdKlasFilter('${v}')" class="filter-bar-btn" style="font-size:12px;padding:4px 12px;white-space:nowrap;flex-shrink:0;background:${prodKlasFilter===v?'var(--purple-light)':'var(--white)'};border-color:${prodKlasFilter===v?'var(--purple-mid)':'var(--border-md)'};color:${prodKlasFilter===v?'var(--purple-mid)':'var(--text)'};font-weight:${prodKlasFilter===v?'600':'500'}">${l}</div>`).join('')}
     </div>
     <div id="prod-list-inner">
       ${filtered.length ? filtered.map(p=>prodListItemHTML(p)).join('') : `<div style="text-align:center;padding:60px 0;color:var(--text-hint)"><i class="ti ti-package" style="font-size:40px;display:block;margin-bottom:12px"></i><div style="font-size:14px">Belum ada produk</div></div>`}
@@ -9173,7 +9185,6 @@ function prodDetailPageHTML(id){
     ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
     ['benefits','ti-star','Benefits',(p.benefits||[]).length],
     ['features','ti-settings-2','Product Features',(p.features||[]).length],
-    ['subproducts','ti-package','Sub-produk',(p.subProducts||[]).length],
     ['assets','ti-link','Aset Konten',(p.assets||[]).length],
     ['feedback','ti-message','Feedback',(p.feedbacks||[]).length],
   ];
@@ -9314,7 +9325,6 @@ function prodAccordionPanelHTML(p){
     ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
     ['benefits','ti-star','Benefits',(p.benefits||[]).length],
     ['features','ti-settings-2','Fitur',(p.features||[]).length],
-    ['subproducts','ti-package','Sub-produk',(p.subProducts||[]).length],
     ['assets','ti-link','Aset Konten',(p.assets||[]).length],
     ['feedback','ti-message','Feedback',(p.feedbacks||[]).length],
   ];
@@ -9354,7 +9364,6 @@ function prodRightPanelHTML(id){
     ['passionpoints','ti-heart','Passion Points',(p.passionPoints||[]).length],
     ['benefits','ti-star','Benefits',(p.benefits||[]).length],
     ['features','ti-settings-2','Product Features',(p.features||[]).length],
-    ['subproducts','ti-package','Sub-produk',(p.subProducts||[]).length],
     ['assets','ti-link','Aset Konten',(p.assets||[]).length],
     ['feedback','ti-message','Feedback',(p.feedbacks||[]).length],
   ];
@@ -9372,6 +9381,7 @@ function prodRightPanelHTML(id){
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn btn-sm" onclick="openProdModal('${p.id}')"><i class="ti ti-edit"></i> Edit</button>
+        <button class="btn btn-sm" onclick="duplicateProduct('${p.id}')" title="Duplikat produk ini"><i class="ti ti-copy"></i> Duplikat</button>
         <button class="btn btn-sm" onclick="exportSingleProductJSON('${p.id}')"><i class="ti ti-download"></i> Export KB</button>
       </div>
     </div>
@@ -9417,6 +9427,7 @@ function bundlingRightPanelHTML(p){
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn btn-sm" onclick="openBundlingModal('${p.id}')"><i class="ti ti-edit"></i> Edit</button>
+        <button class="btn btn-sm" onclick="duplicateProduct('${p.id}')" title="Duplikat produk ini"><i class="ti ti-copy"></i> Duplikat</button>
         <button class="btn btn-sm" onclick="exportSingleProductJSON('${p.id}')"><i class="ti ti-download"></i> Export KB</button>
       </div>
     </div>
@@ -9997,6 +10008,40 @@ async function deleteProd(id){
   closeProdModal();
   showToast("Produk dihapus");
   backToProdList();
+}
+
+async function duplicateProduct(id){
+  const p=products.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  showToast('Menduplikat produk...');
+  const newProd=await sb_insert('products',{
+    nama: p.nama+' (Copy)',
+    tipe: p.tipe||'satuan',
+    type: p.type||'satuan',
+    harga: p.harga||0,
+    deskripsi: p.deskripsi||null,
+    status: 'Draft',
+    klasifikasi: p.klasifikasi||null,
+    notes: p.notes||null,
+  });
+  if(!newProd?.id){showToast('Gagal duplikat produk','error');return;}
+  const newId=newProd.id;
+  const [pps,pass,bens,feats]=await Promise.all([
+    sb_load('product_pain_points',{eq:{product_id:id}}).catch(()=>[]),
+    sb_load('product_passion_points',{eq:{product_id:id}}).catch(()=>[]),
+    sb_load('product_benefits',{eq:{product_id:id}}).catch(()=>[]),
+    sb_load('product_features',{eq:{product_id:id}}).catch(()=>[]),
+  ]);
+  await Promise.all([
+    ...pps.map(r=>sb_insert('product_pain_points',{product_id:newId,nama:r.nama||'',text:r.text||'',severity:r.severity||'Med',source:r.source||''})),
+    ...pass.map(r=>sb_insert('product_passion_points',{product_id:newId,nama:r.nama||'',text:r.text||'',severity:r.severity||'Med',source:r.source||''})),
+    ...bens.map(r=>sb_insert('product_benefits',{product_id:newId,text:r.text||'',category:r.category||''})),
+    ...feats.map(r=>sb_insert('product_features',{product_id:newId,title:r.title||'',description:r.description||'',links:r.links||[]})),
+  ]);
+  await loadProducts();
+  _refreshProdListPanel();
+  showToast('Produk berhasil diduplikat ✓');
+  logActivity('PRODUCTS','DUPLIKAT',p.nama);
 }
 
 
@@ -22053,14 +22098,14 @@ async function initCollaborator(){
 }
 
 function collaboratorHTML(){
-  return `<div id="collab-root">
+  return `<div id="collab-root" style="display:flex;flex-direction:column;height:100%">
     <div style="flex-shrink:0;padding:0 20px">
       <div class="tab-row" style="margin-bottom:0">
         <div class="tab active" id="ctab-collaborator" onclick="_collabTab('collaborator',this)"><i class="ti ti-star" style="font-size:12px"></i> Collaborator</div>
         <div class="tab" id="ctab-advisor" onclick="_collabTab('advisor',this)"><i class="ti ti-bulb" style="font-size:12px"></i> Advisor</div>
       </div>
     </div>
-    <div id="collab-tab-body"></div>
+    <div id="collab-tab-body" style="padding:16px 20px;flex:1;overflow-y:auto"></div>
   </div>`;
 }
 
