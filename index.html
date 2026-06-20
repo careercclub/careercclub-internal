@@ -3049,8 +3049,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     products = prodRows.map(p => ({
       ...p,
-      painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
-      passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
+      painPoints: allPP.filter(r => r.product_id === p.id).map(d => ({ id: d.id, nama: d.nama || '', text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
+      passionPoints: allPas.filter(r => r.product_id === p.id).map(d => ({ id: d.id, nama: d.nama || '', text: d.text || '', severity: d.severity || 'Med', source: d.source || '' })),
       features: allProdFeatures.filter(r => String(r.product_id) === String(p.id)).map(d => ({ id: d.id, name: d.name || '', description: d.description || '', links: allFeatLinks.filter(l => String(l.feature_id) === String(d.id)).map(l => ({ id: l.id, label: l.label || '', url: l.url || '' })) })),
       bundleItems: bundleRows.filter(r => String(r.bundle_id) === String(p.id)).map(r => ({ recordId: r.id, itemId: String(r.item_id) })),
       subProducts: allSubProds.filter(r => String(r.product_id) === String(p.id)).map(sp => ({
@@ -10054,6 +10054,7 @@ async function duplicateProduct(id){
   await loadProducts();
   prodTypeFilter='all';
   prodKlasFilter='all';
+  prodSortOrder='none';
   _refreshProdListPanel();
   showToast('Produk berhasil diduplikat ✓');
   logActivity('PRODUCTS','DUPLIKAT',p.nama);
