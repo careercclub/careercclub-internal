@@ -2539,6 +2539,7 @@ function _tktJSToRow(t) {
     type_id: t.tipeId || null,
     divisi_id: t.divisiId || null,
     assigned_to_id: (t.assignedToIds && t.assignedToIds[0]) || t.assignedToId || null,
+    assigned_to_ids: Array.isArray(t.assignedToIds) && t.assignedToIds.length ? t.assignedToIds : (t.assignedToId ? [t.assignedToId] : []),
     requester_id: t.requesterId || null,
     due_date: t.deadline || null,
     related_task_id: t.linkedTaskId || null,
@@ -6062,11 +6063,13 @@ function gcalAddTicket(tktId){
 function _gcalOpenTicketModal(tktId){
   const t=tickets.find(x=>_idEq(x.id,tktId));
   if(!t){showToast('Ticket tidak ditemukan','error');return;}
-  const person=getPersonById(t.assignedToId);
+  const assigneeIds=t.assignedToIds&&t.assignedToIds.length?t.assignedToIds:(t.assignedToId?[t.assignedToId]:[]);
+  const assigneePeople=assigneeIds.map(id=>getPersonById(id)).filter(Boolean);
+  const person=assigneePeople[0]||getPersonById(t.assignedToId);
   const requester=getPersonById(t.requesterId);
   const todayVal=new Date().toISOString().substring(0,10);
   const deadlineVal=t.deadline?t.deadline.substring(0,10):todayVal;
-  const allPeople=(window.tktPeople||[]).filter(p=>p.email&&p.id!==t.assignedToId&&p.id!==t.requesterId);
+  const allPeople=(window.tktPeople||[]).filter(p=>p.email&&!assigneeIds.includes(p.id)&&p.id!==t.requesterId);
   const modal=document.getElementById('gcal-modal');
   modal.style.display='flex';
   modal.innerHTML=`
@@ -6084,7 +6087,7 @@ function _gcalOpenTicketModal(tktId){
     <div style="display:flex;flex-direction:column;gap:12px">
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUDUL EVENT</label>
-        <input id="gcal-title" value="${t.judul}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+        <input id="gcal-title" value="${(t.judul||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
 
       </div>
       <div>
@@ -6123,10 +6126,10 @@ function _gcalOpenTicketModal(tktId){
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">DESKRIPSI</label>
         <textarea id="gcal-desc" rows="3" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg);resize:vertical">${t.deskripsi||''}</textarea>
       </div>
-      ${person&&person.email?`<div style="background:var(--purple-light);border-radius:var(--radius);padding:10px 12px">
+      ${assigneePeople.length||requester?`<div style="background:var(--purple-light);border-radius:var(--radius);padding:10px 12px">
         <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px">ASSIGNEE & REQUESTER</div>
-        ${person.email?`<div style="font-size:12px;margin-bottom:3px"><i class="ti ti-user-check" style="font-size:12px;color:var(--purple-accent)"></i> ${person.nama} <span style="color:var(--text-muted)">(${person.email})</span></div>`:''}
-        ${requester&&requester.email&&requester.email!==person.email?`<div style="font-size:12px"><i class="ti ti-user" style="font-size:12px;color:var(--purple-accent)"></i> ${requester.nama} <span style="color:var(--text-muted)">(${requester.email})</span></div>`:''}
+        ${assigneePeople.filter(p=>p.email).map(p=>`<div style="font-size:12px;margin-bottom:3px"><i class="ti ti-user-check" style="font-size:12px;color:var(--purple-accent)"></i> ${p.nama} <span style="color:var(--text-muted)">(${p.email})</span></div>`).join('')}
+        ${requester&&requester.email&&!assigneePeople.some(p=>p.email===requester.email)?`<div style="font-size:12px"><i class="ti ti-user" style="font-size:12px;color:var(--purple-accent)"></i> ${requester.nama} <span style="color:var(--text-muted)">(${requester.email})</span></div>`:''}
       </div>`:''}
       ${allPeople.length>0?`<div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px">CC TAMBAHAN</label>
@@ -6155,12 +6158,16 @@ async function gcalCreateTicketEvent(tktId){
   const desc=document.getElementById('gcal-desc').value.trim();
   if(!title||!startRaw||!endRaw){showToast('Judul & waktu wajib diisi','error');return;}
   const t=tickets.find(x=>_idEq(x.id,tktId));
-  const person=getPersonById(t?t.assignedToId:null);
+  const assigneeIds2=t&&t.assignedToIds&&t.assignedToIds.length?t.assignedToIds:(t?.assignedToId?[t.assignedToId]:[]);
+  const assigneePeople2=assigneeIds2.map(id=>getPersonById(id)).filter(Boolean);
   const requester=getPersonById(t?t.requesterId:null);
-  const attendees=[];
-  if(person&&person.email) attendees.push({email:person.email,displayName:person.nama});
-  if(requester&&requester.email&&requester.email!==person.email) attendees.push({email:requester.email,displayName:requester.nama});
-  document.querySelectorAll('.gcal-cc:checked').forEach(cb=>attendees.push({email:cb.value,displayName:cb.dataset.name}));
+  const ccEmails=[];
+  document.querySelectorAll('.gcal-cc:checked').forEach(cb=>ccEmails.push({email:cb.value,displayName:cb.dataset.name}));
+  const attendees=[
+    ...assigneePeople2.filter(p=>p.email).map(p=>({email:p.email,displayName:p.nama})),
+    ...(requester?.email&&!assigneePeople2.some(p=>p.email===requester.email)?[{email:requester.email,displayName:requester.nama}]:[]),
+    ...ccEmails
+  ];
   const useTime=document.getElementById('gcal-time-fields')?.style.display!=='none';
   let startObj,endObj;
   if(useTime){
