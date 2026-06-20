@@ -10244,7 +10244,7 @@ function renderPainPoints(p){
     <div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:6px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
-          <input style="width:100%;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0;outline:none" placeholder="Nama pain point..." value="${pp.nama||''}" onchange="updatePP('${p.id}','${pp.id}','nama',this.value)">
+          <input style="width:100%;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0;outline:none" placeholder="Nama pain point..." value="${pp.nama||''}" onclick="event.stopPropagation()" oninput="updatePP('${p.id}','${pp.id}','nama',this.value)" onchange="updatePP('${p.id}','${pp.id}','nama',this.value)">
           <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--text-muted);resize:none;line-height:1.5;padding:0" rows="2" placeholder="Deskripsi (opsional)..." onclick="event.stopPropagation()" oninput="updatePP('${p.id}','${pp.id}','text',this.value)" onchange="updatePP('${p.id}','${pp.id}','text',this.value)">${pp.text||''}</textarea>
         </div>
         <button onclick="deletePP('${p.id}','${pp.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
@@ -10269,7 +10269,7 @@ function renderPassionPoints(p){
     <div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:6px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
-          <input style="width:100%;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0;outline:none" placeholder="Nama passion point..." value="${pas.nama||''}" onchange="updatePas('${p.id}','${pas.id}','nama',this.value)">
+          <input style="width:100%;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;color:var(--text);padding:0;outline:none" placeholder="Nama passion point..." value="${pas.nama||''}" onclick="event.stopPropagation()" oninput="updatePas('${p.id}','${pas.id}','nama',this.value)" onchange="updatePas('${p.id}','${pas.id}','nama',this.value)">
           <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--text-muted);resize:none;line-height:1.5;padding:0" rows="2" placeholder="Deskripsi (opsional)..." onclick="event.stopPropagation()" oninput="updatePas('${p.id}','${pas.id}','text',this.value)" onchange="updatePas('${p.id}','${pas.id}','text',this.value)">${pas.text||''}</textarea>
         </div>
         <button onclick="deletePas('${p.id}','${pas.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
