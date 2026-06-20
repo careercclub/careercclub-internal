@@ -6064,7 +6064,8 @@ function _gcalOpenTicketModal(tktId){
   if(!t){showToast('Ticket tidak ditemukan','error');return;}
   const person=getPersonById(t.assignedToId);
   const requester=getPersonById(t.requesterId);
-  const dateVal=t.deadline?t.deadline.substring(0,10):new Date().toISOString().substring(0,10);
+  const todayVal=new Date().toISOString().substring(0,10);
+  const deadlineVal=t.deadline?t.deadline.substring(0,10):todayVal;
   const allPeople=(window.tktPeople||[]).filter(p=>p.email&&p.id!==t.assignedToId&&p.id!==t.requesterId);
   const modal=document.getElementById('gcal-modal');
   modal.style.display='flex';
@@ -6084,16 +6085,17 @@ function _gcalOpenTicketModal(tktId){
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">JUDUL EVENT</label>
         <input id="gcal-title" value="${t.judul}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+
       </div>
       <div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
             <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Tanggal Mulai</label>
-            <input id="gcal-start" type="date" value="${dateVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+            <input id="gcal-start" type="date" value="${todayVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
           </div>
           <div>
             <label style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px">Tanggal Selesai</label>
-            <input id="gcal-end" type="date" value="${dateVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
+            <input id="gcal-end" type="date" value="${deadlineVal}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;background:var(--bg)">
           </div>
         </div>
         <div id="gcal-time-fields" style="display:none">
@@ -10180,12 +10182,6 @@ function renderPainPoints(p){
         </div>
         <button onclick="deletePP('${p.id}','${pp.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        ${severityBadge(pp.severity)}
-        <select style="font-size:11px;padding:2px 6px;border-radius:5px;border:0.5px solid var(--border-md);background:var(--white);color:var(--text);height:22px" onchange="updatePP('${p.id}','${pp.id}','severity',this.value)">
-          ${PROD_SEVERITY.map(s=>`<option ${s===pp.severity?"selected":""}>${s}</option>`).join("")}
-        </select>
-      </div>
     </div>`).join("")}
   </div>`;
 }
@@ -10210,12 +10206,6 @@ function renderPassionPoints(p){
           <textarea style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--text-muted);resize:none;line-height:1.5;padding:0" rows="2" placeholder="Deskripsi (opsional)..." onchange="updatePas('${p.id}','${pas.id}','text',this.value)">${pas.text||''}</textarea>
         </div>
         <button onclick="deletePas('${p.id}','${pas.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:2px;flex-shrink:0;font-size:14px"><i class="ti ti-trash"></i></button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        ${severityBadge(pas.severity)}
-        <select style="font-size:11px;padding:2px 6px;border-radius:5px;border:0.5px solid var(--border-md);background:var(--white);color:var(--text);height:22px" onchange="updatePas('${p.id}','${pas.id}','severity',this.value)">
-          ${PROD_SEVERITY.map(s=>`<option ${s===pas.severity?"selected":""}>${s}</option>`).join("")}
-        </select>
       </div>
     </div>`).join("")}
   </div>`;
@@ -22057,9 +22047,11 @@ async function initCollaborator(){
 
 function collaboratorHTML(){
   return `<div id="collab-root">
-    <div class="tab-row" style="margin-bottom:16px">
-      <div class="tab active" id="ctab-collaborator" onclick="_collabTab('collaborator',this)"><i class="ti ti-star" style="font-size:12px"></i> Collaborator</div>
-      <div class="tab" id="ctab-advisor" onclick="_collabTab('advisor',this)"><i class="ti ti-bulb" style="font-size:12px"></i> Advisor</div>
+    <div style="flex-shrink:0;padding:0 20px">
+      <div class="tab-row" style="margin-bottom:0">
+        <div class="tab active" id="ctab-collaborator" onclick="_collabTab('collaborator',this)"><i class="ti ti-star" style="font-size:12px"></i> Collaborator</div>
+        <div class="tab" id="ctab-advisor" onclick="_collabTab('advisor',this)"><i class="ti ti-bulb" style="font-size:12px"></i> Advisor</div>
+      </div>
     </div>
     <div id="collab-tab-body"></div>
   </div>`;
