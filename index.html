@@ -2259,16 +2259,16 @@ async function sb_updateProduct(id, data) {
 }
 async function sb_deleteProduct(id) { return await sb_delete('products', id); }
 
-// PRODUCT PAIN POINTS — schema: id, product_id, text, severity, source
+// PRODUCT PAIN POINTS — schema: id, product_id, nama, text
 async function sb_loadProductPainPoints(productId) {
   const rows = await sb_load('product_pain_points', { order: 'created_at', ascending: true });
   return rows.filter(r => r.product_id === productId).map(d => ({
-    id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || ''
+    id: d.id, nama: d.nama || '', text: d.text || ''
   }));
 }
 async function sb_insertProductPainPoint(productId, data) {
   return await sb_insert('product_pain_points', {
-    product_id: productId, text: data.text || '', severity: data.severity || 'Med', source: data.source || ''
+    product_id: productId, nama: data.nama || '', text: data.text || ''
   });
 }
 async function sb_updateProductPainPoint(id, data) {
@@ -2278,16 +2278,16 @@ async function sb_updateProductPainPoint(id, data) {
 }
 async function sb_deleteProductPainPoint(id) { return await sb_delete('product_pain_points', id); }
 
-// PRODUCT PASSION POINTS — schema: id, product_id, text, severity, source
+// PRODUCT PASSION POINTS — schema: id, product_id, nama, text
 async function sb_loadProductPassionPoints(productId) {
   const rows = await sb_load('product_passion_points', { order: 'created_at', ascending: true });
   return rows.filter(r => r.product_id === productId).map(d => ({
-    id: d.id, text: d.text || '', severity: d.severity || 'Med', source: d.source || ''
+    id: d.id, nama: d.nama || '', text: d.text || ''
   }));
 }
 async function sb_insertProductPassionPoint(productId, data) {
   return await sb_insert('product_passion_points', {
-    product_id: productId, text: data.text || '', severity: data.severity || 'Med', source: data.source || ''
+    product_id: productId, nama: data.nama || '', text: data.text || ''
   });
 }
 async function sb_updateProductPassionPoint(id, data) {
@@ -4805,10 +4805,10 @@ function handleResult(input){
     const ws=wb.Sheets[wb.SheetNames[0]];
     const rows=XLSX.utils.sheet_to_json(ws);
     let updated=0;
-    rows.forEach((r,i)=>{
-      if(r["Status"]!=="SUCCESS") return;
-      const wa=normalizeWA(r["Buyer Phone (Opsional)"]);if(!wa) return;
-      const buyer=buyers.find(b=>b.wa===wa);if(!buyer) return;
+    for (const r of rows) {
+      if(r["Status"]!=="SUCCESS") continue;
+      const wa=normalizeWA(r["Buyer Phone (Opsional)"]);if(!wa) continue;
+      const buyer=buyers.find(b=>b.wa===wa);if(!buyer) continue;
       const produkBaru=r["Judul Barang"]||"";
       const hargaBaru=parseFloat(r["Harga"]||r["Price"]||0);
       const tanggal=r["Tanggal"]||"";
@@ -4820,7 +4820,8 @@ function handleResult(input){
       buyer.produk=produkBaru;buyer.klasifikasi=klasifikasiBaru;buyer.harga=hargaBaru;
       buyer.riwayat.push({produk:produkBaru,klasifikasi:klasifikasiBaru,harga:hargaBaru,tanggal});
       updated++;
-    });
+      await sb_updateBuyer(buyer.id, buyer);
+    }
     renderBuyers();renderCRMStats();
     showToast(`${updated} buyer diupdate dari hasil blast`);
   };
@@ -7853,7 +7854,7 @@ function fmtDateShort(iso){
 
 async function addPainPoint(pid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  const newEntry={nama:"",text:"",severity:"Med",source:"Asumsi"};
+  const newEntry={nama:"",text:""};
   const saved = await sb_insertProductPainPoint(p.id, newEntry);
   if(!saved||!saved.id){showToast("Gagal tambah data","error");return;}
   p.painPoints.push({id:saved.id,...newEntry});
@@ -8963,11 +8964,11 @@ async function exportProductsJSON(){
       tanggal_launch:p.launchDate||'',
       customer_insights:allPP
         .filter(r=>String(r.product_id)===String(p.id))
-        .map(d=>({text:d.text||'',severity:d.severity||'Med',source:d.source||''})),
+        .map(d=>({nama:d.nama||'',text:d.text||''})),
       passion_points:allPas
         .filter(r=>String(r.product_id)===String(p.id))
-        .map(d=>({text:d.text||'',severity:d.severity||'Med',source:d.source||''})),
-      benefits:(p.benefits||[]).map(b=>({text:b.text||'',segment:b.segment||'',evidence:b.evidence||''})),
+        .map(d=>({nama:d.nama||'',text:d.text||''})),
+      benefits:(p.benefits||[]).map(b=>({nama:b.nama||'',text:b.text||''})),
     }));
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
@@ -9756,11 +9757,11 @@ async function exportSingleProductJSON(id){
       deskripsi:p.desc||'',
       customer_insights:allPP
         .filter(r=>String(r.product_id)===String(p.id))
-        .map(d=>({text:d.text||'',severity:d.severity||'Med',source:d.source||''})),
+        .map(d=>({nama:d.nama||'',text:d.text||''})),
       passion_points:allPas
         .filter(r=>String(r.product_id)===String(p.id))
-        .map(d=>({text:d.text||'',severity:d.severity||'Med',source:d.source||''})),
-      benefits:(p.benefits||[]).map(b=>({text:b.text||'',segment:b.segment||'',evidence:b.evidence||''})),
+        .map(d=>({nama:d.nama||'',text:d.text||''})),
+      benefits:(p.benefits||[]).map(b=>({nama:b.nama||'',text:b.text||''})),
       product_features:allFeat
         .filter(r=>String(r.product_id)===String(p.id))
         .map(d=>({name:d.name||'',description:d.description||''})),
@@ -10298,7 +10299,7 @@ function renderPassionPoints(p){
 
 async function addPassionPoint(pid){
   const p=products.find(x=>String(x.id)===String(pid));if(!p) return;
-  const newEntry={nama:"",text:"",severity:"Med",source:"Feedback"};
+  const newEntry={nama:"",text:""};
   const saved = await sb_insertProductPassionPoint(p.id, newEntry);
   if(!saved||!saved.id){showToast("Gagal tambah passion point","error");return;}
   if(!p.passionPoints) p.passionPoints=[];
