@@ -5926,6 +5926,7 @@ function openTktDetail(id){
 
   // Footer
   document.getElementById("tkt-detail-footer").innerHTML=`
+    <button class="btn btn-sm" onclick="duplicateTkt('${t.id}')"><i class="ti ti-copy"></i> Duplikat</button>
     <button class="btn btn-sm btn-danger" onclick="deleteTkt('${t.id}')"><i class="ti ti-trash"></i> Hapus</button>
     <div style="display:flex;gap:6px">
       <button class="btn btn-sm" onclick="gcalAddTicket('${t.id}')" style="${t.gcal_added?'background:var(--green);border-color:var(--green);color:#fff':''}"><i class="ti ti-calendar-${t.gcal_added?'check':'plus'}" style="font-size:13px"></i> ${t.gcal_added?'Re-sync Calendar':'Google Calendar'}</button>
@@ -6144,6 +6145,19 @@ async function updateTktStatus(id,val){
   }
 }
 
+async function addTktLink(id){
+  const input=document.getElementById('tkt-new-link');
+  if(!input)return;
+  const url=input.value.trim();
+  if(!url){showToast('Tulis URL dulu','error');return;}
+  const t=tickets.find(x=>_idEq(x.id,id));if(!t)return;
+  t.links=t.links||[];
+  t.links.push(url);
+  await sb_updateTicket(id,t);
+  input.value='';
+  openTktDetail(id);
+  showToast('Link ditambahkan');
+}
 function addTktComment(id){
   const inp=document.getElementById("new-comment");
   const txt=inp.value.trim();if(!txt) return;
@@ -6155,6 +6169,39 @@ function addTktComment(id){
   openTktDetail(id);
   showToast("Komentar terkirim via email 📧");
   autoSendCommentEmail(t, txt);
+}
+async function duplicateTkt(id){
+  const t=tickets.find(x=>_idEq(x.id,id));if(!t)return;
+  if(!await showConfirmDelete('Duplikat ticket ini?','Ticket baru akan dibuat dengan data yang sama. Status direset ke Todo, deadline dikosongkan.'))return;
+  const newTkt={
+    ticketNo: nextTicketNo(),
+    judul: t.judul+' (Copy)',
+    deskripsi: t.deskripsi||'',
+    status: 'Todo',
+    prioritas: t.prioritas||'Med',
+    tipeId: t.tipeId||null,
+    divisiId: t.divisiId||null,
+    assignedToId: t.assignedToId||null,
+    assignedToIds: Array.isArray(t.assignedToIds)?[...t.assignedToIds]:[],
+    requesterId: t.requesterId||null,
+    deadline: null,
+    linkedTaskId: null,
+    source: 'Manual',
+    cc: [],
+    links: Array.isArray(t.links)?[...t.links]:[],
+    files: [],
+    komentar: [],
+    attachments: [],
+    gcal_added: false
+  };
+  const row=await sb_saveTicket(newTkt);
+  if(!row){showToast('Gagal duplikat ticket','error');return;}
+  const saved=_tktRowToJS(row);
+  tickets.unshift(saved);
+  renderTickets&&renderTickets();
+  closeTktDetail();
+  showToast('Ticket berhasil diduplikat ✓');
+  logActivity('TICKETS','DUPLICATE',newTkt.judul);
 }
 async function deleteTkt(id){
   if(!await showConfirmDelete("Hapus ticket ini?","Task terkait di Program juga akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.")) return;
