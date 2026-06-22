@@ -5235,14 +5235,15 @@ function _aiShowPreview(moduleId,data){
   const rows=Object.entries(actualData).filter(([k,v])=>v!==null&&v!==''&&v!==undefined&&k!=='slides'&&!(Array.isArray(v)&&v.length===0));
   const slidesHTML=actualData.slides&&actualData.slides.length?`<div style="margin-top:8px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:4px">Slides</div>${actualData.slides.map((s,i)=>`<div style="font-size:12px;padding:4px 8px;background:var(--bg);border-radius:6px;margin-bottom:4px"><span style="color:var(--text-muted);margin-right:6px">${i+1}</span>${s}</div>`).join('')}</div>`:'';
   const fieldsHTML=rows.map(([k,v])=>`<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);min-width:90px;flex-shrink:0">${fieldLabels[k]||k}</div><div style="font-size:12px;font-weight:500;color:var(--text)">${v}</div></div>`).join('');
-  const dataStr=JSON.stringify(actualData).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  window._aiPendingData=window._aiPendingData||{};
+  window._aiPendingData[moduleId]=actualData;
   preview.style.display='block';
-  preview.innerHTML=`<div class="card" style="padding:10px 12px;border-color:#0f52ba44"><div style="font-size:11px;font-weight:600;color:#0f52ba;margin-bottom:10px;display:flex;align-items:center;gap:4px"><i class="ti ti-check" style="font-size:12px"></i> Hasil parse — konfirmasi sebelum disimpan</div>${fieldsHTML}${slidesHTML}<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;border-top:0.5px solid var(--border);padding-top:10px"><button class="btn btn-sm" onclick="document.getElementById('ai-preview-${moduleId}').style.display='none';document.getElementById('ai-input-${moduleId}').value=''">Batal</button><button class="btn btn-primary btn-sm" onclick="_aiConfirmStr('${moduleId}','${dataStr}')"><i class="ti ti-device-floppy" style="font-size:11px"></i> Simpan</button></div></div>`;
+  preview.innerHTML=`<div class="card" style="padding:10px 12px;border-color:#0f52ba44"><div style="font-size:11px;font-weight:600;color:#0f52ba;margin-bottom:10px;display:flex;align-items:center;gap:4px"><i class="ti ti-check" style="font-size:12px"></i> Hasil parse — konfirmasi sebelum disimpan</div>${fieldsHTML}${slidesHTML}<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;border-top:0.5px solid var(--border);padding-top:10px"><button class="btn btn-sm" onclick="document.getElementById('ai-preview-${moduleId}').style.display='none';document.getElementById('ai-input-${moduleId}').value=''">Batal</button><button class="btn btn-primary btn-sm" onclick="_aiConfirmPending('${moduleId}')"><i class="ti ti-device-floppy" style="font-size:11px"></i> Simpan</button></div></div>`;
 }
 
-async function _aiConfirmStr(moduleId,dataStr){
-  let data;
-  try{data=JSON.parse(dataStr);}catch(e){showToast('Data tidak valid','error');return;}
+async function _aiConfirmPending(moduleId){
+  const data=window._aiPendingData&&window._aiPendingData[moduleId];
+  if(!data){showToast('Data tidak valid','error');return;}
   await _aiConfirm(moduleId,data);
 }
 
@@ -5908,9 +5909,13 @@ function openTktDetail(id){
           </select>
         </div>
       </div>
-      ${(filesHTML||linksHTML)?`
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin-bottom:6px">Lampiran & Link</div>
-      ${filesHTML}${linksHTML}`:""}
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin:12px 0 6px">Lampiran & Link</div>
+        ${filesHTML}
+        ${linksHTML}
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input type="text" id="tkt-new-link" placeholder="https://..." style="flex:1;height:30px;padding:0 8px;font-size:12px;border:0.5px solid var(--border-md);border-radius:7px;font-family:'DM Sans',sans-serif">
+          <button class="btn btn-sm" style="flex-shrink:0" onclick="addTktLink('${t.id}')"><i class="ti ti-plus"></i> Tambah link</button>
+        </div>
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin:14px 0 6px">Komentar</div>
       <div>${komHTML}</div>
       <div style="display:flex;gap:7px;margin-top:10px">
