@@ -5926,7 +5926,10 @@ function openTktDetail(id){
 
   // Footer
   document.getElementById("tkt-detail-footer").innerHTML=`
-    <button class="btn btn-sm btn-danger" onclick="deleteTkt('${t.id}')"><i class="ti ti-trash"></i> Hapus</button>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="duplicateTkt('${t.id}')"><i class="ti ti-copy"></i> Duplikat</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteTkt('${t.id}')"><i class="ti ti-trash"></i> Hapus</button>
+    </div>
     <div style="display:flex;gap:6px">
       <button class="btn btn-sm" onclick="gcalAddTicket('${t.id}')" style="${t.gcal_added?'background:var(--green);border-color:var(--green);color:#fff':''}"><i class="ti ti-calendar-${t.gcal_added?'check':'plus'}" style="font-size:13px"></i> ${t.gcal_added?'Re-sync Calendar':'Google Calendar'}</button>
       <button class="btn btn-primary btn-sm" onclick="saveTktDetail('${t.id}')"><i class="ti ti-check"></i> Simpan</button>
