@@ -5164,6 +5164,148 @@ function comingSoonHTML(title, icon, desc){
     </div>
   </div>`;
 }
+function renderAIInputPanel(moduleId,placeholder,hintFields,hintExample){
+  return `<div id="ai-panel-${moduleId}" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0" onclick="_aiTogglePanel('${moduleId}')">
+      <i class="ti ti-sparkles" style="font-size:13px;color:#0f52ba"></i>
+      <span style="font-size:12px;font-weight:600;color:#0f52ba">Input dengan AI</span>
+      <i id="ai-chevron-${moduleId}" class="ti ti-chevron-down" style="font-size:11px;color:var(--text-muted);margin-left:auto;transition:transform .2s"></i>
+    </div>
+    <div id="ai-panel-body-${moduleId}" style="display:none">
+      <div class="card" style="padding:10px 12px;border-color:#0f52ba44;margin-bottom:0">
+        <textarea id="ai-input-${moduleId}" rows="2" placeholder="${placeholder}" style="width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;resize:none;color:var(--text);line-height:1.5;padding:0;margin-bottom:8px"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+          <button class="btn btn-primary btn-sm" onclick="_aiParse('${moduleId}')"><i class="ti ti-sparkles" style="font-size:11px"></i> Parse</button>
+        </div>
+        <div style="border-top:0.5px solid var(--border);padding-top:8px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Tulis bebas — AI akan ekstrak ${hintFields} otomatis</div>
+          <div style="font-size:10px;color:var(--text-muted)"><span style="font-weight:500">contoh lain:</span> ${hintExample}</div>
+        </div>
+      </div>
+      <div id="ai-preview-${moduleId}" style="display:none;margin-top:8px"></div>
+    </div>
+  </div>`;
+}
+
+function _aiTogglePanel(moduleId){
+  const body=document.getElementById('ai-panel-body-'+moduleId);
+  const chevron=document.getElementById('ai-chevron-'+moduleId);
+  if(!body)return;
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  if(chevron)chevron.style.transform=open?'rotate(180deg)':'';
+}
+
+async function _aiParse(moduleId){
+  const input=document.getElementById('ai-input-'+moduleId);
+  const preview=document.getElementById('ai-preview-'+moduleId);
+  if(!input||!preview)return;
+  const text=input.value.trim();
+  if(!text){showToast('Tulis dulu sebelum di-parse','error');return;}
+  const btn=document.querySelector(`#ai-panel-${moduleId} .btn-primary`);
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="font-size:11px;animation:spin 1s linear infinite"></i> Parsing...';}
+  const systemPrompts={
+    tickets:`Kamu adalah parser data untuk sistem internal CareerCclub. Ekstrak data dari teks bebas dan kembalikan JSON dengan field berikut: judul (string, wajib), deskripsi (string, boleh kosong), prioritas (salah satu: "High"/"Med"/"Low", default "Med"), divisiNama (string nama divisi, boleh kosong), tipeNama (string nama tipe ticket, boleh kosong), requesterNama (string nama orang, boleh kosong), assigneeNama (string nama orang, boleh kosong), deadline (string format YYYY-MM-DD jika ada, boleh null). Kembalikan HANYA JSON valid, tanpa penjelasan.`,
+    carousel:`Kamu adalah parser data untuk sistem internal CareerCclub. Ekstrak data dari teks bebas dan kembalikan JSON dengan field berikut: judul (string, wajib), tanggal_posting (string format YYYY-MM-DD jika ada, boleh null), funnel (salah satu: "TOFU"/"MOFU"/"BOFU", default "TOFU"), assigneeNama (string nama orang, boleh kosong), status (salah satu: "Draft"/"In Progress"/"Done", default "Draft"), cta (string label CTA jika ada, boleh kosong). Kembalikan HANYA JSON valid, tanpa penjelasan.`,
+    story:`Kamu adalah parser data untuk sistem internal CareerCclub. Ekstrak data dari teks bebas dan kembalikan JSON dengan field berikut: tanggal (string format YYYY-MM-DD, wajib), slides (array of string, isi tiap slide story). Kembalikan HANYA JSON valid, tanpa penjelasan.`,
+    voucher:`Kamu adalah parser data untuk sistem internal CareerCclub. Ekstrak data dari teks bebas dan kembalikan JSON dengan field berikut: nama_event (string, wajib), tipe (string, boleh kosong), kode (string kode voucher, boleh kosong), diskon_persen (number 0-100, default 0), periode_mulai (YYYY-MM-DD atau null), periode_selesai (YYYY-MM-DD atau null), min_transaksi (number, default 0), maks_potongan (number atau null), notes (string, boleh kosong). Kembalikan HANYA JSON valid, tanpa penjelasan.`,
+    b2b:`Kamu adalah parser data untuk sistem internal CareerCclub. Ekstrak data dari teks bebas dan kembalikan JSON dengan field berikut: nama (string nama perusahaan, wajib), kategori (string, boleh kosong), pic (string nama PIC, boleh kosong), wa (string nomor WA, boleh kosong), email (string, boleh kosong), tier (salah satu: "Standard"/"Strategic"/"Premium", default "Standard"), status (salah satu: "Approached"/"Sales Meet"/"Proposal"/"Negotiation"/"Closed Deal"/"Rejected", default "Approached"), scope (string, boleh kosong), notes (string, boleh kosong). Kembalikan HANYA JSON valid, tanpa penjelasan.`,
+    org:`Kamu adalah parser data untuk sistem internal CareerCclub. Ekstrak data dari teks bebas dan kembalikan JSON dengan field berikut: nama (string nama organisasi, wajib), pic (string nama PIC, boleh kosong), wa (string nomor WA, boleh kosong), email (string, boleh kosong), tier (salah satu: "Standard"/"Strategic"/"Premium", default "Standard"), status (salah satu: "Approached"/"Sales Meet"/"Proposal"/"Negotiation"/"Closed Deal"/"Rejected", default "Approached"), scope (string, boleh kosong), notes (string, boleh kosong). Kembalikan HANYA JSON valid, tanpa penjelasan.`,
+    dashboard:`Kamu adalah parser data untuk sistem internal CareerCclub. Tentukan modul tujuan dan ekstrak data dari teks bebas. Kembalikan JSON dengan field: modul (salah satu: "tickets"/"carousel"/"story"/"voucher"/"b2b"/"org"), data (object berisi field relevan untuk modul tersebut). Kembalikan HANYA JSON valid, tanpa penjelasan.`
+  };
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:systemPrompts[moduleId]||systemPrompts.dashboard,messages:[{role:'user',content:text}]})});
+    const d=await res.json();
+    const raw=d.content?.[0]?.text||'{}';
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    _aiShowPreview(moduleId,parsed);
+  }catch(e){
+    showToast('Gagal parse, coba lagi','error');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-sparkles" style="font-size:11px"></i> Parse';}
+  }
+}
+
+function _aiShowPreview(moduleId,data){
+  const preview=document.getElementById('ai-preview-'+moduleId);
+  if(!preview)return;
+  const fieldLabels={judul:'Judul',deskripsi:'Deskripsi',prioritas:'Prioritas',divisiNama:'Divisi',tipeNama:'Tipe',requesterNama:'Requester',assigneeNama:'Assignee',deadline:'Deadline',tanggal_posting:'Tanggal Posting',funnel:'Funnel',status:'Status',cta:'CTA',tanggal:'Tanggal',slides:'Slides',nama_event:'Nama Event',tipe:'Tipe',kode:'Kode',diskon_persen:'Diskon %',periode_mulai:'Mulai',periode_selesai:'Selesai',min_transaksi:'Min Transaksi',maks_potongan:'Maks Potongan',notes:'Notes',nama:'Nama',kategori:'Kategori',pic:'PIC',wa:'WA',email:'Email',tier:'Tier',scope:'Scope',modul:'Modul'};
+  const actualData=moduleId==='dashboard'?(data.data||data):data;
+  const rows=Object.entries(actualData).filter(([k,v])=>v!==null&&v!==''&&v!==undefined&&k!=='slides'&&!(Array.isArray(v)&&v.length===0));
+  const slidesHTML=actualData.slides&&actualData.slides.length?`<div style="margin-top:8px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:4px">Slides</div>${actualData.slides.map((s,i)=>`<div style="font-size:12px;padding:4px 8px;background:var(--bg);border-radius:6px;margin-bottom:4px"><span style="color:var(--text-muted);margin-right:6px">${i+1}</span>${s}</div>`).join('')}</div>`:'';
+  const fieldsHTML=rows.map(([k,v])=>`<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);min-width:90px;flex-shrink:0">${fieldLabels[k]||k}</div><div style="font-size:12px;font-weight:500;color:var(--text)">${v}</div></div>`).join('');
+  const dataStr=JSON.stringify(actualData).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  preview.style.display='block';
+  preview.innerHTML=`<div class="card" style="padding:10px 12px;border-color:#0f52ba44"><div style="font-size:11px;font-weight:600;color:#0f52ba;margin-bottom:10px;display:flex;align-items:center;gap:4px"><i class="ti ti-check" style="font-size:12px"></i> Hasil parse — konfirmasi sebelum disimpan</div>${fieldsHTML}${slidesHTML}<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;border-top:0.5px solid var(--border);padding-top:10px"><button class="btn btn-sm" onclick="document.getElementById('ai-preview-${moduleId}').style.display='none';document.getElementById('ai-input-${moduleId}').value=''">Batal</button><button class="btn btn-primary btn-sm" onclick="_aiConfirmStr('${moduleId}','${dataStr}')"><i class="ti ti-device-floppy" style="font-size:11px"></i> Simpan</button></div></div>`;
+}
+
+async function _aiConfirmStr(moduleId,dataStr){
+  let data;
+  try{data=JSON.parse(dataStr);}catch(e){showToast('Data tidak valid','error');return;}
+  await _aiConfirm(moduleId,data);
+}
+
+async function _aiConfirm(moduleId,data){
+  const btn=document.querySelector(`#ai-preview-${moduleId} .btn-primary`);
+  if(btn){btn.disabled=true;btn.textContent='Menyimpan...';}
+  try{
+    if(moduleId==='tickets'){
+      const divObj=tktDivisi.find(d=>d.nama===data.divisiNama);
+      const tipeObj=tktTypes.find(t=>t.nama===data.tipeNama);
+      const reqObj=tktPeople.find(p=>p.nama===data.requesterNama);
+      const assignObj=tktPeople.find(p=>p.nama===data.assigneeNama);
+      const t={judul:data.judul||'',deskripsi:data.deskripsi||'',prioritas:data.prioritas||'Med',divisiId:divObj?.id||null,tipeId:tipeObj?.id||null,requesterId:reqObj?.id||null,assignedToIds:assignObj?[assignObj.id]:[],assignedToId:assignObj?.id||null,status:'Todo',deadline:data.deadline||null,source:'AI',cc:[],links:[],files:[],komentar:[],attachments:[],gcal_added:false};
+      const row=await sb_saveTicket(t);
+      if(row){tickets.unshift(_tktRowToJS(row));renderTickets&&renderTickets();logActivity('TICKETS','ADD_AI',data.judul);showToast('Ticket dibuat via AI ✓');}
+      else showToast('Gagal simpan','error');
+    }
+    else if(moduleId==='carousel'){
+      const assignObj=tktPeople.find(p=>p.nama===data.assigneeNama);
+      const ctaObj=carouselCTAOptions.find(c=>c.label===data.cta);
+      const payload={judul:data.judul||'',tanggal_posting:data.tanggal_posting||null,funnel:data.funnel||'TOFU',cta:ctaObj?.label||data.cta||null,assignee_id:assignObj?.id||null,status:data.status||'Draft',link_brief:null};
+      const row=await sb_insert('carousel_plans',payload);
+      if(row){carouselPlans.push({id:row.id,...payload});carouselPlans.sort((a,b)=>(a.tanggal_posting||'')>(b.tanggal_posting||'')?1:-1);if(typeof _cpRenderCards==='function')_cpRenderCards();if(typeof _cpRenderCalendar==='function')_cpRenderCalendar();logActivity('CONTENT','ADD_AI_CAROUSEL',data.judul);showToast('Carousel plan dibuat via AI ✓');}
+      else showToast('Gagal simpan','error');
+    }
+    else if(moduleId==='story'){
+      if(!data.tanggal){showToast('Tanggal tidak terdeteksi','error');return;}
+      const dateRow=await sb_insert('story_plan_dates',{tanggal:data.tanggal});
+      if(!dateRow){showToast('Gagal simpan','error');return;}
+      storyPlanDates.push({id:dateRow.id,tanggal:data.tanggal,status:'Draft'});
+      if(data.slides&&data.slides.length){for(let i=0;i<data.slides.length;i++){const r=await sb_insert('story_plan_items',{date_id:dateRow.id,urutan:i+1,isi:data.slides[i]});if(r)storyPlanItems.push({id:r.id,date_id:dateRow.id,urutan:i+1,isi:data.slides[i]});}}
+      if(typeof _spDatesHTML==='function'){const el=document.getElementById('sp-dates');if(el)el.innerHTML=_spDatesHTML();}
+      logActivity('CONTENT','ADD_AI_STORY',data.tanggal);showToast('Story plan dibuat via AI ✓');
+    }
+    else if(moduleId==='voucher'){
+      const row={nama_event:data.nama_event||'',tipe:data.tipe||'',periode_mulai:data.periode_mulai||null,periode_selesai:data.periode_selesai||null,kode:data.kode||'',diskon_persen:data.diskon_persen||0,maks_potongan:data.maks_potongan||null,min_transaksi:data.min_transaksi||0,product_ids:[],notes:data.notes||''};
+      const saved=await sb_saveVoucher(row);
+      if(saved){voucherData.unshift({id:saved.id,...row});if(typeof renderVoucherTab==='function')renderVoucherTab();logActivity('VOUCHER','ADD_AI',data.nama_event);showToast('Voucher dibuat via AI ✓');}
+      else showToast('Gagal simpan','error');
+    }
+    else if(moduleId==='b2b'){
+      const jsData={nama:data.nama||'',category:data.kategori||'',pic:data.pic||'',pos:'',wa:data.wa||'',email:data.email||'',li:'',tier:data.tier||'Standard',status:data.status||'Approached',scope:data.scope||'',notes:data.notes||'',inputDate:toLocalDateISO(new Date())};
+      const row=await sb_insert('partners',_partnerJSToRow(jsData));
+      if(row){partners.push(_partnerRowToJS(row));if(typeof renderPartnerMaster==='function')renderPartnerMaster();logActivity('B2B','ADD_AI',data.nama);showToast('B2B partner ditambah via AI ✓');}
+      else showToast('Gagal simpan','error');
+    }
+    else if(moduleId==='org'){
+      const jsData={nama:data.nama||'',pic:data.pic||'',pos:'',wa:data.wa||'',email:data.email||'',li:'',tier:data.tier||'Standard',status:data.status||'Approached',scope:data.scope||'',notes:data.notes||'',inputDate:toLocalDateISO(new Date())};
+      const row=await sb_insert('org_partners',_orgPartnerJSToRow(jsData));
+      if(row){orgPartners.push(_orgPartnerRowToJS(row));if(typeof renderOrgPartnerMaster==='function')renderOrgPartnerMaster();logActivity('ORG','ADD_AI',data.nama);showToast('Org partner ditambah via AI ✓');}
+      else showToast('Gagal simpan','error');
+    }
+    else if(moduleId==='dashboard'){
+      await _aiConfirm(data.modul||'tickets',data.data||data);
+      return;
+    }
+    document.getElementById('ai-preview-'+moduleId).style.display='none';
+    document.getElementById('ai-input-'+moduleId).value='';
+  }catch(e){
+    showToast('Gagal simpan','error');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy" style="font-size:11px"></i> Simpan';}
+  }
+}
 function showToast(msg){
   const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2500);
