@@ -3379,6 +3379,7 @@ function switchPage(page,el){
 
 function dashboardHTML(){
   return `
+  ${renderAIInputPanel('dashboard','tulis apa saja — AI akan deteksi modulnya. contoh: voucher ramadan diskon 20%, atau buat ticket revisi konten dari Falah','modul tujuan dan semua field relevan','BEM ITB mau workshop MT, PIC Hana, baru dideketin — atau — carousel 5 alasan fresh grad harus daftar MT, posting 3 Juli')}
   <div id="dash-layout" style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start">
     <!-- Kiri: Mini Calendar -->
     <div>
@@ -5580,6 +5581,7 @@ function levelBadge(level){
 function ticketsHTML(){
   return `
   <div class="tkt-stats" id="tkt-stats"></div>
+  ${renderAIInputPanel('tickets','buat design CCA dari Caca, penting, deadline Jumat, untuk Addy','judul, prioritas, deadline, dan assignee','revisi copy landing page dari Falah, medium, minggu depan, untuk Michelle')}
   <div class="card" style="padding:0;overflow:hidden">
     <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:0.5px solid var(--border)">
       <div class="tab-row" style="border:none;margin:0">
@@ -6776,6 +6778,7 @@ function partnershipMasterHTML(){
       <select id="p-ftier" onchange="renderPartnerMaster()"><option value="">Semua tier</option>${PARTNER_TIERS.map(t=>`<option value="${t}">${t}</option>`).join("")}</select>
       <button class="btn btn-sm" onclick="resetPartnerFilter()"><i class="ti ti-refresh"></i></button>
     </div>
+    ${renderAIInputPanel('b2b','PT Tokopedia mau kerjasama webinar, hubungi Budi di 08123456789, baru dideketin','nama perusahaan, PIC, kontak, dan scope','Ruangguru tertarik collab e-learning, PIC Dina 08198765432, udah meeting awal')}
     <div style="overflow-x:auto" id="partner-table-wrap"></div>
     <div class="row-count" id="p-row-count"></div>
   </div>`;
@@ -7337,6 +7340,7 @@ function opMasterHTML(){
       <select id="op-ftier" onchange="renderOrgPartnerMaster()"><option value="">Semua tier</option>${OP_TIERS.map(t=>`<option value="${t}">${t}</option>`).join("")}</select>
       <button class="btn btn-sm" onclick="resetOrgPartnerFilter()"><i class="ti ti-refresh"></i></button>
     </div>
+    ${renderAIInputPanel('org','Himpunan Mahasiswa UI mau workshop MT, PIC Rani, 08198765432, baru dideketin','nama organisasi, PIC, kontak, dan scope','BEM Unpad minta sharing session karir, PIC Dito, udah deal scope seminar')}
     <div style="overflow-x:auto" id="op-table-wrap"></div>
     <div class="row-count" id="op-row-count"></div>
   </div>`;
@@ -14097,6 +14101,7 @@ function _qlRenderChips(prefix){
 /* ── STORY PLAN ─────────────────────────────────────────────────── */
 function storyPlanHTML(){
   return `<div style="padding:12px 14px">
+    ${renderAIInputPanel('story','story 28 Juni: hook dulu, terus pain point, solusi CCA, tutup CTA daftar','tanggal dan isi tiap slide','story 30 Juni: opening testimoni, benefit CCA, harga, link bio')}
     ${_quickLinksHTML('sp',storyPlanLinks,'sp_links_visible')}
     <div style="margin-bottom:14px">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-calendar" style="font-size:13px;color:var(--text-muted)"></i> Kalender Story</div>
@@ -14315,6 +14320,7 @@ async function _spDeleteDate(dateId){
 
 function carouselPlanHTML(){
   return `<div style="padding:12px 14px">
+    ${renderAIInputPanel('carousel','carousel tips lolos MT FMCG buat Falah, posting 25 Juni, awareness','judul, tanggal posting, funnel, dan assignee','carousel perbedaan MT banking vs FMCG, 1 Juli, consideration, buat Michelle')}
     ${_quickLinksHTML('cp',carouselPlanLinks,'cp_links_visible')}
     <div style="margin-bottom:14px">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-calendar" style="font-size:13px;color:var(--text-muted)"></i> Kalender Carousel</div>
@@ -20481,6 +20487,7 @@ function fmtRp(n) {
 
 function voucherHTML() {
   return `
+  ${renderAIInputPanel('voucher','voucher lebaran diskon 30 persen, kode CCC30, berlaku Juli, minimal beli 100 ribu','kode, diskon, periode, dan minimum transaksi','flash sale diskon 20%, kode FLASH20, berlaku hari ini aja, maks potongan 50 ribu')}
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <h2 style="font-size:18px;font-weight:700;margin:0">Voucher</h2>
     <button onclick="openVoucherModal(null)" class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px">
