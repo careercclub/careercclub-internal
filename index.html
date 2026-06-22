@@ -5913,8 +5913,7 @@ function openTktDetail(id){
         ${filesHTML}
         ${linksHTML}
         <div style="display:flex;gap:6px;margin-top:6px">
-          <input type="text" id="tkt-new-link" placeholder="https://..." style="flex:1;height:30px;padding:0 8px;font-size:12px;border:0.5px solid var(--border-md);border-radius:7px;font-family:'DM Sans',sans-serif">
-          <button class="btn btn-sm" style="flex-shrink:0" onclick="addTktLink('${t.id}')"><i class="ti ti-plus"></i> Tambah link</button>
+          <input type="text" id="tkt-new-link" placeholder="https://... (paste langsung tersimpan)" style="flex:1;height:30px;padding:0 8px;font-size:12px;border:0.5px solid var(--border-md);border-radius:7px;font-family:'DM Sans',sans-serif" onpaste="setTimeout(()=>_tktLinkAutoPaste('${t.id}'),50)">
         </div>
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-hint);margin:14px 0 6px">Komentar</div>
       <div>${komHTML}</div>
@@ -6147,6 +6146,19 @@ async function updateTktStatus(id,val){
   }
 }
 
+async function _tktLinkAutoPaste(id){
+  const input=document.getElementById('tkt-new-link');
+  if(!input)return;
+  const url=input.value.trim();
+  if(!url||!url.startsWith('http'))return;
+  const t=tickets.find(x=>_idEq(x.id,id));if(!t)return;
+  t.links=t.links||[];
+  t.links.push(url);
+  await sb_updateTicket(id,t);
+  input.value='';
+  openTktDetail(id);
+  showToast('Link ditambahkan');
+}
 async function addTktLink(id){
   const input=document.getElementById('tkt-new-link');
   if(!input)return;
