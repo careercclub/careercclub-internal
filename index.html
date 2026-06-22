@@ -5215,7 +5215,7 @@ async function _aiParse(moduleId){
     dashboard:`Kamu adalah parser data untuk sistem internal CareerCclub. Tentukan modul tujuan dan ekstrak data dari teks bebas. Kembalikan JSON dengan field: modul (salah satu: "tickets"/"carousel"/"story"/"voucher"/"b2b"/"org"), data (object berisi field relevan untuk modul tersebut). Kembalikan HANYA JSON valid, tanpa penjelasan.`
   };
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:systemPrompts[moduleId]||systemPrompts.dashboard,messages:[{role:'user',content:text}]})});
+    const res=await fetch('/api/ai-parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:systemPrompts[moduleId]||systemPrompts.dashboard,messages:[{role:'user',content:text}]})});
     const d=await res.json();
     const raw=d.content?.[0]?.text||'{}';
     const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
@@ -5255,9 +5255,10 @@ async function _aiConfirm(moduleId,data){
       const tipeObj=tktTypes.find(t=>t.nama===data.tipeNama);
       const reqObj=tktPeople.find(p=>p.nama===data.requesterNama);
       const assignObj=tktPeople.find(p=>p.nama===data.assigneeNama);
-      const t={judul:data.judul||'',deskripsi:data.deskripsi||'',prioritas:data.prioritas||'Med',divisiId:divObj?.id||null,tipeId:tipeObj?.id||null,requesterId:reqObj?.id||null,assignedToIds:assignObj?[assignObj.id]:[],assignedToId:assignObj?.id||null,status:'Todo',deadline:data.deadline||null,source:'AI',cc:[],links:[],files:[],komentar:[],attachments:[],gcal_added:false};
+      const tktNo=nextTicketNo();
+      const t={judul:data.judul||'',deskripsi:data.deskripsi||'',prioritas:data.prioritas||'Med',divisiId:divObj?.id||null,tipeId:tipeObj?.id||null,requesterId:reqObj?.id||null,assignedToIds:assignObj?[assignObj.id]:[],assignedToId:assignObj?.id||null,status:'Todo',deadline:data.deadline||null,source:'AI',cc:[],links:[],files:[],komentar:[],attachments:[],gcal_added:false,ticketNo:tktNo};
       const row=await sb_saveTicket(t);
-      if(row){tickets.unshift(_tktRowToJS(row));renderTickets&&renderTickets();logActivity('TICKETS','ADD_AI',data.judul);showToast('Ticket dibuat via AI ✓');}
+      if(row){const newT=_tktRowToJS(row);tickets.unshift(newT);renderTickets&&renderTickets();logActivity('TICKETS','ADD_AI',data.judul);showToast('Ticket dibuat via AI ✓');}
       else showToast('Gagal simpan','error');
     }
     else if(moduleId==='carousel'){
