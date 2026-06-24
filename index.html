@@ -14427,6 +14427,71 @@ async function _spToggleDone(dateId,checked){
 function _spRenderDates(){const el=document.getElementById('sp-dates');if(el)el.innerHTML=_spDatesHTML();}
 function _spRenderCalendar(){const el=document.getElementById('sp-calendar');if(el)el.innerHTML=_spCalendarHTML();}
 
+function _spBuildDatePicker(selectedDate){
+  const sel=selectedDate||new Date().toISOString().slice(0,10);
+  const [selY,selM,selD]=sel.split('-').map(Number);
+  const year=selY;const month=selM-1;
+  const monthNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=new Date().toISOString().slice(0,10);
+  const statusMap={};
+  storyPlanDates.forEach(d=>{
+    if(!d.tanggal)return;
+    statusMap[d.tanggal]=d.status||'Draft';
+  });
+  const prevM=month===0?11:month-1;const prevY=month===0?year-1:year;
+  const nextM=month===11?0:month+1;const nextY=month===11?year+1:year;
+  const prevDate=`${prevY}-${String(prevM+1).padStart(2,'0')}-01`;
+  const nextDate=`${nextY}-${String(nextM+1).padStart(2,'0')}-01`;
+  let daysHTML='';
+  for(let i=0;i<firstDay;i++)daysHTML+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const st=statusMap[dateStr];
+    const isSelected=dateStr===sel;
+    const isToday=dateStr===today;
+    let bg='transparent';let color='var(--text)';
+    if(isSelected){bg='#0f52ba';color='#fff';}
+    else if(st==='Done'){bg='#EAF3DE';color='#27500A';}
+    else if(st==='Draft'){bg='#FCEBEB';color='#791F1F';}
+    const border=isToday&&!isSelected?'1.5px solid #0f52ba':'none';
+    daysHTML+=`<div onclick="_spPickDate('${dateStr}')" style="aspect-ratio:1;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;background:${bg};color:${color};border:${border};font-weight:${isSelected||isToday?'500':'400'}">${d}</div>`;
+  }
+  return `<div style="border:0.5px solid var(--border-md);border-radius:8px;padding:10px;background:var(--white)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <button onclick="_spNavMonth('${prevDate}')" style="background:none;border:0.5px solid var(--border);border-radius:5px;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-left" style="font-size:10px"></i></button>
+      <span style="font-size:11px;font-weight:500">${monthNames[month]} ${year}</span>
+      <button onclick="_spNavMonth('${nextDate}')" style="background:none;border:0.5px solid var(--border);border-radius:5px;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-right" style="font-size:10px"></i></button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+      ${dayNames.map(d=>`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:2px 0">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${daysHTML}</div>
+    <div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#FCEBEB"></div>Draft</div>
+      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#EAF3DE"></div>Done</div>
+    </div>
+  </div>`;
+}
+
+function _spPickDate(dateStr){
+  const inp=document.getElementById('sp-new-date');
+  if(inp)inp.value=dateStr;
+  const wrap=document.getElementById('sp-date-picker-wrap');
+  if(wrap)wrap.innerHTML=_spBuildDatePicker(dateStr);
+}
+
+function _spNavMonth(firstOfMonth){
+  const wrap=document.getElementById('sp-date-picker-wrap');
+  if(!wrap)return;
+  const inp=document.getElementById('sp-new-date');
+  const currentSel=inp?inp.value:'';
+  wrap.innerHTML=_spBuildDatePicker(firstOfMonth.slice(0,7)+'-01');
+  if(inp)inp.value=currentSel;
+}
+
 let _spModalStoryCount=3;
 function _spOpenAddDateModal(preDate){
   document.querySelectorAll('.sp-date-modal').forEach(e=>e.remove());
@@ -14445,7 +14510,8 @@ function _spOpenAddDateModal(preDate){
     <div style="padding:16px 20px;overflow-y:auto">
       <div class="cust-field editable" style="margin-bottom:12px">
         <div class="cust-field-label">Tanggal *</div>
-        <input type="date" id="sp-new-date" class="cust-field-input" value="${defaultDate}">
+        <div id="sp-date-picker-wrap">${_spBuildDatePicker(defaultDate)}</div>
+        <input type="hidden" id="sp-new-date" value="${defaultDate}">
       </div>
       <div id="sp-modal-stories">${storyInputs}</div>
       <button onclick="_spModalAddStory()" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:4px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah Story</button>
@@ -14623,7 +14689,7 @@ function _cpCardsHTML(){
     groups[key].plans.push(p);
   });
 
-  const sortedKeys=Object.keys(groups).sort((a,b)=>b>a?1:-1);
+  const sortedKeys=Object.keys(groups).sort((a,b)=>a>b?1:-1);
 
   return sortedKeys.map(key=>{
     const {weekStart,plans}=groups[key];
@@ -14646,7 +14712,7 @@ function _cpCardsHTML(){
         ?`<a href="${p.link_brief}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#0f52ba;text-decoration:none;padding:3px 8px;border-radius:5px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:11px"></i> Link Brief <i class="ti ti-external-link" style="font-size:10px;opacity:.7"></i></a><button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="width:22px;height:22px;border:0.5px solid var(--border);border-radius:5px;background:transparent;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center"><i class="ti ti-pencil" style="font-size:10px"></i></button>`
         :`<button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);padding:3px 8px;border-radius:5px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:11px"></i> Tambah link brief</button>`;
 
-      const inlineCal=datePickerOpen?`<div id="cp-inline-cal-${p.id}">${_cpInlineDatePicker(p.id,p.tanggal_posting||new Date().toISOString().slice(0,10))}</div>`:'';
+      const inlineCal='';
 
       return `<div id="cp-card-${p.id}" style="margin-bottom:4px;background:var(--white);border:0.5px solid var(--border);border-left:3px solid ${borderCol};border-radius:0 var(--radius-lg) var(--radius-lg) 0;overflow:hidden">
   <div style="padding:10px 14px">
@@ -14660,7 +14726,7 @@ function _cpCardsHTML(){
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <button onclick="event.stopPropagation();_cpToggleInlineCal('${p.id}')" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;font-family:inherit"><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDt(p.tanggal_posting)||'—'} <i class="ti ti-pencil" style="font-size:10px;opacity:.4"></i></button>
+            <button class="cp-date-trigger" onclick="event.stopPropagation();_cpToggleInlineCal('${p.id}')" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;font-family:inherit"><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDt(p.tanggal_posting)||'—'} <i class="ti ti-pencil" style="font-size:10px;opacity:.4"></i></button>
             <span style="color:var(--border)">·</span>
             <div id="cp-link-wrap-${p.id}" style="display:inline-flex;align-items:center;gap:4px">${linkBriefHTML}</div>
           </div>
@@ -14777,7 +14843,22 @@ async function _cpQuickPickDate(planId, dateStr){
 }
 
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
-function _cpToggleInlineCal(id){if(_cpOpenDatePickers.has(id))_cpOpenDatePickers.delete(id);else{_cpOpenDatePickers.clear();_cpOpenDatePickers.add(id);}const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
+function _cpToggleInlineCal(id){
+  const existing=document.getElementById('cp-date-popup');
+  if(existing){existing.remove();if(existing.dataset.planId===id)return;}
+  const plan=carouselPlans.find(p=>_idEq(p.id,id));
+  if(!plan)return;
+  const triggerBtn=document.querySelector(`#cp-card-${id} .cp-date-trigger`);
+  if(!triggerBtn)return;
+  const rect=triggerBtn.getBoundingClientRect();
+  const popup=document.createElement('div');
+  popup.id='cp-date-popup';
+  popup.dataset.planId=id;
+  popup.style.cssText=`position:fixed;z-index:9999;top:${rect.bottom+4}px;left:${rect.left}px;background:var(--white);border:0.5px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);width:260px`;
+  popup.innerHTML=_cpInlineDatePicker(id,plan.tanggal_posting||new Date().toISOString().slice(0,10));
+  document.body.appendChild(popup);
+  setTimeout(()=>document.addEventListener('click',function _close(e){if(!popup.contains(e.target)&&!triggerBtn.contains(e.target)){popup.remove();document.removeEventListener('click',_close);}},),50);
+}
 function _cpRenderCards(){const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpRenderCalendar(){const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
 async function _cpToggleDone(id,checked){
