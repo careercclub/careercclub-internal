@@ -14181,6 +14181,7 @@ let carouselPlanLinks = [];
 let _cpCalMonth = new Date().getMonth();
 let _cpCalYear = new Date().getFullYear();
 let _cpCollapsed = new Set(); // expanded by default = not in set
+let _cpOpenDatePickers=new Set();
 let _editingCarouselId = null;
 
 let _contentSubTab = 'carousel';
@@ -14612,47 +14613,178 @@ function _cpCalDayClick(dateKey,hasPosts){
 
 function _cpCardsHTML(){
   if(!carouselPlans.length) return `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:12px"><i class="ti ti-layout-columns" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>Belum ada carousel plan. Klik "+ Tambah Plan" untuk mulai.</div>`;
-  return carouselPlans.map(p=>{
-    const isExpanded=_cpCollapsed.has(p.id);
-    const funnel=p.funnel||'—';
-    const status=p.status||'Draft';
-    const fCol=_cpFunnelColors[funnel]||'#6b7280';
-    const fBg=_cpFunnelBg[funnel]||'var(--bg)';
-    const sCol=_cpStatusColors[status]||'var(--text-muted)';
-    const sBg=_cpStatusBg[status]||'var(--bg)';
-    const assignee=tktPeople.find(pe=>_idEq(pe.id,p.assignee_id));
-    const detailHTML=isExpanded?`<div style="padding:8px 12px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">CTA</div><div style="font-size:12px">${p.cta||'—'}</div></div><div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Assignee</div><div style="font-size:12px">${assignee?assignee.nama:'—'}</div></div>${p.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Catatan</div><div style="font-size:12px">${p.notes}</div></div>`:''}</div><div style="padding:8px 14px 12px;display:flex;gap:6px;justify-content:flex-end;border-top:0.5px solid var(--border)"><button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" class="btn btn-sm" style="font-size:11px"><i class="ti ti-edit" style="font-size:11px"></i> Edit</button><button onclick="event.stopPropagation();_cpDeletePlan('${p.id}')" class="btn btn-sm" style="font-size:11px;color:var(--red)"><i class="ti ti-trash" style="font-size:11px"></i> Hapus</button></div>`:'';
-    const borderCol=_cpStatusBorder[status]||'#888780';
-    return `<div id="cp-card-${p.id}" style="margin-bottom:6px;background:var(--white);border:0.5px solid var(--border);border-left:3px solid ${borderCol};border-radius:0 var(--radius-lg) var(--radius-lg) 0;overflow:hidden">
-  <div style="padding:10px 14px;cursor:pointer" onclick="_cpToggleCard('${p.id}')">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
-      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
-        <input type="checkbox" ${status==='Done'?'checked':''} onclick="event.stopPropagation();_cpToggleDone('${p.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11">
-        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:${status==='Done'?'line-through':'none'};color:${status==='Done'?'var(--text-muted)':'var(--text)'}">${p.judul||'Tanpa judul'}</div>
+
+  const groups={};
+  carouselPlans.forEach(p=>{
+    const dateStr=p.tanggal_posting||'9999-99-99';
+    const ws=_cpGetWeekStart(dateStr==='9999-99-99'?new Date().toISOString().slice(0,10):dateStr);
+    const key=ws.toISOString().slice(0,10);
+    if(!groups[key])groups[key]={weekStart:ws,plans:[]};
+    groups[key].plans.push(p);
+  });
+
+  const sortedKeys=Object.keys(groups).sort((a,b)=>b>a?1:-1);
+
+  return sortedKeys.map(key=>{
+    const {weekStart,plans}=groups[key];
+    const label=_cpWeekLabel(weekStart);
+    const end=new Date(weekStart);end.setDate(end.getDate()+6);
+    const ms=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+    const rangeLabel=`${weekStart.getDate()} ${ms[weekStart.getMonth()]} – ${end.getDate()} ${ms[end.getMonth()]}`;
+
+    const cardsHTML=plans.map(p=>{
+      const funnel=p.funnel||'—';
+      const status=p.status||'Draft';
+      const fCol=_cpFunnelColors[funnel]||'#6b7280';
+      const fBg=_cpFunnelBg[funnel]||'var(--bg)';
+      const assignee=tktPeople.find(pe=>_idEq(pe.id,p.assignee_id));
+      const borderCol=_cpStatusBorder[status]||'#888780';
+      const isDone=status==='Done';
+      const datePickerOpen=_cpOpenDatePickers.has(p.id);
+
+      const linkBriefHTML=p.link_brief
+        ?`<a href="${p.link_brief}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#0f52ba;text-decoration:none;padding:3px 8px;border-radius:5px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:11px"></i> Link Brief <i class="ti ti-external-link" style="font-size:10px;opacity:.7"></i></a><button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="width:22px;height:22px;border:0.5px solid var(--border);border-radius:5px;background:transparent;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center"><i class="ti ti-pencil" style="font-size:10px"></i></button>`
+        :`<button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);padding:3px 8px;border-radius:5px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:11px"></i> Tambah link brief</button>`;
+
+      const inlineCal=datePickerOpen?`<div id="cp-inline-cal-${p.id}">${_cpInlineDatePicker(p.id,p.tanggal_posting||new Date().toISOString().slice(0,10))}</div>`:'';
+
+      return `<div id="cp-card-${p.id}" style="margin-bottom:4px;background:var(--white);border:0.5px solid var(--border);border-left:3px solid ${borderCol};border-radius:0 var(--radius-lg) var(--radius-lg) 0;overflow:hidden">
+  <div style="padding:10px 14px">
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <input type="checkbox" ${isDone?'checked':''} onclick="event.stopPropagation();_cpToggleDone('${p.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3b6d11;margin-top:2px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+          <span style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:${isDone?'line-through':'none'};color:${isDone?'var(--text-muted)':'var(--text)'}">${p.judul||'Tanpa judul'}</span>
+          <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:600;flex-shrink:0">${funnel}</span>
+          ${p.cta?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#EEF2FF;color:#3C3489;border:0.5px solid #AFA9EC;font-weight:500;flex-shrink:0">${p.cta}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <button onclick="event.stopPropagation();_cpToggleInlineCal('${p.id}')" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;font-family:inherit"><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDt(p.tanggal_posting)||'—'} <i class="ti ti-pencil" style="font-size:10px;opacity:.4"></i></button>
+            <span style="color:var(--border)">·</span>
+            <div id="cp-link-wrap-${p.id}" style="display:inline-flex;align-items:center;gap:4px">${linkBriefHTML}</div>
+          </div>
+          ${assignee?`<span style="font-size:11px;color:var(--text-muted);flex-shrink:0;white-space:nowrap"><i class="ti ti-user" style="font-size:10px"></i> ${assignee.nama}</span>`:''}
+        </div>
+        ${inlineCal}
       </div>
-      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:600">${funnel}</span>
-        ${p.cta?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--bg);border:0.5px solid var(--border);color:var(--text-muted);font-weight:500">${p.cta}</span>`:''}
-        <i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted)"></i>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-      <i class="ti ti-calendar" style="font-size:11px;color:var(--text-muted)"></i>
-      <span style="font-size:12px;font-weight:500;color:var(--text)">${fmtDt(p.tanggal_posting)||'—'}</span>
-      ${assignee?`<span style="font-size:10px;color:var(--text-hint)">·</span><i class="ti ti-user" style="font-size:11px;color:var(--text-hint)"></i><span style="font-size:11px;color:var(--text-muted)">${assignee.nama}</span>`:''}
-    </div>
-    <div id="cp-link-wrap-${p.id}">
-      ${p.link_brief
-        ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px"><a href="${p.link_brief}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:#0f52ba;text-decoration:none;padding:5px 10px;border-radius:6px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:13px"></i> Link Brief <i class="ti ti-external-link" style="font-size:11px;opacity:.7"></i></a><button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="width:24px;height:24px;border:0.5px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center" title="Ganti link"><i class="ti ti-pencil" style="font-size:11px"></i></button></div>`
-        : `<div style="margin-top:6px"><button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:400;color:var(--text-muted);padding:5px 10px;border-radius:6px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:12px"></i> Tambah link brief</button></div>`
-      }
+      <button onclick="event.stopPropagation();openCarouselPlanModal('${p.id}',null)" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:2px;flex-shrink:0"><i class="ti ti-edit" style="font-size:13px"></i></button>
     </div>
   </div>
-  ${detailHTML}
+</div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:16px">
+  <div style="font-size:11px;font-weight:500;color:var(--text-muted);padding:4px 0;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+    <span>${label} <span style="font-weight:400;color:var(--text-hint)">· ${rangeLabel}</span></span>
+    <span style="flex:1;height:0.5px;background:var(--border)"></span>
+  </div>
+  ${cardsHTML}
 </div>`;
   }).join('');
 }
+function _cpGetWeekStart(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  const day=d.getDay();
+  const diff=d.getDate()-day;
+  return new Date(d.setDate(diff));
+}
+
+function _cpWeekLabel(weekStart){
+  const end=new Date(weekStart);
+  end.setDate(end.getDate()+6);
+  const ms=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  const now=new Date();
+  const thisWeek=_cpGetWeekStart(now.toISOString().slice(0,10));
+  const lastWeek=new Date(thisWeek);lastWeek.setDate(lastWeek.getDate()-7);
+  const ws=weekStart.getTime();
+  if(ws===thisWeek.getTime())return'Minggu ini';
+  if(ws===lastWeek.getTime())return'Minggu lalu';
+  const diff=Math.round((thisWeek.getTime()-ws)/(7*86400000));
+  if(diff>0)return`${diff} minggu lalu`;
+  if(diff<0)return`${Math.abs(diff)} minggu lagi`;
+  return`${weekStart.getDate()} ${ms[weekStart.getMonth()]}`;
+}
+
+function _cpInlineDatePicker(planId, selectedDate){
+  const sel=selectedDate||new Date().toISOString().slice(0,10);
+  const [selY,selM]=sel.split('-').map(Number);
+  const year=selY;const month=selM-1;
+  const monthNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=new Date().toISOString().slice(0,10);
+  const statusMap={};
+  carouselPlans.forEach(p=>{
+    if(!p.tanggal_posting||_idEq(p.id,planId))return;
+    const d=p.tanggal_posting.slice(0,10);
+    if(!statusMap[d])statusMap[d]=[];
+    statusMap[d].push(p.status||'Draft');
+  });
+  const prevM=month===0?11:month-1;const prevY=month===0?year-1:year;
+  const nextM=month===11?0:month+1;const nextY=month===11?year+1:year;
+  const prevDate=`${prevY}-${String(prevM+1).padStart(2,'0')}-01`;
+  const nextDate=`${nextY}-${String(nextM+1).padStart(2,'0')}-01`;
+  let daysHTML='';
+  for(let i=0;i<firstDay;i++)daysHTML+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const statuses=statusMap[dateStr]||[];
+    const isSelected=dateStr===sel;
+    const isToday=dateStr===today;
+    const draftCount=statuses.filter(s=>s==='Draft').length;
+    const doneCount=statuses.filter(s=>s==='Done').length;
+    const total=statuses.length;
+    let bg='transparent';let color='var(--text)';let extraHTML='';
+    if(isSelected){bg='#0f52ba';color='#fff';}
+    else if(total>=3){bg='#E6F1FB';color='#0C447C';extraHTML=`<span style="position:absolute;top:1px;right:2px;font-size:9px;font-weight:600;color:#0C447C">${total}</span>`;}
+    else if(draftCount>0&&doneCount>0){extraHTML=`<span style="position:absolute;inset:0;border-radius:5px;overflow:hidden"><span style="position:absolute;top:0;left:0;width:50%;height:100%;background:#FCEBEB"></span><span style="position:absolute;top:0;right:0;width:50%;height:100%;background:#EAF3DE"></span></span>`;color='#333';}
+    else if(draftCount>0){bg='#FCEBEB';color='#791F1F';}
+    else if(doneCount>0){bg='#EAF3DE';color='#27500A';}
+    const border=isToday&&!isSelected?'1.5px solid #0f52ba':'none';
+    daysHTML+=`<div onclick="event.stopPropagation();_cpQuickPickDate('${planId}','${dateStr}')" style="aspect-ratio:1;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;background:${bg};color:${color};border:${border};position:relative;font-weight:${isSelected||isToday?'500':'400'}">${extraHTML}<span style="position:relative;z-index:1">${d}</span></div>`;
+  }
+  return `<div onclick="event.stopPropagation()" style="margin-top:8px;border:0.5px solid var(--border-md);border-radius:8px;padding:10px;background:var(--white)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <button onclick="event.stopPropagation();_cpNavInlineMonth('${planId}','${prevDate}','${sel}')" style="background:none;border:0.5px solid var(--border);border-radius:5px;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-left" style="font-size:10px"></i></button>
+      <span style="font-size:11px;font-weight:500">${monthNames[month]} ${year}</span>
+      <button onclick="event.stopPropagation();_cpNavInlineMonth('${planId}','${nextDate}','${sel}')" style="background:none;border:0.5px solid var(--border);border-radius:5px;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-right" style="font-size:10px"></i></button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+      ${dayNames.map(d=>`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:2px 0">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${daysHTML}</div>
+    <div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#FCEBEB"></div>Draft</div>
+      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#EAF3DE"></div>Done</div>
+      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#E6F1FB"></div>3+</div>
+    </div>
+  </div>`;
+}
+
+function _cpNavInlineMonth(planId, firstOfMonth, currentSel){
+  const wrap=document.getElementById(`cp-inline-cal-${planId}`);
+  if(!wrap)return;
+  const [y,m]=firstOfMonth.split('-').map(Number);
+  const tempSel=currentSel||new Date().toISOString().slice(0,10);
+  const selWithNewMonth=`${y}-${String(m).padStart(2,'0')}-${tempSel.slice(8)}`;
+  wrap.innerHTML=_cpInlineDatePicker(planId, `${y}-${String(m).padStart(2,'0')}-01`);
+}
+
+async function _cpQuickPickDate(planId, dateStr){
+  const ok=await sb_update('carousel_plans',planId,{tanggal_posting:dateStr});
+  if(!ok){showToast('Gagal update tanggal','error');return;}
+  const plan=carouselPlans.find(p=>_idEq(p.id,planId));
+  if(plan)plan.tanggal_posting=dateStr;
+  _cpOpenDatePickers.delete(planId);
+  carouselPlans.sort((a,b)=>(a.tanggal_posting||'')>(b.tanggal_posting||'')?1:-1);
+  _cpRenderCards();_cpRenderCalendar();
+  showToast('Tanggal diperbarui ✓');
+}
+
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
+function _cpToggleInlineCal(id){if(_cpOpenDatePickers.has(id))_cpOpenDatePickers.delete(id);else{_cpOpenDatePickers.clear();_cpOpenDatePickers.add(id);}const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpRenderCards(){const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpRenderCalendar(){const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
 async function _cpToggleDone(id,checked){
@@ -14672,6 +14804,159 @@ async function _cpDeletePlan(id){
   _cpCollapsed.delete(id);
   _cpRenderCards();_cpRenderCalendar();
   showToast('Plan dihapus');
+}
+
+function _cpBuildDatePicker(selectedDate){
+  const sel=selectedDate||new Date().toISOString().slice(0,10);
+  const [selY,selM,selD]=sel.split('-').map(Number);
+  const viewDate=new Date(selY,selM-1,1);
+  const year=viewDate.getFullYear();
+  const month=viewDate.getMonth();
+  const monthNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=new Date().toISOString().slice(0,10);
+
+  const statusMap={};
+  carouselPlans.forEach(p=>{
+    if(!p.tanggal_posting)return;
+    const d=p.tanggal_posting.slice(0,10);
+    if(!statusMap[d])statusMap[d]=[];
+    statusMap[d].push(p.status||'Draft');
+  });
+
+  const prevM=month===0?11:month-1;
+  const prevY=month===0?year-1:year;
+  const nextM=month===11?0:month+1;
+  const nextY=month===11?year+1:year;
+  const prevDate=`${prevY}-${String(prevM+1).padStart(2,'0')}-01`;
+  const nextDate=`${nextY}-${String(nextM+1).padStart(2,'0')}-01`;
+
+  let daysHTML='';
+  for(let i=0;i<firstDay;i++) daysHTML+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const statuses=statusMap[dateStr]||[];
+    const isSelected=dateStr===sel;
+    const isToday=dateStr===today;
+    const draftCount=statuses.filter(s=>s==='Draft').length;
+    const doneCount=statuses.filter(s=>s==='Done').length;
+    const total=statuses.length;
+
+    let bg='transparent';
+    let color='var(--text)';
+    let extraHTML='';
+
+    if(isSelected){
+      bg='#0f52ba';color='#fff';
+    } else if(total>=3){
+      bg='#E6F1FB';color='#0C447C';
+      extraHTML=`<span style="position:absolute;top:1px;right:2px;font-size:9px;font-weight:600;color:#0C447C">${total}</span>`;
+    } else if(draftCount>0&&doneCount>0){
+      extraHTML=`<span style="position:absolute;inset:0;border-radius:6px;overflow:hidden"><span style="position:absolute;top:0;left:0;width:50%;height:100%;background:#FCEBEB"></span><span style="position:absolute;top:0;right:0;width:50%;height:100%;background:#EAF3DE"></span></span>`;
+      color='#444441';
+    } else if(draftCount>0){
+      bg='#FCEBEB';color='#791F1F';
+    } else if(doneCount>0){
+      bg='#EAF3DE';color='#27500A';
+    }
+
+    const border=isToday&&!isSelected?'1.5px solid #0f52ba':'none';
+    daysHTML+=`<div onclick="_cpPickDate('${dateStr}')" style="aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;background:${bg};color:${color};border:${border};position:relative;font-weight:${isSelected||isToday?'500':'400'}">${extraHTML}<span style="position:relative;z-index:1">${d}</span></div>`;
+  }
+
+  return `<div style="border:0.5px solid var(--border-md);border-radius:8px;padding:10px;background:var(--white)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="_cpNavMonth('${prevDate}')" style="background:none;border:0.5px solid var(--border);border-radius:6px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-left" style="font-size:11px"></i></button>
+      <span style="font-size:12px;font-weight:500">${monthNames[month]} ${year}</span>
+      <button onclick="_cpNavMonth('${nextDate}')" style="background:none;border:0.5px solid var(--border);border-radius:6px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-right" style="font-size:11px"></i></button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
+      ${dayNames.map(d=>`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:2px 0">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+      ${daysHTML}
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#FCEBEB;border:0.5px solid #F09595"></div> Draft</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#EAF3DE;border:0.5px solid #97C459"></div> Done</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#E6F1FB;border:0.5px solid #85B7EB"></div> 3+</div>
+    </div>
+  </div>`;
+}
+
+function _cpPickDate(dateStr){
+  const inp=document.getElementById('cp-form-tanggal');
+  if(inp)inp.value=dateStr;
+  const wrap=document.getElementById('cp-date-picker-wrap');
+  if(wrap)wrap.innerHTML=_cpBuildDatePicker(dateStr);
+}
+
+function _cpNavMonth(firstOfMonth){
+  const inp=document.getElementById('cp-form-tanggal');
+  const currentSel=inp?inp.value:'';
+  const wrap=document.getElementById('cp-date-picker-wrap');
+  if(!wrap)return;
+  const [y,m]=firstOfMonth.split('-').map(Number);
+  const tempDate=new Date(y,m-1,1);
+  const year=tempDate.getFullYear();
+  const month=tempDate.getMonth();
+  const monthNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const dayNames=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=new Date().toISOString().slice(0,10);
+  const statusMap={};
+  carouselPlans.forEach(p=>{
+    if(!p.tanggal_posting)return;
+    const d=p.tanggal_posting.slice(0,10);
+    if(!statusMap[d])statusMap[d]=[];
+    statusMap[d].push(p.status||'Draft');
+  });
+  const prevM=month===0?11:month-1;
+  const prevY=month===0?year-1:year;
+  const nextM=month===11?0:month+1;
+  const nextY=month===11?year+1:year;
+  const prevDate=`${prevY}-${String(prevM+1).padStart(2,'0')}-01`;
+  const nextDate=`${nextY}-${String(nextM+1).padStart(2,'0')}-01`;
+  let daysHTML='';
+  for(let i=0;i<firstDay;i++) daysHTML+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const statuses=statusMap[dateStr]||[];
+    const isSelected=dateStr===currentSel;
+    const isToday=dateStr===today;
+    const draftCount=statuses.filter(s=>s==='Draft').length;
+    const doneCount=statuses.filter(s=>s==='Done').length;
+    const total=statuses.length;
+    let bg='transparent';let color='var(--text)';let extraHTML='';
+    if(isSelected){bg='#0f52ba';color='#fff';}
+    else if(total>=3){bg='#E6F1FB';color='#0C447C';extraHTML=`<span style="position:absolute;top:1px;right:2px;font-size:9px;font-weight:600;color:#0C447C">${total}</span>`;}
+    else if(draftCount>0&&doneCount>0){extraHTML=`<span style="position:absolute;inset:0;border-radius:6px;overflow:hidden"><span style="position:absolute;top:0;left:0;width:50%;height:100%;background:#FCEBEB"></span><span style="position:absolute;top:0;right:0;width:50%;height:100%;background:#EAF3DE"></span></span>`;color='#444441';}
+    else if(draftCount>0){bg='#FCEBEB';color='#791F1F';}
+    else if(doneCount>0){bg='#EAF3DE';color='#27500A';}
+    const border=isToday&&!isSelected?'1.5px solid #0f52ba':'none';
+    daysHTML+=`<div onclick="_cpPickDate('${dateStr}')" style="aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;background:${bg};color:${color};border:${border};position:relative;font-weight:${isSelected||isToday?'500':'400'}">${extraHTML}<span style="position:relative;z-index:1">${d}</span></div>`;
+  }
+  wrap.innerHTML=`<div style="border:0.5px solid var(--border-md);border-radius:8px;padding:10px;background:var(--white)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="_cpNavMonth('${prevDate}')" style="background:none;border:0.5px solid var(--border);border-radius:6px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-left" style="font-size:11px"></i></button>
+      <span style="font-size:12px;font-weight:500">${monthNames[month]} ${year}</span>
+      <button onclick="_cpNavMonth('${nextDate}')" style="background:none;border:0.5px solid var(--border);border-radius:6px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="ti ti-chevron-right" style="font-size:11px"></i></button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
+      ${dayNames.map(d=>`<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:2px 0">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+      ${daysHTML}
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#FCEBEB;border:0.5px solid #F09595"></div> Draft</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#EAF3DE;border:0.5px solid #97C459"></div> Done</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:3px;background:#E6F1FB;border:0.5px solid #85B7EB"></div> 3+</div>
+    </div>
+  </div>`;
 }
 
 /* Carousel Plan Add/Edit Modal */
@@ -14699,15 +14984,14 @@ function openCarouselPlanModal(id,preDate){
         <div class="cust-field-label">Judul *</div>
         <input id="cp-form-judul" class="cust-field-input" placeholder="Judul konten carousel..." value="${(plan?.judul||'').replace(/"/g,'&quot;')}">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="cust-field editable">
-          <div class="cust-field-label">Tanggal Posting</div>
-          <input type="date" id="cp-form-tanggal" class="cust-field-input" value="${defaultDate}">
-        </div>
-        <div class="cust-field editable">
-          <div class="cust-field-label">Funnel</div>
-          ${buildDropdown({id:'cp-form-funnel',options:['TOFU','MOFU','BOFU'],value:plan?.funnel||'TOFU'})}
-        </div>
+      <div class="cust-field editable">
+        <div class="cust-field-label">Tanggal Posting</div>
+        <div id="cp-date-picker-wrap">${_cpBuildDatePicker(defaultDate)}</div>
+        <input type="hidden" id="cp-form-tanggal" value="${defaultDate}">
+      </div>
+      <div class="cust-field editable">
+        <div class="cust-field-label">Funnel</div>
+        ${buildDropdown({id:'cp-form-funnel',options:['TOFU','MOFU','BOFU'],value:plan?.funnel||'TOFU'})}
       </div>
       <div class="cust-field editable">
         <div class="cust-field-label">CTA</div>
