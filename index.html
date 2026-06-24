@@ -30,7 +30,7 @@
   --teal-bg:#e1f5ee;--teal:#0f6e56;--coral-bg:#faece7;--coral:#993c1d;
   --pink-bg:#fbeaf0;--pink:#993556;--radius:10px;--radius-lg:14px;
 }
-body{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;overscroll-behavior:none}
 .ci-search-dropdown{position:relative;display:inline-block;width:100%}
 .ci-search-dropdown input{width:100%;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white);cursor:pointer}
 .ci-search-dropdown .ci-dd-list{position:absolute;top:100%;left:0;right:0;background:var(--white);border:0.5px solid var(--border-md);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:999;max-height:240px;overflow-y:auto;display:none}
@@ -3740,8 +3740,12 @@ async function initCRM(){
 }
 function renderCRMStats(){
   const el=document.getElementById("crm-stats");if(!el)return;
-  const totalBuyers=buyers.length,
-    totalTransaksi=buyers.reduce((sum,b)=>sum+(b.riwayat&&b.riwayat.length?b.riwayat.length:1),0),
+  const totalBuyers=buyers.filter(b=>(b.riwayat||[]).some(r=>r.paymentStatus==='SUCCESS'||b.paymentStatus==='SUCCESS')).length,
+    totalTransaksi=buyers.reduce((sum,b)=>{
+      const riwayat=b.riwayat||[];
+      const successCount=riwayat.filter(r=>r.paymentStatus==='SUCCESS').length;
+      return sum+(successCount||(b.paymentStatus==='SUCCESS'?1:0));
+    },0),
     belumPool=buyers.filter(b=>!b.talentPool).length,
     aktif=buyers.filter(b=>b.status!=="Belum diblast"&&!b.status.includes("convert")).length,
     convert=buyers.filter(b=>b.status.includes("convert")).length;
@@ -14628,16 +14632,13 @@ function _cpCardsHTML(){
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
         <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${fBg};color:${fCol};font-weight:600">${funnel}</span>
-        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${sBg};color:${sCol};font-weight:500">${status}</span>
+        ${p.cta?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--bg);border:0.5px solid var(--border);color:var(--text-muted);font-weight:500">${p.cta}</span>`:''}
         <i class="ti ti-chevron-${isExpanded?'up':'down'}" style="font-size:12px;color:var(--text-muted)"></i>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-      <i class="ti ti-calendar" style="font-size:11px;color:var(--text-hint)"></i>
-      <span style="font-size:11px;color:var(--text-muted)">${fmtDt(p.tanggal_posting)||'—'}</span>
-      <span style="font-size:10px;color:var(--text-hint)">·</span>
-      <i class="ti ti-layout-columns" style="font-size:11px;color:var(--text-hint)"></i>
-      <span style="font-size:11px;color:var(--text-muted)">Carousel</span>
+      <i class="ti ti-calendar" style="font-size:11px;color:var(--text-muted)"></i>
+      <span style="font-size:12px;font-weight:500;color:var(--text)">${fmtDt(p.tanggal_posting)||'—'}</span>
       ${assignee?`<span style="font-size:10px;color:var(--text-hint)">·</span><i class="ti ti-user" style="font-size:11px;color:var(--text-hint)"></i><span style="font-size:11px;color:var(--text-muted)">${assignee.nama}</span>`:''}
     </div>
     <div id="cp-link-wrap-${p.id}">
