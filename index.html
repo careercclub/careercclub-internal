@@ -15134,7 +15134,7 @@ async function _cpDeletePlan(id){
   if(!await showConfirmDelete('Hapus carousel plan ini?','Data akan dihapus permanen.'))return;
   await sb_delete('carousel_plans',id);
   carouselPlans=carouselPlans.filter(p=>!_idEq(p.id,id));
-  closeCPModal();
+  document.querySelectorAll('.cp-plan-modal').forEach(e=>e.remove());
   _cpRenderCards();_cpRenderCalendar();
   logActivity('CONTENT','DELETE_CAROUSEL_PLAN',id);
   showToast('Carousel plan dihapus');
