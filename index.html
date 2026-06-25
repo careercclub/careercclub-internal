@@ -14855,9 +14855,9 @@ async function _cpQuickPickDate(planId, dateStr){
 
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpToggleWeek(key){
-  if(!window._cpCollapsedWeeks)window._cpCollapsedWeeks=new Set();
-  if(window._cpCollapsedWeeks.has(key))window._cpCollapsedWeeks.delete(key);
-  else window._cpCollapsedWeeks.add(key);
+  if(!_cpCollapsedWeeks)_cpCollapsedWeeks=new Set();
+  if(_cpCollapsedWeeks.has(key))_cpCollapsedWeeks.delete(key);
+  else _cpCollapsedWeeks.add(key);
   _cpRenderCards();
 }
 function _cpToggleInlineCal(id){
