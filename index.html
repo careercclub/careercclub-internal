@@ -15113,7 +15113,7 @@ function openCarouselPlanModal(id,preDate){
         </div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border);flex-shrink:0">
-      ${editingPlanId?`<button onclick="_cpDeletePlan('${editingPlanId}')" class="btn btn-sm btn-danger" style="margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>`:''}
+      ${id?`<button onclick="_cpDeletePlan('${id}')" class="btn btn-sm btn-danger" style="margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>`:''}
       <button onclick="closeCPModal()" class="btn btn-sm">Batal</button>
       <button onclick="_cpSavePlan()" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Simpan</button>
     </div>
