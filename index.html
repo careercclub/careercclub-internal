@@ -14693,7 +14693,7 @@ function _cpCardsHTML(){
   const sortedKeys=Object.keys(groups).sort((a,b)=>a>b?1:-1);
 
   const currentWeekKey=_cpGetWeekStart(new Date().toISOString().slice(0,10)).toISOString().slice(0,10);
-  if(!_cpCollapsedWeeks)window._cpCollapsedWeeks=new Set(sortedKeys.filter(k=>k!==currentWeekKey));
+  if(!_cpCollapsedWeeks)_cpCollapsedWeeks=new Set(sortedKeys.filter(k=>k!==currentWeekKey));
 
   return sortedKeys.map(key=>{
     const {weekStart,plans}=groups[key];
@@ -14701,7 +14701,7 @@ function _cpCardsHTML(){
     const end=new Date(weekStart);end.setDate(end.getDate()+6);
     const ms=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
     const rangeLabel=`${weekStart.getDate()} ${ms[weekStart.getMonth()]} – ${end.getDate()} ${ms[end.getMonth()]}`;
-    const isCollapsed=window._cpCollapsedWeeks&&window._cpCollapsedWeeks.has(key);
+    const isCollapsed=_cpCollapsedWeeks&&_cpCollapsedWeeks.has(key);
     const doneCount=plans.filter(p=>p.status==='Done').length;
     const draftCount=plans.length-doneCount;
 
