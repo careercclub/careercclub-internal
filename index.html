@@ -14171,6 +14171,7 @@ let kolList = [];
 let storyPlanLinks = [];
 let storyPlanDates = [];
 let storyPlanItems = [];
+let _spCollapsedWeeks = null;
 let _spCalMonth = new Date().getMonth();
 let _spCalYear = new Date().getFullYear();
 let _spCollapsed = new Set();
@@ -14385,14 +14386,39 @@ function _spCalDayClick(dateKey,dateId,hasPosts){
 
 function _spDatesHTML(){
   if(!storyPlanDates.length) return `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:12px"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.4"></i>Belum ada jadwal. Klik "+ Tambah Tanggal" untuk mulai.</div>`;
-  return storyPlanDates.map(d=>{
-    const items=storyPlanItems.filter(i=>i.date_id===d.id).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
-    const isCollapsed=_spCollapsed.has(d.id);
-    const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px" id="sp-item-row-${item.id}"><span style="width:14px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.isi||'').replace(/"/g,'&quot;')}" style="flex:1;height:26px;padding:0 7px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
-    const spBorderCol=(d.status||'Draft')==='Done'?'#3B6D11':'#888780';
-    const spStatusBg=(d.status||'Draft')==='Done'?'#d1fae5':'var(--bg)';
-    const spStatusCol=(d.status||'Draft')==='Done'?'#3b6d11':'var(--text-muted)';
-    return `<div id="sp-date-${d.id}" style="margin-bottom:6px;background:var(--white);border:0.5px solid var(--border);border-left:3px solid ${spBorderCol};border-radius:0 var(--radius-lg) var(--radius-lg) 0;overflow:hidden">
+
+  const groups={};
+  storyPlanDates.forEach(d=>{
+    const ws=_spGetWeekStart(d.tanggal||new Date().toISOString().slice(0,10));
+    const key=ws.toISOString().slice(0,10);
+    if(!groups[key])groups[key]={weekStart:ws,dates:[]};
+    groups[key].dates.push(d);
+  });
+
+  const sortedKeys=Object.keys(groups).sort((a,b)=>a>b?1:-1);
+  const currentWeekKey=_spGetWeekStart(new Date().toISOString().slice(0,10)).toISOString().slice(0,10);
+  if(!_spCollapsedWeeks)_spCollapsedWeeks=new Set(sortedKeys.filter(k=>k!==currentWeekKey));
+
+  return sortedKeys.map(key=>{
+    const {weekStart,dates}=groups[key];
+    const label=_spWeekLabel(weekStart);
+    const end=new Date(weekStart);end.setDate(end.getDate()+6);
+    const ms=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+    const rangeLabel=`${weekStart.getDate()} ${ms[weekStart.getMonth()]} – ${end.getDate()} ${ms[end.getMonth()]}`;
+    const isWeekCollapsed=_spCollapsedWeeks&&_spCollapsedWeeks.has(key);
+    const doneCount=dates.filter(d=>(d.status||'Draft')==='Done').length;
+    const draftCount=dates.length-doneCount;
+
+    const badgesHTML=isWeekCollapsed?`<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${draftCount>0?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#FCEBEB;color:#791F1F;font-weight:500">${draftCount} draft</span>`:''} ${doneCount>0?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#EAF3DE;color:#27500A;font-weight:500">${doneCount} done</span>`:''}</div>`:'';
+
+    const datesHTML=isWeekCollapsed?'':dates.map(d=>{
+      const items=storyPlanItems.filter(i=>i.date_id===d.id).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
+      const isCollapsed=_spCollapsed.has(d.id);
+      const itemsHTML=items.map((item,idx)=>`<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px" id="sp-item-row-${item.id}"><span style="width:14px;flex-shrink:0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${idx+1}</span><input value="${(item.isi||'').replace(/"/g,'&quot;')}" style="flex:1;height:26px;padding:0 7px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--bg)" onblur="_spUpdateItem('${item.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur()}"><button onclick="_spDeleteItem('${item.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus story"><i class="ti ti-trash" style="font-size:12px"></i></button></div>`).join('');
+      const spBorderCol=(d.status||'Draft')==='Done'?'#3B6D11':'#888780';
+      const spStatusBg=(d.status||'Draft')==='Done'?'#d1fae5':'var(--bg)';
+      const spStatusCol=(d.status||'Draft')==='Done'?'#3b6d11':'var(--text-muted)';
+      return `<div id="sp-date-${d.id}" style="margin-bottom:6px;background:var(--white);border:0.5px solid var(--border);border-left:3px solid ${spBorderCol};border-radius:0 var(--radius-lg) var(--radius-lg) 0;overflow:hidden">
   <div style="padding:10px 14px;cursor:pointer" onclick="_spToggleDateCard('${d.id}')">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
       <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
@@ -14401,7 +14427,7 @@ function _spDatesHTML(){
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
         <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#e8f0fc;color:#185FA5;font-weight:500">${items.length} story</span>
-        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${spStatusBg};color:${spStatusCol};font-weight:500">${d.status||'Draft'}</span>
+        <button onclick="event.stopPropagation();_spDeleteDate('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Hapus tanggal"><i class="ti ti-trash" style="font-size:13px"></i></button>
         <i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:12px;color:var(--text-muted)"></i>
       </div>
     </div>
@@ -14411,7 +14437,20 @@ function _spDatesHTML(){
       ${(d.status||'Draft')==='Done'?`<span style="font-size:10px;color:var(--text-hint)">·</span><span style="font-size:11px;color:#3b6d11;font-weight:500">Selesai diposting</span>`:''}
     </div>
   </div>
-  <div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:8px 12px;border-top:0.5px solid var(--border)"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div></div>`;
+  <div id="sp-date-body-${d.id}" style="display:${isCollapsed?'none':'block'};padding:8px 12px;border-top:0.5px solid var(--border)"><div id="sp-items-${d.id}">${itemsHTML||'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Belum ada story. Klik "+ Tambah story".</div>'}</div><button onclick="_spAddItem('${d.id}')" style="font-size:11px;color:#0f52ba;background:none;border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px;margin-top:2px"><i class="ti ti-plus" style="font-size:11px"></i> Tambah story</button></div>
+</div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:6px">
+  <div data-sp-week-key="${key}" onclick="event.stopPropagation();_spToggleWeek(this.dataset.spWeekKey)" style="display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:${isWeekCollapsed?'0':'4px'};border:0.5px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;user-select:none">
+    <i class="ti ti-chevron-${isWeekCollapsed?'right':'down'}" style="font-size:11px;color:var(--text-muted);flex-shrink:0"></i>
+    <span style="font-size:12px;font-weight:500;color:var(--text);flex-shrink:0">${label}</span>
+    <span style="font-size:11px;color:var(--text-muted);flex-shrink:0">${rangeLabel}</span>
+    <span style="flex:1"></span>
+    ${badgesHTML}
+  </div>
+  ${datesHTML}
+</div>`;
   }).join('');
 }
 function _spToggleDateCard(dateId){if(_spCollapsed.has(dateId))_spCollapsed.delete(dateId);else _spCollapsed.add(dateId);_spRenderDates();}
