@@ -14691,14 +14691,20 @@ function _cpCardsHTML(){
 
   const sortedKeys=Object.keys(groups).sort((a,b)=>a>b?1:-1);
 
+  const currentWeekKey=_cpGetWeekStart(new Date().toISOString().slice(0,10)).toISOString().slice(0,10);
+  if(!_cpCollapsedWeeks)window._cpCollapsedWeeks=new Set(sortedKeys.filter(k=>k!==currentWeekKey));
+
   return sortedKeys.map(key=>{
     const {weekStart,plans}=groups[key];
     const label=_cpWeekLabel(weekStart);
     const end=new Date(weekStart);end.setDate(end.getDate()+6);
     const ms=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
     const rangeLabel=`${weekStart.getDate()} ${ms[weekStart.getMonth()]} – ${end.getDate()} ${ms[end.getMonth()]}`;
+    const isCollapsed=window._cpCollapsedWeeks&&window._cpCollapsedWeeks.has(key);
+    const doneCount=plans.filter(p=>p.status==='Done').length;
+    const draftCount=plans.length-doneCount;
 
-    const cardsHTML=plans.map(p=>{
+    const cardsHTML=isCollapsed?'':(plans.map(p=>{
       const funnel=p.funnel||'—';
       const status=p.status||'Draft';
       const fCol=_cpFunnelColors[funnel]||'#6b7280';
@@ -14738,14 +14744,16 @@ function _cpCardsHTML(){
     </div>
   </div>
 </div>`;
-    }).join('');
+    }).join(''));
 
-    return `<div style="margin-bottom:16px">
-  <div style="font-size:11px;font-weight:500;color:var(--text-muted);padding:4px 0;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+    return `<div style="margin-bottom:12px">
+  <div onclick="_cpToggleWeek('${key}')" style="font-size:11px;font-weight:500;color:var(--text-muted);padding:6px 8px;margin-bottom:${isCollapsed?'0':'6px'};display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;user-select:none" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='transparent'">
+    <i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:11px;flex-shrink:0"></i>
     <span>${label} <span style="font-weight:400;color:var(--text-hint)">· ${rangeLabel}</span></span>
+    ${isCollapsed?`<span style="font-size:10px;color:var(--text-hint);margin-left:2px">${draftCount>0?`${draftCount} draft`:''}${draftCount>0&&doneCount>0?' · ':''}${doneCount>0?`${doneCount} done`:''}</span>`:''}
     <span style="flex:1;height:0.5px;background:var(--border)"></span>
   </div>
-  ${cardsHTML}
+  ${isCollapsed?'':cardsHTML}
 </div>`;
   }).join('');
 }
@@ -14843,6 +14851,12 @@ async function _cpQuickPickDate(planId, dateStr){
 }
 
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
+function _cpToggleWeek(key){
+  if(!window._cpCollapsedWeeks)window._cpCollapsedWeeks=new Set();
+  if(window._cpCollapsedWeeks.has(key))window._cpCollapsedWeeks.delete(key);
+  else window._cpCollapsedWeeks.add(key);
+  _cpRenderCards();
+}
 function _cpToggleInlineCal(id){
   document.querySelectorAll('.cp-date-modal').forEach(e=>e.remove());
   const plan=carouselPlans.find(p=>_idEq(p.id,id));
