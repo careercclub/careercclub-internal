@@ -14748,7 +14748,7 @@ function _cpCardsHTML(){
     }).join(''));
 
     return `<div style="margin-bottom:12px">
-  <div onclick="_cpToggleWeek('${key}')" style="font-size:11px;font-weight:500;color:var(--text-muted);padding:6px 8px;margin-bottom:${isCollapsed?'0':'6px'};display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;user-select:none" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='transparent'">
+  <div data-week-key="${key}" onclick="event.stopPropagation();_cpToggleWeek(this.dataset.weekKey)" style="font-size:11px;font-weight:500;color:var(--text-muted);padding:6px 8px;margin-bottom:${isCollapsed?'0':'6px'};display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;user-select:none" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='transparent'">
     <i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:11px;flex-shrink:0"></i>
     <span>${label} <span style="font-weight:400;color:var(--text-hint)">· ${rangeLabel}</span></span>
     ${isCollapsed?`<span style="font-size:10px;color:var(--text-hint);margin-left:2px">${draftCount>0?`${draftCount} draft`:''}${draftCount>0&&doneCount>0?' · ':''}${doneCount>0?`${doneCount} done`:''}</span>`:''}
