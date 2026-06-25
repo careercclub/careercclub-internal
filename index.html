@@ -14453,6 +14453,29 @@ function _spDatesHTML(){
 </div>`;
   }).join('');
 }
+function _spGetWeekStart(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  const day=d.getDay();
+  const diff=d.getDate()-(day===0?6:day-1);
+  return new Date(d.setDate(diff));
+}
+
+function _spWeekLabel(weekStart){
+  const monthNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const firstOfMonth=new Date(weekStart.getFullYear(),weekStart.getMonth(),1);
+  const firstWeekStart=_spGetWeekStart(firstOfMonth.toISOString().slice(0,10));
+  const diffMs=weekStart.getTime()-firstWeekStart.getTime();
+  const weekNum=Math.floor(diffMs/(7*86400000))+1;
+  return`Minggu ${weekNum} ${monthNames[weekStart.getMonth()]}`;
+}
+
+function _spToggleWeek(key){
+  if(!_spCollapsedWeeks)_spCollapsedWeeks=new Set();
+  if(_spCollapsedWeeks.has(key))_spCollapsedWeeks.delete(key);
+  else _spCollapsedWeeks.add(key);
+  _spRenderDates();
+}
+
 function _spToggleDateCard(dateId){if(_spCollapsed.has(dateId))_spCollapsed.delete(dateId);else _spCollapsed.add(dateId);_spRenderDates();}
 async function _spToggleDone(dateId,checked){
   const newStatus=checked?'Done':'Draft';
