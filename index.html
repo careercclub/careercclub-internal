@@ -15113,7 +15113,8 @@ function openCarouselPlanModal(id,preDate){
         </div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:0.5px solid var(--border);flex-shrink:0">
-      <button onclick="this.closest('.cp-plan-modal').remove()" class="btn btn-sm">Batal</button>
+      ${editingPlanId?`<button onclick="_cpDeletePlan('${editingPlanId}')" class="btn btn-sm btn-danger" style="margin-right:auto"><i class="ti ti-trash"></i> Hapus</button>`:''}
+      <button onclick="closeCPModal()" class="btn btn-sm">Batal</button>
       <button onclick="_cpSavePlan()" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Simpan</button>
     </div>
   </div>`;
@@ -15128,6 +15129,15 @@ async function _cpAddCTAOption(){
   carouselCTAOptions.push({id:row.id,label:label.trim()});
   _cddState['cp-form-cta'] && (_cddState['cp-form-cta'].options = carouselCTAOptions.map(c=>c.label)); _cddSearch('cp-form-cta','');
   showToast('CTA ditambah ✓');
+}
+async function _cpDeletePlan(id){
+  if(!await showConfirmDelete('Hapus carousel plan ini?','Data akan dihapus permanen.'))return;
+  await sb_delete('carousel_plans',id);
+  carouselPlans=carouselPlans.filter(p=>!_idEq(p.id,id));
+  closeCPModal();
+  _cpRenderCards();_cpRenderCalendar();
+  logActivity('CONTENT','DELETE_CAROUSEL_PLAN',id);
+  showToast('Carousel plan dihapus');
 }
 async function _cpSavePlan(){
   const judul=(document.getElementById('cp-form-judul')||{}).value?.trim();
