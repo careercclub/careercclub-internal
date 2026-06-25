@@ -14844,20 +14844,25 @@ async function _cpQuickPickDate(planId, dateStr){
 
 function _cpToggleCard(id){if(_cpCollapsed.has(id))_cpCollapsed.delete(id);else _cpCollapsed.add(id);const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpToggleInlineCal(id){
-  const existing=document.getElementById('cp-date-popup');
-  if(existing){existing.remove();if(existing.dataset.planId===id)return;}
+  document.querySelectorAll('.cp-date-modal').forEach(e=>e.remove());
   const plan=carouselPlans.find(p=>_idEq(p.id,id));
   if(!plan)return;
-  const triggerBtn=document.querySelector(`#cp-card-${id} .cp-date-trigger`);
-  if(!triggerBtn)return;
-  const rect=triggerBtn.getBoundingClientRect();
-  const popup=document.createElement('div');
-  popup.id='cp-date-popup';
-  popup.dataset.planId=id;
-  popup.style.cssText=`position:fixed;z-index:9999;top:${rect.bottom+4}px;left:${rect.left}px;background:var(--white);border:0.5px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);width:260px`;
-  popup.innerHTML=_cpInlineDatePicker(id,plan.tanggal_posting||new Date().toISOString().slice(0,10));
-  document.body.appendChild(popup);
-  setTimeout(()=>document.addEventListener('click',function _close(e){if(!popup.contains(e.target)&&!triggerBtn.contains(e.target)){popup.remove();document.removeEventListener('click',_close);}},),50);
+  const el=document.createElement('div');
+  el.className='modal-overlay cp-date-modal';
+  el.style.cssText='position:fixed;inset:0;z-index:9995;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  el.onclick=()=>el.remove();
+  el.innerHTML=`<div style="background:var(--white);border-radius:12px;width:100%;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:13px;font-weight:600">Ubah Tanggal Posting</div>
+      <button onclick="this.closest('.cp-date-modal').remove()" class="btn btn-sm"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:14px 16px">
+      <div id="cp-date-modal-cal-${id}">${_cpInlineDatePicker(id,plan.tanggal_posting||new Date().toISOString().slice(0,10))}</div>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  const esc=e=>{if(e.key==='Escape'){el.remove();document.removeEventListener('keydown',esc);}};
+  document.addEventListener('keydown',esc);
 }
 function _cpRenderCards(){const el=document.getElementById('cp-cards');if(el)el.innerHTML=_cpCardsHTML();}
 function _cpRenderCalendar(){const el=document.getElementById('cp-calendar');if(el)el.innerHTML=_cpCalendarHTML();}
