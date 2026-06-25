@@ -14747,12 +14747,14 @@ function _cpCardsHTML(){
 </div>`;
     }).join(''));
 
-    return `<div style="margin-bottom:12px">
-  <div data-week-key="${key}" onclick="event.stopPropagation();_cpToggleWeek(this.dataset.weekKey)" style="font-size:11px;font-weight:500;color:var(--text-muted);padding:6px 8px;margin-bottom:${isCollapsed?'0':'6px'};display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;user-select:none" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='transparent'">
-    <i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:11px;flex-shrink:0"></i>
-    <span>${label} <span style="font-weight:400;color:var(--text-hint)">· ${rangeLabel}</span></span>
-    ${isCollapsed?`<span style="font-size:10px;color:var(--text-hint);margin-left:2px">${draftCount>0?`${draftCount} draft`:''}${draftCount>0&&doneCount>0?' · ':''}${doneCount>0?`${doneCount} done`:''}</span>`:''}
-    <span style="flex:1;height:0.5px;background:var(--border)"></span>
+    const badgesHTML=isCollapsed?`<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${draftCount>0?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#FCEBEB;color:#791F1F;font-weight:500">${draftCount} draft</span>`:''} ${doneCount>0?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#EAF3DE;color:#27500A;font-weight:500">${doneCount} done</span>`:''}</div>`:'';
+    return `<div style="margin-bottom:6px">
+  <div data-week-key="${key}" onclick="event.stopPropagation();_cpToggleWeek(this.dataset.weekKey)" style="display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:${isCollapsed?'0':'4px'};border:0.5px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;user-select:none">
+    <i class="ti ti-chevron-${isCollapsed?'right':'down'}" style="font-size:11px;color:var(--text-muted);flex-shrink:0"></i>
+    <span style="font-size:12px;font-weight:500;color:var(--text);flex-shrink:0">${label}</span>
+    <span style="font-size:11px;color:var(--text-muted);flex-shrink:0">${rangeLabel}</span>
+    <span style="flex:1"></span>
+    ${badgesHTML}
   </div>
   ${isCollapsed?'':cardsHTML}
 </div>`;
