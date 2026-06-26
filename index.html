@@ -3738,13 +3738,16 @@ async function initCRM(){
   buyers=loadedBuyers.map(b=>({...b,talentPool:talentWAs.has(normalizeWA(b.wa))}));
   populateFilters();renderBuyers();renderCRMStats();setTimeout(()=>crmTab('buyers'),0);
 }
-function renderCRMStats(){
+async function renderCRMStats(){
   const el=document.getElementById("crm-stats");if(!el)return;
-  const totalBuyers=buyers.filter(b=>(b.riwayat||[]).some(r=>r.paymentStatus==='SUCCESS'||b.paymentStatus==='SUCCESS')).length,
-    totalTransaksi=buyers.reduce((sum,b)=>{
-      const riwayat=b.riwayat||[];
-      const successCount=riwayat.filter(r=>r.paymentStatus==='SUCCESS').length;
-      return sum+(successCount||(b.paymentStatus==='SUCCESS'?1:0));
+  let uniqueBuyers=buyers.filter(b=>b.paymentStatus==='SUCCESS').length;
+  try{
+    const res=await supabase.rpc('count_unique_buyers');
+    if(res.data!==null&&res.data!==undefined)uniqueBuyers=res.data;
+  }catch(e){}
+  const totalBuyers=uniqueBuyers,
+    totalTransaksi=buyers.filter(b=>b.paymentStatus==='SUCCESS').reduce((sum,b)=>{
+      return sum+((b.riwayat&&b.riwayat.length)?b.riwayat.length:1);
     },0),
     belumPool=buyers.filter(b=>!b.talentPool).length,
     aktif=buyers.filter(b=>b.status!=="Belum diblast"&&!b.status.includes("convert")).length,
