@@ -1,0 +1,81 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
+
+:root {
+  --purple-dark: #2e2a7a;
+  --purple-mid: #534ab7;
+  --purple-accent: #7c6ff7;
+  --purple-light: #eeedfe;
+  --bg: #f4f3ff;
+  --white: #fff;
+  --text: #1a1a2e;
+  --text-muted: #6b7280;
+  --text-hint: #9ca3af;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-md: rgba(0, 0, 0, 0.12);
+  --green-bg: #eaf3de;
+  --green: #3b6d11;
+  --amber-bg: #faeeda;
+  --amber: #854f0b;
+  --red-bg: #fcebeb;
+  --red: #a32d2d;
+  --blue-bg: #e6f1fb;
+  --blue: #185fa5;
+  --teal-bg: #e1f5ee;
+  --teal: #0f6e56;
+  --coral-bg: #faece7;
+  --coral: #993c1d;
+  --pink-bg: #fbeaf0;
+  --pink: #993556;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  max-width: 100vw;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  color: var(--text);
+  background: var(--bg);
+  font-family: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+::selection {
+  color: #fff;
+  background: var(--purple-accent);
+}
