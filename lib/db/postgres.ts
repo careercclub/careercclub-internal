@@ -1,18 +1,40 @@
 import "server-only";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import postgres from "postgres";
 
 type GlobalWithSql = typeof globalThis & {
   __cccPostgresSql?: postgres.Sql;
 };
 
-function getConnectionString() {
+type ConnectionConfig = {
+  connectionString: string;
+  hyperdrive: boolean;
+};
+
+const globalWithSql = globalThis as GlobalWithSql;
+
+function getHyperdriveConnectionString() {
+  try {
+    return getCloudflareContext().env.HYPERDRIVE?.connectionString || null;
+  } catch {
+    return null;
+  }
+}
+
+function getConnectionConfig(): ConnectionConfig {
+  const hyperdriveConnectionString = getHyperdriveConnectionString();
+
+  if (hyperdriveConnectionString) {
+    return { connectionString: hyperdriveConnectionString, hyperdrive: true };
+  }
+
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
   if (!connectionString) {
     throw new Error("Missing DATABASE_URL or POSTGRES_URL for PostgreSQL connection.");
   }
 
-  return connectionString;
+  return { connectionString, hyperdrive: false };
 }
 
 function getMaxConnections() {
@@ -20,52 +42,51 @@ function getMaxConnections() {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
 }
 
-const globalWithSql = globalThis as GlobalWithSql;
+function createPostgresClient(config: ConnectionConfig) {
+  return postgres(config.connectionString, {
+    max: config.hyperdrive ? 5 : getMaxConnections(),
+    prepare: process.env.POSTGRES_PREPARE !== "false",
+  });
+}
 
-let client: postgres.Sql | undefined;
-
-function createPostgresClient() {
+function getLocalPostgresClient(config: ConnectionConfig) {
   const existingClient = globalWithSql.__cccPostgresSql;
 
   if (existingClient) {
     return existingClient;
   }
 
-  const nextClient = postgres(getConnectionString(), {
-    max: getMaxConnections(),
-    prepare: process.env.POSTGRES_PREPARE !== "false",
-  });
+  const client = createPostgresClient(config);
 
   if (process.env.NODE_ENV !== "production") {
-    globalWithSql.__cccPostgresSql = nextClient;
+    globalWithSql.__cccPostgresSql = client;
   }
 
-  return nextClient;
-}
-
-function getPostgresClient() {
-  client ??= createPostgresClient();
   return client;
 }
 
-const lazySqlTarget = function sqlProxy() {} as unknown as postgres.Sql;
+export async function withPostgres<T>(operation: (sql: postgres.Sql) => Promise<T>) {
+  const config = getConnectionConfig();
+  const client = config.hyperdrive
+    ? createPostgresClient(config)
+    : getLocalPostgresClient(config);
 
-export const sql = new Proxy(lazySqlTarget, {
-  apply(_target, thisArg, argArray) {
-    return Reflect.apply(getPostgresClient() as unknown as (...args: unknown[]) => unknown, thisArg, argArray);
-  },
-  get(_target, property) {
-    const target = getPostgresClient();
-    const value = Reflect.get(target, property);
-    return typeof value === "function" ? value.bind(target) : value;
-  },
-}) as postgres.Sql;
+  try {
+    return await operation(client);
+  } finally {
+    if (config.hyperdrive) {
+      await client.end({ timeout: 1 });
+    }
+  }
+}
 
 export async function closePostgresConnection() {
+  const client = globalWithSql.__cccPostgresSql;
+
   if (!client) {
     return;
   }
 
   await client.end({ timeout: 5 });
-  client = undefined;
+  globalWithSql.__cccPostgresSql = undefined;
 }

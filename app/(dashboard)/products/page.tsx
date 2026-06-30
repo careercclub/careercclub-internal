@@ -1,13 +1,9 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { RecordManager } from "@/app/_components/record-manager";
+import { listProducts } from "@/lib/api/products";
+import { productLinks } from "@/lib/records/links";
 
-const page = getPageBySlug("products");
+export const metadata = { title: "Products" };
 
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
-
-export default function ProductsPage() {
-  return <ModulePage page={page} />;
+export default async function ProductsPage() {
+  return <RecordManager definitionKey="products" links={productLinks} rows={await listProducts()} />;
 }

@@ -1,6 +1,6 @@
 import "server-only";
-import type { Row } from "postgres";
-import { sql } from "./postgres";
+import type { Row, Sql } from "postgres";
+import { withPostgres } from "./postgres";
 import { assertIdentifier, assertTableName, type TableName } from "./tables";
 
 export type QueryOptions = {
@@ -12,17 +12,17 @@ export type QueryOptions = {
 
 type RowValues = Record<string, unknown>;
 
-function tableSql(table: TableName) {
+function tableSql(sql: Sql, table: TableName) {
   assertTableName(table);
   return sql.unsafe(`"${table}"`);
 }
 
-function columnSql(column: string) {
+function columnSql(sql: Sql, column: string) {
   assertIdentifier(column);
   return sql.unsafe(`"${column}"`);
 }
 
-function whereSql(options?: QueryOptions) {
+function whereSql(sql: Sql, options?: QueryOptions) {
   const entries = Object.entries(options?.eq ?? {});
 
   if (!entries.length) {
@@ -30,21 +30,21 @@ function whereSql(options?: QueryOptions) {
   }
 
   return sql`where ${entries.map(([column, value]) => {
-    const identifier = columnSql(column);
+    const identifier = columnSql(sql, column);
     return value === null ? sql`${identifier} is null` : sql`${identifier} = ${value}`;
   })}`;
 }
 
-function orderSql(options?: QueryOptions) {
+function orderSql(sql: Sql, options?: QueryOptions) {
   if (!options?.orderBy) {
     return sql``;
   }
 
   const direction = options.ascending === false ? sql`desc` : sql`asc`;
-  return sql`order by ${columnSql(options.orderBy)} ${direction}`;
+  return sql`order by ${columnSql(sql, options.orderBy)} ${direction}`;
 }
 
-function limitSql(options?: QueryOptions) {
+function limitSql(sql: Sql, options?: QueryOptions) {
   if (!options?.limit) {
     return sql``;
   }
@@ -52,29 +52,30 @@ function limitSql(options?: QueryOptions) {
   return sql`limit ${options.limit}`;
 }
 
-export async function listRows<T extends Row>(
-  table: TableName,
-  options?: QueryOptions,
-): Promise<T[]> {
-  const rows = await sql<T[]>`
-    select *
-    from ${tableSql(table)}
-    ${whereSql(options)}
-    ${orderSql(options)}
-    ${limitSql(options)}
-  `;
+export function listRows<T extends Row>(table: TableName, options?: QueryOptions): Promise<T[]> {
+  return withPostgres(async (sql) => {
+    const rows = await sql<T[]>`
+      select *
+      from ${tableSql(sql, table)}
+      ${whereSql(sql, options)}
+      ${orderSql(sql, options)}
+      ${limitSql(sql, options)}
+    `;
 
-  return [...rows];
+    return [...rows];
+  });
 }
 
-export async function countRows(table: TableName, options?: Pick<QueryOptions, "eq">) {
-  const rows = await sql<{ count: string }[]>`
-    select count(*)::text as count
-    from ${tableSql(table)}
-    ${whereSql(options)}
-  `;
+export function countRows(table: TableName, options?: Pick<QueryOptions, "eq">) {
+  return withPostgres(async (sql) => {
+    const rows = await sql<{ count: string }[]>`
+      select count(*)::text as count
+      from ${tableSql(sql, table)}
+      ${whereSql(sql, options)}
+    `;
 
-  return Number(rows[0]?.count ?? 0);
+    return Number(rows[0]?.count ?? 0);
+  });
 }
 
 export async function getRowById<T extends Row>(table: TableName, id: string): Promise<T | null> {
@@ -82,36 +83,42 @@ export async function getRowById<T extends Row>(table: TableName, id: string): P
   return rows[0] ?? null;
 }
 
-export async function insertRow<T extends Row>(table: TableName, values: RowValues): Promise<T> {
-  const [row] = await sql<T[]>`
-    insert into ${tableSql(table)}
-    ${sql(values)}
-    returning *
-  `;
+export function insertRow<T extends Row>(table: TableName, values: RowValues): Promise<T> {
+  return withPostgres(async (sql) => {
+    const [row] = await sql<T[]>`
+      insert into ${tableSql(sql, table)}
+      ${sql(values)}
+      returning *
+    `;
 
-  return row;
+    return row;
+  });
 }
 
-export async function updateRow<T extends Row>(
+export function updateRow<T extends Row>(
   table: TableName,
   id: string,
   values: RowValues,
 ): Promise<T | null> {
-  const [row] = await sql<T[]>`
-    update ${tableSql(table)}
-    set ${sql(values)}
-    where "id" = ${id}
-    returning *
-  `;
+  return withPostgres(async (sql) => {
+    const [row] = await sql<T[]>`
+      update ${tableSql(sql, table)}
+      set ${sql(values)}
+      where "id" = ${id}
+      returning *
+    `;
 
-  return row ?? null;
+    return row ?? null;
+  });
 }
 
-export async function deleteRow(table: TableName, id: string) {
-  const result = await sql`
-    delete from ${tableSql(table)}
-    where "id" = ${id}
-  `;
+export function deleteRow(table: TableName, id: string) {
+  return withPostgres(async (sql) => {
+    const result = await sql`
+      delete from ${tableSql(sql, table)}
+      where "id" = ${id}
+    `;
 
-  return result.count ?? 0;
+    return result.count ?? 0;
+  });
 }

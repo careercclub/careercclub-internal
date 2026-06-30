@@ -35,7 +35,12 @@ The old single-page sidebar modules are now split across explicit App Router seg
 - `/design-assets`
 - `/resources`
 - `/settings`
+- `/talent-pool`
+- `/collaborators`
+- nested Product, Content Planning, and Program feature routes
 - `/api/send-email` typed Resend proxy route
+- `/api/storage` authenticated R2 presigning route
+- `/api/ai/parse` and `/api/ai/parse-screenshot` authenticated Anthropic routes
 
 ## Postgres Data Layer
 
@@ -78,8 +83,9 @@ AUTH_ADMIN_EMAIL=admin@careercclub.com
 AUTH_ADMIN_PASSWORD=change-me
 ```
 
-The edge-safe route protection lives in `auth.config.ts` and `proxy.ts`; the server-only credential
-verification stays in `auth.ts` and `lib/api/auth-users.ts`.
+The edge-safe route protection lives in `auth.config.ts` and `middleware.ts`; the server-only
+credential verification stays in `auth.ts` and `lib/api/auth-users.ts`. Next.js 16 normally prefers
+`proxy.ts`, but OpenNext currently requires Edge Middleware while Next.js 16 Proxy is Node-only.
 
 ## Email API
 
@@ -100,3 +106,73 @@ Payload:
   "from_name": "CareerCclub"
 }
 ```
+
+## Database Migrations
+
+Restore the Supabase PostgreSQL dump to staging on the VPS first, then apply the committed SQL in
+order:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/001_production_feature_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/002_crm_buyer_matching.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/003_normalize_r2_storage_keys.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/004_ticket_notifications_and_pwa.sql
+```
+
+Do not point production at the new VPS database until row counts, foreign keys, CRM buyer counts,
+and sampled records match the Supabase source.
+
+## Cloudflare R2
+
+Create one private bucket and configure the R2 variables from `.env.example`. The app creates
+short-lived S3-compatible PUT URLs through `/api/storage`; browsers upload directly to R2 and the
+database stores only the resulting object key.
+
+The bucket must allow `PUT` from the deployed application origin. A minimal R2 CORS policy is:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://internal.ccclub.id"],
+    "AllowedMethods": ["GET", "PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+## Ticket Notifications And PWA
+
+Ticket create, update, and delete actions publish notifications to the roles selected on the
+ticket. Visibility and read receipts are enforced server-side per authenticated PostgreSQL user.
+Users can optionally enable Web Push from the notification panel after VAPID credentials are set.
+
+The PWA service worker caches only immutable static assets and the offline page. Authenticated HTML
+and API responses remain network-only so another user cannot receive stale operational data from a
+shared browser cache.
+
+## Production Deployment
+
+The primary production deployment is a standalone Next.js container on the VPS, connected to the
+existing PostgreSQL container through the external `deploy_default` network. See
+`DEPLOYMENT_VPS.md` for the Compose, Caddy, DNS, and verification procedure.
+
+This application cannot use a pure `output: "export"` build: Auth.js, Server Actions, PostgreSQL,
+Resend, Anthropic, and R2 presigning require a server runtime. OpenNext Worker configuration remains
+available as an alternative, but production `internal.ccclub.id` is owned by VPS Caddy and must not
+also be configured as a Worker Custom Domain.
+
+### Alternative Cloudflare Worker Deployment
+
+1. Create a Cloudflare Tunnel TCP hostname for the TLS-enabled VPS PostgreSQL service.
+2. Create a private Hyperdrive configuration for database `ccc_ops` using role `ccc_ops_app`.
+3. Add the returned ID as the `HYPERDRIVE` binding in `wrangler.jsonc`.
+4. Apply `r2-cors.json` to the `ccc-ops` bucket.
+5. Add application secrets with `npx wrangler secret put NAME`.
+6. Run `npm run build:cloudflare`, then `npm run deploy`.
+
+Required Worker secrets include `AUTH_SECRET`, `ANTHROPIC_API_KEY`, Resend values, and R2 S3 API
+credentials. `DATABASE_URL` is only needed for local development; deployed database traffic uses
+the Hyperdrive binding. Keep PostgreSQL restricted by firewall/TLS or connect Hyperdrive through
+Cloudflare Tunnel when the database has no public address.

@@ -1,13 +1,20 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { PainPointAiParser } from "@/app/_components/pain-point-ai-parser";
+import { RecordManager } from "@/app/_components/record-manager";
+import { listPainPointCategories, listPainPoints } from "@/lib/api/customer-knowledge";
 
-const page = getPageBySlug("customer-knowledge");
+export const metadata = { title: "Customer Knowledge" };
 
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
+export default async function CustomerKnowledgePage() {
+  const [rows, categoryRows] = await Promise.all([listPainPoints(), listPainPointCategories()]);
+  const categories = categoryRows
+    .map((row) => String(row.nama || "").trim())
+    .filter(Boolean);
 
-export default function CustomerKnowledgePage() {
-  return <ModulePage page={page} />;
+  return (
+    <RecordManager
+      definitionKey="pain_points"
+      rows={rows}
+      tools={<PainPointAiParser categories={categories} />}
+    />
+  );
 }

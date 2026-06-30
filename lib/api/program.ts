@@ -4,6 +4,7 @@ import { createTableApi, type ApiRecord } from "./_crud";
 export type ProgramEventRecord = ApiRecord;
 export type ProgramTaskRecord = ApiRecord;
 export type EventLinkTemplateRecord = ApiRecord;
+export type EventRundownRecord = ApiRecord;
 
 const events = createTableApi<ProgramEventRecord>("events", {
   orderBy: "tanggal",
@@ -16,6 +17,11 @@ const tasks = createTableApi<ProgramTaskRecord>("tasks", {
 });
 
 const eventLinkTemplates = createTableApi<EventLinkTemplateRecord>("event_link_templates", {
+  orderBy: "urutan",
+  ascending: true,
+});
+
+const eventRundown = createTableApi<EventRundownRecord>("event_rundown", {
   orderBy: "urutan",
   ascending: true,
 });
@@ -38,3 +44,8 @@ export const listEventLinkTemplates = eventLinkTemplates.list;
 export const createEventLinkTemplate = eventLinkTemplates.create;
 export const updateEventLinkTemplate = eventLinkTemplates.update;
 export const deleteEventLinkTemplate = eventLinkTemplates.remove;
+
+export const listEventRundown = eventRundown.list;
+export const createEventRundownItem = eventRundown.create;
+export const updateEventRundownItem = eventRundown.update;
+export const deleteEventRundownItem = eventRundown.remove;

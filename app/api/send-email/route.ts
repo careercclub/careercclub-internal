@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
-
-export const runtime = "edge";
+import { auth } from "@/auth";
 
 type Recipient = string | { email?: string };
 
@@ -45,11 +44,15 @@ export function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await auth())?.user) {
+    return json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = (await request.json()) as SendEmailBody;
     const { to, subject, html, from_name, from_email, scheduled_at } = body;
 
-    if (!to || !subject || !html) {
+    if (!to || !subject || !html || subject.length > 300 || html.length > 500_000) {
       return json(
         { error: "Missing required fields: to, subject, html" },
         { status: 400 },
@@ -62,6 +65,9 @@ export async function POST(request: NextRequest) {
     }
 
     const recipients = Array.isArray(to) ? to : [to];
+    if (recipients.length > 100) {
+      return json({ error: "A maximum of 100 recipients is allowed per request." }, { status: 400 });
+    }
     const results: SendResult[] = [];
     let sent = 0;
     let failed = 0;

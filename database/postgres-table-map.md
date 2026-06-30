@@ -10,27 +10,43 @@ restored into Postgres with the same table names, then wired module by module.
 | --- | --- |
 | `lib/api/auth-users.ts` | `auth_users` |
 | `lib/api/dashboard.ts` | `activity_log`, `events`, `tasks`, `crm_deals`, `tickets`, `content_library` |
-| `lib/api/content-planning.ts` | `content_plans` |
+| `lib/api/content-planning.ts` | `content_plans`, `story_plan_dates`, `story_plan_items`, `story_plan_links`, `carousel_plans`, `carousel_cta_options`, `carousel_plan_links`, `kol_list`, `mt_story_list` |
 | `lib/api/content-evaluation.ts` | `content_evaluations` |
 | `lib/api/meta-ads.ts` | `ads_contents` |
 | `lib/api/instagram.ts` | `ig_snapshots`, `ig_targets` |
 | `lib/api/content-library.ts` | `content_library` |
 | `lib/api/voucher.ts` | `vouchers` |
-| `lib/api/program.ts` | `events`, `tasks`, `event_link_templates` |
-| `lib/api/products.ts` | `products`, `product_pain_points`, `product_passion_points` |
-| `lib/api/crm.ts` | `buyers`, `crm_deals` |
+| `lib/api/program.ts` | `events`, `tasks`, `event_link_templates`, `event_rundown` |
+| `lib/api/products.ts` | `products`, `product_pain_points`, `product_passion_points`, `product_benefits`, `product_features`, `product_feature_links`, `product_bundles`, `product_klasifikasi`, `master_produk`, `sub_products`, `sub_product_links` |
+| `lib/api/crm.ts` | `buyers`, `crm_deals`, plus `count_unique_buyers()` and `ccc_normalize_wa()` |
+| `lib/api/talent-pool.ts` | `talent_pool` |
+| `lib/api/collaborators.ts` | `collaborators` |
 | `lib/api/job-vacancy-mt.ts` | `mt_vacancies`, `mt_industries` |
 | `lib/api/competitor-intel.ts` | `competitor_profiles`, `competitor_snapshots`, `competitor_flags`, `competitor_products`, `competitor_product_prices` |
 | `lib/api/customer-knowledge.ts` | `pain_points`, `pain_point_platforms`, `pain_point_categories`, `free_class_eval` |
 | `lib/api/tickets.ts` | `tickets`, `tkt_divisi`, `tkt_people`, `tkt_types` |
+| `lib/api/notifications.ts` | `ticket_notifications`, `ticket_notification_reads`, `web_push_subscriptions` |
 | `lib/api/b2b-partnership.ts` | `partners`, `partner_deals`, `partner_outreach` |
 | `lib/api/org-partnership.ts` | `org_partners`, `org_deals`, `org_outreach` |
 | `lib/api/design-assets.ts` | `design_assets` |
 | `lib/api/resources.ts` | `resources` |
 | `lib/api/settings.ts` | `app_settings` |
 
-Storage buckets from Supabase, such as `design-assets` and `task-attachments`, still need a
-separate file-storage decision. The Postgres layer only replaces database table access.
+Cloudflare R2 replaces Supabase Storage. PostgreSQL stores object keys under the `uploads`,
+`collaborator-photos`, `design-assets`, and `task-attachments` prefixes; file bytes do not belong
+in PostgreSQL.
+
+## Ordered Migrations
+
+Apply migrations after restoring the Supabase schema into the VPS database:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/001_production_feature_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/002_crm_buyer_matching.sql
+```
+
+Migration `002` replaces the browser-side Supabase RPC dependency and provides indexed,
+consistent email/WhatsApp matching between CRM buyers and Talent Pool records.
 
 ## Authentication Table
 

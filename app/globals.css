@@ -41,6 +41,10 @@ body {
   margin: 0;
 }
 
+html {
+  background: var(--purple-dark);
+}
+
 body {
   overflow: hidden;
   color: var(--text);
@@ -49,6 +53,13 @@ body {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (display-mode: standalone) {
+  body {
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
 }
 
 button,

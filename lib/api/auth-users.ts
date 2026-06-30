@@ -1,5 +1,6 @@
 import "server-only";
 import bcrypt from "bcryptjs";
+import { withPostgres } from "@/lib/db/postgres";
 import { listRows } from "@/lib/db/query";
 import { createTableApi, type ApiRecord } from "./_crud";
 
@@ -34,4 +35,17 @@ export async function getAuthUserByEmail(email: string) {
 
 export function verifyPassword(password: string, passwordHash: string) {
   return bcrypt.compare(password, passwordHash);
+}
+
+export function listAuthRoles() {
+  return withPostgres(async (sql) => {
+    const rows = await sql<{ role: string }[]>`
+      select distinct lower(coalesce(role, 'member')) as role
+      from auth_users
+      where is_active is true
+      order by role
+    `;
+
+    return rows.map((row) => row.role);
+  });
 }

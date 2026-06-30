@@ -1,13 +1,10 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { RecordManager } from "@/app/_components/record-manager";
+import { listAuthRoles } from "@/lib/api/auth-users";
+import { listTickets } from "@/lib/api/tickets";
 
-const page = getPageBySlug("tickets");
+export const metadata = { title: "Tickets" };
 
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
-
-export default function TicketsPage() {
-  return <ModulePage page={page} />;
+export default async function TicketsPage() {
+  const [tickets, roles] = await Promise.all([listTickets(), listAuthRoles()]);
+  return <RecordManager definitionKey="tickets" rows={tickets} fieldOptions={{ notification_roles: roles }} />;
 }

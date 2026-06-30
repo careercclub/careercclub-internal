@@ -1,13 +1,9 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { RecordManager } from "@/app/_components/record-manager";
+import { listStoryPlanDates } from "@/lib/api/content-planning";
+import { contentPlanningLinks } from "@/lib/records/links";
 
-const page = getPageBySlug("content-planning");
+export const metadata = { title: "Content Planning" };
 
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
-
-export default function ContentPlanningPage() {
-  return <ModulePage page={page} />;
+export default async function ContentPlanningPage() {
+  return <RecordManager definitionKey="story_plan_dates" links={contentPlanningLinks} rows={await listStoryPlanDates()} />;
 }

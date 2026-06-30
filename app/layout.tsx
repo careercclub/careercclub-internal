@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { PwaRegistration } from "./_components/pwa-registration";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,9 +9,16 @@ export const metadata: Metadata = {
     template: "%s | CCC Internal",
   },
   description: "CareerCclub internal operations dashboard built with Next.js App Router.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "CCC Internal",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CCC Internal",
+  },
   icons: {
     icon: "/favicon.ico",
-    apple: "/favicon.ico",
+    apple: "/pwa-icon/180",
   },
 };
 
@@ -36,7 +44,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <PwaRegistration />
+        {children}
+      </body>
     </html>
   );
 }
