@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { FilterBar, Pill, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
+import { FilterBar, Pagination, Pill, StatCard, StatsGrid, filterFieldClass, usePagination } from "./ui-kit";
 
 type Tab = "overview" | "pipeline" | "database" | "manage";
 const STATUS_TONE: Record<string, "green" | "amber" | "red" | "blue"> = { "Closed Deal": "green", Negotiation: "amber", "Closed Lost": "red" };
@@ -17,6 +17,7 @@ function csvCell(value: unknown) { const text = String(value || ""); return `"${
 export function PartnershipWorkspace({ rows, title, entityLabel, pipeline, management }: { rows: ApiRecord[]; title: string; entityLabel: string; pipeline: ReactNode; management: ReactNode }) {
   const [tab, setTab] = useState<Tab>("overview"); const [query, setQuery] = useState(""); const [category, setCategory] = useState(""); const [tier, setTier] = useState(""); const [status, setStatus] = useState(""); const [selected, setSelected] = useState<ApiRecord | null>(null); const categories = distribution(rows, "category").map(([value]) => value); const tiers = distribution(rows, "tier").map(([value]) => value); const statuses = distribution(rows, "status").map(([value]) => value);
   const filtered = useMemo(() => rows.filter((row) => (!query || `${row.name} ${row.contact_name} ${row.scope}`.toLowerCase().includes(query.toLowerCase())) && (!category || row.category === category) && (!tier || row.tier === tier) && (!status || row.status === status)), [rows, query, category, tier, status]);
+  const { pageItems, page, setPage, totalPages } = usePagination(filtered, 15);
   function exportCsv() { const headers = ["name", "category", "tier", "status", "contact_name", "contact_email", "contact_phone", "scope", "notes", "input_date"]; const content = [headers.join(","), ...filtered.map((row) => headers.map((key) => csvCell(row[key])).join(","))].join("\n"); const url = URL.createObjectURL(new Blob([content], { type: "text/csv" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${entityLabel.toLowerCase().replaceAll(" ", "-")}.csv`; anchor.click(); URL.revokeObjectURL(url); }
 
   return (
@@ -57,11 +58,11 @@ export function PartnershipWorkspace({ rows, title, entityLabel, pipeline, manag
             <select className={filterFieldClass} onChange={(event) => setTier(event.target.value)} value={tier}><option value="">All tiers</option>{tiers.map((value) => <option key={value}>{value}</option>)}</select>
             <select className={filterFieldClass} onChange={(event) => setStatus(event.target.value)} value={status}><option value="">All stages</option>{statuses.map((value) => <option key={value}>{value}</option>)}</select>
           </FilterBar>
-          <Card className="p-0">
+          <Card className="gap-0 p-0">
             <Table>
               <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Tier</TableHead><TableHead>Status</TableHead><TableHead>PIC</TableHead><TableHead>Contact</TableHead><TableHead>Scope</TableHead></TableRow></TableHeader>
               <TableBody>
-                {filtered.map((row) => (
+                {pageItems.map((row) => (
                   <TableRow className="cursor-pointer" key={String(row.id)} onClick={() => setSelected(row)}>
                     <TableCell className="whitespace-normal"><strong className="block text-[var(--purple-mid)]">{String(row.name || "Untitled")}</strong><span className="text-muted-foreground">{String(row.input_date || "")}</span></TableCell>
                     <TableCell>{String(row.category || "-")}</TableCell>
@@ -74,6 +75,7 @@ export function PartnershipWorkspace({ rows, title, entityLabel, pipeline, manag
                 ))}
               </TableBody>
             </Table>
+            <Pagination className="p-3" onChange={setPage} page={page} totalPages={totalPages} />
           </Card>
         </>
       ) : null}

@@ -89,6 +89,8 @@
 .tableCard td { max-width: 150px; padding: 7px 8px; border-bottom: .5px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tableCard tbody tr { cursor: pointer; }.tableCard tbody tr:hover td { background: #f8fbff; }
 .tableCard td:first-child { min-width: 200px; color: var(--purple-mid); }.tableCard td:first-child strong, .tableCard td:first-child small { display: block; }.tableCard td:first-child small { margin-top: 2px; color: var(--text-muted); font-size: 10px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 0; border-top: .5px solid var(--border); }
+.pagination span { color: var(--text-muted); font-size: 11px; }
 .storyHeader { margin-bottom: 10px; }
 .storyDays { display: grid; gap: 8px; }
 .storyDays details { overflow: hidden; border: .5px solid var(--border); border-radius: 14px; background: var(--white); }

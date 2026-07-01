@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { type CSSProperties, useMemo, useState } from "react";
 import { DashboardCalendar } from "./dashboard-calendar";
 import { GoogleCalendarScript, useGoogleCalendarAction } from "./google-calendar-tool";
+import { Pagination, usePagination } from "./ui-kit";
 import styles from "../record-manager.module.css";
 
 const JENIS = ["CCA", "Webinar", "Workshop", "Bootcamp", "Seminar"];
@@ -263,6 +264,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const historyEvents = eventsState.filter((event) => ["Done", "Cancelled"].includes(text(event.status))).filter((event) => !jenisFilter || text(event.jenis_program) === jenisFilter);
   const selectedTasks = taskRows.filter((task) => String(task.project_id) === selectedEvent);
   const phaseTasks = selectedTasks.filter((task) => phaseTab === "all" || text(task.phase) === phaseTab);
+  const { pageItems: phaseTaskPage, page: taskPage, setPage: setTaskPage, totalPages: taskTotalPages } = usePagination(phaseTasks, 10);
 
   function progressOf(eventId: string) { const related = taskRows.filter((task) => String(task.project_id) === eventId); const done = related.filter((task) => task.status === "Done").length; return { done, total: related.length, pct: related.length ? Math.round((done / related.length) * 100) : 0 }; }
   function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; const person = ids.length ? personMap.get(ids[0]) : null; if (!person) return { name: "—", div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
@@ -332,7 +334,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead><tr style={{ background: "var(--bg)" }}><th style={thStyle} /><th style={thStyle}>Task</th><th style={thStyle}>Assignee</th><th style={thStyle}>Deadline</th><th style={thStyle}>Status</th><th style={thStyle}>Priority</th><th style={{ ...thStyle, textAlign: "center" }}>Aksi</th></tr></thead>
                     <tbody>
-                      {phaseTasks.length === 0 ? <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Belum ada task. Klik &quot;+ Task&quot; untuk menambah.</td></tr> : phaseTasks.map((task) => { const isDone = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); return (
+                      {phaseTasks.length === 0 ? <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Belum ada task. Klik &quot;+ Task&quot; untuk menambah.</td></tr> : phaseTaskPage.map((task) => { const isDone = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); return (
                         <tr key={String(task.id)} onClick={() => setTaskModal({ task })} style={{ borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
                           <td style={tdStyle} onClick={(e) => { e.stopPropagation(); toggleTask(task); }}><div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isDone ? "#0f52ba" : "var(--border-md)"}`, background: isDone ? "#0f52ba" : "transparent", display: "grid", placeItems: "center" }}>{isDone ? <i className="ti ti-check" style={{ fontSize: 10, color: "#fff" }} /> : null}</div></td>
                           <td style={{ ...tdStyle, textDecoration: isDone ? "line-through" : "none", color: isDone ? "var(--text-muted)" : "var(--text)" }}>{text(task.title) || "Untitled"}</td>
@@ -350,6 +352,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                     </tbody>
                   </table>
                 </div>
+                <Pagination onChange={setTaskPage} page={taskPage} totalPages={taskTotalPages} />
               </div>
             </>
           ) : <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>Pilih event untuk melihat & mengelola task-nya.</p>}

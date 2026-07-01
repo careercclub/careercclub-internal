@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { CrmTools } from "./crm-tools";
+import { Pagination, usePagination } from "./ui-kit";
 import styles from "./crm.module.css";
 
 type Transaction = { produk?: string; klasifikasi?: string; harga?: number; tanggal?: string; paymentStatus?: string };
@@ -45,6 +46,7 @@ export function CrmWorkspace({ rows }: { rows: ApiRecord[] }) {
     const search = `${row.name} ${row.wa} ${row.email} ${row.produk}`.toLowerCase();
     return (!query || search.includes(query.toLowerCase())) && (!classification || row.klasifikasi === classification) && (!industry || row.industri === industry) && (!stage || row.tahap === stage) && (!status || row.status === status) && (!talent || (talent === "yes") === Boolean(row.talent_pool || row.talent_pool_match)) && (!source || row.sumber === source) && (!payment || (payment === "none" ? !row.payment_status : row.payment_status === payment)) && (!repeat || (repeat === "repeat" ? row.txCount > 1 : row.txCount === 1));
   }), [customers, query, classification, industry, stage, status, talent, source, payment, repeat]);
+  const { pageItems, page, setPage, totalPages } = usePagination(filtered, 15);
   const detail = customers.find((row) => String(row._key) === detailKey);
   const selectedIds = customers.filter((row) => selected.includes(String(row._key))).flatMap((row) => row.ids);
   const stats = { buyers: customers.length, transactions: customers.reduce((sum, row) => sum + row.txCount, 0), noPool: customers.filter((row) => !(row.talent_pool || row.talent_pool_match)).length, blasting: customers.filter((row) => String(row.status || "").includes("blast")).length, converted: customers.filter((row) => String(row.status || "").includes("convert")).length };
@@ -118,7 +120,7 @@ export function CrmWorkspace({ rows }: { rows: ApiRecord[] }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((row) => (
+                  {pageItems.map((row) => (
                     <tr key={String(row._key)}>
                       <td className={styles.td}><input checked={selected.includes(String(row._key))} onChange={(event) => setSelected((current) => event.target.checked ? [...current, String(row._key)] : current.filter((key) => key !== String(row._key)))} type="checkbox" /></td>
                       <td className={styles.td}><button className={styles.nameLink} onClick={() => setDetailKey(String(row._key))} type="button">{String(row.name || "-")}</button></td>
@@ -140,6 +142,7 @@ export function CrmWorkspace({ rows }: { rows: ApiRecord[] }) {
               </table>
             </div>
             <div className={styles.rowCount}>{filtered.length} dari {customers.length} orang</div>
+            <Pagination onChange={setPage} page={page} totalPages={totalPages} />
           </>
         ) : null}
         {tab === "analytics" ? (

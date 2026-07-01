@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import styles from "./talent-pool.module.css";
 import { TalentPoolTools } from "./talent-pool-tools";
+import { Pagination, usePagination } from "./ui-kit";
 
 function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => String(row[field] || "")).filter(Boolean))].sort(); }
 function text(value: unknown) { return value === null || value === undefined || value === "" ? "" : String(value); }
@@ -25,6 +26,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
     const matchesPipeline = !pipeline || (pipeline === "beli" ? isBuyer(row) : !isBuyer(row));
     return (!query || search.includes(query.toLowerCase())) && matchesPipeline && (!status || row.status === status) && (!source || row.sumber === source) && (!tier || row.campus_tier === tier);
   }), [rows, query, pipeline, status, source, tier]);
+  const { pageItems, page, setPage, totalPages } = usePagination(visible, 15);
   const detail = rows.find((row) => String(row.id) === detailId);
   const sudahBeli = rows.filter(isBuyer).length;
   function distribution(field: string) { const counts = new Map<string, number>(); rows.forEach((row) => { const value = String(row[field] || "Unknown"); counts.set(value, (counts.get(value) || 0) + 1); }); return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10); }
@@ -73,7 +75,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
                 </tr>
               </thead>
               <tbody>
-                {visible.length === 0 ? <tr><td className={styles.empty} colSpan={12}>Belum ada data. Import CSV dulu.</td></tr> : visible.map((row) => (
+                {visible.length === 0 ? <tr><td className={styles.empty} colSpan={12}>Belum ada data. Import CSV dulu.</td></tr> : pageItems.map((row) => (
                   <tr className={styles.row} key={String(row.id)} onClick={() => setDetailId(String(row.id))}>
                     <td className={`${styles.td} ${styles.tdName}`}>{text(row.nama) || "—"}</td>
                     <td className={styles.td}>{text(row.wa) || "—"}</td>
@@ -92,6 +94,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
               </tbody>
             </table>
           </div>
+          <Pagination onChange={setPage} page={page} totalPages={totalPages} />
         </div>
       ) : null}
       {tab === "analytics" ? (

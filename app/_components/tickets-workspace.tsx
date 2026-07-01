@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { GoogleCalendarTool } from "./google-calendar-tool";
+import { Pagination, usePagination } from "./ui-kit";
 
 const PRIORITIES = ["High", "Med", "Low"];
 
@@ -182,6 +183,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
     if (fPrio && text(row.priority) !== fPrio) return false;
     return true;
   });
+  const { pageItems: visiblePage, page: ticketPage, setPage: setTicketPage, totalPages: ticketTotalPages } = usePagination(visible, 15);
   const detail = items.find((row) => String(row.id) === detailId) || null;
 
   function firstAssignee(row: ApiRecord) {
@@ -224,7 +226,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
               </tr>
             </thead>
             <tbody>
-              {visible.length === 0 ? <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}><i className="ti ti-inbox" style={{ fontSize: 28, display: "block", marginBottom: 8 }} />Tidak ada ticket ditemukan</td></tr> : visible.map((row) => {
+              {visible.length === 0 ? <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}><i className="ti ti-inbox" style={{ fontSize: 28, display: "block", marginBottom: 8 }} />Tidak ada ticket ditemukan</td></tr> : visiblePage.map((row) => {
                 const isDone = row.status === "Done";
                 const divId = text(row.divisi_id);
                 const division = divisionMap.get(divId);
@@ -247,6 +249,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
             </tbody>
           </table>
         </div>
+        <Pagination onChange={setTicketPage} page={ticketPage} totalPages={ticketTotalPages} />
       </div>
       <GoogleCalendarTool tasks={items} people={people} recordType="ticket" />
       {createOpen ? <CreateTicketModal people={people} divisions={divisions} types={types} onClose={() => setCreateOpen(false)} onCreated={(row) => { setItems((current) => [row, ...current]); setCreateOpen(false); router.refresh(); }} /> : null}

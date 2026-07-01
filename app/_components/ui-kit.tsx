@@ -3,6 +3,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+/** Slices `items` into pages. Framework-agnostic — usable from Tailwind or CSS-module components alike. */
+export function usePagination<T>(items: T[], pageSize = 10) {
+  const [page, setPage] = React.useState(0);
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageItems = React.useMemo(() => items.slice(safePage * pageSize, safePage * pageSize + pageSize), [items, safePage, pageSize]);
+  return { pageItems, page: safePage, setPage, totalPages };
+}
+
+/** Prev/next pager reproducing the legacy `.pagination` control, for Tailwind-based components. */
+export function Pagination({ page, totalPages, onChange, className }: { page: number; totalPages: number; onChange: (page: number) => void; className?: string }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className={cn("flex items-center justify-center gap-2 pt-3", className)}>
+      <Button disabled={page <= 0} onClick={() => onChange(Math.max(0, page - 1))} size="icon-sm" type="button" variant="outline"><i className="ti ti-chevron-left" /></Button>
+      <span className="text-[11px] text-muted-foreground">Page {page + 1} / {totalPages}</span>
+      <Button disabled={page >= totalPages - 1} onClick={() => onChange(Math.min(totalPages - 1, page + 1))} size="icon-sm" type="button" variant="outline"><i className="ti ti-chevron-right" /></Button>
+    </div>
+  );
+}
 
 /** Colored status pill reproducing the legacy `.pill .pill-*` classes, built on shadcn Badge. */
 const pillVariants = cva("rounded-full border-0 font-medium", {

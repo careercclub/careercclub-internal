@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { FilterBar, Pill, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
+import { FilterBar, Pagination, Pill, StatCard, StatsGrid, filterFieldClass, usePagination } from "./ui-kit";
 
 type Tab = "dashboard" | "list" | "newsletter" | "company" | "manage";
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -156,12 +156,13 @@ export function MtVacancyTools({ rows, referenceDate, management }: { rows: ApiR
 }
 
 function VacancyTable({ rows }: { rows: ApiRecord[] }) {
+  const { pageItems, page, setPage, totalPages } = usePagination(rows, 15);
   return (
-    <Card className="p-0">
+    <Card className="gap-0 p-0">
       <Table>
         <TableHeader><TableRow><TableHead>Company / Program</TableHead><TableHead>Industry</TableHead><TableHead>Roles</TableHead><TableHead>Open months</TableHead><TableHead>Deadline</TableHead><TableHead>Career links</TableHead></TableRow></TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {pageItems.map((row) => (
             <TableRow key={String(row.id)}>
               <TableCell className="whitespace-normal"><strong className="block">{String(row.company || "-")}</strong><span className="text-muted-foreground">{String(row.program || "-")}</span></TableCell>
               <TableCell><Pill tone="blue">{String(row.industry || "-")}</Pill></TableCell>
@@ -173,6 +174,7 @@ function VacancyTable({ rows }: { rows: ApiRecord[] }) {
           ))}
         </TableBody>
       </Table>
+      <Pagination className="p-3" onChange={setPage} page={page} totalPages={totalPages} />
     </Card>
   );
 }

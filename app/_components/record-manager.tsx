@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { ReactNode } from "react";
 import { recordDefinitions, type ManagedField, type RecordDefinitionKey } from "@/lib/records/catalog";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { R2UploadField } from "./r2-upload-field";
+import { usePagination } from "./ui-kit";
 import styles from "../record-manager.module.css";
 
 type RecordManagerProps = {
@@ -61,6 +64,7 @@ function Field({ field, value, options }: { field: ManagedField; value?: unknown
 
 export function RecordManager({ definitionKey, rows, links = [], tools, fieldOptions = {} }: RecordManagerProps) {
   const definition = recordDefinitions[definitionKey];
+  const { pageItems, page, setPage, totalPages } = usePagination(rows, 12);
   return (
     <section className={styles.workspace}>
       <header className={styles.workspaceHeader}>
@@ -78,8 +82,9 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
       </details>
       <div className={styles.dataPanel}>
         {rows.length ? <div className={styles.tableScroll}><table><thead><tr>{definition.columns.map((column) => <th key={column}>{column.replaceAll("_", " ")}</th>)}<th>Actions</th></tr></thead><tbody>
-          {rows.map((row) => { const id = String(row.id); return <tr key={id}>{definition.columns.map((column) => <td key={column}>{displayValue(row[column])}</td>)}<td><details className={styles.rowActions}><summary aria-label={`Edit ${id}`}><i className="ti ti-pencil" /></summary><div className={styles.rowEditor}><form action={updateManagedRecord.bind(null, definitionKey, id)} className={styles.formGrid}>{definition.fields.map((field) => <Field field={field} key={field.name} value={row[field.name]} options={fieldOptions[field.name]} />)}<button className={styles.primaryButton} type="submit">Save changes</button></form><form action={deleteManagedRecord.bind(null, definitionKey, id)}><button className={styles.dangerButton} type="submit">Delete record</button></form></div></details></td></tr>; })}
+          {pageItems.map((row) => { const id = String(row.id); return <tr key={id}>{definition.columns.map((column) => <td key={column}>{displayValue(row[column])}</td>)}<td><details className={styles.rowActions}><summary aria-label={`Edit ${id}`}><i className="ti ti-pencil" /></summary><div className={styles.rowEditor}><form action={updateManagedRecord.bind(null, definitionKey, id)} className={styles.formGrid}>{definition.fields.map((field) => <Field field={field} key={field.name} value={row[field.name]} options={fieldOptions[field.name]} />)}<button className={styles.primaryButton} type="submit">Save changes</button></form><form action={deleteManagedRecord.bind(null, definitionKey, id)}><button className={styles.dangerButton} type="submit">Delete record</button></form></div></details></td></tr>; })}
         </tbody></table></div> : <div className={styles.emptyState}><i className="ti ti-database-off" /><strong>No records yet</strong><span>Add the first record when the VPS database is connected.</span></div>}
+        {rows.length && totalPages > 1 ? <div className={styles.pagination}><button disabled={page <= 0} onClick={() => setPage(Math.max(0, page - 1))} type="button"><i className="ti ti-chevron-left" /></button><span>Page {page + 1} / {totalPages}</span><button disabled={page >= totalPages - 1} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} type="button"><i className="ti ti-chevron-right" /></button></div> : null}
       </div>
     </section>
   );
