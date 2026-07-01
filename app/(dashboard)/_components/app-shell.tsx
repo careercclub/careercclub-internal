@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { enhancedNavSections as navSections } from "../_data/navigation-all";
 import { NotificationCenter } from "./notification-center";
 import styles from "../dashboard.module.css";
@@ -36,6 +36,9 @@ function getTitle(pathname: string): string {
 export function AppShell({ children, hiddenSlugs = [], navBadges = {}, user }: AppShellProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => { setCollapsed(localStorage.getItem("sidebarCollapsed") === "1"); }, []);
+  const toggleCollapse = () => setCollapsed((prev) => { const next = !prev; localStorage.setItem("sidebarCollapsed", next ? "1" : "0"); return next; });
   const displayName = user.name || user.email || "CCC User";
   const initials = displayName
     .split(" ")
@@ -50,12 +53,12 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, user }: A
 
   return (
     <main className={styles.app}>
-      <aside className={menuOpen ? styles.sidebarOpen : styles.sidebar} aria-label="Primary navigation">
+      <aside className={`${menuOpen ? styles.sidebarOpen : styles.sidebar}${collapsed ? " " + styles.sidebarCollapsed : ""}`} aria-label="Primary navigation">
         <div className={styles.sidebarLogo}>
-          <Link className={styles.sidebarToggle} href="/dashboard" aria-label="CCC Internal home" onClick={() => setMenuOpen(false)}>
-            <i className="ti ti-layout-sidebar-left-collapse" aria-hidden="true" />
-            <span>CCC Internal</span>
-          </Link>
+          <button className={styles.sidebarToggle} type="button" onClick={toggleCollapse} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand" : "Collapse"}>
+            <i className={`ti ${collapsed ? "ti-layout-sidebar-left-expand" : "ti-layout-sidebar-left-collapse"}`} aria-hidden="true" />
+            <span>Collapse</span>
+          </button>
         </div>
 
         {visibleSections.map((section) => (
@@ -69,6 +72,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, user }: A
                   className={isActive ? styles.navItemActive : styles.navItem}
                   href={page.path}
                   key={page.slug}
+                  title={page.title}
                   onClick={() => setMenuOpen(false)}
                 >
                   <i className={`ti ${page.icon}`} aria-hidden="true" />

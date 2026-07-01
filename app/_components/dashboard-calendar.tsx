@@ -2,7 +2,7 @@
 
 import { rescheduleTicketAction } from "@/app/actions/dashboard-actions";
 import { updateProgramTaskWorkflowAction } from "@/app/actions/program-actions";
-import { deleteTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
+import { deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,7 @@ function localIso(date: Date) { return `${date.getFullYear()}-${String(date.getM
 // Task/ticket deadlines and event dates are calendar dates; in WIB (UTC+7) the
 // local parts of a UTC-midnight Date resolve to the correct day.
 function dateKey(value: unknown) { if (!value) return ""; return value instanceof Date ? localIso(value) : String(value).slice(0, 10); }
+function personName(people: ApiRecord[], id: string) { const person = people.find((row) => String(row.id) === id); return person ? text(person.nama) || text(person.name) || text(person.email) || id : id; }
 
 type CalItem = { kind: "event" | "task" | "ticket"; row: ApiRecord };
 
@@ -36,6 +37,9 @@ const primaryBtn: CSSProperties = { padding: "8px 14px", border: 0, borderRadius
 const ghostBtn: CSSProperties = { padding: "8px 14px", border: "1px solid var(--border-md)", borderRadius: 8, background: "var(--white)", fontSize: 12, color: "var(--text)" };
 const dangerBtn: CSSProperties = { padding: "8px 12px", border: "1px solid var(--red)", borderRadius: 8, background: "var(--white)", color: "var(--red)", fontSize: 12 };
 const iconBtn: CSSProperties = { border: 0, background: "transparent", fontSize: 16, color: "var(--text-muted)", cursor: "pointer" };
+const chipTag: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "var(--purple-light)", color: "var(--purple-mid)", fontSize: 11, fontWeight: 500 };
+const chipX: CSSProperties = { border: 0, background: "transparent", color: "var(--purple-mid)", cursor: "pointer", fontSize: 13, lineHeight: 1 };
+const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 16 };
 
 function Legend({ color, label }: { color: string; label: string }) {
   return <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: "inline-block" }} />{label}</span>;
@@ -43,6 +47,21 @@ function Legend({ color, label }: { color: string; label: string }) {
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label style={{ display: "block", marginBottom: 8 }}><span style={{ display: "block", fontSize: 10, color: "var(--text-muted)", marginBottom: 3 }}>{label}</span>{children}</label>;
+}
+
+function AssigneeField({ people, value, onChange }: { people: ApiRecord[]; value: string[]; onChange: (ids: string[]) => void }) {
+  const available = people.filter((person) => !value.includes(String(person.id)));
+  return (
+    <Field label="Assignee">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+        {value.length ? value.map((id) => <span key={id} style={chipTag}>{personName(people, id)}<button type="button" onClick={() => onChange(value.filter((current) => current !== id))} style={chipX} aria-label="Hapus assignee">×</button></span>) : <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Belum ada assignee</span>}
+      </div>
+      <select value="" onChange={(event) => { if (event.target.value) onChange([...value, event.target.value]); }} style={inp}>
+        <option value="">+ Tambah assignee…</option>
+        {available.map((person) => <option key={String(person.id)} value={String(person.id)}>{text(person.nama) || text(person.name) || text(person.email)}</option>)}
+      </select>
+    </Field>
+  );
 }
 
 function CalChip({ item, onOpen, onDragStart }: { item: CalItem; onOpen: () => void; onDragStart: (e: DragEvent) => void }) {
@@ -60,8 +79,11 @@ function CalChip({ item, onOpen, onDragStart }: { item: CalItem; onOpen: () => v
   return <button type="button" draggable onDragStart={onDragStart} onClick={onOpen} title={title} style={{ ...chipBase, background: color.bg, color: color.fg, fontWeight: 500, cursor: "pointer", opacity: done ? 0.5 : 1, textDecoration: done ? "line-through" : "none", borderLeft: progress ? `2px solid ${color.fg}` : undefined }}>{title}</button>;
 }
 
-function TicketModal({ ticket, onClose, onSaved, onDeleted }: { ticket: ApiRecord; onClose: () => void; onSaved: (row: ApiRecord) => void; onDeleted: (id: string) => void }) {
+function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }: { ticket: ApiRecord; people: ApiRecord[]; divisions: ApiRecord[]; onClose: () => void; onSaved: (row: ApiRecord) => void; onDeleted: (id: string) => void }) {
+  const router = useRouter();
   const [form, setForm] = useState({ title: text(ticket.title), description: text(ticket.description), status: text(ticket.status) || "Todo", priority: text(ticket.priority) || "Med", dueDate: dateKey(ticket.due_date) });
+  const [divisionId, setDivisionId] = useState(text(ticket.divisi_id));
+  const [assignees, setAssignees] = useState<string[]>(Array.isArray(ticket.assigned_to_ids) ? ticket.assigned_to_ids.map(String) : []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function save() {
@@ -69,17 +91,20 @@ function TicketModal({ ticket, onClose, onSaved, onDeleted }: { ticket: ApiRecor
     try {
       await updateTicketDetailsAction(String(ticket.id), {
         title: form.title, description: form.description, status: form.status, priority: form.priority, dueDate: form.dueDate || null,
-        assignedToIds: Array.isArray(ticket.assigned_to_ids) ? ticket.assigned_to_ids : [],
-        divisionId: ticket.divisi_id ?? null, typeId: ticket.type_id ?? null,
+        assignedToIds: assignees, divisionId: divisionId || null, typeId: ticket.type_id ?? null,
         cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc),
       });
-      onSaved({ ...ticket, ...form, due_date: form.dueDate });
+      onSaved({ ...ticket, ...form, due_date: form.dueDate, divisi_id: divisionId, assigned_to_ids: assignees });
     } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); setBusy(false); }
   }
   async function remove() {
     if (!window.confirm("Hapus ticket ini?")) return;
     setBusy(true); setError("");
     try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); }
+  }
+  async function duplicate() {
+    setBusy(true); setError("");
+    try { await duplicateTicketAction(String(ticket.id)); router.refresh(); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menduplikat."); setBusy(false); }
   }
   return (
     <div style={overlay} onClick={onClose} role="presentation">
@@ -95,12 +120,18 @@ function TicketModal({ ticket, onClose, onSaved, onDeleted }: { ticket: ApiRecor
           <Field label="Status"><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} style={inp}>{["Todo", "In Progress", "Done"].map((s) => <option key={s}>{s}</option>)}</select></Field>
           <Field label="Prioritas"><select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} style={inp}>{["High", "Med", "Low"].map((s) => <option key={s}>{s}</option>)}</select></Field>
         </div>
-        <Field label="Deadline"><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} style={inp} /></Field>
+        <div style={twoCol}>
+          <Field label="Divisi"><select value={divisionId} onChange={(e) => setDivisionId(e.target.value)} style={inp}><option value="">—</option>{divisions.map((division) => <option key={String(division.id)} value={String(division.id)}>{text(division.nama) || text(division.name)}</option>)}</select></Field>
+          <Field label="Deadline"><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} style={inp} /></Field>
+        </div>
+        <AssigneeField people={people} value={assignees} onChange={setAssignees} />
         {error ? <p style={{ color: "var(--red)", fontSize: 11, margin: "4px 0" }}>{error}</p> : null}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 8, flexWrap: "wrap" }}>
-          <button type="button" onClick={remove} disabled={busy} style={dangerBtn}><i className="ti ti-trash" /> Hapus</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" onClick={duplicate} disabled={busy} style={ghostBtn}><i className="ti ti-copy" /> Duplikat</button>
+            <button type="button" onClick={remove} disabled={busy} style={dangerBtn}><i className="ti ti-trash" /> Hapus</button>
+          </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <Link href="/tickets" style={{ fontSize: 11, color: "var(--purple-mid)" }}>Buka di Tickets</Link>
             <button type="button" onClick={onClose} style={ghostBtn}>Batal</button>
             <button type="button" onClick={save} disabled={busy} style={primaryBtn}>{busy ? "Menyimpan…" : "Simpan"}</button>
           </div>
@@ -110,11 +141,12 @@ function TicketModal({ ticket, onClose, onSaved, onDeleted }: { ticket: ApiRecor
   );
 }
 
-function TaskModal({ task, onClose, onSaved }: { task: ApiRecord; onClose: () => void; onSaved: (row: ApiRecord) => void }) {
+function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people: ApiRecord[]; onClose: () => void; onSaved: (row: ApiRecord) => void }) {
   const [status, setStatus] = useState(text(task.status) || "Todo");
   const [dueDate, setDueDate] = useState(dateKey(task.due_date));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const assignees = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : [];
   async function save() {
     setBusy(true); setError("");
     try { await updateProgramTaskWorkflowAction(String(task.id), { status, dueDate: dueDate || undefined }); onSaved({ ...task, status, due_date: dueDate }); }
@@ -136,6 +168,7 @@ function TaskModal({ task, onClose, onSaved }: { task: ApiRecord; onClose: () =>
           <Field label="Status"><select value={status} onChange={(e) => setStatus(e.target.value)} style={inp}>{["Todo", "On Progress", "Done"].map((s) => <option key={s}>{s}</option>)}</select></Field>
           <Field label="Deadline"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={inp} /></Field>
         </div>
+        <Field label="Assignee">{assignees.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{assignees.map((id) => <span key={id} style={chipTag}>{personName(people, id)}</span>)}</div> : <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Belum ada assignee</span>}</Field>
         {error ? <p style={{ color: "var(--red)", fontSize: 11, margin: "4px 0" }}>{error}</p> : null}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 8, flexWrap: "wrap" }}>
           <Link href="/program/tasks" style={{ fontSize: 11, color: "var(--purple-mid)" }}>Edit lengkap di Program</Link>
@@ -149,7 +182,28 @@ function TaskModal({ task, onClose, onSaved }: { task: ApiRecord; onClose: () =>
   );
 }
 
-export function DashboardCalendar({ tickets, tasks, events, referenceDate }: { tickets: ApiRecord[]; tasks: ApiRecord[]; events: ApiRecord[]; referenceDate: string }) {
+export function DashboardUpcoming({ tasks, tickets }: { tasks: ApiRecord[]; tickets: ApiRecord[] }) {
+  const items = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today); horizon.setDate(horizon.getDate() + 7);
+    const startKey = localIso(today); const endKey = localIso(horizon);
+    const collect = (rows: ApiRecord[], kind: string, href: string) => rows.filter((row) => text(row.status) !== "Done").map((row) => ({ id: String(row.id), title: text(row.title) || "Untitled", kind, date: dateKey(row.due_date), href })).filter((item) => item.date >= startKey && item.date <= endKey);
+    return [...collect(tasks, "Task", "/program/tasks"), ...collect(tickets.filter((ticket) => !ticket.related_task_id), "Ticket", "/tickets")].sort((a, b) => a.date.localeCompare(b.date));
+  }, [tasks, tickets]);
+  return (
+    <aside style={panelCard}>
+      <header style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, fontSize: 13, fontWeight: 600 }}><i className="ti ti-clock" /> Upcoming Tasks</header>
+      {items.length ? items.map((item, index) => (
+        <Link href={item.href} key={`${item.kind}-${item.id}-${index}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: "0.5px solid var(--border)", color: "var(--text)" }}>
+          <strong style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</strong>
+          <span style={{ flexShrink: 0, color: "var(--text-muted)", fontSize: 11 }}>{item.kind} · {item.date}</span>
+        </Link>
+      )) : <div style={{ display: "grid", justifyItems: "center", gap: 8, padding: "28px 8px", color: "var(--text-muted)", fontSize: 12, textAlign: "center" }}><i className="ti ti-checks" style={{ fontSize: 22 }} /><span>Tidak ada task dalam 7 hari</span></div>}
+    </aside>
+  );
+}
+
+export function DashboardCalendar({ tickets, tasks, events, people = [], divisions = [], referenceDate }: { tickets: ApiRecord[]; tasks: ApiRecord[]; events: ApiRecord[]; people?: ApiRecord[]; divisions?: ApiRecord[]; referenceDate: string }) {
   const router = useRouter();
   const [taskRows, setTaskRows] = useState(tasks);
   const [ticketRows, setTicketRows] = useState(tickets);
@@ -196,11 +250,6 @@ export function DashboardCalendar({ tickets, tasks, events, referenceDate }: { t
     }
   }
 
-  const upcoming = useMemo(() => [
-    ...taskRows.filter((row) => text(row.status) !== "Done").map((row) => ({ id: String(row.id), title: text(row.title) || "Untitled", kind: "Task", date: dateKey(row.due_date), href: "/program/tasks" })),
-    ...ticketRows.filter((row) => text(row.status) !== "Done" && !row.related_task_id).map((row) => ({ id: String(row.id), title: text(row.title) || "Untitled", kind: "Ticket", date: dateKey(row.due_date), href: "/tickets" })),
-  ].filter((item) => item.date).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12), [taskRows, ticketRows]);
-
   return (
     <div className={styles.dashboardOps}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
@@ -238,18 +287,8 @@ export function DashboardCalendar({ tickets, tasks, events, referenceDate }: { t
           );
         })}
       </div>
-      <div className={styles.dashboardLists}>
-        <section>
-          <header><strong>Upcoming</strong><span>{upcoming.length}</span></header>
-          {upcoming.length ? upcoming.map((item, index) => <Link href={item.href} key={`${item.kind}-${item.id}-${index}`}><strong>{item.title}</strong><span>{item.kind} · {item.date}</span></Link>) : <p style={{ fontSize: 9, color: "var(--text-muted)", padding: "4px 0" }}>Tidak ada task dalam waktu dekat</p>}
-        </section>
-        <section>
-          <header><strong>Program aktif</strong><Link href="/program">Lihat semua</Link></header>
-          {events.filter((event) => !["Done", "Cancelled"].includes(text(event.status))).sort((a, b) => text(a.tanggal || "9999").localeCompare(text(b.tanggal || "9999"))).slice(0, 8).map((event) => <Link href="/program" key={String(event.id)}><strong>{text(event.nama) || "Untitled"}</strong><span>{text(event.tanggal) || "No date"}</span></Link>)}
-        </section>
-      </div>
-      {modal?.kind === "ticket" ? <TicketModal ticket={modal.row} onClose={() => setModal(null)} onSaved={(row) => { setTicketRows((rows) => rows.map((r) => (String(r.id) === String(row.id) ? row : r))); setModal(null); router.refresh(); }} onDeleted={(id) => { setTicketRows((rows) => rows.filter((r) => String(r.id) !== id)); setModal(null); router.refresh(); }} /> : null}
-      {modal?.kind === "task" ? <TaskModal task={modal.row} onClose={() => setModal(null)} onSaved={(row) => { setTaskRows((rows) => rows.map((r) => (String(r.id) === String(row.id) ? row : r))); setModal(null); router.refresh(); }} /> : null}
+      {modal?.kind === "ticket" ? <TicketModal ticket={modal.row} people={people} divisions={divisions} onClose={() => setModal(null)} onSaved={(row) => { setTicketRows((rows) => rows.map((r) => (String(r.id) === String(row.id) ? row : r))); setModal(null); router.refresh(); }} onDeleted={(id) => { setTicketRows((rows) => rows.filter((r) => String(r.id) !== id)); setModal(null); router.refresh(); }} /> : null}
+      {modal?.kind === "task" ? <TaskModal task={modal.row} people={people} onClose={() => setModal(null)} onSaved={(row) => { setTaskRows((rows) => rows.map((r) => (String(r.id) === String(row.id) ? row : r))); setModal(null); router.refresh(); }} /> : null}
     </div>
   );
 }

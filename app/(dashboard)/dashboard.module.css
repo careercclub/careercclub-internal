@@ -938,3 +938,39 @@
     margin-left: auto;
   }
 }
+
+.sidebarCollapsed {
+  width: 62px;
+}
+
+.sidebarCollapsed .navLabel {
+  display: none;
+}
+
+.sidebarCollapsed .sidebarToggle,
+.sidebarCollapsed .navItem,
+.sidebarCollapsed .navItemActive {
+  justify-content: center;
+  gap: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.sidebarCollapsed .sidebarToggle span,
+.sidebarCollapsed .navItem span,
+.sidebarCollapsed .navItemActive span {
+  display: none;
+}
+
+.dashboardMain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .dashboardMain {
+    grid-template-columns: 1fr;
+  }
+}
