@@ -49,3 +49,34 @@ export function listTalentPoolWithBuyerMatches() {
     return [...rows];
   });
 }
+
+export function importTalentPoolRows(rows: Array<Record<string, string | number | null>>) {
+  return withPostgres(async (sql) => sql.begin(async (tx) => {
+    let imported = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      const email = String(row.email || "").trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { skipped += 1; continue; }
+      await tx`
+        insert into talent_pool (
+          nama, email, wa, status, sumber, domisili, universitas, campus_tier,
+          ipk, tahun_lulus, target_mt, posisi_mt, pipeline, produk_dibeli, feedback
+        ) values (
+          ${String(row.nama || "")}, ${email}, ${String(row.wa || "")}, ${String(row.status || "")},
+          ${String(row.sumber || "")}, ${String(row.domisili || "")}, ${String(row.universitas || "")},
+          ${String(row.campus_tier || "")}, ${String(row.ipk || "")}, ${String(row.tahun_lulus || "")},
+          ${String(row.target_mt || "")}, ${String(row.posisi_mt || "")}, ${String(row.pipeline || "")},
+          ${String(row.produk_dibeli || "")}, ${String(row.feedback || "")}
+        )
+        on conflict (email) do update set
+          nama = excluded.nama, wa = excluded.wa, status = excluded.status, sumber = excluded.sumber,
+          domisili = excluded.domisili, universitas = excluded.universitas, campus_tier = excluded.campus_tier,
+          ipk = excluded.ipk, tahun_lulus = excluded.tahun_lulus, target_mt = excluded.target_mt,
+          posisi_mt = excluded.posisi_mt, pipeline = excluded.pipeline,
+          produk_dibeli = excluded.produk_dibeli, feedback = excluded.feedback
+      `;
+      imported += 1;
+    }
+    return { imported, skipped };
+  }));
+}

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 
-type Recipient = string | { email?: string };
+type Recipient = string | { email?: string; name?: string };
 
 type SendEmailBody = {
   to?: Recipient | Recipient[];
@@ -37,6 +37,12 @@ function json(payload: unknown, init: ResponseInit = {}) {
 
 function getRecipientEmail(recipient: Recipient): string | null {
   return typeof recipient === "string" ? recipient : recipient.email || null;
+}
+
+function personalize(value: string, recipient: Recipient, html = false) {
+  const rawName = typeof recipient === "string" ? "" : recipient.name || "";
+  const name = html ? rawName.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character) : rawName;
+  return value.replaceAll("{{nama}}", name || "Kak");
 }
 
 export function OPTIONS() {
@@ -86,8 +92,8 @@ export async function POST(request: NextRequest) {
           from_email || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"
         }>`,
         to: [email],
-        subject,
-        html,
+        subject: personalize(subject, recipient),
+        html: personalize(html, recipient, true),
         ...(scheduled_at ? { scheduled_at } : {}),
       };
 

@@ -25,5 +25,61 @@ export const contentPlanningLinks = [
 
 export const programLinks = [
   { href: "/program", label: "Program overview" },
+  { href: "/program/tasks", label: "Tasks" },
   { href: "/program/rundown", label: "Event rundown" },
+  { href: "/program/link-templates", label: "Link templates" },
+];
+
+export const crmLinks = [
+  { href: "/crm", label: "Buyers" },
+  { href: "/crm/deals", label: "Deals pipeline" },
+];
+
+export const instagramLinks = [
+  { href: "/instagram", label: "Snapshots" },
+  { href: "/instagram/targets", label: "Targets" },
+];
+
+export const mtVacancyLinks = [
+  { href: "/job-vacancy-mt", label: "Vacancies" },
+  { href: "/job-vacancy-mt/industries", label: "Industries" },
+];
+
+export const competitorLinks = [
+  { href: "/competitor-intel", label: "Profiles" },
+  { href: "/competitor-intel/products", label: "Products" },
+  { href: "/competitor-intel/prices", label: "Price history" },
+  { href: "/competitor-intel/snapshots", label: "Snapshots" },
+  { href: "/competitor-intel/flags", label: "Flags" },
+];
+
+export const customerKnowledgeLinks = [
+  { href: "/customer-knowledge", label: "Pain points" },
+  { href: "/customer-knowledge/platforms", label: "Platforms" },
+  { href: "/customer-knowledge/categories", label: "Categories" },
+  { href: "/customer-knowledge/free-class", label: "Free class analytics" },
+];
+
+export const ticketLinks = [
+  { href: "/tickets", label: "Tickets" },
+  { href: "/tickets/divisions", label: "Divisions" },
+  { href: "/tickets/people", label: "People" },
+  { href: "/tickets/types", label: "Request types" },
+];
+
+export const partnershipLinks = [
+  { href: "/b2b-partnership", label: "Partners" },
+  { href: "/b2b-partnership/deals", label: "Deals" },
+  { href: "/b2b-partnership/outreach", label: "Outreach" },
+];
+
+export const orgPartnershipLinks = [
+  { href: "/org-partnership", label: "Organizations" },
+  { href: "/org-partnership/deals", label: "Deals" },
+  { href: "/org-partnership/outreach", label: "Outreach" },
+];
+
+export const settingsLinks = [
+  { href: "/settings", label: "Application settings" },
+  { href: "/settings/users", label: "Users & roles" },
 ];

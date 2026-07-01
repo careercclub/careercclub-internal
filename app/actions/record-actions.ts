@@ -1,9 +1,17 @@
 "use server";
 
 import { auth } from "@/auth";
+import { logActivity } from "@/lib/api/activity";
 import { normalizeNotificationRoles, publishTicketNotification } from "@/lib/api/notifications";
+import {
+  deleteProgramEventWithWorkflow,
+  deleteTaskWithLinkedTicket,
+  deleteTicketWithLinkedTask,
+  synchronizeTaskToTicket,
+  synchronizeTicketToTask,
+} from "@/lib/api/program";
 import { deleteRow, getRowById, insertRow, updateRow } from "@/lib/db/query";
-import { isRecordDefinitionKey, recordDefinitions, type ManagedField } from "@/lib/records/catalog";
+import { isRecordDefinitionKey, recordDefinitions, type ManagedField, type RecordDefinition } from "@/lib/records/catalog";
 import { revalidatePath } from "next/cache";
 
 function parseField(field: ManagedField, formData: FormData) {
@@ -30,7 +38,18 @@ async function requireUser() {
 
 function getDefinition(key: string) {
   if (!isRecordDefinitionKey(key)) throw new Error("Unknown record definition.");
-  return recordDefinitions[key];
+  return recordDefinitions[key] as RecordDefinition;
+}
+
+function requireMutationRole(
+  definition: ReturnType<typeof getDefinition>,
+  user: { role?: string | null },
+) {
+  if (!definition.mutationRoles?.length) return;
+  const role = user.role?.trim().toLowerCase() || "member";
+  if (!definition.mutationRoles.includes(role)) {
+    throw new Error("You do not have permission to modify this module.");
+  }
 }
 
 function getValues(key: string, formData: FormData) {
@@ -53,6 +72,12 @@ function getTicketRoles(record: ManagedRecord | null, fallbackRole?: string | nu
   return roles.length ? roles : [fallbackRole?.trim().toLowerCase() || "admin"];
 }
 
+function getActivityDetail(record: ManagedRecord | null) {
+  if (!record) return "";
+  const value = record.title ?? record.name ?? record.nama ?? record.email ?? record.company ?? record.kode;
+  return typeof value === "string" ? value : `ID: ${record.id}`;
+}
+
 async function notifyTicket(input: Parameters<typeof publishTicketNotification>[0]) {
   try {
     await publishTicketNotification(input);
@@ -64,6 +89,7 @@ async function notifyTicket(input: Parameters<typeof publishTicketNotification>[
 export async function createManagedRecord(key: string, formData: FormData) {
   const user = await requireUser();
   const definition = getDefinition(key);
+  requireMutationRole(definition, user);
   const values = getValues(key, formData);
 
   if (key === "tickets" && !normalizeNotificationRoles(values.notification_roles).length) {
@@ -71,6 +97,12 @@ export async function createManagedRecord(key: string, formData: FormData) {
   }
 
   const record = await insertRow<ManagedRecord>(definition.table, values);
+
+  if (key === "tasks") {
+    await synchronizeTaskToTicket(record.id, user.id);
+  } else if (key === "tickets" && record.related_task_id) {
+    await synchronizeTicketToTask(record.id);
+  }
 
   if (key === "tickets") {
     const actorName = getActorName(user);
@@ -85,12 +117,22 @@ export async function createManagedRecord(key: string, formData: FormData) {
     });
   }
 
+  await logActivity({
+    userName: getActorName(user),
+    module: definition.title,
+    action: "Tambah",
+    detail: getActivityDetail(record),
+    table: definition.table,
+  });
+
   revalidatePath(definition.path);
+  revalidatePath("/dashboard");
 }
 
 export async function updateManagedRecord(key: string, id: string, formData: FormData) {
   const user = await requireUser();
   const definition = getDefinition(key);
+  requireMutationRole(definition, user);
   const previous = key === "tickets" ? await getRowById<ManagedRecord>(definition.table, id) : null;
   const values = getValues(key, formData);
 
@@ -99,6 +141,12 @@ export async function updateManagedRecord(key: string, id: string, formData: For
   }
 
   const record = await updateRow<ManagedRecord>(definition.table, id, values);
+
+  if (key === "tasks" && record) {
+    await synchronizeTaskToTicket(record.id, user.id);
+  } else if (key === "tickets" && record?.related_task_id) {
+    await synchronizeTicketToTask(record.id);
+  }
 
   if (key === "tickets" && record) {
     const actorName = getActorName(user);
@@ -119,14 +167,34 @@ export async function updateManagedRecord(key: string, id: string, formData: For
     });
   }
 
+  if (record) {
+    await logActivity({
+      userName: getActorName(user),
+      module: definition.title,
+      action: "Update",
+      detail: getActivityDetail(record),
+      table: definition.table,
+    });
+  }
+
   revalidatePath(definition.path);
+  revalidatePath("/dashboard");
 }
 
 export async function deleteManagedRecord(key: string, id: string) {
   const user = await requireUser();
   const definition = getDefinition(key);
+  requireMutationRole(definition, user);
   const previous = key === "tickets" ? await getRowById<ManagedRecord>(definition.table, id) : null;
-  await deleteRow(definition.table, id);
+  if (key === "tasks") {
+    await deleteTaskWithLinkedTicket(id);
+  } else if (key === "tickets") {
+    await deleteTicketWithLinkedTask(id);
+  } else if (key === "events") {
+    await deleteProgramEventWithWorkflow(id);
+  } else {
+    await deleteRow(definition.table, id);
+  }
 
   if (key === "tickets" && previous) {
     const actorName = getActorName(user);
@@ -140,5 +208,14 @@ export async function deleteManagedRecord(key: string, id: string) {
     });
   }
 
+  await logActivity({
+    userName: getActorName(user),
+    module: definition.title,
+    action: "Hapus",
+    detail: getActivityDetail(previous) || `ID: ${id}`,
+    table: definition.table,
+  });
+
   revalidatePath(definition.path);
+  revalidatePath("/dashboard");
 }

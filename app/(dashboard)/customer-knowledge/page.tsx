@@ -1,6 +1,7 @@
 import { PainPointAiParser } from "@/app/_components/pain-point-ai-parser";
 import { RecordManager } from "@/app/_components/record-manager";
 import { listPainPointCategories, listPainPoints } from "@/lib/api/customer-knowledge";
+import { customerKnowledgeLinks } from "@/lib/records/links";
 
 export const metadata = { title: "Customer Knowledge" };
 
@@ -13,6 +14,7 @@ export default async function CustomerKnowledgePage() {
   return (
     <RecordManager
       definitionKey="pain_points"
+      links={customerKnowledgeLinks}
       rows={rows}
       tools={<PainPointAiParser categories={categories} />}
     />

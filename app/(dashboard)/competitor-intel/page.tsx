@@ -1,13 +1,9 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { CompetitorTools } from "@/app/_components/competitor-tools";
+import { RecordManager } from "@/app/_components/record-manager";
+import { getCompetitorWorkspace } from "@/lib/api/competitor-intel";
+import { competitorLinks } from "@/lib/records/links";
 
-const page = getPageBySlug("competitor-intel");
-
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
-
-export default function CompetitorIntelPage() {
-  return <ModulePage page={page} />;
+export default async function CompetitorIntelPage() {
+  const workspace = await getCompetitorWorkspace();
+  return <RecordManager definitionKey="competitor_profiles" links={competitorLinks} rows={workspace.profiles} tools={<CompetitorTools workspace={workspace} />} />;
 }

@@ -49,3 +49,39 @@ export function listAuthRoles() {
     return rows.map((row) => row.role);
   });
 }
+
+export function listSafeAuthUsers() {
+  return withPostgres(async (sql) => {
+    const rows = await sql<Array<Pick<AuthUserRecord, "id" | "email" | "name" | "role" | "is_active" | "created_at">>>`
+      select id, email, name, role, is_active, created_at
+      from auth_users
+      order by created_at desc
+    `;
+    return [...rows];
+  });
+}
+
+export async function createInternalUser(input: { email: string; name: string; role: string; password: string }) {
+  const passwordHash = await bcrypt.hash(input.password, 12);
+  return withPostgres(async (sql) => {
+    const [user] = await sql<AuthUserRecord[]>`
+      insert into auth_users (email, name, role, password_hash, is_active)
+      values (${input.email.toLowerCase()}, ${input.name}, ${input.role}, ${passwordHash}, true)
+      returning *
+    `;
+    return user;
+  });
+}
+
+export async function resetInternalUserPassword(id: string, password: string) {
+  const passwordHash = await bcrypt.hash(password, 12);
+  return withPostgres(async (sql) => {
+    await sql`update auth_users set password_hash = ${passwordHash} where id = ${id}`;
+  });
+}
+
+export function updateInternalUserAccess(id: string, input: { role: string; isActive: boolean }) {
+  return withPostgres(async (sql) => {
+    await sql`update auth_users set role = ${input.role}, is_active = ${input.isActive} where id = ${id}`;
+  });
+}

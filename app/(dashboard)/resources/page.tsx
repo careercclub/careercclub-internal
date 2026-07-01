@@ -1,13 +1,8 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { RecordManager } from "@/app/_components/record-manager";
+import { ResourceTools } from "@/app/_components/resource-tools";
+import { listResources } from "@/lib/api/resources";
 
-const page = getPageBySlug("resources");
-
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
-
-export default function ResourcesPage() {
-  return <ModulePage page={page} />;
+export default async function ResourcesPage() {
+  const rows = await listResources();
+  return <RecordManager definitionKey="resources" rows={rows} tools={<ResourceTools rows={rows} />} />;
 }

@@ -83,9 +83,8 @@ AUTH_ADMIN_EMAIL=admin@careercclub.com
 AUTH_ADMIN_PASSWORD=change-me
 ```
 
-The edge-safe route protection lives in `auth.config.ts` and `middleware.ts`; the server-only
-credential verification stays in `auth.ts` and `lib/api/auth-users.ts`. Next.js 16 normally prefers
-`proxy.ts`, but OpenNext currently requires Edge Middleware while Next.js 16 Proxy is Node-only.
+Route protection lives in `auth.config.ts` and the Next.js 16 `proxy.ts`; server-only credential
+verification stays in `auth.ts` and `lib/api/auth-users.ts`.
 
 ## Email API
 
@@ -117,6 +116,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/001_production_fe
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/002_crm_buyer_matching.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/003_normalize_r2_storage_keys.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/004_ticket_notifications_and_pwa.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/005_workflow_integrity.sql
 ```
 
 Do not point production at the new VPS database until row counts, foreign keys, CRM buyer counts,

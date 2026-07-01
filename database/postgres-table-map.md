@@ -43,10 +43,16 @@ Apply migrations after restoring the Supabase schema into the VPS database:
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/001_production_feature_parity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/002_crm_buyer_matching.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/003_normalize_r2_storage_keys.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/004_ticket_notifications_and_pwa.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/005_workflow_integrity.sql
 ```
 
 Migration `002` replaces the browser-side Supabase RPC dependency and provides indexed,
 consistent email/WhatsApp matching between CRM buyers and Talent Pool records.
+Migration `003` converts migrated Supabase object URLs to R2 object keys. Migration `004` adds
+role-audienced ticket notifications, read receipts, and Web Push subscriptions. Migration `005`
+deduplicates content-to-ads mirrors and adds workflow integrity indexes.
 
 ## Authentication Table
 

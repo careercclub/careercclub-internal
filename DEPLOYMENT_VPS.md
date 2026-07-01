@@ -26,6 +26,8 @@ AUTH_SECRET=GENERATE_A_RANDOM_SECRET
 AUTH_URL=https://internal.ccclub.id
 AUTH_TRUST_HOST=true
 
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+
 ANTHROPIC_API_KEY=
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
@@ -64,13 +66,18 @@ Percent-encode reserved characters in the database password before placing it in
 
 The existing `deploy_default` network must exist before the application starts.
 
-Apply the ticket notification schema before starting this application version:
+Apply every migration that has not already been recorded on this database. For the current parity
+release, `005` is the final migration:
 
 ```bash
 docker exec -i deploy-postgres-1 \
   psql -U ccc_user -d ccc_ops -v ON_ERROR_STOP=1 \
-  < database/migrations/004_ticket_notifications_and_pwa.sql
+  < database/migrations/005_workflow_integrity.sql
 ```
+
+When Google Calendar is enabled, create a Google OAuth Web client and add both the local origin and
+`https://internal.ccclub.id` to its Authorized JavaScript origins. Put the client ID in
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID`; no Google client secret is used by this browser-consent flow.
 
 ```bash
 docker network inspect deploy_default >/dev/null

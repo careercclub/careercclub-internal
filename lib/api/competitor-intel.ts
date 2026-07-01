@@ -58,3 +58,11 @@ export const listCompetitorProductPrices = prices.list;
 export const createCompetitorProductPrice = prices.create;
 export const updateCompetitorProductPrice = prices.update;
 export const deleteCompetitorProductPrice = prices.remove;
+
+export async function getCompetitorWorkspace() {
+  const [profileRows, snapshotRows, flagRows, productRows, priceRows] = await Promise.all([
+    listCompetitorProfiles(), listCompetitorSnapshots(), listCompetitorFlags(),
+    listCompetitorProducts(), listCompetitorProductPrices(),
+  ]);
+  return { profiles: profileRows, snapshots: snapshotRows, flags: flagRows, products: productRows, prices: priceRows };
+}

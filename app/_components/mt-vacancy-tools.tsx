@@ -1,0 +1,17 @@
+"use client";
+
+import type { ApiRecord } from "@/lib/api/_crud";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import styles from "../record-manager.module.css";
+
+function date(value: unknown) { const parsed = new Date(String(value || "")); return Number.isFinite(parsed.getTime()) ? parsed : null; }
+
+export function MtVacancyTools({ rows, referenceDate }: { rows: ApiRecord[]; referenceDate: string }) {
+  const router = useRouter(); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
+  const active = useMemo(() => { const now = new Date(referenceDate).getTime(); return rows.filter((row) => String(row.status || "Active").toLowerCase() !== "closed" && (!date(row.deadline) || date(row.deadline)!.getTime() >= now)).sort((a, b) => String(a.deadline || "9999").localeCompare(String(b.deadline || "9999"))); }, [rows, referenceDate]);
+  const industries = new Set(rows.map((row) => String(row.industry || "Uncategorized"))).size; const companies = new Set(rows.map((row) => String(row.company || "Unknown"))).size;
+  function newsletter() { const body = active.map((row, index) => `${index + 1}. ${row.company} - ${row.program}\nIndustry: ${row.industry || "-"}\nDeadline: ${row.deadline || "Open"}\n${Array.isArray(row.career_links) ? row.career_links.join("\n") : ""}`).join("\n\n"); const content = `CareerCclub MT Vacancy Update\n${new Date().toLocaleDateString("id-ID")}\n\n${body}`; navigator.clipboard.writeText(content).then(() => setMessage("Newsletter copied to clipboard.")).catch(() => setMessage("Clipboard access was blocked.")); }
+  async function importVacancies(formData: FormData) { setBusy(true); setMessage(""); try { const response = await fetch("/api/mt-vacancies/import", { method: "POST", body: formData }); const result = await response.json() as { inserted?: number; updated?: number; error?: string }; if (!response.ok) throw new Error(result.error || "Import failed."); setMessage(`Imported ${result.inserted || 0}; updated ${result.updated || 0}.`); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); } finally { setBusy(false); } }
+  return <div className={styles.toolStack}><div className={styles.metricStrip}><div><strong>{rows.length}</strong><span>vacancies</span></div><div><strong>{active.length}</strong><span>active</span></div><div><strong>{companies}</strong><span>companies</span></div><div><strong>{industries}</strong><span>industries</span></div></div><div className={styles.filterBar}><button className={styles.secondaryButton} onClick={newsletter} type="button"><i className="ti ti-news" /> Copy active-vacancy newsletter</button></div><details className={styles.createPanel}><summary><i className="ti ti-file-import" /> Import vacancy CSV/XLSX</summary><form action={importVacancies} className={styles.toolForm}><input accept=".csv,.xlsx" name="file" type="file" required /><button className={styles.primaryButton} disabled={busy}>Import</button></form></details>{message ? <p className={styles.formMessage}>{message}</p> : null}<div className={styles.summaryGrid}>{active.slice(0, 12).map((row) => <article key={String(row.id)}><header><strong>{String(row.company || "Unknown")}</strong><span>{String(row.status || "Active")}</span></header><p>{String(row.program || "Untitled program")}</p><footer><span>{String(row.industry || "Uncategorized")}</span><span>{String(row.deadline || "No deadline")}</span></footer></article>)}</div></div>;
+}

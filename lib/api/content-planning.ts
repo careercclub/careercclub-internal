@@ -1,5 +1,6 @@
 import "server-only";
 import { createTableApi, type ApiRecord } from "./_crud";
+import { withPostgres } from "@/lib/db/postgres";
 
 export type ContentPlanRecord = ApiRecord;
 export type StoryPlanDateRecord = ApiRecord;
@@ -59,3 +60,22 @@ export const listMtStories = mtStories.list;
 export const createMtStory = mtStories.create;
 export const updateMtStory = mtStories.update;
 export const deleteMtStory = mtStories.remove;
+
+export function createStoryPlanWithItems(input: { tanggal: string; status?: string; items: Array<{ urutan?: number; isi?: string }> }) {
+  const status = input.status === "Done" ? "Done" : "Draft";
+  const items = input.items.slice(0, 30).map((item, index) => ({ urutan: Number(item.urutan) || index + 1, isi: String(item.isi || "").trim() })).filter((item) => item.isi);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.tanggal)) throw new Error("A valid story date is required.");
+  if (!items.length) throw new Error("At least one story slide is required.");
+
+  return withPostgres(async (sql) => sql.begin(async (tx) => {
+    const [date] = await tx<{ id: string }[]>`
+      insert into story_plan_dates (tanggal, status)
+      values (${input.tanggal}, ${status})
+      returning id
+    `;
+    for (const item of items) {
+      await tx`insert into story_plan_items (date_id, urutan, isi) values (${date.id}::uuid, ${item.urutan}, ${item.isi})`;
+    }
+    return date.id;
+  }));
+}

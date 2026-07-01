@@ -1,13 +1,7 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { RecordManager } from "@/app/_components/record-manager";
+import { listAppSettings } from "@/lib/api/settings";
+import { settingsLinks } from "@/lib/records/links";
 
-const page = getPageBySlug("settings");
-
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
-
-export default function SettingsPage() {
-  return <ModulePage page={page} />;
+export default async function SettingsPage() {
+  return <RecordManager definitionKey="app_settings" links={settingsLinks} rows={await listAppSettings()} />;
 }

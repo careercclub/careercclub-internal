@@ -1,13 +1,9 @@
-import { ModulePage } from "../_components/module-page";
-import { getPageBySlug } from "../_data/navigation";
+import { AssetGallery } from "@/app/_components/asset-gallery";
+import { AssetUploadTools } from "@/app/_components/asset-upload-tools";
+import { RecordManager } from "@/app/_components/record-manager";
+import { listDesignAssets } from "@/lib/api/design-assets";
 
-const page = getPageBySlug("design-assets");
-
-export const metadata = {
-  title: page.title,
-  description: page.description,
-};
-
-export default function DesignAssetsPage() {
-  return <ModulePage page={page} />;
+export default async function DesignAssetsPage() {
+  const rows = await listDesignAssets();
+  return <RecordManager definitionKey="design_assets" rows={rows} tools={<><AssetUploadTools mode="design" /><AssetGallery rows={rows} titleField="nama" categoryField="kategori" imageFields={["storage_paths", "storage_path"]} canSendToLibrary /></>} />;
 }

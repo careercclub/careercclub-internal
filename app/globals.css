@@ -41,6 +41,11 @@ body {
   margin: 0;
 }
 
+.pwa-pull-indicator { position: fixed; z-index: 200; top: env(safe-area-inset-top, 0); left: 50%; min-height: 34px; display: flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1px solid var(--border); border-radius: 18px; color: var(--text-muted); background: var(--white); box-shadow: 0 5px 18px rgba(26,26,46,.14); opacity: 0; pointer-events: none; transition: opacity 120ms ease; font-size: 10px; }
+.pwa-pull-visible { opacity: 1; }
+.pwa-pull-spin { animation: pwa-pull-spin 800ms linear infinite; }
+@keyframes pwa-pull-spin { to { transform: rotate(360deg); } }
+
 html {
   background: var(--purple-dark);
 }

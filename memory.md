@@ -4,6 +4,27 @@ This file records the completed refactor foundation, the production features dis
 
 Items described as completed apply to the `refactor` branch. The current production `main` branch still runs the legacy `index.html` application against Supabase.
 
+## Current Refactor State (30 June 2026)
+
+- The legacy single-page HTML runtime has been replaced by 79 compiled App Router pages and route handlers. No dashboard route renders demo records or the removed shared placeholder component.
+- All structured application data is read and mutated server-side through VPS PostgreSQL. Module APIs remain split by domain under `lib/api/`; there is no browser Supabase client and no monolithic `lib/api.ts`.
+- Auth.js credentials authentication, bcrypt hashes, JWT sessions, active-user enforcement, roles, admin user management, and protected `proxy.ts` routing are implemented.
+- Supabase Storage was migrated to private R2 bucket `ccc-ops`. Authenticated presigned upload/download handling and galleries are implemented for design assets, content references, ticket attachments, collaborators, KOL, MT Story, and product/content files.
+- Ticket notifications support per-ticket role audiences, per-user read receipts, optional Web Push, and stale subscription cleanup. Ticket status, comments, links, attachments, duplication, email, and linked task synchronization are wired to PostgreSQL.
+- Program workflows include event/task CRUD, rundown and link-template routes, task-ticket synchronization and repair, event duplication, cascade deletion, dashboard deadline rescheduling, and Google Calendar creation.
+- Product workflows include the catalog and all knowledge subroutes, merged bundle counts, duplication of related knowledge, filtering, sorting, and JSON export.
+- CRM supports Lynkid CSV/XLSX import modes, normalized WhatsApp matching, buyer history, classification mapping, grouped analytics, JSON export, deal pipelines, and Talent Pool matching/import/email workflows.
+- Content workflows include Story/Carousel planning data, KOL and MT Story galleries, Meta CSV/XLSX evaluation import, legacy-compatible Reel/Feed/Story scoring, posting/buyer analysis, and Meta Ads candidate synchronization.
+- Partnership, organization, and CRM deals have persisted drag-and-drop pipelines with mobile status controls and CSV export.
+- Instagram snapshots and MT vacancies support CSV/XLSX import and analytics. Customer Knowledge supports AI screenshot parsing plus file or public Google Sheets survey import. Review-before-save text parsing is exposed for tickets, tasks, partnerships, Story and Carousel plans, and vouchers.
+- Design assets can be uploaded to R2 and copied into Content Library. Resources persist ordering; vouchers persist atomic usage changes; competitor intelligence has profile/product/price/snapshot/flag routes and overview analytics.
+- The PWA has an offline fallback, static-only service-worker caching, controlled updates, install metadata, Web Push integration, and standalone pull-to-refresh.
+- Generic record mutations now write non-blocking activity history for the dashboard while retaining the legacy noisy-table exclusions.
+- Migrations `001` through `005` cover production feature parity, CRM normalization, R2 key normalization, ticket notifications/PWA, and workflow integrity indexes.
+- Current verification: `tsc --noEmit`, ESLint, and the optimized Next.js production build all pass. The build compiles 79 routes.
+
+Known cutover work is operational rather than placeholder implementation: apply migration `005`, configure Google OAuth if Calendar is used, deploy the rebuilt container, and run authenticated staging smoke tests against the VPS database and R2. Talent Pool blast templates, device-local history, sender preferences, and `{{nama}}` personalization are implemented without exposing the Resend key. MT-specific unread notifications are not a separate subsystem; ticket notifications remain intentionally ticket-only.
+
 ## Branch Comparison Snapshot
 
 - Shared branch base: `72a7820` from 13 June 2026.
@@ -28,7 +49,7 @@ Items described as completed apply to the `refactor` branch. The current product
 - Added a shared dashboard route group at `app/(dashboard)`.
 - Added a protected dashboard layout in `app/(dashboard)/layout.tsx`.
 - Added a reusable application shell with the sidebar, topbar, active navigation state, user identity, and sign-out control.
-- Added shared module rendering through `app/(dashboard)/_components/module-page.tsx`.
+- Added shared persisted CRUD rendering through `app/_components/record-manager.tsx`; the original placeholder module component was removed.
 - Centralized module navigation metadata in `app/(dashboard)/_data/navigation.ts`.
 - Split the original page into these routes:
   - `/dashboard`
@@ -96,9 +117,10 @@ Items described as completed apply to the `refactor` branch. The current product
   - Resources
   - Settings
 
-## Production Features To Port
+## Legacy Production Feature Inventory
 
-The following features exist in the legacy production branch but are not yet implemented as production-ready App Router workflows.
+This is the original feature inventory extracted from the legacy production file. Its implementation
+status is superseded by **Current Refactor State (30 June 2026)** above.
 
 ### Products
 
@@ -192,7 +214,7 @@ Existing tables also require production schema parity. In particular, `tickets` 
 - Added the App Router auth handler at `app/api/auth/[...nextauth]/route.ts`.
 - Added server-side credential verification in `auth.ts`.
 - Added an edge-safe shared auth configuration in `auth.config.ts`.
-- Added route protection through Edge `middleware.ts`. Next.js 16 `proxy.ts` was replaced because its forced Node runtime is not currently supported by OpenNext Cloudflare middleware packaging.
+- Added route protection through the Next.js 16 `proxy.ts` convention for the VPS standalone runtime.
 - Added JWT-backed sessions with user ID and role fields.
 - Added NextAuth TypeScript module augmentation in `types/next-auth.d.ts`.
 - Added Postgres authentication through the `auth_users` table.
@@ -243,15 +265,9 @@ Existing tables also require production schema parity. In particular, `tickets` 
 - Added nested-route navigation handling and sidebar entries for Talent Pool and Collaborators.
 - Protected the Resend endpoint with Auth.js and bounded request size/recipient count.
 
-Still incomplete before production cutover:
-
-- Rich ticket detail/calendar interactions, Google Calendar integration, and task-to-ticket synchronization/repair.
-- Product duplication, merged bundle knowledge views, filtering/sorting, and JSON exports.
-- Content Evaluation story-vs-buyer analytics and posting calendar.
-- CRM import UI, transaction grouping/history UI, analytics, and JSON export.
-- Collaborator card/search presentation and company/title schema fields still need confirmation against the production dump.
-- MT vacancy unread notifications and iOS PWA pull-to-refresh behavior.
-- Final application deployment, workflow smoke testing, backup automation, and monitoring.
+The remaining cutover items are applying migration `005`, deployment configuration, authenticated
+workflow smoke testing, backup automation, and monitoring. A dedicated MT-vacancy unread feed is
+not included because the new notification system is intentionally scoped to tickets.
 
 ## Complete Migration Plan
 
@@ -325,6 +341,17 @@ Still incomplete before production cutover:
 
 ## Verification Completed
 
+- Replaced every remaining top-level placeholder route with a server-rendered PostgreSQL view:
+  Dashboard, B2B Partnerships, Content Evaluation, CRM, Instagram, Vouchers, Meta Ads,
+  Design Assets, Competitor Intelligence, MT Vacancies, Content Library, Settings, Resources,
+  Programs, and Organization Partnerships.
+- Added the matching primary-table definitions and retained module-specific `lib/api` boundaries;
+  these pages now read and mutate persisted records through authenticated Server Actions.
+- Dashboard totals and recent activity now come from PostgreSQL, and the fabricated Programs
+  navigation badge was removed.
+- Fixed the application shell so the sidebar and main content scroll independently on desktop and
+  mobile viewports.
+
 - Added ticket-only notifications with explicit role audiences stored on each ticket, server-side
   audience enforcement, and per-user read receipts.
 - Added optional Web Push delivery with per-user device subscriptions, stable VAPID credentials,
@@ -346,17 +373,22 @@ Still incomplete before production cutover:
 - Browser smoke testing confirmed that the authenticated topbar exposes the sign-out control.
 - TypeScript `tsc --noEmit` passes after the Cloudflare, R2, migration, CRUD route, CRM matching, and Anthropic work.
 - Focused ESLint passes for application, API, data-layer, authentication, and Cloudflare configuration code.
-- The optimized Next.js build passes with 48 App Router routes.
+- The optimized Next.js build passes with 79 App Router routes and route handlers.
 - OpenNext Cloudflare packaging passes and generates `.open-next/worker.js`.
-- Local middleware smoke checks pass: `/dashboard` redirects unauthenticated users, `/sign-in` renders, and protected API handlers return JSON `401` responses.
+- Local auth-gate smoke checks pass: `/dashboard` redirects unauthenticated users, `/sign-in` renders, and protected API handlers return JSON `401` responses.
 
 ## Current Boundaries
 
-- The high-priority new data modules listed in the progress section now use real App Router pages and module APIs. Older untouched modules still render shared placeholder/demo views.
+- All top-level routes now load real VPS PostgreSQL records; no route renders the removed shared placeholder/demo component.
+- Specialized routes now cover partnership deals/outreach, competitor products/prices/snapshots/flags,
+  Instagram targets, program tasks/link templates/rundown, ticket masters, customer-knowledge masters,
+  settings users, CRM imports/grouped analytics, pipelines, and exports.
 - The Supabase schema and data were restored into VPS database `ccc_ops`; all 62 public tables and the committed parity migrations were applied.
 - The restricted `ccc_ops_app` role can access the migrated schema, including 550 buyer rows and the `count_unique_buyers()` function result of 418.
 - Supabase Storage was copied to the private R2 bucket `ccc-ops`; 298 objects were validated and stored under their original bucket-name prefixes.
 - Stored Supabase object URLs were normalized to R2 object keys, and R2 CORS is restricted to `https://internal.ccclub.id`.
 - The first PostgreSQL-backed Auth.js administrator account has been created; bootstrap environment credentials are no longer required.
-- Production still requires the VPS `.env.production`, Caddy route, Cloudflare DNS record, initial container build, smoke testing, backup automation, and monitoring.
+- DNS and Caddy routing are established. Production still requires the updated VPS environment,
+  migration `005`, rebuilt application container, authenticated smoke testing, backup automation,
+  and monitoring.
 - The refactor branch must not be deployed until the acceptance criteria above are satisfied.

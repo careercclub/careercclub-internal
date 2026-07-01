@@ -10,6 +10,7 @@ import styles from "../dashboard.module.css";
 
 type AppShellProps = Readonly<{
   children: ReactNode;
+  hiddenSlugs?: string[];
   user: {
     name?: string | null;
     email?: string | null;
@@ -31,7 +32,7 @@ function getTitle(pathname: string): string {
   return "Dashboard";
 }
 
-export function AppShell({ children, user }: AppShellProps) {
+export function AppShell({ children, hiddenSlugs = [], user }: AppShellProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const displayName = user.name || user.email || "CCC User";
@@ -41,6 +42,10 @@ export function AppShell({ children, user }: AppShellProps) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const visibleSections = navSections.map((section) => ({
+    ...section,
+    pages: section.pages.filter((page) => !hiddenSlugs.includes(page.slug)),
+  })).filter((section) => section.pages.length);
 
   return (
     <main className={styles.app}>
@@ -52,7 +57,7 @@ export function AppShell({ children, user }: AppShellProps) {
           </Link>
         </div>
 
-        {navSections.map((section) => (
+        {visibleSections.map((section) => (
           <nav className={styles.navSection} key={section.label} aria-label={section.label}>
             <div className={styles.navLabel}>{section.label}</div>
             {section.pages.map((page) => {
@@ -67,7 +72,6 @@ export function AppShell({ children, user }: AppShellProps) {
                 >
                   <i className={`ti ${page.icon}`} aria-hidden="true" />
                   <span>{page.title}</span>
-                  {page.slug === "program" ? <b className={styles.navBadge}>24</b> : null}
                 </Link>
               );
             })}
@@ -102,7 +106,7 @@ export function AppShell({ children, user }: AppShellProps) {
           </div>
         </header>
 
-        <div className={styles.content}>{children}</div>
+        <div className={styles.content} id="mainContent">{children}</div>
       </section>
       {menuOpen ? <button className={styles.sidebarBackdrop} type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} /> : null}
     </main>
