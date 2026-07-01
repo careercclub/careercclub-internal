@@ -9,6 +9,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { FollowersChart, MetricsChart } from "./charts";
 import { StatCard, StatsGrid } from "./ui-kit";
 
 type Tab = "dashboard" | "upload" | "target";
@@ -39,8 +40,39 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
   }, [snapshots, targets, baseline, referenceDate]);
   const history = [...analytics.sorted].reverse(); const pages = Math.max(1, Math.ceil(history.length / 5)); const pageRows = history.slice(Math.min(page, pages - 1) * 5, Math.min(page, pages - 1) * 5 + 5);
   const weekly = [...analytics.sorted].reverse().slice(0, 8).reverse().map((row) => ({ label: day(row.week_start).slice(5), values: [numeric(row.follows_gained) / 7] }));
-  const followerRows = analytics.monthly.slice(-12).map(([label, value]) => ({ label: label.slice(2), values: [value.followers] }));
-  const metricRows = analytics.monthly.slice(-12).map(([label, value]) => ({ label: label.slice(2), values: [value.reach, value.interactions] }));
+  const metricMonths = analytics.monthly.slice(-12);
+  const metricRows = metricMonths.map(([label, value]) => ({ label: label.slice(2), values: [value.reach, value.interactions] }));
+
+  // Extend the followers series with the current year's remaining months so the
+  // dashed prediction line can project forward, matching the legacy `igChartFollowers` combo chart.
+  const followersChart = useMemo(() => {
+    const monthMap = new Map(analytics.monthly);
+    const baselineDate = new Date(`${day(baseline?.baseline_date) || referenceDate.slice(0, 10)}T00:00:00Z`);
+    const baselineFollowers = numeric(baseline?.followers_total);
+    const currentYear = new Date(referenceDate).getFullYear();
+    const actualKeys = analytics.monthly.map(([key]) => key);
+    const lastActualKey = actualKeys.at(-1);
+    const futureKeys: string[] = [];
+    if (lastActualKey) {
+      let [year, month] = lastActualKey.split("-").map(Number);
+      while ((year < currentYear || (year === currentYear && month < 12)) && futureKeys.length < 12) {
+        month += 1; if (month > 12) { month = 1; year += 1; }
+        futureKeys.push(`${year}-${String(month).padStart(2, "0")}`);
+      }
+    }
+    const keys = [...actualKeys.slice(-8), ...futureKeys].slice(-12);
+    function predictedForKey(key: string) {
+      const [year, month] = key.split("-").map(Number);
+      const endOfMonth = new Date(Date.UTC(year, month, 0));
+      const daysFromBaseline = Math.round((endOfMonth.getTime() - baselineDate.getTime()) / 86400000);
+      return Math.round(baselineFollowers + analytics.avgPerDay * daysFromBaseline);
+    }
+    return {
+      labels: keys.map((key) => key.slice(2)),
+      actual: keys.map((key) => monthMap.get(key)?.followers ?? null),
+      predicted: keys.map((key) => (key === lastActualKey || futureKeys.includes(key)) ? predictedForKey(key) : null),
+    };
+  }, [analytics.monthly, analytics.avgPerDay, baseline, referenceDate]);
 
   async function importSnapshots(formData: FormData) { setBusy(true); setMessage(""); try { const response = await fetch("/api/instagram/import", { method: "POST", body: formData }); const result = await response.json() as { imported?: number; files?: number; error?: string }; if (!response.ok) throw new Error(result.error || "Import failed."); setMessage(`Imported ${result.imported || 0} weekly snapshot(s) from ${result.files || 0} file(s).`); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); } finally { setBusy(false); } }
   const currentFollowers = numeric(baseline?.followers_total) || numeric(analytics.latest?.computedFollowers); const target = numeric(analytics.currentTarget?.target_followers); const progress = target ? Math.min(100, currentFollowers / target * 100) : 0;
@@ -67,9 +99,15 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
               <div className="h-2.5 overflow-hidden rounded-full bg-[var(--bg)]"><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "linear-gradient(90deg, var(--purple-accent), #a78bfa)" }} /></div>
             </Card>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Chart legends={["Followers"]} rows={followerRows} target={target} title="Followers &middot; actual" />
+              <Card className="gap-2 p-4">
+                <h3 className="text-[11px] font-bold">Followers &middot; actual vs prediksi</h3>
+                <FollowersChart actual={followersChart.actual} labels={followersChart.labels} predicted={followersChart.predicted} target={target || null} />
+              </Card>
               <Chart legends={["Follows/day"]} rows={weekly} title={`Average follows/day (${analytics.avgPerDay.toFixed(1)})`} />
-              <Chart legends={["Reach", "Interactions"]} rows={metricRows} title="Monthly reach and interactions" />
+              <Card className="gap-2 p-4">
+                <h3 className="text-[11px] font-bold">Monthly reach and interactions</h3>
+                <MetricsChart interactions={metricRows.map((row) => row.values[1])} labels={metricRows.map((row) => row.label)} reach={metricRows.map((row) => row.values[0])} />
+              </Card>
             </div>
             <Card className="gap-3 p-0">
               <div className="flex items-center justify-between p-4 pb-0"><h2 className="text-sm font-bold">Snapshot history</h2><span className="text-[11px] text-muted-foreground">{history.length} weeks</span></div>
