@@ -89,7 +89,7 @@ if (( ${#pending_migrations[@]} > 0 )); then
   done
 else
   echo "No pending database migrations."
-done
+fi
 
 echo "Building and starting the complete Next.js application..."
 "${compose[@]}" build web
