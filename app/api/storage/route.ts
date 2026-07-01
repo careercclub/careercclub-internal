@@ -7,13 +7,29 @@ import {
   isStorageKey,
 } from "@/lib/storage/r2";
 
-const allowedContentTypes = new Set([
+// Documents/archives allowed for attachments. Images are allowed by the
+// `image/*` prefix below so the server matches what the upload UIs accept
+// (design assets, collaborator photos, and ticket attachments all pass the
+// browser's raw file.type, e.g. image/heic from iPhones or office documents).
+const allowedDocumentTypes = new Set([
   "application/pdf",
-  "image/gif",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/csv",
+  "text/plain",
+  "application/zip",
 ]);
+
+function isAllowedContentType(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    (value.startsWith("image/") || allowedDocumentTypes.has(value))
+  );
+}
 
 async function requireSession() {
   const session = await auth();
@@ -46,8 +62,7 @@ export async function POST(request: Request) {
     typeof body.filename !== "string" ||
     !body.filename.trim() ||
     body.filename.length > 255 ||
-    typeof body.contentType !== "string" ||
-    !allowedContentTypes.has(body.contentType)
+    !isAllowedContentType(body.contentType)
   ) {
     return Response.json(
       { error: "A valid storage area, filename, and supported content type are required." },

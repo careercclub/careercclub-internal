@@ -46,6 +46,8 @@ function createPostgresClient(config: ConnectionConfig) {
   return postgres(config.connectionString, {
     max: config.hyperdrive ? 5 : getMaxConnections(),
     prepare: process.env.POSTGRES_PREPARE !== "false",
+    idle_timeout: 20,
+    max_lifetime: 60 * 30,
   });
 }
 
@@ -57,10 +59,7 @@ function getLocalPostgresClient(config: ConnectionConfig) {
   }
 
   const client = createPostgresClient(config);
-
-  if (process.env.NODE_ENV !== "production") {
-    globalWithSql.__cccPostgresSql = client;
-  }
+  globalWithSql.__cccPostgresSql = client;
 
   return client;
 }
