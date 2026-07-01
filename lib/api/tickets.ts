@@ -119,3 +119,41 @@ export function duplicateTicket(id: string) {
     return created;
   }));
 }
+
+export function insertTicket(input: {
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  typeId?: string | null;
+  divisionId?: string | null;
+  assignedToIds?: string[];
+  requesterId?: string | null;
+  dueDate?: string | null;
+  cc?: string[];
+  links?: { label: string; url: string }[];
+  notificationRoles?: string[];
+}) {
+  return withPostgres(async (sql) => sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(hashtext('ccc_ops_ticket_number'))`;
+    const [numberRow] = await tx<{ next_number: number }[]>`
+      select coalesce(max(nullif(regexp_replace(ticket_no, '\\D', '', 'g'), '')::integer), 0) + 1 as next_number from tickets
+    `;
+    const ticketNo = `TKT-${String(numberRow?.next_number || 1).padStart(3, "0")}`;
+    const assignees = (input.assignedToIds || []).filter(Boolean);
+    const [created] = await tx<TicketRecord[]>`
+      insert into tickets (
+        ticket_no, title, description, status, priority, type_id, divisi_id,
+        assigned_to_id, assigned_to_ids, requester_id, due_date, cc, links, files,
+        komentar, attachments, notification_roles, source, gcal_added
+      ) values (
+        ${ticketNo}, ${input.title}, ${input.description || ""}, ${input.status || "Todo"}, ${input.priority || "Med"},
+        ${input.typeId || null}, ${input.divisionId || null}, ${assignees[0] || null}, ${assignees}::uuid[],
+        ${input.requesterId || null}, ${input.dueDate || null}, ${JSON.stringify(input.cc || [])}::jsonb,
+        ${JSON.stringify(input.links || [])}::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb,
+        ${(input.notificationRoles && input.notificationRoles.length ? input.notificationRoles : ["admin"])}::text[], 'Manual', false
+      ) returning *
+    `;
+    return created;
+  }));
+}

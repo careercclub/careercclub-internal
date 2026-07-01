@@ -52,6 +52,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/008_talent_pool_p
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/009_product_knowledge_parity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/010_instagram_baseline_parity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/011_program_post_event_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/012_normalize_legacy_gallery_keys.sql
 ```
 
 Migration `002` replaces the browser-side Supabase RPC dependency and provides indexed,
@@ -68,6 +69,7 @@ Migration `009` adds product asset and feedback tables plus the knowledge fields
 master-detail Product workspace.
 Migration `010` stores the Instagram follower baseline used to derive historical follower counts.
 Migration `011` restores event type, participant outcome, post-event notes, and event links.
+Migration `012` prefixes relative legacy gallery and collaborator paths with their R2 storage area.
 
 ## Authentication Table
 

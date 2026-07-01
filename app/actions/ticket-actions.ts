@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { normalizeNotificationRoles, publishTicketNotification } from "@/lib/api/notifications";
 import { deleteTicketWithLinkedTask, synchronizeTicketToTask } from "@/lib/api/program";
-import { appendTicketComment, appendTicketFile, appendTicketLink, duplicateTicket, getTicket, updateTicket } from "@/lib/api/tickets";
+import { appendTicketComment, appendTicketFile, appendTicketLink, duplicateTicket, getTicket, insertTicket, updateTicket } from "@/lib/api/tickets";
 import { revalidatePath } from "next/cache";
 
 async function requireUser() {
@@ -65,8 +65,9 @@ export async function attachTicketFileAction(id: string, file: { name: string; k
 
 export async function duplicateTicketAction(id: string) {
   await requireUser();
-  await duplicateTicket(id);
+  const created = await duplicateTicket(id);
   refresh();
+  return created;
 }
 
 export async function updateTicketDetailsAction(id: string, input: Record<string, unknown>) {
@@ -88,4 +89,33 @@ export async function deleteTicketAction(id: string) {
   await requireUser();
   await deleteTicketWithLinkedTask(id);
   refresh();
+}
+
+export async function createTicketAction(input: Record<string, unknown>) {
+  const user = await requireUser();
+  const title = String(input.title || "").trim();
+  if (!title) throw new Error("Ticket title is required.");
+  const status = String(input.status || "Todo");
+  if (!["Todo", "In Progress", "Done"].includes(status)) throw new Error("Invalid ticket status.");
+  const priority = String(input.priority || "Med");
+  if (!["High", "Med", "Low"].includes(priority)) throw new Error("Invalid ticket priority.");
+  const assignedToIds = Array.isArray(input.assignedToIds) ? input.assignedToIds.map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)) : [];
+  const links = Array.isArray(input.links) ? input.links.filter((link): link is { label: string; url: string } => !!link && typeof link === "object" && "url" in link) : [];
+  const ticket = await insertTicket({
+    title,
+    description: String(input.description || ""),
+    status,
+    priority,
+    typeId: input.typeId ? String(input.typeId) : null,
+    divisionId: input.divisionId ? String(input.divisionId) : null,
+    assignedToIds,
+    dueDate: input.dueDate ? String(input.dueDate) : null,
+    notificationRoles: [user.role?.trim().toLowerCase() || "admin"],
+    links,
+  });
+  if (ticket.related_task_id) await synchronizeTicketToTask(String(ticket.id));
+  const actorName = user.name || user.email || "CCC User";
+  await publishTicketNotification({ ticketId: String(ticket.id), actorUserId: user.id, actorName, eventType: "created", title: `New ticket: ${title}`, message: `${actorName} created this ticket.`, targetRoles: roles(ticket) });
+  refresh();
+  return ticket;
 }

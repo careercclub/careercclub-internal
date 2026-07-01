@@ -11,5 +11,5 @@ export default async function ProgramPage() {
     listProgramTasks(),
     listTicketPeople(),
   ]);
-  return <ProgramWorkspace events={events} tasks={tasks} referenceDate={new Date().toISOString()} tools={<ProgramWorkflowTools events={events} tasks={tasks} people={people} />} management={<RecordManager definitionKey="events" links={programLinks} rows={events} />} />;
+  return <ProgramWorkspace events={events} tasks={tasks} people={people} referenceDate={new Date().toISOString()} tools={<ProgramWorkflowTools events={events} tasks={tasks} people={people} />} management={<RecordManager definitionKey="events" links={programLinks} rows={events} />} />;
 }

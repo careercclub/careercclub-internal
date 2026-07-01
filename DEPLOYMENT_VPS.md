@@ -80,21 +80,11 @@ These commands are defined in `package.json`. Next.js produces one image contain
 server bundles, so the frontend-only command still rebuilds the `web` image; it differs by skipping
 database migrations and leaving PostgreSQL untouched.
 
-Apply every migration that has not already been recorded on this database. For the current parity
-release, `011` is the final migration. If the VPS already has `001` through `008`, apply the
-remaining migrations in order:
-
-```bash
-for migration in \
-  009_product_knowledge_parity.sql \
-  010_instagram_baseline_parity.sql \
-  011_program_post_event_parity.sql
-do
-  docker exec -i deploy-postgres-1 \
-    psql -U ccc_user -d ccc_ops -v ON_ERROR_STOP=1 \
-    < "database/migrations/$migration" || exit 1
-done
-```
+The full rebuild discovers every ordered `database/migrations/*.sql` file and tracks successful
+applications in `public.app_schema_migrations`. It skips recorded files and applies only pending
+files. A checksum mismatch stops deployment because applied migrations must never be edited; create
+a new numbered migration instead. The first ledger-enabled run safely replays the existing
+idempotent migrations and records them.
 
 When Google Calendar is enabled, create a Google OAuth Web client and add both the local origin and
 `https://internal.ccclub.id` to its Authorized JavaScript origins. Put the client ID in

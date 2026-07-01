@@ -26,5 +26,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       ? settingValue.hiddenSlugs.map(String)
       : [];
 
-  return <AppShell hiddenSlugs={hiddenSlugs} navBadges={{ program: counts.tasks, tickets: counts.tickets }} user={session.user}>{children}</AppShell>;
+  const monthLabel = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date());
+
+  return <AppShell hiddenSlugs={hiddenSlugs} navBadges={{ program: counts.tasks, tickets: counts.tickets }} monthLabel={monthLabel} user={session.user}>{children}</AppShell>;
 }

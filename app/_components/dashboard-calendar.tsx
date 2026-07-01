@@ -3,10 +3,17 @@
 import { rescheduleTicketAction } from "@/app/actions/dashboard-actions";
 import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/actions/program-actions";
 import { deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type CSSProperties, type DragEvent, type ReactNode, useMemo, useState, useTransition } from "react";
+import { type CSSProperties, type DragEvent, useMemo, useState, useTransition } from "react";
 import styles from "../record-manager.module.css";
 
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -29,38 +36,34 @@ type CalItem = { kind: "event" | "task" | "ticket"; row: ApiRecord };
 
 const navBtn: CSSProperties = { minHeight: 28, padding: "4px 8px", border: "0.5px solid var(--border-md)", borderRadius: 6, background: "var(--white)", fontSize: 12, color: "var(--text)" };
 const chipBase: CSSProperties = { display: "block", width: "100%", textAlign: "left", border: 0, padding: "2px 5px", borderRadius: 3, fontSize: 9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
-const overlay: CSSProperties = { position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 60 };
-const modalCard: CSSProperties = { width: "min(560px,100%)", maxHeight: "90vh", overflowY: "auto", background: "var(--white)", borderRadius: 12, padding: 18, boxShadow: "0 20px 60px rgba(0,0,0,.25)" };
-const inp: CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid var(--border-md)", borderRadius: 8, fontSize: 13, background: "var(--white)", color: "var(--text)" };
-const twoCol: CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 };
-const primaryBtn: CSSProperties = { padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--purple-mid)", color: "#fff", fontSize: 12, fontWeight: 600 };
-const ghostBtn: CSSProperties = { padding: "8px 14px", border: "1px solid var(--border-md)", borderRadius: 8, background: "var(--white)", fontSize: 12, color: "var(--text)" };
-const dangerBtn: CSSProperties = { padding: "8px 12px", border: "1px solid var(--red)", borderRadius: 8, background: "var(--white)", color: "var(--red)", fontSize: 12 };
-const iconBtn: CSSProperties = { border: 0, background: "transparent", fontSize: 16, color: "var(--text-muted)", cursor: "pointer" };
-const chipTag: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "var(--purple-light)", color: "var(--purple-mid)", fontSize: 11, fontWeight: 500 };
-const chipX: CSSProperties = { border: 0, background: "transparent", color: "var(--purple-mid)", cursor: "pointer", fontSize: 13, lineHeight: 1 };
 const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 16 };
 
 function Legend({ color, label }: { color: string; label: string }) {
   return <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: "inline-block" }} />{label}</span>;
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <label style={{ display: "block", marginBottom: 8 }}><span style={{ display: "block", fontSize: 10, color: "var(--text-muted)", marginBottom: 3 }}>{label}</span>{children}</label>;
-}
-
 function AssigneeField({ people, value, onChange }: { people: ApiRecord[]; value: string[]; onChange: (ids: string[]) => void }) {
   const available = people.filter((person) => !value.includes(String(person.id)));
   return (
-    <Field label="Assignee">
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
-        {value.length ? value.map((id) => <span key={id} style={chipTag}>{personName(people, id)}<button type="button" onClick={() => onChange(value.filter((current) => current !== id))} style={chipX} aria-label="Hapus assignee">×</button></span>) : <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Belum ada assignee</span>}
+    <div className="grid gap-1.5">
+      <Label>Assignee</Label>
+      <div className="flex flex-wrap gap-1.5">
+        {value.length ? value.map((id) => (
+          <Badge key={id} variant="secondary" className="gap-1 pr-1">
+            {personName(people, id)}
+            <button type="button" onClick={() => onChange(value.filter((current) => current !== id))} className="rounded-full px-1 leading-none hover:bg-black/10" aria-label="Hapus assignee">×</button>
+          </Badge>
+        )) : <span className="text-xs text-muted-foreground">Belum ada assignee</span>}
       </div>
-      <select value="" onChange={(event) => { if (event.target.value) onChange([...value, event.target.value]); }} style={inp}>
-        <option value="">+ Tambah assignee…</option>
-        {available.map((person) => <option key={String(person.id)} value={String(person.id)}>{text(person.nama) || text(person.name) || text(person.email)}</option>)}
-      </select>
-    </Field>
+      {available.length ? (
+        <Select key={value.length} value="" onValueChange={(id) => { if (id) onChange([...value, id]); }}>
+          <SelectTrigger><SelectValue placeholder="+ Tambah assignee…" /></SelectTrigger>
+          <SelectContent>
+            {available.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{text(person.nama) || text(person.name) || text(person.email)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ) : null}
+    </div>
   );
 }
 
@@ -107,37 +110,38 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
     try { await duplicateTicketAction(String(ticket.id)); router.refresh(); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menduplikat."); setBusy(false); }
   }
   return (
-    <div style={overlay} onClick={onClose} role="presentation">
-      <div style={modalCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-          <strong style={{ fontSize: 14, display: "flex", gap: 6, alignItems: "center" }}><i className="ti ti-ticket" /> Detail Ticket</strong>
-          <button type="button" onClick={onClose} style={iconBtn} aria-label="Tutup"><i className="ti ti-x" /></button>
-        </div>
-        {ticket.ticket_no ? <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>#{text(ticket.ticket_no)}</div> : null}
-        <Field label="Judul Ticket"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inp} /></Field>
-        <Field label="Deskripsi"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} style={inp} /></Field>
-        <div style={twoCol}>
-          <Field label="Status"><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} style={inp}>{["Todo", "In Progress", "Done"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-          <Field label="Prioritas"><select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} style={inp}>{["High", "Med", "Low"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-        </div>
-        <div style={twoCol}>
-          <Field label="Divisi"><select value={divisionId} onChange={(e) => setDivisionId(e.target.value)} style={inp}><option value="">—</option>{divisions.map((division) => <option key={String(division.id)} value={String(division.id)}>{text(division.nama) || text(division.name)}</option>)}</select></Field>
-          <Field label="Deadline"><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} style={inp} /></Field>
-        </div>
-        <AssigneeField people={people} value={assignees} onChange={setAssignees} />
-        {error ? <p style={{ color: "var(--red)", fontSize: 11, margin: "4px 0" }}>{error}</p> : null}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 8, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" onClick={duplicate} disabled={busy} style={ghostBtn}><i className="ti ti-copy" /> Duplikat</button>
-            <button type="button" onClick={remove} disabled={busy} style={dangerBtn}><i className="ti ti-trash" /> Hapus</button>
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Detail Ticket</DialogTitle>
+          {ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}
+        </DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5"><Label>Judul Ticket</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Deskripsi</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "In Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Prioritas</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["High", "Med", "Low"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button type="button" onClick={onClose} style={ghostBtn}>Batal</button>
-            <button type="button" onClick={save} disabled={busy} style={primaryBtn}>{busy ? "Menyimpan…" : "Simpan"}</button>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5"><Label>Divisi</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama) || text(d.name)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
+          <AssigneeField people={people} value={assignees} onChange={setAssignees} />
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-      </div>
-    </div>
+        <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i className="ti ti-copy" /> Duplikat</Button>
+            <Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Hapus</Button>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>Batal</Button>
+            <Button type="button" onClick={save} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -155,38 +159,32 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
     } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); setBusy(false); }
   }
   return (
-    <div style={overlay} onClick={onClose} role="presentation">
-      <div style={modalCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <strong style={{ fontSize: 14, display: "flex", gap: 6, alignItems: "center" }}><i className="ti ti-checklist" /> Edit Task</strong>
-          <button type="button" onClick={onClose} style={iconBtn} aria-label="Tutup"><i className="ti ti-x" /></button>
-        </div>
-        <Field label="Judul Task"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inp} /></Field>
-        <Field label="Deskripsi"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} style={inp} /></Field>
-        <div style={twoCol}>
-          <Field label="Phase"><select value={form.phase} onChange={(e) => setForm({ ...form, phase: e.target.value })} style={inp}><option value="">—</option>{["Pre Event", "Hari H", "Post Event"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-          <Field label="Status"><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} style={inp}>{["Todo", "On Progress", "Done"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-        </div>
-        <div style={twoCol}>
-          <Field label="Priority"><select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} style={inp}>{["High", "Med", "Low"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-          <Field label="Deadline"><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} style={inp} /></Field>
-        </div>
-        <AssigneeField people={people} value={assignees} onChange={setAssignees} />
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ display: "block", fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>Attachments</span>
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Belum ada attachment</span>
-          <div style={{ marginTop: 8, padding: "8px 10px", background: "var(--blue-bg)", color: "var(--blue)", borderRadius: 8, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }}><i className="ti ti-info-circle" style={{ marginTop: 1 }} /><span>Upload file &amp; sinkron Google Calendar tersedia di halaman Program tasks.</span></div>
-        </div>
-        {error ? <p style={{ color: "var(--red)", fontSize: 11, margin: "4px 0" }}>{error}</p> : null}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 8, flexWrap: "wrap" }}>
-          <Link href="/program/tasks" style={{ fontSize: 11, color: "var(--purple-mid)" }}>Buka di Program</Link>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button type="button" onClick={onClose} style={ghostBtn}>Batal</button>
-            <button type="button" onClick={save} disabled={busy} style={primaryBtn}>{busy ? "Menyimpan…" : "Simpan"}</button>
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> Edit Task</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5"><Label>Judul Task</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Deskripsi</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase || "none"} onValueChange={(v) => setForm({ ...form, phase: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{["Pre Event", "Hari H", "Post Event"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "On Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["High", "Med", "Low"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+          </div>
+          <AssigneeField people={people} value={assignees} onChange={setAssignees} />
+          <div className="flex gap-2 rounded-md bg-secondary/60 px-3 py-2 text-xs text-muted-foreground"><i className="ti ti-info-circle mt-0.5" /><span>Upload file &amp; sinkron Google Calendar tersedia di halaman <Link href="/program/tasks" className="text-primary underline">Program tasks</Link>.</span></div>
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-      </div>
-    </div>
+        <DialogFooter className="sm:justify-end">
+          <Button type="button" variant="ghost" onClick={onClose}>Batal</Button>
+          <Button type="button" onClick={save} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

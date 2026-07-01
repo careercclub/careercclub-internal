@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
-import { createEventRundownItem, deleteEventRundownItem, duplicateProgramEvent, repairTaskTicketLinks, updateEventRundownItem } from "@/lib/api/program";
+import { createEventRundownItem, createProgramEvent, createProgramTask, deleteEventRundownItem, duplicateProgramEvent, repairTaskTicketLinks, updateEventRundownItem } from "@/lib/api/program";
 import { synchronizeTaskToTicket } from "@/lib/api/program";
 import { withPostgres } from "@/lib/db/postgres";
 import { revalidatePath } from "next/cache";
@@ -95,6 +95,54 @@ export async function updateTaskDetailsAction(id: string, input: { title: string
   }));
   await synchronizeTaskToTicket(id, user.id);
   revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+}
+
+export async function createEventAction(input: Record<string, unknown>) {
+  await requireUser();
+  const nama = String(input.nama || "").trim();
+  if (!nama) throw new Error("Program name is required.");
+  const tanggal = String(input.tanggal || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) throw new Error("A valid date is required.");
+  const status = String(input.status || "Planning");
+  const rawTarget = input.target;
+  const target = rawTarget === "" || rawTarget === null || rawTarget === undefined ? null : Number(rawTarget);
+  const event = await createProgramEvent({
+    nama,
+    jenis_program: input.jenisProgram ? String(input.jenisProgram) : null,
+    tanggal,
+    waktu: input.waktu ? String(input.waktu) : null,
+    status: ["Planning", "On Progress", "Done", "Cancelled"].includes(status) ? status : "Planning",
+    speaker: input.speaker ? String(input.speaker) : null,
+    platform: input.platform ? String(input.platform) : null,
+    target: typeof target === "number" && Number.isFinite(target) ? target : null,
+    deskripsi: input.deskripsi ? String(input.deskripsi) : null,
+  });
+  revalidatePath("/program"); revalidatePath("/dashboard");
+  return event;
+}
+
+export async function createTaskAction(input: Record<string, unknown>) {
+  const user = await requireUser();
+  const title = String(input.title || "").trim();
+  if (!title) throw new Error("Task title is required.");
+  const status = String(input.status || "Todo");
+  const priority = String(input.priority || "Med");
+  const phase = input.phase ? String(input.phase) : "";
+  const assignees = Array.isArray(input.assigneeIds) ? input.assigneeIds.map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)) : [];
+  const task = await createProgramTask({
+    project_id: input.projectId ? String(input.projectId) : null,
+    title,
+    description: String(input.description || ""),
+    status: ["Todo", "On Progress", "Done"].includes(status) ? status : "Todo",
+    priority: ["High", "Med", "Low"].includes(priority) ? priority : "Med",
+    phase: ["Pre Event", "Hari H", "Post Event"].includes(phase) ? phase : null,
+    due_date: input.dueDate ? String(input.dueDate) : null,
+    assignee_id: assignees[0] || null,
+    assignee_ids: assignees,
+  });
+  await synchronizeTaskToTicket(String(task.id), user.id);
+  revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  return task;
 }
 
 export async function createRundownRowAction(eventId: string, order: number) {

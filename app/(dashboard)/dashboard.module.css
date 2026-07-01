@@ -977,3 +977,135 @@
     grid-template-columns: 1fr;
   }
 }
+
+.topbarMonth {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sidebarUser {
+  display: none;
+}
+
+.bottomNav {
+  display: none;
+}
+
+.bottomNavItem,
+.bottomNavItemActive {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bottomNavItem i,
+.bottomNavItemActive i {
+  font-size: 19px;
+}
+
+.bottomNavItemActive {
+  color: var(--purple-mid);
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    background: var(--purple-dark);
+    border-bottom: 0;
+  }
+
+  .pageTitle {
+    color: #fff;
+  }
+
+  .topbarRight {
+    width: auto;
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  .topbarMonth {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .userMenu {
+    display: none;
+  }
+
+  .notifButton {
+    width: 36px;
+    height: 36px;
+    border-color: transparent;
+    border-radius: 10px;
+    color: var(--purple-dark);
+    background: #fff;
+  }
+
+  .content {
+    padding: 14px;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .sidebarCollapsed {
+    width: 220px;
+  }
+
+  .sidebarLogo {
+    display: none;
+  }
+
+  .sidebarUser {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 14px;
+    padding-top: max(14px, env(safe-area-inset-top));
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebarUser .userText {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sidebarUser .userText strong {
+    max-width: none;
+    color: #fff;
+  }
+
+  .sidebarUser .userText span {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .sidebarUser .userAvatar {
+    background: var(--purple-accent);
+  }
+
+  .bottomNav {
+    display: flex;
+    position: fixed;
+    z-index: 80;
+    inset: auto 0 0 0;
+    align-items: stretch;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    border-top: 0.5px solid var(--border);
+    background: var(--white);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+  }
+}

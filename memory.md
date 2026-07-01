@@ -39,6 +39,7 @@ Migrations must be applied in filename order:
 9. `009_product_knowledge_parity.sql`: product assets, feedback, and knowledge fields.
 10. `010_instagram_baseline_parity.sql`: persisted Instagram follower baseline.
 11. `011_program_post_event_parity.sql`: post-event outcomes, notes, type, and links.
+12. `012_normalize_legacy_gallery_keys.sql`: normalizes relative gallery and collaborator paths for R2.
 
 The Supabase schema/data and R2 objects have already been migrated. The VPS database contains both
 `buyers` and `crm_buyers`; application role `ccc_ops_app` has access to `public`, and buyer counts were
