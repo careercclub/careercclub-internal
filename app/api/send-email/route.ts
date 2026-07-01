@@ -42,7 +42,7 @@ function getRecipientEmail(recipient: Recipient): string | null {
 function personalize(value: string, recipient: Recipient, html = false) {
   const rawName = typeof recipient === "string" ? "" : recipient.name || "";
   const name = html ? rawName.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character) : rawName;
-  return value.replaceAll("{{nama}}", name || "Kak");
+  return value.replaceAll("{{nama}}", name || "Kak").replaceAll("{nama}", name || "Kak");
 }
 
 export function OPTIONS() {

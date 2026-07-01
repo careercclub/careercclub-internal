@@ -67,12 +67,19 @@ Percent-encode reserved characters in the database password before placing it in
 The existing `deploy_default` network must exist before the application starts.
 
 Apply every migration that has not already been recorded on this database. For the current parity
-release, `005` is the final migration:
+release, `011` is the final migration. If the VPS already has `001` through `008`, apply the
+remaining migrations in order:
 
 ```bash
-docker exec -i deploy-postgres-1 \
-  psql -U ccc_user -d ccc_ops -v ON_ERROR_STOP=1 \
-  < database/migrations/005_workflow_integrity.sql
+for migration in \
+  009_product_knowledge_parity.sql \
+  010_instagram_baseline_parity.sql \
+  011_program_post_event_parity.sql
+do
+  docker exec -i deploy-postgres-1 \
+    psql -U ccc_user -d ccc_ops -v ON_ERROR_STOP=1 \
+    < "database/migrations/$migration" || exit 1
+done
 ```
 
 When Google Calendar is enabled, create a Google OAuth Web client and add both the local origin and

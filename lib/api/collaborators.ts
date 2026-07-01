@@ -6,7 +6,7 @@ export type CollaboratorRecord = ApiRecord & {
   tipe: "collaborator" | "advisor";
   rekening?: string | null;
   privy?: boolean;
-  kewajiban?: Array<{ label?: string; value?: string }>;
+  kewajiban?: string[];
   services?: Array<{ label?: string; rate?: string }>;
   background?: string | null;
   status?: string | null;

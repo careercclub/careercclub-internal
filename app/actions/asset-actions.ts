@@ -20,8 +20,10 @@ export async function createContentLibraryAssetAction(input: Record<string, unkn
   revalidatePath("/content-library");
 }
 
-export async function sendDesignAssetToLibraryAction(id: string) {
+export async function sendDesignAssetToLibraryAction(id: string, input: Record<string, unknown>) {
   await requireUser(); const asset = await getDesignAsset(id); if (!asset) throw new Error("Design asset not found.");
-  await createContentLibraryItem({ platform: "Instagram", jenis: "Carousel", link: asset.link || "", copywriting: asset.nama || "", likes: 0, comments: 0, shares: 0, views: 0, labels: asset.kategori ? [String(asset.kategori)] : [], storage_paths: Array.isArray(asset.storage_paths) ? asset.storage_paths : asset.storage_path ? [asset.storage_path] : [], notes: asset.notes || "" });
+  const likes = Number(input.likes);
+  if (!Number.isFinite(likes) || likes < 0) throw new Error("Likes must be zero or greater.");
+  await createContentLibraryItem({ platform: String(input.platform || "Instagram"), jenis: String(input.jenis || "Carousel"), link: String(input.link || asset.link || ""), copywriting: String(input.copywriting || asset.nama || ""), likes, comments: Number(input.comments || 0), shares: Number(input.shares || 0), views: Number(input.views || 0), labels: String(input.labels || asset.kategori || "").split(",").map((label) => label.trim()).filter(Boolean), storage_paths: Array.isArray(asset.storage_paths) ? asset.storage_paths : asset.storage_path ? [asset.storage_path] : [], notes: String(input.notes || asset.notes || "") });
   revalidatePath("/content-library");
 }

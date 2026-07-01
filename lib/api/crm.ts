@@ -139,6 +139,14 @@ export function importCrmTransactions(rows: CrmImportRow[], mode: ImportMode) {
       }
       const classification = classify(row.product);
       if (classification === "Belum Diklasifikasi") warnings.push(`Row ${index + 2}: product classification not found.`);
+      else if (!mappings.some((mapping) => mapping.nama.trim().toLowerCase() === row.product.trim().toLowerCase())) {
+        await tx`
+          insert into master_produk (nama, klasifikasi)
+          values (${row.product.trim()}, ${classification})
+          on conflict (nama) do nothing
+        `;
+        mappings.push({ nama: row.product.trim(), klasifikasi: classification });
+      }
       const notes = parseBuyerNotes(row.notes);
       const historyItem = { produk: row.product, klasifikasi: classification, harga: row.price, tanggal: row.date || "" };
       const [existing] = await tx<{ id: string; harga: number | null; riwayat: unknown }[]>`
@@ -179,7 +187,7 @@ export function importCrmTransactions(rows: CrmImportRow[], mode: ImportMode) {
       await tx`
         update buyers
         set produk = ${row.product}, klasifikasi = ${classification}, harga = ${row.price},
-            payment_status = 'SUCCESS', status = ${`Sudah convert - ${conversion}`},
+            payment_status = 'SUCCESS', status = ${`Sudah convert — ${conversion}`},
             tanggal = ${row.date}, riwayat = ${JSON.stringify([...history, historyItem])}::jsonb
         where id = ${existing.id}
       `;

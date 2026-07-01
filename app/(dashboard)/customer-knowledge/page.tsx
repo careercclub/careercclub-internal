@@ -1,7 +1,7 @@
+import { CustomerKnowledgeWorkspace } from "@/app/_components/customer-knowledge-workspace";
 import { PainPointAiParser } from "@/app/_components/pain-point-ai-parser";
 import { RecordManager } from "@/app/_components/record-manager";
 import { listPainPointCategories, listPainPoints } from "@/lib/api/customer-knowledge";
-import { customerKnowledgeLinks } from "@/lib/records/links";
 
 export const metadata = { title: "Customer Knowledge" };
 
@@ -11,12 +11,5 @@ export default async function CustomerKnowledgePage() {
     .map((row) => String(row.nama || "").trim())
     .filter(Boolean);
 
-  return (
-    <RecordManager
-      definitionKey="pain_points"
-      links={customerKnowledgeLinks}
-      rows={rows}
-      tools={<PainPointAiParser categories={categories} />}
-    />
-  );
+  return <CustomerKnowledgeWorkspace rows={rows} management={<RecordManager definitionKey="pain_points" rows={rows} tools={<PainPointAiParser categories={categories} />} />} />;
 }

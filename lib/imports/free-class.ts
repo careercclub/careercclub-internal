@@ -71,6 +71,10 @@ export function googleSheetCsvUrl(value: string) {
   if (url.protocol !== "https:" || url.hostname !== "docs.google.com") {
     throw new Error("Only HTTPS Google Sheets URLs are supported.");
   }
+  if (/^\/spreadsheets\/d\/e\/[a-zA-Z0-9-_]+\/pub/.test(url.pathname)) {
+    url.searchParams.set("output", "csv");
+    return url.toString();
+  }
   const match = url.pathname.match(/^\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   if (!match) throw new Error("The Google Sheets URL is invalid.");
   const hashGid = new URLSearchParams(url.hash.replace(/^#/, "")).get("gid");

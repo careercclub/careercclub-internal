@@ -11,6 +11,7 @@ import styles from "../dashboard.module.css";
 type AppShellProps = Readonly<{
   children: ReactNode;
   hiddenSlugs?: string[];
+  navBadges?: Record<string, number>;
   user: {
     name?: string | null;
     email?: string | null;
@@ -32,7 +33,7 @@ function getTitle(pathname: string): string {
   return "Dashboard";
 }
 
-export function AppShell({ children, hiddenSlugs = [], user }: AppShellProps) {
+export function AppShell({ children, hiddenSlugs = [], navBadges = {}, user }: AppShellProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const displayName = user.name || user.email || "CCC User";
@@ -72,6 +73,7 @@ export function AppShell({ children, hiddenSlugs = [], user }: AppShellProps) {
                 >
                   <i className={`ti ${page.icon}`} aria-hidden="true" />
                   <span>{page.title}</span>
+                  {navBadges[page.slug] ? <span className={page.slug === "tickets" ? styles.navBadgeRed : styles.navBadge}>{navBadges[page.slug] > 99 ? "99+" : navBadges[page.slug]}</span> : null}
                 </Link>
               );
             })}

@@ -80,17 +80,18 @@ type WorkflowRecord = {
 };
 
 const taskToTicketStatus: Record<string, string> = {
-  Todo: "Open",
-  "On Progress": "In Progress",
+  Todo: "Todo",
   "In Progress": "In Progress",
+  "On Progress": "In Progress",
   Done: "Done",
-  Blocked: "Done",
+  Blocked: "In Progress",
 };
 
 const ticketToTaskStatus: Record<string, string> = {
+  Todo: "Todo",
   Open: "Todo",
-  "In Review": "In Progress",
-  "In Progress": "In Progress",
+  "In Review": "On Progress",
+  "In Progress": "On Progress",
   Done: "Done",
   Rejected: "Todo",
 };
@@ -132,7 +133,7 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
       : "";
     const ticketTitle = text(task.title);
     const ticketDescription = `${text(task.description)}${eventInfo}`;
-    const ticketStatus = taskToTicketStatus[text(task.status)] || "Open";
+    const ticketStatus = taskToTicketStatus[text(task.status)] || "Todo";
     const ticketPriority = text(task.priority) || "Med";
     const ticketAssignees = assigneeIds.length ? assigneeIds : primaryAssignee ? [primaryAssignee] : [];
 

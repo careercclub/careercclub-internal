@@ -1,9 +1,9 @@
-import { RecordManager } from "@/app/_components/record-manager";
-import { listEventRundown } from "@/lib/api/program";
-import { programLinks } from "@/lib/records/links";
+import { RundownWorkspace } from "@/app/_components/rundown-workspace";
+import { listEventRundown, listProgramEvents } from "@/lib/api/program";
 
 export const metadata = { title: "Event Rundown" };
 
 export default async function EventRundownPage() {
-  return <RecordManager definitionKey="event_rundown" links={programLinks} rows={await listEventRundown()} />;
+  const [events, rows] = await Promise.all([listProgramEvents(), listEventRundown()]);
+  return <RundownWorkspace events={events} rows={rows} />;
 }

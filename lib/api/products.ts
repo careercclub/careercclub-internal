@@ -13,6 +13,8 @@ export type ProductClassificationRecord = ApiRecord;
 export type MasterProductRecord = ApiRecord;
 export type SubProductRecord = ApiRecord;
 export type SubProductLinkRecord = ApiRecord;
+export type ProductAssetRecord = ApiRecord;
+export type ProductFeedbackRecord = ApiRecord;
 
 const products = createTableApi<ProductRecord>("products", {
   orderBy: "created_at",
@@ -37,6 +39,8 @@ const classifications = createTableApi<ProductClassificationRecord>("product_kla
 const masterProducts = createTableApi<MasterProductRecord>("master_produk", { orderBy: "nama" });
 const subProducts = createTableApi<SubProductRecord>("sub_products", { orderBy: "created_at" });
 const subProductLinks = createTableApi<SubProductLinkRecord>("sub_product_links", { orderBy: "created_at" });
+const assets = createTableApi<ProductAssetRecord>("product_assets", { orderBy: "created_at" });
+const feedbacks = createTableApi<ProductFeedbackRecord>("product_feedbacks", { orderBy: "created_at" });
 
 export const listProducts = products.list;
 export const countProducts = products.count;
@@ -90,11 +94,19 @@ export const deleteSubProduct = subProducts.remove;
 export const listSubProductLinks = subProductLinks.list;
 export const createSubProductLink = subProductLinks.create;
 export const deleteSubProductLink = subProductLinks.remove;
+export const listProductAssets = assets.list;
+export const createProductAsset = assets.create;
+export const updateProductAsset = assets.update;
+export const deleteProductAsset = assets.remove;
+export const listProductFeedbacks = feedbacks.list;
+export const createProductFeedback = feedbacks.create;
+export const updateProductFeedback = feedbacks.update;
+export const deleteProductFeedback = feedbacks.remove;
 
 export async function getProductKnowledgeWorkspace() {
-  const [productRows, painPointRows, passionPointRows, benefitRows, featureRows, featureLinkRows, bundleRows, subProductRows, subProductLinkRows] = await Promise.all([
+  const [productRows, painPointRows, passionPointRows, benefitRows, featureRows, featureLinkRows, bundleRows, subProductRows, subProductLinkRows, assetRows, feedbackRows] = await Promise.all([
     listProducts(), listProductPainPoints(), listProductPassionPoints(), listProductBenefits(),
-    listProductFeatures(), listProductFeatureLinks(), listProductBundles(), listSubProducts(), listSubProductLinks(),
+    listProductFeatures(), listProductFeatureLinks(), listProductBundles(), listSubProducts(), listSubProductLinks(), listProductAssets(), listProductFeedbacks(),
   ]);
   return {
     products: productRows,
@@ -106,6 +118,8 @@ export async function getProductKnowledgeWorkspace() {
     bundles: bundleRows,
     subProducts: subProductRows,
     subProductLinks: subProductLinkRows,
+    assets: assetRows,
+    feedbacks: feedbackRows,
   };
 }
 
@@ -122,12 +136,12 @@ export function duplicateProduct(sourceId: string, name: string) {
       returning id
     `;
     await tx`
-      insert into product_pain_points (product_id, text, severity, source)
-      select ${created.id}, text, severity, source from product_pain_points where product_id = ${source.id}
+      insert into product_pain_points (product_id, nama, text)
+      select ${created.id}, nama, text from product_pain_points where product_id = ${source.id}
     `;
     await tx`
-      insert into product_passion_points (product_id, text, severity, source)
-      select ${created.id}, text, severity, source from product_passion_points where product_id = ${source.id}
+      insert into product_passion_points (product_id, nama, text)
+      select ${created.id}, nama, text from product_passion_points where product_id = ${source.id}
     `;
     await tx`
       insert into product_benefits (product_id, nama, text)
@@ -163,6 +177,14 @@ export function duplicateProduct(sourceId: string, name: string) {
       insert into product_bundles (bundle_id, item_id)
       select ${created.id}, item_id from product_bundles where bundle_id = ${source.id}
       on conflict do nothing
+    `;
+    await tx`
+      insert into product_assets (product_id, nama, tipe, url, status)
+      select ${created.id}, nama, tipe, url, status from product_assets where product_id = ${source.id}
+    `;
+    await tx`
+      insert into product_feedbacks (product_id, tipe, isi, tanggal)
+      select ${created.id}, tipe, isi, tanggal from product_feedbacks where product_id = ${source.id}
     `;
     return created.id;
   }));

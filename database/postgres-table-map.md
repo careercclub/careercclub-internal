@@ -46,6 +46,12 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/002_crm_buyer_mat
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/003_normalize_r2_storage_keys.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/004_ticket_notifications_and_pwa.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/005_workflow_integrity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/006_app_settings.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/007_parity_contract_corrections.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/008_talent_pool_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/009_product_knowledge_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/010_instagram_baseline_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/011_program_post_event_parity.sql
 ```
 
 Migration `002` replaces the browser-side Supabase RPC dependency and provides indexed,
@@ -53,6 +59,15 @@ consistent email/WhatsApp matching between CRM buyers and Talent Pool records.
 Migration `003` converts migrated Supabase object URLs to R2 object keys. Migration `004` adds
 role-audienced ticket notifications, read receipts, and Web Push subscriptions. Migration `005`
 deduplicates content-to-ads mirrors and adds workflow integrity indexes.
+Migration `006` creates the application-owned settings table that is not present in the legacy
+Supabase schema and grants access to the restricted application role.
+Migration `007` restores the production status, priority, phase, content-format, and CRM conversion
+vocabularies for records written by earlier refactor builds.
+Migration `008` restores survey and voucher fields used by the production Talent Pool import.
+Migration `009` adds product asset and feedback tables plus the knowledge fields required by the
+master-detail Product workspace.
+Migration `010` stores the Instagram follower baseline used to derive historical follower counts.
+Migration `011` restores event type, participant outcome, post-event notes, and event links.
 
 ## Authentication Table
 

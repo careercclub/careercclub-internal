@@ -3,13 +3,14 @@ import { AppShell } from "./_components/app-shell";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { listAppSettings } from "@/lib/api/settings";
+import { getDashboardCounts } from "@/lib/api/dashboard";
 
 type DashboardLayoutProps = Readonly<{
   children: ReactNode;
 }>;
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [session, settings] = await Promise.all([auth(), listAppSettings()]);
+  const [session, settings, counts] = await Promise.all([auth(), listAppSettings(), getDashboardCounts()]);
 
   if (!session?.user) {
     redirect("/sign-in");
@@ -25,5 +26,5 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       ? settingValue.hiddenSlugs.map(String)
       : [];
 
-  return <AppShell hiddenSlugs={hiddenSlugs} user={session.user}>{children}</AppShell>;
+  return <AppShell hiddenSlugs={hiddenSlugs} navBadges={{ program: counts.tasks, tickets: counts.tickets }} user={session.user}>{children}</AppShell>;
 }

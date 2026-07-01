@@ -5,5 +5,5 @@ import { listBuyers } from "@/lib/api/crm";
 
 export default async function ContentEvaluationPage() {
   const [evaluations, buyers] = await Promise.all([listContentEvaluations(), listBuyers()]);
-  return <RecordManager definitionKey="content_evaluations" rows={evaluations} tools={<ContentEvaluationTools evaluations={evaluations} buyers={buyers} />} />;
+  return <ContentEvaluationTools evaluations={evaluations} buyers={buyers} management={<RecordManager definitionKey="content_evaluations" rows={evaluations} />} />;
 }

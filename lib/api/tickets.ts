@@ -108,7 +108,7 @@ export function duplicateTicket(id: string) {
         source, cc, links, files, komentar, notification_roles, gcal_added
       ) values (
         ${ticketNo}, ${`${String(source.title || "Untitled")} (Copy)`}, ${source.description || ""},
-        'Open', ${source.priority || "Med"}, ${source.type_id || null}, ${source.divisi_id || null},
+        'Todo', ${source.priority || "Med"}, ${source.type_id || null}, ${source.divisi_id || null},
         ${source.assigned_to_id || null}, ${Array.isArray(source.assigned_to_ids) ? source.assigned_to_ids : []}::uuid[],
         ${source.requester_id || null}, ${source.due_date || null}, ${JSON.stringify(source.attachments || [])}::jsonb,
         'Duplicate', ${JSON.stringify(source.cc || [])}::jsonb, ${JSON.stringify(source.links || [])}::jsonb,

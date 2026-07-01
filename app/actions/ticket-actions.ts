@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { normalizeNotificationRoles, publishTicketNotification } from "@/lib/api/notifications";
-import { synchronizeTicketToTask } from "@/lib/api/program";
+import { deleteTicketWithLinkedTask, synchronizeTicketToTask } from "@/lib/api/program";
 import { appendTicketComment, appendTicketFile, appendTicketLink, duplicateTicket, getTicket, updateTicket } from "@/lib/api/tickets";
 import { revalidatePath } from "next/cache";
 
@@ -29,7 +29,7 @@ function refresh() {
 
 export async function changeTicketStatusAction(id: string, status: string) {
   const user = await requireUser();
-  if (!["Open", "In Review", "In Progress", "Done", "Rejected"].includes(status)) throw new Error("Invalid ticket status.");
+  if (!["Todo", "In Progress", "Done"].includes(status)) throw new Error("Invalid ticket status.");
   const ticket = await updateTicket(id, { status });
   if (!ticket) throw new Error("Ticket not found.");
   if (ticket.related_task_id) await synchronizeTicketToTask(id);
@@ -66,5 +66,26 @@ export async function attachTicketFileAction(id: string, file: { name: string; k
 export async function duplicateTicketAction(id: string) {
   await requireUser();
   await duplicateTicket(id);
+  refresh();
+}
+
+export async function updateTicketDetailsAction(id: string, input: Record<string, unknown>) {
+  const user = await requireUser();
+  const status = String(input.status || "Todo"); const priority = String(input.priority || "Med");
+  if (!["Todo", "In Progress", "Done"].includes(status)) throw new Error("Invalid ticket status.");
+  if (!["High", "Med", "Low"].includes(priority)) throw new Error("Invalid ticket priority.");
+  const assigned = Array.isArray(input.assignedToIds) ? input.assignedToIds.map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)) : [];
+  const cc = String(input.cc || "").split(",").map((email) => email.trim()).filter(Boolean).slice(0, 30);
+  const ticket = await updateTicket(id, { title: String(input.title || "").trim(), description: String(input.description || "").trim(), status, priority, divisi_id: input.divisionId || null, type_id: input.typeId || null, due_date: input.dueDate || null, assigned_to_id: assigned[0] || null, assigned_to_ids: assigned, cc });
+  if (!ticket) throw new Error("Ticket not found.");
+  if (ticket.related_task_id) await synchronizeTicketToTask(id);
+  await notify(ticket, user, `${user.name || user.email} updated the ticket details.`);
+  refresh();
+  return ticket;
+}
+
+export async function deleteTicketAction(id: string) {
+  await requireUser();
+  await deleteTicketWithLinkedTask(id);
   refresh();
 }

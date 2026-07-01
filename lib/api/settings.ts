@@ -14,3 +14,9 @@ export const getAppSetting = settings.get;
 export const createAppSetting = settings.create;
 export const updateAppSetting = settings.update;
 export const deleteAppSetting = settings.remove;
+
+export async function saveAppSetting(key: string, value: unknown) {
+  const rows = await settings.list({ eq: { key } });
+  if (rows[0]) return settings.update(String(rows[0].id), { value });
+  return settings.create({ key, value });
+}

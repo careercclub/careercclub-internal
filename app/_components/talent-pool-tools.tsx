@@ -18,6 +18,7 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
   const [body, setBody] = useState("");
   const [fromName, setFromName] = useState("CareerCclub");
   const [fromEmail, setFromEmail] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [templates, setTemplates] = useState<BlastTemplate[]>([]);
   const [logs, setLogs] = useState<BlastLog[]>([]);
   const visible = useMemo(() => rows.filter((row) => (!query || `${row.nama} ${row.email} ${row.wa} ${row.universitas}`.toLowerCase().includes(query.toLowerCase())) && (!pipeline || String(row.pipeline || "") === pipeline)), [rows, query, pipeline]);
@@ -57,10 +58,14 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
   }
 
   async function sendBlast() {
-    const recipients = visible.map((row) => ({ email: String(row.email || ""), name: String(row.nama || "") })).filter((recipient) => recipient.email).slice(0, 100);
+    const recipients = visible.map((row) => ({ email: String(row.email || ""), name: String(row.nama || "") })).filter((recipient) => recipient.email);
     if (!recipients.length) { setMessage("No matching recipient email addresses."); return; }
+    const scheduleInput = window.prompt("Optional schedule (YYYY-MM-DDTHH:mm). Leave blank to send now.", scheduledAt);
+    if (scheduleInput === null) return;
+    if (scheduleInput && !Number.isFinite(new Date(scheduleInput).getTime())) { setMessage("The scheduled date/time is invalid."); return; }
+    setScheduledAt(scheduleInput);
     setBusy(true);
-    try { const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: recipients, subject: subject || "CareerCclub update", from_name: fromName, from_email: fromEmail || undefined, html: `<div style="font-family:Arial,sans-serif;white-space:pre-wrap">${body.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character)}</div>` }) }); const result = await response.json() as { sent?: number; failed?: number; error?: string }; if (!response.ok) throw new Error(result.error || "Blast failed."); const nextLogs = [{ subject, total: recipients.length, sent: result.sent || 0, failed: result.failed || 0, sentAt: new Date().toISOString() }, ...logs].slice(0, 100); setLogs(nextLogs); localStorage.setItem("ccc_tp_blast_logs", JSON.stringify(nextLogs)); setMessage(`Sent ${result.sent || 0}; failed ${result.failed || 0}.`); }
+    try { let sent=0;let failed=0;for(let offset=0;offset<recipients.length;offset+=100){const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: recipients.slice(offset,offset+100), subject: subject || "CareerCclub update", from_name: fromName, from_email: fromEmail || undefined, scheduled_at: scheduleInput ? new Date(scheduleInput).toISOString() : undefined, html: `<div style="font-family:Arial,sans-serif;white-space:pre-wrap">${body.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character)}</div>` }) }); const result = await response.json() as { sent?: number; failed?: number; error?: string }; if (!response.ok) throw new Error(result.error || "Blast failed.");sent+=result.sent||0;failed+=result.failed||0;} const nextLogs = [{ subject, total: recipients.length, sent, failed, sentAt: scheduleInput ? new Date(scheduleInput).toISOString() : new Date().toISOString() }, ...logs].slice(0, 100); setLogs(nextLogs); localStorage.setItem("ccc_tp_blast_logs", JSON.stringify(nextLogs)); setMessage(`${scheduleInput?"Scheduled":"Sent"} ${sent}; failed ${failed}.`); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Blast failed."); } finally { setBusy(false); }
   }
 

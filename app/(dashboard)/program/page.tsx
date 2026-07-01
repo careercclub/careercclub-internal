@@ -1,4 +1,5 @@
 import { ProgramWorkflowTools } from "@/app/_components/program-workflow-tools";
+import { ProgramWorkspace } from "@/app/_components/program-workspace";
 import { RecordManager } from "@/app/_components/record-manager";
 import { listProgramEvents, listProgramTasks } from "@/lib/api/program";
 import { listTicketPeople } from "@/lib/api/tickets";
@@ -10,12 +11,5 @@ export default async function ProgramPage() {
     listProgramTasks(),
     listTicketPeople(),
   ]);
-  return (
-    <RecordManager
-      definitionKey="events"
-      links={programLinks}
-      rows={events}
-      tools={<ProgramWorkflowTools events={events} tasks={tasks} people={people} />}
-    />
-  );
+  return <ProgramWorkspace events={events} tasks={tasks} referenceDate={new Date().toISOString()} tools={<ProgramWorkflowTools events={events} tasks={tasks} people={people} />} management={<RecordManager definitionKey="events" links={programLinks} rows={events} />} />;
 }

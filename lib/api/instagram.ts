@@ -4,6 +4,7 @@ import { withPostgres } from "@/lib/db/postgres";
 
 export type InstagramSnapshotRecord = ApiRecord;
 export type InstagramTargetRecord = ApiRecord;
+export type InstagramBaselineRecord = ApiRecord;
 
 const snapshots = createTableApi<InstagramSnapshotRecord>("ig_snapshots", {
   orderBy: "week_start",
@@ -13,6 +14,11 @@ const snapshots = createTableApi<InstagramSnapshotRecord>("ig_snapshots", {
 const targets = createTableApi<InstagramTargetRecord>("ig_targets", {
   orderBy: "year",
   ascending: true,
+});
+
+const baselines = createTableApi<InstagramBaselineRecord>("ig_baselines", {
+  orderBy: "updated_at",
+  ascending: false,
 });
 
 export const listInstagramSnapshots = snapshots.list;
@@ -28,6 +34,23 @@ export const getInstagramTarget = targets.get;
 export const createInstagramTarget = targets.create;
 export const updateInstagramTarget = targets.update;
 export const deleteInstagramTarget = targets.remove;
+
+export async function getInstagramBaseline() {
+  const rows = await baselines.list();
+  return rows[0] || null;
+}
+
+export function saveInstagramBaseline(followersTotal: number, baselineDate: string) {
+  return withPostgres(async (sql) => {
+    const [existing] = await sql<{ id: string }[]>`select id from ig_baselines order by updated_at desc nulls last limit 1`;
+    if (existing) {
+      const [row] = await sql<InstagramBaselineRecord[]>`update ig_baselines set followers_total = ${followersTotal}, baseline_date = ${baselineDate}, updated_at = now() where id = ${existing.id} returning *`;
+      return row;
+    }
+    const [row] = await sql<InstagramBaselineRecord[]>`insert into ig_baselines (followers_total, baseline_date) values (${followersTotal}, ${baselineDate}) returning *`;
+    return row;
+  });
+}
 
 export function importInstagramSnapshots(rows: Array<Record<string, string | number | null>>) {
   return withPostgres(async (sql) => sql.begin(async (tx) => {

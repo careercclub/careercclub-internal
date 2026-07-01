@@ -117,6 +117,12 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/002_crm_buyer_mat
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/003_normalize_r2_storage_keys.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/004_ticket_notifications_and_pwa.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/005_workflow_integrity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/006_app_settings.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/007_parity_contract_corrections.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/008_talent_pool_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/009_product_knowledge_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/010_instagram_baseline_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/011_program_post_event_parity.sql
 ```
 
 Do not point production at the new VPS database until row counts, foreign keys, CRM buyer counts,

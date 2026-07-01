@@ -1,9 +1,11 @@
 import { auth } from "@/auth";
 import { updateProgramTask } from "@/lib/api/program";
+import { updateTicket } from "@/lib/api/tickets";
 
 type RequestBody = {
   accessToken?: unknown;
   taskId?: unknown;
+  ticketId?: unknown;
   title?: unknown;
   description?: unknown;
   start?: unknown;
@@ -26,6 +28,7 @@ export async function POST(request: Request) {
   const body = await request.json() as RequestBody;
   const accessToken = value(body.accessToken, 4096);
   const taskId = value(body.taskId, 64);
+  const ticketId = value(body.ticketId, 64);
   const title = value(body.title, 300);
   const description = value(body.description, 5000);
   const start = value(body.start, 40);
@@ -34,8 +37,8 @@ export async function POST(request: Request) {
     ? body.attendees.map((email) => value(email, 254).toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)).slice(0, 50)
     : [];
 
-  if (!accessToken || !taskId || !title || !isDateTime(start) || !isDateTime(end) || new Date(end) <= new Date(start)) {
-    return Response.json({ error: "Task, title, and a valid start/end range are required." }, { status: 400 });
+  if (!accessToken || (!taskId && !ticketId) || (taskId && ticketId) || !title || !isDateTime(start) || !isDateTime(end) || new Date(end) <= new Date(start)) {
+    return Response.json({ error: "One task or ticket, title, and a valid start/end range are required." }, { status: 400 });
   }
 
   const googleResponse = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all", {
@@ -57,6 +60,7 @@ export async function POST(request: Request) {
   }
 
   const event = await googleResponse.json() as { id?: string; htmlLink?: string };
-  await updateProgramTask(taskId, { gcal_added: true });
+  if (taskId) await updateProgramTask(taskId, { gcal_added: true });
+  else await updateTicket(ticketId, { gcal_added: true });
   return Response.json({ id: event.id, url: event.htmlLink });
 }

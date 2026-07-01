@@ -1,12 +1,11 @@
 import { ContentPlanningTools } from "@/app/_components/content-planning-tools";
 import { RecordManager } from "@/app/_components/record-manager";
 import { StoryPlanAiParser } from "@/app/_components/story-plan-ai-parser";
-import { listCarouselPlans, listKols, listMtStories, listStoryPlanDates, listStoryPlanItems } from "@/lib/api/content-planning";
-import { contentPlanningLinks } from "@/lib/records/links";
+import { listCarouselCtas, listCarouselPlanLinks, listCarouselPlans, listKols, listMtStories, listStoryPlanDates, listStoryPlanItems, listStoryPlanLinks } from "@/lib/api/content-planning";
 
 export const metadata = { title: "Content Planning" };
 
 export default async function ContentPlanningPage() {
-  const [dates, stories, carousels, kols, mtStories] = await Promise.all([listStoryPlanDates(), listStoryPlanItems(), listCarouselPlans(), listKols(), listMtStories()]);
-  return <RecordManager definitionKey="story_plan_dates" links={contentPlanningLinks} rows={dates} tools={<><StoryPlanAiParser /><ContentPlanningTools dates={dates} stories={stories} carousels={carousels} kols={kols} mtStories={mtStories} /></>} />;
+  const [dates, stories, storyLinks, carousels, carouselLinks, ctas, kols, mtStories] = await Promise.all([listStoryPlanDates(), listStoryPlanItems(), listStoryPlanLinks(), listCarouselPlans(), listCarouselPlanLinks(), listCarouselCtas(), listKols(), listMtStories()]);
+  return <ContentPlanningTools dates={dates} stories={stories} storyLinks={storyLinks} carousels={carousels} carouselLinks={carouselLinks} ctas={ctas} kols={kols} mtStories={mtStories} management={<><StoryPlanAiParser /><RecordManager definitionKey="story_plan_dates" rows={dates}/></>} />;
 }

@@ -23,10 +23,17 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/crm/import", { method: "POST", body: formData });
-      const result = await response.json() as ImportResult;
-      if (!response.ok) throw new Error(result.error || "Import failed.");
-      setMessage(`Added ${result.added || 0}, updated ${result.updated || 0}, skipped ${result.skipped || 0}.${result.warnings?.length ? ` ${result.warnings.length} classification warning(s).` : ""}`);
+      const files = formData.getAll("files").filter((item): item is File => item instanceof File && item.size > 0);
+      if (!files.length) throw new Error("Select at least one CSV or XLSX file.");
+      const total = { added: 0, updated: 0, skipped: 0, warnings: 0 };
+      for (const file of files) {
+        const request = new FormData(); request.set("mode", String(formData.get("mode") || "new")); request.set("file", file);
+        const response = await fetch("/api/crm/import", { method: "POST", body: request });
+        const result = await response.json() as ImportResult;
+        if (!response.ok) throw new Error(`${file.name}: ${result.error || "Import failed."}`);
+        total.added += result.added || 0; total.updated += result.updated || 0; total.skipped += result.skipped || 0; total.warnings += result.warnings?.length || 0;
+      }
+      setMessage(`Added ${total.added}, updated ${total.updated}, skipped ${total.skipped}.${total.warnings ? ` ${total.warnings} classification warning(s).` : ""}`);
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Import failed.");
@@ -58,7 +65,7 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
         <summary><i className="ti ti-file-import" aria-hidden="true" /> Import Lynkid transactions</summary>
         <form action={importFile} className={styles.formGrid}>
           <label className={styles.field}><span>Import mode</span><select name="mode"><option value="new">New buyers (skip duplicate WhatsApp)</option><option value="results">Blast results (append purchase history)</option></select></label>
-          <label className={styles.field}><span>CSV or XLSX</span><input accept=".csv,.xlsx" name="file" type="file" required /></label>
+          <label className={styles.field}><span>CSV or XLSX files</span><input accept=".csv,.xlsx" multiple name="files" type="file" required /></label>
           <button className={styles.primaryButton} disabled={busy} type="submit">{busy ? "Importing..." : "Import transactions"}</button>
           {message ? <p className={styles.formMessage} role="status">{message}</p> : null}
         </form>

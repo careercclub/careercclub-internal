@@ -25,9 +25,9 @@ declare global {
   }
 }
 
-type Props = { tasks: ApiRecord[]; people: ApiRecord[] };
+type Props = { tasks: ApiRecord[]; people: ApiRecord[]; recordType?: "task" | "ticket" };
 
-export function GoogleCalendarTool({ tasks, people }: Props) {
+export function GoogleCalendarTool({ tasks, people, recordType = "task" }: Props) {
   const router = useRouter();
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
   const [message, setMessage] = useState("");
@@ -42,7 +42,7 @@ export function GoogleCalendarTool({ tasks, people }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         accessToken,
-        taskId,
+        ...(recordType === "ticket" ? { ticketId: taskId } : { taskId }),
         title: String(task?.title || "CCC task"),
         description: String(task?.description || ""),
         start: String(formData.get("start") || ""),
@@ -52,7 +52,7 @@ export function GoogleCalendarTool({ tasks, people }: Props) {
     });
     const result = await response.json() as { error?: string };
     if (!response.ok) throw new Error(result.error || "Calendar event could not be created.");
-    setMessage("Calendar event created and task marked as synchronized.");
+    setMessage(`Calendar event created and ${recordType} marked as synchronized.`);
     router.refresh();
   }
 
@@ -83,9 +83,9 @@ export function GoogleCalendarTool({ tasks, people }: Props) {
   return (
     <details className={styles.createPanel}>
       <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
-      <summary><i className="ti ti-calendar-plus" aria-hidden="true" /> Add task to Google Calendar</summary>
+      <summary><i className="ti ti-calendar-plus" aria-hidden="true" /> Add {recordType} to Google Calendar</summary>
       <form action={createEvent} className={styles.formGrid}>
-        <label className={styles.field}><span>Task</span><select name="task_id" required><option value="">Select...</option>{tasks.map((task) => <option key={String(task.id)} value={String(task.id)}>{String(task.title || task.id)}{task.gcal_added ? " (added)" : ""}</option>)}</select></label>
+        <label className={styles.field}><span>{recordType === "ticket" ? "Ticket" : "Task"}</span><select name="task_id" required><option value="">Select...</option>{tasks.map((task) => <option key={String(task.id)} value={String(task.id)}>{String(task.title || task.id)}{task.gcal_added ? " (added)" : ""}</option>)}</select></label>
         <label className={styles.field}><span>Start</span><input name="start" type="datetime-local" required /></label>
         <label className={styles.field}><span>End</span><input name="end" type="datetime-local" required /></label>
         <fieldset className={styles.checkList}><legend>Invite people</legend>{people.filter((person) => person.email).map((person) => <label key={String(person.id)}><input name="attendees" type="checkbox" value={String(person.email)} /><span>{String(person.nama || person.email)}</span></label>)}</fieldset>
