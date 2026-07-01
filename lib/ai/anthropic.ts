@@ -12,15 +12,28 @@ type AnthropicResponse = {
   error?: { message?: string };
 };
 
-function parseJsonResponse(text: string) {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
-  const candidate = fenced || text;
-  const start = Math.min(
-    ...[candidate.indexOf("{"), candidate.indexOf("[")].filter((index) => index >= 0),
-  );
-
-  if (!Number.isFinite(start)) throw new Error("Anthropic returned no JSON payload.");
-  return JSON.parse(candidate.slice(start).trim()) as unknown;
+function parseJsonResponse(text: string): unknown {
+  const cleaned = text.trim();
+  const candidates: string[] = [];
+  // Prefer a fenced ```json ... ``` block when present.
+  const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  if (fenced) candidates.push(fenced.trim());
+  // Then the whole reply, then a first-brace..last-brace slice (tolerates prose around the JSON).
+  candidates.push(cleaned);
+  const starts = [cleaned.indexOf("{"), cleaned.indexOf("[")].filter((index) => index >= 0);
+  if (starts.length) {
+    const start = Math.min(...starts);
+    const end = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+    if (end > start) candidates.push(cleaned.slice(start, end + 1));
+  }
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as unknown;
+    } catch {
+      // fall through to the next strategy
+    }
+  }
+  throw new Error(`Anthropic did not return valid JSON. Raw reply: ${cleaned.slice(0, 300)}`);
 }
 
 export async function requestAnthropicJson(system: string, content: AnthropicContent[]) {

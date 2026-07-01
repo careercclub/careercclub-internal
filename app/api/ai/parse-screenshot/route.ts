@@ -44,9 +44,10 @@ export async function POST(request: Request) {
 
     return Response.json(data);
   } catch (error) {
+    console.error("[api/ai/parse-screenshot] failed:", error);
     return Response.json(
       { error: error instanceof Error ? error.message : "Screenshot parsing failed." },
-      { status: 502 },
+      { status: 500 },
     );
   }
 }

@@ -34,9 +34,10 @@ export async function POST(request: Request) {
 
     return Response.json({ data });
   } catch (error) {
+    console.error("[api/ai/parse] failed:", error);
     return Response.json(
       { error: error instanceof Error ? error.message : "AI parsing failed." },
-      { status: 502 },
+      { status: 500 },
     );
   }
 }
