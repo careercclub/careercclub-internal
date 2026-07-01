@@ -127,6 +127,16 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
       [requestType] = await tx<WorkflowRecord[]>`select * from tkt_types where divisi_id = ${divisionId} order by nama limit 1`;
     }
 
+    // requesterId is typically the authenticated user's id (auth_users), which is NOT a
+    // tkt_people row. tickets.requester_id has an FK to tkt_people, so keep it only when it
+    // resolves to a real person; otherwise fall back to the primary assignee (a valid person).
+    let validRequester: string | null = null;
+    if (requesterId) {
+      const [requesterPerson] = await tx<WorkflowRecord[]>`select id from tkt_people where id = ${requesterId} limit 1`;
+      validRequester = requesterPerson ? String(requesterPerson.id) : null;
+    }
+    const resolvedRequester = validRequester || primaryAssignee;
+
     const eventName = text(task.event_name);
     const eventInfo = eventName
       ? `\n\nEvent: ${eventName}\nDeadline: ${text(task.due_date) || "-"}\nPhase: ${text(task.phase) || "-"}`
@@ -156,7 +166,7 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
             divisi_id = ${divisionId},
             assigned_to_id = ${primaryAssignee},
             assigned_to_ids = ${ticketAssignees}::uuid[],
-            requester_id = ${requesterId || primaryAssignee},
+            requester_id = ${resolvedRequester},
             due_date = ${task.due_date || null},
             related_task_id = ${task.id},
             source = 'Webinar Project'
@@ -183,7 +193,7 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
       ) values (
         ${ticketNo}, ${ticketTitle}, ${ticketDescription}, ${ticketStatus}, ${ticketPriority},
         ${requestType?.id || null}, ${divisionId}, ${primaryAssignee}, ${ticketAssignees}::uuid[],
-        ${requesterId || primaryAssignee}, ${task.due_date || null}, ${task.id},
+        ${resolvedRequester}, ${task.due_date || null}, ${task.id},
         'Webinar Project', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb
       )
       returning *
