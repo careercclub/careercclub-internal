@@ -1,7 +1,7 @@
 "use client";
 
 import { rescheduleTicketAction } from "@/app/actions/dashboard-actions";
-import { updateProgramTaskWorkflowAction } from "@/app/actions/program-actions";
+import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/actions/program-actions";
 import { deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
@@ -142,15 +142,17 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
 }
 
 function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people: ApiRecord[]; onClose: () => void; onSaved: (row: ApiRecord) => void }) {
-  const [status, setStatus] = useState(text(task.status) || "Todo");
-  const [dueDate, setDueDate] = useState(dateKey(task.due_date));
+  const [form, setForm] = useState({ title: text(task.title), description: text(task.description), status: text(task.status) || "Todo", priority: text(task.priority) || "Med", phase: text(task.phase), dueDate: dateKey(task.due_date) });
+  const [assignees, setAssignees] = useState<string[]>(Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const assignees = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : [];
   async function save() {
+    if (!form.title.trim()) { setError("Judul task wajib diisi."); return; }
     setBusy(true); setError("");
-    try { await updateProgramTaskWorkflowAction(String(task.id), { status, dueDate: dueDate || undefined }); onSaved({ ...task, status, due_date: dueDate }); }
-    catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); setBusy(false); }
+    try {
+      await updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees });
+      onSaved({ ...task, ...form, due_date: form.dueDate, assignee_ids: assignees });
+    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); setBusy(false); }
   }
   return (
     <div style={overlay} onClick={onClose} role="presentation">
@@ -159,19 +161,25 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
           <strong style={{ fontSize: 14, display: "flex", gap: 6, alignItems: "center" }}><i className="ti ti-checklist" /> Edit Task</strong>
           <button type="button" onClick={onClose} style={iconBtn} aria-label="Tutup"><i className="ti ti-x" /></button>
         </div>
-        <Field label="Judul Task"><input value={text(task.title)} readOnly style={{ ...inp, background: "var(--bg)" }} /></Field>
+        <Field label="Judul Task"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inp} /></Field>
+        <Field label="Deskripsi"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} style={inp} /></Field>
         <div style={twoCol}>
-          <Field label="Phase"><input value={text(task.phase) || "-"} readOnly style={{ ...inp, background: "var(--bg)" }} /></Field>
-          <Field label="Priority"><input value={text(task.priority) || "-"} readOnly style={{ ...inp, background: "var(--bg)" }} /></Field>
+          <Field label="Phase"><select value={form.phase} onChange={(e) => setForm({ ...form, phase: e.target.value })} style={inp}><option value="">—</option>{["Pre Event", "Hari H", "Post Event"].map((s) => <option key={s}>{s}</option>)}</select></Field>
+          <Field label="Status"><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} style={inp}>{["Todo", "On Progress", "Done"].map((s) => <option key={s}>{s}</option>)}</select></Field>
         </div>
         <div style={twoCol}>
-          <Field label="Status"><select value={status} onChange={(e) => setStatus(e.target.value)} style={inp}>{["Todo", "On Progress", "Done"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-          <Field label="Deadline"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={inp} /></Field>
+          <Field label="Priority"><select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} style={inp}>{["High", "Med", "Low"].map((s) => <option key={s}>{s}</option>)}</select></Field>
+          <Field label="Deadline"><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} style={inp} /></Field>
         </div>
-        <Field label="Assignee">{assignees.length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{assignees.map((id) => <span key={id} style={chipTag}>{personName(people, id)}</span>)}</div> : <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Belum ada assignee</span>}</Field>
+        <AssigneeField people={people} value={assignees} onChange={setAssignees} />
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ display: "block", fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>Attachments</span>
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Belum ada attachment</span>
+          <div style={{ marginTop: 8, padding: "8px 10px", background: "var(--blue-bg)", color: "var(--blue)", borderRadius: 8, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }}><i className="ti ti-info-circle" style={{ marginTop: 1 }} /><span>Upload file &amp; sinkron Google Calendar tersedia di halaman Program tasks.</span></div>
+        </div>
         {error ? <p style={{ color: "var(--red)", fontSize: 11, margin: "4px 0" }}>{error}</p> : null}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 8, flexWrap: "wrap" }}>
-          <Link href="/program/tasks" style={{ fontSize: 11, color: "var(--purple-mid)" }}>Edit lengkap di Program</Link>
+          <Link href="/program/tasks" style={{ fontSize: 11, color: "var(--purple-mid)" }}>Buka di Program</Link>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button type="button" onClick={onClose} style={ghostBtn}>Batal</button>
             <button type="button" onClick={save} disabled={busy} style={primaryBtn}>{busy ? "Menyimpan…" : "Simpan"}</button>

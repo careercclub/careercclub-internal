@@ -66,6 +66,20 @@ Percent-encode reserved characters in the database password before placing it in
 
 The existing `deploy_default` network must exist before the application starts.
 
+After pulling the branch, use the package command that matches the change:
+
+```bash
+# Database migrations plus a complete Next.js rebuild
+npm run vps:rebuild
+
+# UI-only change: rebuild Next.js without running migrations
+npm run vps:rebuild:frontend
+```
+
+These commands are defined in `package.json`. Next.js produces one image containing its client and
+server bundles, so the frontend-only command still rebuilds the `web` image; it differs by skipping
+database migrations and leaving PostgreSQL untouched.
+
 Apply every migration that has not already been recorded on this database. For the current parity
 release, `011` is the final migration. If the VPS already has `001` through `008`, apply the
 remaining migrations in order:

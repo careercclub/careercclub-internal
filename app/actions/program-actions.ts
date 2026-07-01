@@ -60,6 +60,43 @@ export async function updateProgramTaskWorkflowAction(id: string, input: { statu
   revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
 }
 
+export async function updateTaskDetailsAction(id: string, input: { title: string; description?: string; status?: string; priority?: string; phase?: string; dueDate?: string | null; assigneeIds?: string[] }) {
+  const user = await requireUser();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid task.");
+  const title = input.title.trim();
+  if (!title) throw new Error("Task title is required.");
+  const status = input.status && ["Todo", "On Progress", "Done"].includes(input.status) ? input.status : "Todo";
+  const priority = input.priority && ["High", "Med", "Low"].includes(input.priority) ? input.priority : "Med";
+  const phase = input.phase && ["Pre Event", "Hari H", "Post Event"].includes(input.phase) ? input.phase : null;
+  if (input.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) throw new Error("Invalid task date.");
+  const assignees = (input.assigneeIds || []).map(String).filter((value) => /^[0-9a-f-]{36}$/i.test(value));
+  await withPostgres(async (sql) => sql.begin(async (tx) => {
+    const [task] = await tx<{ project_id: string | null }[]>`
+      update tasks set
+        title = ${title},
+        description = ${input.description ?? ""},
+        status = ${status},
+        priority = ${priority},
+        phase = ${phase},
+        due_date = ${input.dueDate || null},
+        assignee_ids = ${assignees}::uuid[],
+        assignee_id = ${assignees[0] || null}
+      where id = ${id}
+      returning project_id
+    `;
+    if (!task) throw new Error("Task not found.");
+    if (task.project_id) {
+      await tx`
+        update events set status = 'On Progress'
+        where id = ${task.project_id} and status = 'Planning'
+          and exists (select 1 from tasks where project_id = ${task.project_id} and status <> 'Todo')
+      `;
+    }
+  }));
+  await synchronizeTaskToTicket(id, user.id);
+  revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+}
+
 export async function createRundownRowAction(eventId: string, order: number) {
   await requireUser();
   await createEventRundownItem({ event_id: eventId, durasi: 0, activity: "New activity", keterangan: "", link: "", cue_mc: "", urutan: order });
