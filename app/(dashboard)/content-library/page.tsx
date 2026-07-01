@@ -5,5 +5,5 @@ import { listContentLibraryItems } from "@/lib/api/content-library";
 
 export default async function ContentLibraryPage() {
   const rows = await listContentLibraryItems();
-  return <RecordManager definitionKey="content_library" rows={rows} tools={<><AssetUploadTools mode="content" /><AssetGallery rows={rows} titleField="copywriting" categoryField="platform" imageFields={["storage_paths"]} /></>} />;
+  return <AssetGallery categoryField="platform" imageFields={["storage_paths"]} manage={<RecordManager definitionKey="content_library" rows={rows} />} rows={rows} titleField="copywriting" upload={<AssetUploadTools mode="content" />} />;
 }

@@ -21,7 +21,7 @@ export async function bulkUpdateCrmBuyers(ids: string[], operation: "status" | "
       if (!value || !allowed.includes(value)) throw new Error("Invalid CRM status.");
       await tx`update buyers set status = ${value} where id = any(${selected}::uuid[])`;
     } else if (operation === "talent") {
-      await tx`update buyers set talent_pool = true where id = any(${selected}::uuid[])`;
+      await tx`update buyers set talent_pool = ${value !== "no"} where id = any(${selected}::uuid[])`;
     } else {
       await tx`delete from buyers where id = any(${selected}::uuid[])`;
     }

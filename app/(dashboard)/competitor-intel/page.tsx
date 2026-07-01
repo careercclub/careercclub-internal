@@ -5,5 +5,5 @@ import { competitorLinks } from "@/lib/records/links";
 
 export default async function CompetitorIntelPage() {
   const workspace = await getCompetitorWorkspace();
-  return <RecordManager definitionKey="competitor_profiles" links={competitorLinks} rows={workspace.profiles} tools={<CompetitorTools workspace={workspace} />} />;
+  return <CompetitorTools manage={<RecordManager definitionKey="competitor_profiles" links={competitorLinks} rows={workspace.profiles} />} workspace={workspace} />;
 }

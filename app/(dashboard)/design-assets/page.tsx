@@ -5,5 +5,5 @@ import { listDesignAssets } from "@/lib/api/design-assets";
 
 export default async function DesignAssetsPage() {
   const rows = await listDesignAssets();
-  return <RecordManager definitionKey="design_assets" rows={rows} tools={<><AssetUploadTools mode="design" /><AssetGallery rows={rows} titleField="nama" categoryField="kategori" imageFields={["storage_paths", "storage_path"]} canSendToLibrary /></>} />;
+  return <AssetGallery canSendToLibrary categoryField="kategori" imageFields={["storage_paths", "storage_path"]} manage={<RecordManager definitionKey="design_assets" rows={rows} />} rows={rows} titleField="nama" upload={<AssetUploadTools mode="design" />} />;
 }

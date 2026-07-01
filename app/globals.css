@@ -147,3 +147,10 @@ a {
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
+
+/* Make Plus Jakarta Sans the Tailwind default so shadcn components and every
+   `font-sans` element use it too (not just the body). */
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --default-font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+}

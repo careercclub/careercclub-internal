@@ -3,7 +3,7 @@
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import styles from "../record-manager.module.css";
+import styles from "./crm.module.css";
 
 type ImportResult = { added?: number; updated?: number; skipped?: number; warnings?: string[]; error?: string };
 
@@ -54,23 +54,23 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
 
   return (
     <div className={styles.toolStack}>
-      <div className={styles.metricStrip}>
-        <div><strong>{stats.total}</strong><span>buyers</span></div>
-        <div><strong>{stats.pending}</strong><span>pending payment</span></div>
-        <div><strong>{stats.failed}</strong><span>failed payment</span></div>
-        <div><strong>{stats.converted}</strong><span>converted</span></div>
-        <div><strong>{stats.talent}</strong><span>talent matches</span></div>
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}><div className={styles.statLabel}>Buyers</div><div className={styles.statVal}>{stats.total}</div></div>
+        <div className={styles.statCard}><div className={styles.statLabel}>Pending payment</div><div className={styles.statVal}>{stats.pending}</div></div>
+        <div className={styles.statCard}><div className={styles.statLabel}>Failed payment</div><div className={styles.statVal}>{stats.failed}</div></div>
+        <div className={styles.statCard}><div className={styles.statLabel}>Converted</div><div className={styles.statVal}>{stats.converted}</div></div>
+        <div className={styles.statCard}><div className={styles.statLabel}>Talent matches</div><div className={styles.statVal}>{stats.talent}</div></div>
       </div>
-      <details className={styles.createPanel}>
-        <summary><i className="ti ti-file-import" aria-hidden="true" /> Import Lynkid transactions</summary>
-        <form action={importFile} className={styles.formGrid}>
-          <label className={styles.field}><span>Import mode</span><select name="mode"><option value="new">New buyers (skip duplicate WhatsApp)</option><option value="results">Blast results (append purchase history)</option></select></label>
-          <label className={styles.field}><span>CSV or XLSX files</span><input accept=".csv,.xlsx" multiple name="files" type="file" required /></label>
-          <button className={styles.primaryButton} disabled={busy} type="submit">{busy ? "Importing..." : "Import transactions"}</button>
-          {message ? <p className={styles.formMessage} role="status">{message}</p> : null}
+      <details className={styles.detailsPanel}>
+        <summary className={styles.detailsSummary}><i className="ti ti-file-import" aria-hidden="true" /> Import Lynkid transactions</summary>
+        <form action={importFile} className={styles.formStack}>
+          <label><span>Import mode</span><select name="mode"><option value="new">New buyers (skip duplicate WhatsApp)</option><option value="results">Blast results (append purchase history)</option></select></label>
+          <label><span>CSV or XLSX files</span><input accept=".csv,.xlsx" multiple name="files" type="file" required /></label>
+          <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={busy} type="submit">{busy ? "Importing..." : "Import transactions"}</button>
+          {message ? <p className={styles.rowCount} role="status">{message}</p> : null}
         </form>
       </details>
-      <button className={styles.secondaryButton} type="button" onClick={exportJson}><i className="ti ti-download" aria-hidden="true" /> Export CRM JSON</button>
+      <button className={styles.btn} type="button" onClick={exportJson}><i className="ti ti-download" aria-hidden="true" /> Export CRM JSON</button>
     </div>
   );
 }
