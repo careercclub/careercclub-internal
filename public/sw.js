@@ -1,4 +1,4 @@
-const STATIC_CACHE = "ccc-static-v1";
+const STATIC_CACHE = "ccc-static-v2";
 const OFFLINE_URL = "/offline";
 const PRECACHE_URLS = [OFFLINE_URL, "/favicon.ico", "/pwa-icon/192"];
 
@@ -36,17 +36,15 @@ self.addEventListener("fetch", (event) => {
   if (!isStaticAsset) return;
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(request).then((response) => {
+    fetch(request)
+      .then((response) => {
         if (response.ok) {
           const copy = response.clone();
           void caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
         }
         return response;
-      });
-    }),
+      })
+      .catch(() => caches.match(request)),
   );
 });
 

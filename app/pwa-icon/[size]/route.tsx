@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: IconRouteProps) {
         alignItems: "center",
         justifyContent: "center",
         padding: inset,
-        background: "#2e2a7a",
+        background: "#0a3d8f",
       }}
     >
       <div

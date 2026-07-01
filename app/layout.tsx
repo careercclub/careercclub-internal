@@ -1,7 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { DM_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import { PwaRegistration } from "./_components/pwa-registration";
 import "./globals.css";
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -28,7 +35,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#2d2777",
+  themeColor: "#0a3d8f",
 };
 
 type RootLayoutProps = Readonly<{
@@ -37,14 +44,14 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="id">
+    <html className={dmSans.variable} lang="id">
       <head>
         <link
           href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"
           rel="stylesheet"
         />
       </head>
-      <body>
+      <body className={dmSans.className}>
         <PwaRegistration />
         {children}
       </body>
