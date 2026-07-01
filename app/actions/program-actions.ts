@@ -1,8 +1,9 @@
 "use server";
 
 import { auth } from "@/auth";
-import { createEventRundownItem, createProgramEvent, createProgramTask, deleteEventRundownItem, duplicateProgramEvent, repairTaskTicketLinks, updateEventRundownItem } from "@/lib/api/program";
+import { createEventRundownItem, createProgramEvent, createProgramTask, deleteEventRundownItem, deleteTaskWithLinkedTicket, duplicateProgramEvent, repairTaskTicketLinks, updateEventRundownItem, updateProgramEvent } from "@/lib/api/program";
 import { synchronizeTaskToTicket } from "@/lib/api/program";
+import type { ApiRecord } from "@/lib/api/_crud";
 import { withPostgres } from "@/lib/db/postgres";
 import { revalidatePath } from "next/cache";
 
@@ -143,6 +144,76 @@ export async function createTaskAction(input: Record<string, unknown>) {
   await synchronizeTaskToTicket(String(task.id), user.id);
   revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
   return task;
+}
+
+export async function updateEventAction(id: string, input: Record<string, unknown>) {
+  await requireUser();
+  if (!id) throw new Error("Invalid event.");
+  const nama = String(input.nama || "").trim();
+  if (!nama) throw new Error("Program name is required.");
+  const tanggal = String(input.tanggal || "").trim();
+  if (tanggal && !/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) throw new Error("Invalid date.");
+  const status = String(input.status || "Planning");
+  const rawTarget = input.target;
+  const target = rawTarget === "" || rawTarget === null || rawTarget === undefined ? null : Number(rawTarget);
+  const event = await updateProgramEvent(id, {
+    nama,
+    jenis_program: input.jenisProgram ? String(input.jenisProgram) : null,
+    tanggal: tanggal || null,
+    waktu: input.waktu ? String(input.waktu) : null,
+    status: ["Planning", "On Progress", "Done", "Cancelled"].includes(status) ? status : "Planning",
+    speaker: input.speaker ? String(input.speaker) : null,
+    platform: input.platform ? String(input.platform) : null,
+    target: typeof target === "number" && Number.isFinite(target) ? target : null,
+    deskripsi: input.deskripsi ? String(input.deskripsi) : null,
+  });
+  if (!event) throw new Error("Program event not found.");
+  revalidatePath("/program"); revalidatePath("/dashboard");
+  return event;
+}
+
+export async function deleteTaskAction(id: string) {
+  await requireUser();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid task.");
+  await deleteTaskWithLinkedTicket(id);
+  revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+}
+
+export async function addEventLinkAction(eventId: string, input: { label: string; url: string }) {
+  await requireUser();
+  if (!/^[0-9a-f-]{36}$/i.test(eventId)) throw new Error("Invalid event.");
+  const label = input.label.trim();
+  const url = input.url.trim();
+  if (!label || !url) throw new Error("Label and URL are required.");
+  const event = await withPostgres(async (sql) => {
+    const [row] = await sql<ApiRecord[]>`
+      update events
+      set links = coalesce(links, '[]'::jsonb) || ${JSON.stringify([{ label, url }])}::jsonb
+      where id = ${eventId}
+      returning *
+    `;
+    return row || null;
+  });
+  if (!event) throw new Error("Program event not found.");
+  revalidatePath("/program");
+  return event;
+}
+
+export async function deleteEventLinkAction(eventId: string, index: number) {
+  await requireUser();
+  if (!/^[0-9a-f-]{36}$/i.test(eventId)) throw new Error("Invalid event.");
+  const event = await withPostgres(async (sql) => {
+    const [row] = await sql<ApiRecord[]>`
+      update events
+      set links = coalesce(links, '[]'::jsonb) - ${index}::int
+      where id = ${eventId}
+      returning *
+    `;
+    return row || null;
+  });
+  if (!event) throw new Error("Program event not found.");
+  revalidatePath("/program");
+  return event;
 }
 
 export async function createRundownRowAction(eventId: string, order: number) {

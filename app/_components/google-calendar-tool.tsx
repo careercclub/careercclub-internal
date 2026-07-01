@@ -25,38 +25,19 @@ declare global {
   }
 }
 
-type Props = { tasks: ApiRecord[]; people: ApiRecord[]; recordType?: "task" | "ticket" };
+export type GoogleCalendarPayload = { taskId?: string; ticketId?: string; title: string; description?: string; start: string; end: string; attendees?: string[] };
 
-export function GoogleCalendarTool({ tasks, people, recordType = "task" }: Props) {
+export function GoogleCalendarScript() {
+  return <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />;
+}
+
+export function useGoogleCalendarAction(onDone?: () => void) {
   const router = useRouter();
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
-  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
-  async function submit(formData: FormData, accessToken: string) {
-    const taskId = String(formData.get("task_id") || "");
-    const task = tasks.find((item) => String(item.id) === taskId);
-    const attendees = formData.getAll("attendees").map(String);
-    const response = await fetch("/api/google-calendar/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        accessToken,
-        ...(recordType === "ticket" ? { ticketId: taskId } : { taskId }),
-        title: String(task?.title || "CCC task"),
-        description: String(task?.description || ""),
-        start: String(formData.get("start") || ""),
-        end: String(formData.get("end") || ""),
-        attendees,
-      }),
-    });
-    const result = await response.json() as { error?: string };
-    if (!response.ok) throw new Error(result.error || "Calendar event could not be created.");
-    setMessage(`Calendar event created and ${recordType} marked as synchronized.`);
-    router.refresh();
-  }
-
-  function createEvent(formData: FormData) {
+  function run(payload: GoogleCalendarPayload) {
     setMessage("");
     if (!clientId || !window.google) {
       setMessage("Google Calendar is not configured or the Google script is unavailable.");
@@ -69,7 +50,16 @@ export function GoogleCalendarTool({ tasks, people, recordType = "task" }: Props
       callback: async (response) => {
         try {
           if (!response.access_token) throw new Error(response.error || "Google authorization failed.");
-          await submit(formData, response.access_token);
+          const apiResponse = await fetch("/api/google-calendar/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accessToken: response.access_token, ...payload }),
+          });
+          const result = await apiResponse.json() as { error?: string };
+          if (!apiResponse.ok) throw new Error(result.error || "Calendar event could not be created.");
+          setMessage("Calendar event created.");
+          router.refresh();
+          onDone?.();
         } catch (error) {
           setMessage(error instanceof Error ? error.message : "Calendar event could not be created.");
         } finally {
@@ -80,9 +70,30 @@ export function GoogleCalendarTool({ tasks, people, recordType = "task" }: Props
     client.requestAccessToken();
   }
 
+  return { run, busy, message, clientId };
+}
+
+type Props = { tasks: ApiRecord[]; people: ApiRecord[]; recordType?: "task" | "ticket" };
+
+export function GoogleCalendarTool({ tasks, people, recordType = "task" }: Props) {
+  const { run, busy, message, clientId } = useGoogleCalendarAction();
+
+  function createEvent(formData: FormData) {
+    const taskId = String(formData.get("task_id") || "");
+    const task = tasks.find((item) => String(item.id) === taskId);
+    run({
+      ...(recordType === "ticket" ? { ticketId: taskId } : { taskId }),
+      title: String(task?.title || "CCC task"),
+      description: String(task?.description || ""),
+      start: String(formData.get("start") || ""),
+      end: String(formData.get("end") || ""),
+      attendees: formData.getAll("attendees").map(String),
+    });
+  }
+
   return (
     <details className={styles.createPanel}>
-      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+      <GoogleCalendarScript />
       <summary><i className="ti ti-calendar-plus" aria-hidden="true" /> Add {recordType} to Google Calendar</summary>
       <form action={createEvent} className={styles.formGrid}>
         <label className={styles.field}><span>{recordType === "ticket" ? "Ticket" : "Task"}</span><select name="task_id" required><option value="">Select...</option>{tasks.map((task) => <option key={String(task.id)} value={String(task.id)}>{String(task.title || task.id)}{task.gcal_added ? " (added)" : ""}</option>)}</select></label>
