@@ -16,7 +16,7 @@ type SortMode = "combined" | "follows" | "link";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
-function day(value: unknown) { return typeof value === "string" ? value.slice(0, 10) : ""; }
+function day(value: unknown) { if (value instanceof Date) return value.toISOString().slice(0, 10); return typeof value === "string" ? value.slice(0, 10) : ""; }
 function number(value: unknown) { const parsed = Number(value || 0); return Number.isFinite(parsed) ? parsed : 0; }
 function compact(value: unknown) { return new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(number(value)); }
 function percent(value: number) { return `${value.toFixed(1)}%`; }

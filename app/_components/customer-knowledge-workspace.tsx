@@ -8,6 +8,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { DistributionChart } from "./charts";
 import { FilterBar, Pill, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
 
 type Tab = "dashboard" | "database" | "manage";
@@ -106,11 +107,10 @@ export function CustomerKnowledgeWorkspace({ rows, management }: { rows: ApiReco
 }
 
 function Distribution({ title, rows }: { title: string; rows: [string, number][] }) {
-  const maximum = Math.max(1, ...rows.map(([, count]) => count));
   return (
     <Card className="gap-2 p-4">
       <h3 className="text-xs font-bold">{title}</h3>
-      {rows.length ? rows.map(([value, count]) => <div className="grid grid-cols-[110px_minmax(0,1fr)_36px] items-center gap-2 text-[10px]" key={value}><span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground">{value}</span><i className="block h-2 min-w-[2px] rounded bg-[var(--purple-mid)]" style={{ width: `${(count / maximum) * 100}%` }} /><strong className="text-right">{count}</strong></div>) : <p className="text-[11px] text-muted-foreground">No data.</p>}
+      <DistributionChart rows={rows} />
     </Card>
   );
 }

@@ -7,6 +7,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { DistributionChart } from "./charts";
 import { StorageImage } from "./storage-image";
 import { FilterBar, Pill, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
 
@@ -46,11 +47,11 @@ export function CompetitorTools({ workspace, manage }: { workspace: Workspace; m
           <div className="grid gap-3 md:grid-cols-2">
             <Card className="gap-2 p-4">
               <h3 className="text-xs font-bold">Threat distribution</h3>
-              {threatCounts.map(([level, count]) => <div className="grid grid-cols-[80px_minmax(0,1fr)_36px] items-center gap-2 text-[10px]" key={level}><span className="text-muted-foreground capitalize">{level}</span><i className="block h-2 min-w-[2px] rounded bg-[var(--purple-mid)]" style={{ width: `${(count / Math.max(1, ...threatCounts.map(([, value]) => value))) * 100}%` }} /><strong className="text-right">{count}</strong></div>)}
+              <DistributionChart rows={threatCounts.map(([level, count]) => [level.charAt(0).toUpperCase() + level.slice(1), count])} />
             </Card>
             <Card className="gap-2 p-4">
               <h3 className="text-xs font-bold">Competitor product coverage</h3>
-              {workspace.profiles.map((profile) => [String(profile.name), workspace.products.filter((product) => String(product.competitor_id) === String(profile.id)).length] as const).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => <div className="grid grid-cols-[110px_minmax(0,1fr)_36px] items-center gap-2 text-[10px]" key={name}><span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground">{name}</span><i className="block h-2 min-w-[2px] rounded bg-[var(--purple-mid)]" style={{ width: `${(count / Math.max(1, ...workspace.profiles.map((profile) => workspace.products.filter((product) => String(product.competitor_id) === String(profile.id)).length))) * 100}%` }} /><strong className="text-right">{count}</strong></div>)}
+              <DistributionChart rows={workspace.profiles.map((profile) => [String(profile.name), workspace.products.filter((product) => String(product.competitor_id) === String(profile.id)).length] as [string, number]).sort((a, b) => b[1] - a[1]).slice(0, 10)} />
             </Card>
           </div>
           <Card className="gap-2 p-4">

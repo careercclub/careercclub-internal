@@ -43,3 +43,24 @@ export function MetricsChart({ labels, reach, interactions }: { labels: string[]
     </div>
   );
 }
+
+/** Horizontal single-series distribution bar chart — replaces the plain CSS bar-div breakdowns
+ * used across Competitor Intel and Customer Knowledge with a real Chart.js chart. */
+export function DistributionChart({ rows, color = "#7c6ff7" }: { rows: [string, number][]; color?: string }) {
+  const height = Math.max(90, rows.length * 26);
+  if (!rows.length) return <p className="text-[11px] text-muted-foreground">No data.</p>;
+  return (
+    <div style={{ height }}>
+      <Bar
+        data={{ labels: rows.map(([label]) => label), datasets: [{ label: "Count", data: rows.map(([, value]) => value), backgroundColor: color, borderRadius: 4, barPercentage: 0.7 }] }}
+        options={{
+          indexAxis: "y" as const,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { intersect: false } },
+          scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: "#f0f2ff" } }, y: { ticks: { font: { size: 10 } }, grid: { display: false } } },
+        }}
+      />
+    </div>
+  );
+}
