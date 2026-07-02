@@ -1,9 +1,9 @@
 "use client";
 
-import { BarController, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
-import { Bar, Chart } from "react-chartjs-2";
+import { ArcElement, BarController, BarElement, CategoryScale, Chart as ChartJS, DoughnutController, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
+import { Bar, Chart, Doughnut } from "react-chartjs-2";
 
-ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, LineController, LineElement, PointElement, Legend, Tooltip);
+ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, LineController, LineElement, PointElement, ArcElement, DoughnutController, Legend, Tooltip);
 
 const baseOptions = {
   responsive: true,
@@ -39,6 +39,38 @@ export function MetricsChart({ labels, reach, interactions }: { labels: string[]
       <Bar
         data={{ labels, datasets: [{ label: "Reach", data: reach, backgroundColor: "#0f52ba", borderRadius: 4 }, { label: "Interactions", data: interactions, backgroundColor: "#34d399", borderRadius: 4 }] }}
         options={{ ...baseOptions, scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } }, grid: { color: "#f0f2ff" } }, x: { ticks: { font: { size: 10 } }, grid: { display: false } } } }}
+      />
+    </div>
+  );
+}
+
+/** Reproduces the legacy `chartMonthly` — 12-month vertical bar of vacancies opened per month. */
+export function MonthlyOpenChart({ labels, counts }: { labels: string[]; counts: number[] }) {
+  return (
+    <div style={{ height: "100%" }}>
+      <Bar
+        data={{ labels, datasets: [{ data: counts, backgroundColor: "#0f52ba", borderRadius: 6, borderSkipped: false }] }}
+        options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: "#f0f2ff" } },
+            x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+          },
+        }}
+      />
+    </div>
+  );
+}
+
+/** Reproduces the legacy `chartIndustry` doughnut — legend rendered separately by the caller. */
+export function IndustryDoughnutChart({ segments }: { segments: Array<{ label: string; value: number; color: string }> }) {
+  return (
+    <div style={{ height: "100%" }}>
+      <Doughnut
+        data={{ labels: segments.map((s) => s.label), datasets: [{ data: segments.map((s) => s.value), backgroundColor: segments.map((s) => s.color), borderWidth: 2, borderColor: "#fff" }] }}
+        options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: "60%" }}
       />
     </div>
   );

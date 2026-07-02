@@ -1,8 +1,7 @@
-import { MtVacancyTools } from "@/app/_components/mt-vacancy-tools";
-import { RecordManager } from "@/app/_components/record-manager";
-import { listMtVacancies } from "@/lib/api/job-vacancy-mt";
+import { JobVacancyMtTools } from "@/app/_components/job-vacancy-mt-tools";
+import { listMtIndustries, listMtVacancies } from "@/lib/api/job-vacancy-mt";
 
 export default async function JobVacancyMtPage() {
-  const rows = await listMtVacancies();
-  return <MtVacancyTools rows={rows} referenceDate={new Date().toISOString()} management={<RecordManager definitionKey="mt_vacancies" rows={rows}/>} />;
+  const [rows, industries] = await Promise.all([listMtVacancies(), listMtIndustries()]);
+  return <JobVacancyMtTools industries={industries} referenceDate={new Date().toISOString()} rows={rows} />;
 }

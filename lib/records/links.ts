@@ -40,11 +40,6 @@ export const instagramLinks = [
   { href: "/instagram/targets", label: "Targets" },
 ];
 
-export const mtVacancyLinks = [
-  { href: "/job-vacancy-mt", label: "Vacancies" },
-  { href: "/job-vacancy-mt/industries", label: "Industries" },
-];
-
 export const competitorLinks = [
   { href: "/competitor-intel", label: "Profiles" },
   { href: "/competitor-intel/products", label: "Products" },

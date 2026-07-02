@@ -21,7 +21,8 @@ export function CompetitorTools({ workspace, manage }: { workspace: Workspace; m
   const categories = [...new Set(workspace.profiles.map((row) => String(row.category || "")).filter(Boolean))].sort(); const platforms = [...new Set(workspace.profiles.flatMap((row) => list(row.platforms)))].sort();
   const profiles = useMemo(() => workspace.profiles.filter((profile) => (!query || `${profile.name} ${profile.category} ${profile.niche} ${profile.target_audience}`.toLowerCase().includes(query.toLowerCase())) && (!category || profile.category === category) && (!threat || profile.threat_level === threat) && (!platform || list(profile.platforms).includes(platform))).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))), [workspace.profiles, query, category, threat, platform]);
   const selected = workspace.profiles.find((profile) => String(profile.id) === selectedId);
-  const latestSnapshots = workspace.snapshots.filter((snapshot) => !workspace.snapshots.some((other) => other.competitor_id === snapshot.competitor_id && String(other.snapshot_date) > String(snapshot.snapshot_date))); const threatCounts = ["high", "medium", "low"].map((level) => [level, workspace.profiles.filter((row) => row.threat_level === level).length] as const);
+  const snapshotDay = (value: unknown) => value instanceof Date ? value.toISOString().slice(0, 10) : typeof value === "string" ? value.slice(0, 10) : "";
+  const latestSnapshots = workspace.snapshots.filter((snapshot) => !workspace.snapshots.some((other) => other.competitor_id === snapshot.competitor_id && snapshotDay(other.snapshot_date) > snapshotDay(snapshot.snapshot_date))); const threatCounts = ["high", "medium", "low"].map((level) => [level, workspace.profiles.filter((row) => row.threat_level === level).length] as const);
 
   return (
     <div className="grid gap-3.5">

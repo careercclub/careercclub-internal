@@ -75,11 +75,6 @@ export const recordDefinitions = {
     description: "Maintain competitor positioning, channels, audience, threat level, and supporting notes.", columns: ["name", "category", "niche", "target_audience", "threat_level", "primary_url"],
     fields: [{ name: "name", label: "Competitor", required: true }, { name: "category", label: "Category" }, { name: "platforms", label: "Platforms JSON", type: "json", placeholder: "[]" }, { name: "primary_url", label: "Primary URL" }, { name: "niche", label: "Niche" }, { name: "target_audience", label: "Target audience", type: "textarea" }, { name: "followers", label: "Followers JSON", type: "json", placeholder: "{}" }, { name: "threat_level", label: "Threat level", type: "select", options: ["low", "medium", "high"] }, { name: "logo_url", label: "Logo object key / URL", storageArea: "design-assets" }, { name: "notes", label: "Notes", type: "textarea" }],
   },
-  mt_vacancies: {
-    table: "mt_vacancies", title: "Management Trainee vacancies", eyebrow: "Talent", path: "/job-vacancy-mt", orderBy: "created_at", ascending: false,
-    description: "Track active MT programs, requirements, placement, deadlines, links, and application notes.", columns: ["company", "program", "industry", "deadline", "status", "year"],
-    fields: [{ name: "company", label: "Company", required: true }, { name: "program", label: "Program", required: true }, { name: "industry", label: "Industry" }, { name: "roles", label: "Roles JSON", type: "json", placeholder: "[]" }, { name: "selection", label: "Selection stages JSON", type: "json", placeholder: "[]" }, { name: "career_links", label: "Career links JSON", type: "json", placeholder: "[]" }, { name: "ref_links", label: "Reference links JSON", type: "json", placeholder: "[]" }, { name: "deadline", label: "Deadline", type: "date" }, { name: "status", label: "Status", type: "select", options: ["Active", "Closed", "Draft"] }, { name: "gpa", label: "GPA requirement" }, { name: "edu", label: "Education requirement" }, { name: "majors", label: "Majors JSON", type: "json", placeholder: "[]" }, { name: "placement", label: "Placement JSON", type: "json", placeholder: "[]" }, { name: "other_req", label: "Other requirements", type: "textarea" }, { name: "duration", label: "Duration" }, { name: "months", label: "Months JSON", type: "json", placeholder: "[]" }, { name: "year", label: "Year" }, { name: "open_date", label: "Open date", type: "date" }, { name: "notes", label: "Notes", type: "textarea" }],
-  },
   content_library: {
     table: "content_library", title: "Content library", eyebrow: "Content", path: "/content-library", orderBy: "created_at", ascending: false,
     description: "Store reusable creative references, performance context, labels, copywriting, and source links.", columns: ["platform", "jenis", "link", "views", "likes", "created_at"],
@@ -114,11 +109,6 @@ export const recordDefinitions = {
     table: "ig_targets", title: "Instagram targets", eyebrow: "Social", path: "/instagram/targets", orderBy: "year",
     description: "Set annual follower targets used by Instagram projections.", columns: ["year", "target_followers", "created_at"],
     fields: [{ name: "year", label: "Year", type: "number", required: true }, { name: "target_followers", label: "Target followers", type: "number", required: true }],
-  },
-  mt_industries: {
-    table: "mt_industries", title: "MT industry master", eyebrow: "Talent", path: "/job-vacancy-mt/industries", orderBy: "nama",
-    description: "Maintain the industry vocabulary used by MT vacancy records.", columns: ["nama", "created_at"],
-    fields: [{ name: "nama", label: "Industry", required: true }],
   },
   partner_deals: {
     table: "partner_deals", title: "B2B partnership deals", eyebrow: "Partnerships", path: "/b2b-partnership/deals", orderBy: "created_at", ascending: false,
