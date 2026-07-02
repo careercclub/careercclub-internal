@@ -21,6 +21,9 @@ const MONTHS_FULL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Ju
 const IND_COLORS = ["#0f52ba", "#1d9e75", "#ef9f27", "#d85a30", "#378add", "#d4537e", "#639922", "#ba7517", "#185fa5", "#993556", "#3b6d11", "#888780"];
 const LAINNYA_COLOR = "#c8c6c0";
 const WEEK_RANGES = ["1–7", "8–14", "15–21", "22–31"];
+// Preset industries always shown alongside saved mt_industries rows (union), so the dropdowns and
+// master-data are never empty. Seed list from legacy loker rawfile.html:16418.
+const DEFAULT_INDUSTRIES = ["Perbankan & Keuangan", "FMCG", "Telekomunikasi", "Energi & Pertambangan", "Manufaktur", "Retail & E-commerce", "Konsultasi", "Teknologi", "Logistik & Supply Chain", "Properti & Konstruksi", "BUMN", "Lainnya"];
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 function list(value: unknown): string[] {
@@ -44,6 +47,17 @@ export function JobVacancyMtTools({ rows, industries, referenceDate }: { rows: A
   const [tab, setTab] = useState<Tab>("dashboard");
   const [listIndustryFilter, setListIndustryFilter] = useState("");
   const [formState, setFormState] = useState<{ record: ApiRecord | null } | null>(null);
+  const industryNames = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const nama of [...industries.map((row) => text(row.nama)), ...DEFAULT_INDUSTRIES]) {
+      const trimmed = nama.trim();
+      if (!trimmed || seen.has(trimmed.toLowerCase())) continue;
+      seen.add(trimmed.toLowerCase());
+      out.push(trimmed);
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }, [industries]);
 
   const tabs: Array<[Tab, string, string]> = [
     ["dashboard", "ti-layout-dashboard", "Dashboard"],
@@ -73,13 +87,13 @@ export function JobVacancyMtTools({ rows, industries, referenceDate }: { rows: A
       <div className={styles.body}>
         <div className={styles.page}>
           {tab === "dashboard" ? <DashboardTab rows={rows} now={now} onJumpToList={jumpToList} /> : null}
-          {tab === "list" ? <ListTab industries={industries} onEdit={(row) => setFormState({ record: row })} presetIndustry={listIndustryFilter} rows={rows} /> : null}
+          {tab === "list" ? <ListTab industryNames={industryNames} onEdit={(row) => setFormState({ record: row })} presetIndustry={listIndustryFilter} rows={rows} /> : null}
           {tab === "newsletter" ? <NewsletterTab now={now} rows={rows} /> : null}
-          {tab === "master" ? <MasterDataTab industries={industries} rows={rows} /> : null}
+          {tab === "master" ? <MasterDataTab industries={industries} names={industryNames} /> : null}
           {tab === "company" ? <CompanyIntelTab rows={rows} /> : null}
         </div>
       </div>
-      {formState ? <VacancyForm industries={industries} onClose={() => setFormState(null)} record={formState.record} /> : null}
+      {formState ? <VacancyForm industryNames={industryNames} onClose={() => setFormState(null)} record={formState.record} /> : null}
     </div>
   );
 }
@@ -286,7 +300,7 @@ function DashboardTab({ rows, now, onJumpToList }: { rows: ApiRecord[]; now: Dat
 }
 
 /* ══════════════ LIST ══════════════ */
-function ListTab({ rows, industries, presetIndustry, onEdit }: { rows: ApiRecord[]; industries: ApiRecord[]; presetIndustry: string; onEdit: (row: ApiRecord) => void }) {
+function ListTab({ rows, industryNames, presetIndustry, onEdit }: { rows: ApiRecord[]; industryNames: string[]; presetIndustry: string; onEdit: (row: ApiRecord) => void }) {
   const [search, setSearch] = useState("");
   const [industry, setIndustry] = useState(presetIndustry);
   const [appliedPreset, setAppliedPreset] = useState(presetIndustry);
@@ -320,7 +334,7 @@ function ListTab({ rows, industries, presetIndustry, onEdit }: { rows: ApiRecord
         <input className={styles.filterInput} onChange={(event) => setSearch(event.target.value)} placeholder="Cari perusahaan..." value={search} />
         <select className={styles.nlSelect} onChange={(event) => setIndustry(event.target.value)} value={industry}>
           <option value="">Industri</option>
-          {industries.map((row) => <option key={text(row.id)} value={text(row.nama)}>{text(row.nama)}</option>)}
+          {industryNames.map((nama) => <option key={nama} value={nama}>{nama}</option>)}
         </select>
         <select className={styles.nlSelect} onChange={(event) => setMonth(event.target.value)} value={month}>
           <option value="">Bulan</option>
@@ -384,7 +398,7 @@ function ListTab({ rows, industries, presetIndustry, onEdit }: { rows: ApiRecord
 }
 
 /* ══════════════ VACANCY FORM (Add/Edit) ══════════════ */
-function VacancyForm({ record, industries, onClose }: { record: ApiRecord | null; industries: ApiRecord[]; onClose: () => void }) {
+function VacancyForm({ record, industryNames, onClose }: { record: ApiRecord | null; industryNames: string[]; onClose: () => void }) {
   const [company, setCompany] = useState(text(record?.company));
   const [industry, setIndustry] = useState(text(record?.industry));
   const [program, setProgram] = useState(text(record?.program));
@@ -441,7 +455,7 @@ function VacancyForm({ record, industries, onClose }: { record: ApiRecord | null
           <Field label="Kategori Industri *">
             <select className={styles.select} onChange={(event) => setIndustry(event.target.value)} value={industry}>
               <option value="">Pilih industri...</option>
-              {industries.map((row) => <option key={text(row.id)} value={text(row.nama)}>{text(row.nama)}</option>)}
+              {industryNames.map((nama) => <option key={nama} value={nama}>{nama}</option>)}
             </select>
           </Field>
           <div className={styles.fieldFull}><Field label="Nama Program MT *"><input className={styles.input} onChange={(event) => setProgram(event.target.value)} placeholder="contoh: Officer Development Program (ODP)" value={program} /></Field></div>
@@ -614,10 +628,11 @@ function NewsletterTab({ rows, now }: { rows: ApiRecord[]; now: Date }) {
 }
 
 /* ══════════════ MASTER DATA ══════════════ */
-function MasterDataTab({ industries, rows }: { industries: ApiRecord[]; rows: ApiRecord[] }) {
+function MasterDataTab({ industries, names }: { industries: ApiRecord[]; names: string[] }) {
   const [value, setValue] = useState("");
   const [pending, start] = useTransition();
-  const sorted = [...industries].sort((a, b) => text(a.nama).localeCompare(text(b.nama)));
+  const rowByName = useMemo(() => new Map(industries.map((row) => [text(row.nama).toLowerCase(), row])), [industries]);
+  const sorted = [...names].sort((a, b) => a.localeCompare(b));
 
   function add() {
     const trimmed = value.trim();
@@ -643,12 +658,19 @@ function MasterDataTab({ industries, rows }: { industries: ApiRecord[]; rows: Ap
         <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={pending} onClick={add} type="button"><i className="ti ti-plus" /> Tambah</button>
       </div>
       <div className={styles.indList}>
-        {sorted.map((row) => (
-          <div className={styles.indRow} key={text(row.id)}>
-            <span>{text(row.nama)}</span>
-            <button className={styles.indRowDelete} disabled={pending} onClick={() => remove(row)} type="button"><i className="ti ti-trash" /></button>
-          </div>
-        ))}
+        {sorted.map((nama) => {
+          const row = rowByName.get(nama.toLowerCase());
+          return (
+            <div className={styles.indRow} key={nama}>
+              <span>{nama}</span>
+              {row ? (
+                <button className={styles.indRowDelete} disabled={pending} onClick={() => remove(row)} type="button"><i className="ti ti-trash" /></button>
+              ) : (
+                <span style={{ fontSize: 10, color: "var(--text-hint)" }}>preset</span>
+              )}
+            </div>
+          );
+        })}
         {!sorted.length ? <div className={styles.empty}>Belum ada industri</div> : null}
       </div>
     </div>
