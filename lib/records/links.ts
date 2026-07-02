@@ -52,7 +52,6 @@ export const customerKnowledgeLinks = [
   { href: "/customer-knowledge", label: "Pain points" },
   { href: "/customer-knowledge/platforms", label: "Platforms" },
   { href: "/customer-knowledge/categories", label: "Categories" },
-  { href: "/customer-knowledge/free-class", label: "Free class analytics" },
 ];
 
 export const ticketLinks = [

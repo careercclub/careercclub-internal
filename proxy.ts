@@ -8,5 +8,5 @@ export function proxy(...args: Parameters<typeof auth>) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|pwa-icon|offline|sign-in|cp-preview).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|pwa-icon|offline|sign-in).*)"],
 };

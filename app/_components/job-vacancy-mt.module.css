@@ -307,28 +307,27 @@
   padding: 0 8px;
 }
 
-/* Category cards (Ringkasan per Kategori) */
-.categoryGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-@media (max-width: 900px) { .categoryGrid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 620px) { .categoryGrid { grid-template-columns: 1fr; } }
-.categoryCard {
-  background: var(--white);
-  border: 0.5px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
+/* Ringkasan per Kategori — single-container row list (matches legacy) */
+.categoryList { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.categoryRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  background: none;
   cursor: pointer;
   text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
-.categoryCard:hover { border-color: var(--purple-accent); }
-.categoryTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.categoryName { font-size: 12px; font-weight: 600; }
-.categoryCount { font-size: 11px; color: var(--text-muted); }
-.categoryBarTrack { height: 5px; border-radius: 4px; background: var(--bg); overflow: hidden; }
-.categoryBarFill { height: 100%; background: #0f52ba; border-radius: 4px; }
-.categoryFoot { display: flex; justify-content: flex-end; }
+.categoryRow:last-child { border-bottom: none; }
+.categoryRow:hover { background: var(--bg); }
+.categoryRowName { font-size: 13px; font-weight: 500; color: var(--text); min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.categoryRowBar { flex: 1; min-width: 60px; height: 6px; background: var(--bg); border-radius: 4px; }
+.categoryRowBarFill { display: block; height: 6px; border-radius: 4px; background: #0f52ba; }
+.categoryRowCount { font-size: 12px; color: var(--text-muted); min-width: 26px; text-align: right; }
+@media (max-width: 620px) { .categoryRowName { min-width: 96px; } }
 
 /* Filter bar */
 .filterBar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }

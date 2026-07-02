@@ -1,15 +1,12 @@
 import { CustomerKnowledgeWorkspace } from "@/app/_components/customer-knowledge-workspace";
-import { PainPointAiParser } from "@/app/_components/pain-point-ai-parser";
-import { RecordManager } from "@/app/_components/record-manager";
-import { listPainPointCategories, listPainPoints } from "@/lib/api/customer-knowledge";
+import { listFreeClassEvaluations, listPainPointCategories, listPainPointPlatforms, listPainPoints } from "@/lib/api/customer-knowledge";
 
 export const metadata = { title: "Customer Knowledge" };
 
 export default async function CustomerKnowledgePage() {
-  const [rows, categoryRows] = await Promise.all([listPainPoints(), listPainPointCategories()]);
-  const categories = categoryRows
-    .map((row) => String(row.nama || "").trim())
-    .filter(Boolean);
+  const [rows, platforms, categories, freeClassRows] = await Promise.all([
+    listPainPoints(), listPainPointPlatforms(), listPainPointCategories(), listFreeClassEvaluations(),
+  ]);
 
-  return <CustomerKnowledgeWorkspace rows={rows} management={<RecordManager definitionKey="pain_points" rows={rows} tools={<PainPointAiParser categories={categories} />} />} />;
+  return <CustomerKnowledgeWorkspace categories={categories} freeClassRows={freeClassRows} platforms={platforms} rows={rows} />;
 }

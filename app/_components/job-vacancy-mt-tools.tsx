@@ -265,15 +265,17 @@ function DashboardTab({ rows, now, onJumpToList }: { rows: ApiRecord[]; now: Dat
       {!industryCounts.length ? (
         <div className={styles.empty}>Belum ada data. Tambahkan loker MT pertama!</div>
       ) : (
-        <div className={styles.categoryGrid}>
+        <div className={styles.categoryList}>
           {industryCounts.map(([name, count]) => {
             const openCompanies = new Set(rows.filter((row) => (text(row.industry) || "Lainnya") === name && list(row.months).map(Number).includes(now.getMonth() + 1)).map((row) => text(row.company)));
             const barPct = Math.round((count / categoryMax) * 100);
             return (
-              <button className={styles.categoryCard} key={name} onClick={() => onJumpToList(name)} type="button">
-                <div className={styles.categoryTop}><span className={styles.categoryName}>{name}</span><span className={styles.categoryCount}>{count}</span></div>
-                <div className={styles.categoryBarTrack}><div className={styles.categoryBarFill} style={{ width: `${barPct}%` }} /></div>
-                <div className={styles.categoryFoot}><span className={`${styles.pill} ${openCompanies.size > 0 ? styles.pillGreen : styles.pillGray}`}>{openCompanies.size} buka</span></div>
+              <button className={styles.categoryRow} key={name} onClick={() => onJumpToList(name)} type="button">
+                <span className={styles.categoryRowName} title={name}>{name}</span>
+                <span className={styles.categoryRowBar}><span className={styles.categoryRowBarFill} style={{ width: `${barPct}%` }} /></span>
+                <span className={styles.categoryRowCount}>{count}</span>
+                <span className={`${styles.pill} ${openCompanies.size > 0 ? styles.pillGreen : styles.pillGray}`}>{openCompanies.size} buka</span>
+                <i className="ti ti-chevron-right" style={{ fontSize: 13, color: "var(--text-muted)", flexShrink: 0 }} />
               </button>
             );
           })}
