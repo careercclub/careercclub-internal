@@ -111,7 +111,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
           })}
         </div>
       ) : null}
-      {tab === "outreach" ? <TalentPoolTools rows={visible} /> : null}
+      {tab === "outreach" ? <TalentPoolTools rows={rows} /> : null}
       {tab === "manage" ? <div className={styles.toolStack}>{sheetsImport}{management}</div> : null}
       {detail ? (
         <div className={styles.detailOverlay} role="dialog" aria-modal="true">

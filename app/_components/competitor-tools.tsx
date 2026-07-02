@@ -7,7 +7,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { StorageImage } from "./storage-image";
 import { FilterBar, Pill, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
 
 type Workspace = { profiles: ApiRecord[]; snapshots: ApiRecord[]; flags: ApiRecord[]; products: ApiRecord[]; prices: ApiRecord[] };
@@ -46,8 +45,19 @@ const THREAT_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 const PLATFORM_OPTS = ["Instagram", "TikTok", "YouTube", "X", "LinkedIn", "Website"];
 
 function CompetitorLogo({ profile, size = 36 }: { profile: ApiRecord; size?: number }) {
-  const logo = text(profile.logo_url);
-  if (logo) return <StorageImage area="design-assets" label={text(profile.name)} objectKey={logo} />;
+  const raw = text(profile.logo_url);
+  const [src, setSrc] = useState(raw.startsWith("http") ? raw : "");
+  useEffect(() => {
+    if (!raw || raw.startsWith("http")) { setSrc(raw.startsWith("http") ? raw : ""); return; }
+    const key = /^(uploads|collaborator-photos|design-assets|task-attachments)\//.test(raw) ? raw : `design-assets/${raw}`;
+    const controller = new AbortController();
+    fetch("/api/storage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation: "download", key }), signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("unavailable"))))
+      .then((result: { url?: string }) => setSrc(result.url || ""))
+      .catch(() => { if (!controller.signal.aborted) setSrc(""); });
+    return () => controller.abort();
+  }, [raw]);
+  if (src) return <div aria-label={text(profile.name)} className="shrink-0 rounded-lg bg-cover bg-center" role="img" style={{ width: size, height: size, backgroundImage: `url("${src.replaceAll('"', "%22")}")` }} />;
   return (
     <div className="grid shrink-0 place-items-center rounded-lg bg-[var(--purple-light)] font-bold text-[var(--purple-mid)]" style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}>
       {(text(profile.name)[0] || "?").toUpperCase()}
