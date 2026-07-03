@@ -1,5 +1,6 @@
 "use client";
 
+import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { saveCompetitorIntelListsAction, saveMenuLabelsAction, saveMenuVisibilityAction } from "@/app/actions/settings-actions";
 import { RecordManager } from "@/app/_components/record-manager";
 import { UserManagement } from "@/app/_components/user-management";
@@ -12,6 +13,99 @@ import { useState } from "react";
 
 type Page = { slug: string; title: string; section: string; path: string; icon: string };
 type SafeUser = Pick<AuthUserRecord, "id" | "email" | "name" | "role" | "is_active" | "created_at">;
+
+const CATEGORY_TONES = ["purple", "blue", "teal", "amber", "coral", "pink", "green", "red"] as const;
+const TONE_BG: Record<string, string> = { purple: "bg-[var(--purple-light)]", blue: "bg-[var(--blue-bg)]", teal: "bg-[var(--teal-bg)]", amber: "bg-[var(--amber-bg)]", coral: "bg-[var(--coral-bg)]", pink: "bg-[var(--pink-bg)]", green: "bg-[var(--green-bg)]", red: "bg-[var(--red-bg)]" };
+const TONE_TEXT: Record<string, string> = { purple: "text-[var(--purple-mid)]", blue: "text-[var(--blue)]", teal: "text-[var(--teal)]", amber: "text-[var(--amber)]", coral: "text-[var(--coral)]", pink: "text-[var(--pink)]", green: "text-[var(--green)]", red: "text-[var(--red)]" };
+const TONE_DOT: Record<string, string> = { purple: "bg-[var(--purple-mid)]", blue: "bg-[var(--blue)]", teal: "bg-[var(--teal)]", amber: "bg-[var(--amber)]", coral: "bg-[var(--coral)]", pink: "bg-[var(--pink)]", green: "bg-[var(--green)]", red: "bg-[var(--red)]" };
+const PLATFORM_ICONS: Record<string, string> = { tiktok: "ti-brand-tiktok", instagram: "ti-brand-instagram", youtube: "ti-brand-youtube", twitter: "ti-brand-x", x: "ti-brand-x", facebook: "ti-brand-facebook", threads: "ti-brand-threads" };
+
+function platformIcon(name: string) {
+  return PLATFORM_ICONS[name.trim().toLowerCase()] ?? "ti-tag";
+}
+
+function categoryTone(color: unknown) {
+  return typeof color === "string" && (CATEGORY_TONES as readonly string[]).includes(color) ? color : "purple";
+}
+
+function CustomerKnowledgeMasterPanel({ platforms, categories }: { platforms: ApiRecord[]; categories: ApiRecord[] }) {
+  return (
+    <div className="grid gap-3.5 lg:grid-cols-2">
+      <Card className="gap-4 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2"><i className="ti ti-device-mobile text-[var(--purple-mid)]" /><h2 className="text-sm font-bold">Platform</h2></div>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase">{platforms.length} sumber</span>
+        </div>
+        <p className="-mt-2 text-[11px] text-muted-foreground">Sumber komentar/diskusi yang tersedia saat mencatat pain point.</p>
+        <div className="flex flex-wrap gap-1.5">
+          {platforms.map((platform) => (
+            <form action={deleteManagedRecord.bind(null, "pain_point_platforms", String(platform.id))} className="flex items-center gap-1.5 rounded-full border border-border bg-white py-1 pr-1 pl-2.5 text-[11px]" key={String(platform.id)}>
+              <i className={`ti ${platformIcon(String(platform.nama))} text-muted-foreground`} />
+              <span className="font-medium">{String(platform.nama)}</span>
+              <button aria-label={`Hapus ${String(platform.nama)}`} className="grid size-5 place-items-center rounded-full text-muted-foreground opacity-60 hover:bg-[var(--red-bg)] hover:text-[var(--red)] hover:opacity-100" type="submit"><i className="ti ti-x text-[11px]" /></button>
+            </form>
+          ))}
+          {!platforms.length ? <span className="text-[11px] text-muted-foreground">Belum ada platform.</span> : null}
+        </div>
+        <form action={createManagedRecord.bind(null, "pain_point_platforms")} className="flex gap-1.5 border-t border-border pt-3.5">
+          <input className="h-8 flex-1 rounded-md border border-input px-2.5 text-xs" name="nama" placeholder="Nama platform baru (mis. Instagram)..." required />
+          <Button size="sm" type="submit">Tambah</Button>
+        </form>
+      </Card>
+
+      <Card className="gap-4 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2"><i className="ti ti-tags text-[var(--purple-mid)]" /><h2 className="text-sm font-bold">Kategori</h2></div>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase">{categories.length} kategori</span>
+        </div>
+        <p className="-mt-2 text-[11px] text-muted-foreground">Warna kategori dipakai konsisten di seluruh dashboard Customer Knowledge — klik titik warna untuk mengubahnya.</p>
+        <div className="grid gap-1.5">
+          {categories.map((category) => {
+            const tone = categoryTone(category.color);
+            return (
+              <div className={`flex items-center gap-2 rounded-lg border border-border p-1.5 pl-2.5 ${TONE_BG[tone]}`} key={String(category.id)}>
+                <span className={`flex-1 truncate text-[11px] font-semibold ${TONE_TEXT[tone]}`}>{String(category.nama)}</span>
+                <form action={updateManagedRecord.bind(null, "pain_point_categories", String(category.id))} className="flex items-center gap-1">
+                  <input name="nama" type="hidden" value={String(category.nama)} />
+                  {CATEGORY_TONES.map((toneOption) => (
+                    <button
+                      aria-label={`Set warna ${toneOption}`}
+                      aria-pressed={tone === toneOption}
+                      className={`size-3.5 rounded-full ${TONE_DOT[toneOption]} ${tone === toneOption ? "ring-2 ring-offset-1 ring-[var(--text)]" : "opacity-40 hover:opacity-80"}`}
+                      key={toneOption}
+                      name="color"
+                      type="submit"
+                      value={toneOption}
+                    />
+                  ))}
+                </form>
+                <form action={deleteManagedRecord.bind(null, "pain_point_categories", String(category.id))}>
+                  <button aria-label={`Hapus ${String(category.nama)}`} className="grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-[var(--red-bg)] hover:text-[var(--red)]" type="submit"><i className="ti ti-x text-[11px]" /></button>
+                </form>
+              </div>
+            );
+          })}
+          {!categories.length ? <span className="text-[11px] text-muted-foreground">Belum ada kategori.</span> : null}
+        </div>
+        <form action={createManagedRecord.bind(null, "pain_point_categories")} className="grid gap-2 border-t border-border pt-3.5">
+          <input className="h-8 rounded-md border border-input px-2.5 text-xs" name="nama" placeholder="Nama kategori baru..." required />
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase">Warna</span>
+            <div className="flex gap-1.5">
+              {CATEGORY_TONES.map((toneOption) => (
+                <label className="cursor-pointer" key={toneOption}>
+                  <input className="peer sr-only" defaultChecked={toneOption === "purple"} name="color" type="radio" value={toneOption} />
+                  <span className={`block size-4 rounded-full ${TONE_DOT[toneOption]} opacity-40 peer-checked:opacity-100 peer-checked:ring-2 peer-checked:ring-offset-1 peer-checked:ring-[var(--text)]`} />
+                </label>
+              ))}
+            </div>
+            <Button className="ml-auto" size="sm" type="submit">Tambah</Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}
 
 function jsonValue(rows: ApiRecord[], key: string): unknown {
   const row = rows.find((item) => item.key === key);
@@ -198,12 +292,7 @@ export function SettingsWorkspace({
         </div>
       ) : null}
 
-      {tab === "pain-point" ? (
-        <div className="grid gap-3.5 sm:grid-cols-2">
-          <RecordManager definitionKey="pain_point_platforms" rows={platforms} />
-          <RecordManager definitionKey="pain_point_categories" rows={categories} />
-        </div>
-      ) : null}
+      {tab === "pain-point" ? <CustomerKnowledgeMasterPanel categories={categories} platforms={platforms} /> : null}
 
       {tab === "menu" ? (
         <div className="grid gap-3.5">
