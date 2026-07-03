@@ -3929,7 +3929,7 @@ function applyPool(){
   showToast(`${count} buyer diupdate talent pool`);
 }
 function downloadSelected(){
-  const rows=buyers.filter(b=>selectedBuyers.has(b.id));
+  const rows=buyers.filter(b=>selectedBuyers.has(b.id)||selectedBuyers.has(String(b.id)));
   if(!rows.length){showToast("Pilih dulu buyer-nya");return;}
   const csv="phone,name\n"+rows.map(b=>`${b.wa},${b.name||""}`).join("\n");
   const blob=new Blob([csv],{type:"text/csv"});
