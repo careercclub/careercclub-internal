@@ -22,7 +22,7 @@ export async function createUserAction(formData: FormData) {
   const role = String(formData.get("role") || "member").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !name || !/^[a-z][a-z0-9_-]{1,30}$/.test(role)) throw new Error("Valid name, email, and role are required.");
   await createInternalUser({ email, name, role, password: password(formData.get("password")) });
-  revalidatePath("/settings/users");
+  revalidatePath("/settings");
 }
 
 export async function updateUserAccessAction(id: string, formData: FormData) {
@@ -32,5 +32,5 @@ export async function updateUserAccessAction(id: string, formData: FormData) {
   await updateInternalUserAccess(id, { role, isActive: formData.get("is_active") === "on" });
   const newPassword = String(formData.get("password") || "");
   if (newPassword) await resetInternalUserPassword(id, password(newPassword));
-  revalidatePath("/settings/users");
+  revalidatePath("/settings");
 }

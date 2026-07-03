@@ -75,5 +75,4 @@ export const orgPartnershipLinks = [
 
 export const settingsLinks = [
   { href: "/settings", label: "Application settings" },
-  { href: "/settings/users", label: "Users & roles" },
 ];
