@@ -3858,13 +3858,13 @@ function syncCheckAll(){
 function renderBuyers(){
   const groups=getGroupedBuyers();
   const tbody=document.getElementById("buyer-tbody");if(!tbody) return;
-  tbody.innerHTML=groups.map(g=>{
+  tbody.innerHTML=groups.map((g,idx)=>{
     const sid=String(g.primaryId);
     const produkDisp=g.produk&&g.produk.length>20?g.produk.slice(0,20)+"…":g.produk||"—";
     const industriDisp=(g.industri||"").split(",")[0].trim()||"—";
     return `
     <tr>
-      <td><input type="checkbox" data-id="${sid}" ${selectedBuyers.has(sid)?"checked":""} onchange="toggleBuyer('${sid}',this)"></td>
+      <td><input type="checkbox" data-id="${sid}" ${selectedBuyers.has(sid)?"checked":""} onchange="toggleBuyerShift(event,'${sid}',${idx},this)"></td>
       <td title="${g.name}" style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openCustModal('${sid}')">${g.name||"-"}</td>
       <td title="${g.wa}" style="font-size:11px;color:var(--text-muted)">${g.wa}</td>
       <td style="font-size:11px;color:var(--text-muted)">${g.email||'<span style="color:var(--text-hint);font-style:italic">—</span>'}</td>
@@ -3887,6 +3887,26 @@ function renderBuyers(){
 function showRiwayat(id){
   const b=buyers.find(x=>x.id===id);if(!b) return;
   showToast(`${b.name||"Buyer"}: ${b.riwayat.length}x beli — terakhir ${b.riwayat[b.riwayat.length-1].produk}`);
+}
+let _lastCheckedBuyerIdx=null;
+function toggleBuyerShift(e,id,idx,el){
+  if(e.shiftKey&&_lastCheckedBuyerIdx!==null){
+    const groups=getGroupedBuyers();
+    const from=Math.min(_lastCheckedBuyerIdx,idx);
+    const to=Math.max(_lastCheckedBuyerIdx,idx);
+    const shouldSelect=el.checked;
+    for(let i=from;i<=to;i++){
+      const g=groups[i];
+      if(!g)continue;
+      const gid=String(g.primaryId);
+      if(shouldSelect) selectedBuyers.add(gid); else selectedBuyers.delete(gid);
+    }
+    _lastCheckedBuyerIdx=idx;
+    renderBuyers();
+  } else {
+    toggleBuyer(id,el);
+    _lastCheckedBuyerIdx=idx;
+  }
 }
 function toggleBuyer(id,el){
   if(el.checked) selectedBuyers.add(id); else selectedBuyers.delete(id);
