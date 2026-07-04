@@ -3864,7 +3864,7 @@ function renderBuyers(){
     const industriDisp=(g.industri||"").split(",")[0].trim()||"—";
     return `
     <tr>
-      <td><input type="checkbox" data-id="${sid}" ${selectedBuyers.has(sid)?"checked":""} onchange="toggleBuyerShift(event,'${sid}',${idx},this)"></td>
+      <td><input type="checkbox" data-id="${sid}" ${selectedBuyers.has(sid)?"checked":""} onclick="toggleBuyerShift(event,'${sid}',${idx},this)"></td>
       <td title="${g.name}" style="cursor:pointer;color:var(--purple-mid);font-weight:500" onclick="openCustModal('${sid}')">${g.name||"-"}</td>
       <td title="${g.wa}" style="font-size:11px;color:var(--text-muted)">${g.wa}</td>
       <td style="font-size:11px;color:var(--text-muted)">${g.email||'<span style="color:var(--text-hint);font-style:italic">—</span>'}</td>
@@ -6462,7 +6462,7 @@ function openNewTktModal(){
   document.getElementById("tkt-form-modal").style.display="flex";
   renderLinkInputs();
   document.getElementById("nf-div").innerHTML=`<option value="">— Pilih divisi —</option>`+tktDivisi.map(d=>`<option value="${d.id}">${d.nama}</option>`).join("");
-  document.getElementById("nf-type").innerHTML=tktTypes.map(t=>`<option value="${t.id}">${t.nama}</option>`).join("");
+  const nfType=document.getElementById("nf-type");if(nfType)nfType.innerHTML=tktTypes.map(t=>`<option value="${t.id}">${t.nama}</option>`).join("");
   document.getElementById("nf-assignee-add").innerHTML=`<option value="">+ Tambah assignee...</option>`+tktPeople.map(p=>{
     const div=p.divisiId?getDivisiById(p.divisiId):{nama:"—"};
     return `<option value="${p.id}">${p.nama} · ${div.nama}</option>`;
