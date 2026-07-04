@@ -3743,7 +3743,7 @@ async function renderCRMStats(){
   let uniqueBuyers=buyers.filter(b=>b.paymentStatus==='SUCCESS').length;
   try{
     const res=await supabase.rpc('count_unique_buyers');
-    if(res.data!==null&&res.data!==undefined)uniqueBuyers=res.data;
+    if(res.data!==null&&res.data!==undefined)uniqueBuyers=Number(res.data);
   }catch(e){}
   const totalBuyers=uniqueBuyers,
     totalTransaksi=buyers.filter(b=>b.paymentStatus==='SUCCESS').reduce((sum,b)=>{
