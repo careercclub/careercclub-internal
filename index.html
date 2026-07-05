@@ -14803,6 +14803,9 @@ function _cpCardsHTML(){
       const linkBriefHTML=p.link_brief
         ?`<a href="${p.link_brief}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#0f52ba;text-decoration:none;padding:3px 8px;border-radius:5px;border:0.5px solid #B5D4F4;background:#EBF3FD"><i class="ti ti-link" style="font-size:11px"></i> Link Brief <i class="ti ti-external-link" style="font-size:10px;opacity:.7"></i></a><button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="width:22px;height:22px;border:0.5px solid var(--border);border-radius:5px;background:transparent;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center"><i class="ti ti-pencil" style="font-size:10px"></i></button>`
         :`<button onclick="event.stopPropagation();_cpShowLinkBriefInput('${p.id}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);padding:3px 8px;border-radius:5px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:11px"></i> Tambah link brief</button>`;
+      const linkRefHTML=p.link_referensi
+        ?`<a href="${p.link_referensi}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#7C3AED;text-decoration:none;padding:3px 8px;border-radius:5px;border:0.5px solid #C4B5FD;background:#F5F3FF"><i class="ti ti-photo" style="font-size:11px"></i> Referensi <i class="ti ti-external-link" style="font-size:10px;opacity:.7"></i></a><button onclick="event.stopPropagation();_cpShowLinkRefInput('${p.id}')" style="width:22px;height:22px;border:0.5px solid var(--border);border-radius:5px;background:transparent;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center"><i class="ti ti-pencil" style="font-size:10px"></i></button>`
+        :`<button onclick="event.stopPropagation();_cpShowLinkRefInput('${p.id}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);padding:3px 8px;border-radius:5px;border:0.5px dashed var(--border);background:transparent;cursor:pointer"><i class="ti ti-plus" style="font-size:11px"></i> Link referensi</button>`;
 
       const inlineCal='';
 
@@ -14821,6 +14824,7 @@ function _cpCardsHTML(){
             <button class="cp-date-trigger" onclick="event.stopPropagation();_cpToggleInlineCal('${p.id}')" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;font-family:inherit"><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDt(p.tanggal_posting)||'—'} <i class="ti ti-pencil" style="font-size:10px;opacity:.4"></i></button>
             <span style="color:var(--border)">·</span>
             <div id="cp-link-wrap-${p.id}" style="display:inline-flex;align-items:center;gap:4px">${linkBriefHTML}</div>
+            <div id="cp-ref-wrap-${p.id}" style="display:inline-flex;align-items:center;gap:4px">${linkRefHTML}</div>
           </div>
           ${assignee?`<span style="font-size:11px;color:var(--text-muted);flex-shrink:0;white-space:nowrap"><i class="ti ti-user" style="font-size:10px"></i> ${assignee.nama}</span>`:''}
         </div>
@@ -15263,6 +15267,25 @@ function _cpShowLinkBriefInput(id){
     <button onclick="event.stopPropagation();_cpRenderLinkBrief('${id}',null)" style="height:28px;padding:0 8px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;font-size:12px;cursor:pointer;flex-shrink:0;color:var(--text-muted)">Batal</button>
   </div>`;
   setTimeout(()=>document.getElementById('cp-link-input-'+id)?.focus(),50);
+}
+
+function _cpShowLinkRefInput(id){
+  const wrap=document.getElementById('cp-ref-wrap-'+id);if(!wrap)return;
+  const p=carouselPlans.find(x=>_idEq(x.id,id));
+  wrap.innerHTML=`<input id="cp-ref-input-${id}" type="url" placeholder="https://..." style="flex:1;height:28px;padding:0 8px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;background:var(--white)" onkeydown="if(event.key==='Enter')_cpSaveLinkRef('${id}');if(event.key==='Escape')_cpRenderCards();" onclick="event.stopPropagation()"><button onclick="event.stopPropagation();_cpSaveLinkRef('${id}')" style="height:28px;padding:0 10px;border-radius:var(--radius);border:none;background:#7C3AED;color:#fff;font-size:12px;cursor:pointer;flex-shrink:0">Simpan</button>`;
+  if(p&&p.link_referensi)document.getElementById('cp-ref-input-'+id).value=p.link_referensi;
+  document.getElementById('cp-ref-input-'+id)?.focus();
+}
+
+async function _cpSaveLinkRef(id){
+  const input=document.getElementById('cp-ref-input-'+id);if(!input)return;
+  const url=input.value.trim();
+  const ok=await sb_update('carousel_plans',id,{link_referensi:url||null});
+  if(!ok){showToast('Gagal simpan','error');return;}
+  const p=carouselPlans.find(x=>_idEq(x.id,id));
+  if(p)p.link_referensi=url||null;
+  _cpRenderCards();
+  showToast('Link referensi disimpan ✓');
 }
 
 async function _cpSaveLinkBrief(id){
