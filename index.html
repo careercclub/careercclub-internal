@@ -20245,6 +20245,8 @@ function renderTpAnalytics() {
   const univData       = freq(data.map(d=>d.universitas));
   const posisiData     = freqMulti(data.map(d=>d.posisi_mt));
   const targetData     = freqMulti(data.map(d=>d.target_mt));
+  const exchangeData   = freq(data.map(d=>d.exchange));
+  const organisasiData = freq(data.map(d=>d.organisasi));
   const ipkRangeData   = Object.entries(ipkRanges).filter(([,v])=>v>0);
 
   c.innerHTML = `
@@ -20269,6 +20271,10 @@ function renderTpAnalytics() {
     ${card('Angkatan / Tahun Lulus', 'ti-calendar', hbar(angkatanData, total, 10))}
     ${card('Universitas Terbanyak', 'ti-building', hbar(univData, total, 10))}
     ${card('Minat Posisi MT', 'ti-briefcase', hbar(posisiData, total, 10))}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+    ${card('Pengalaman Study Abroad', 'ti-plane', donut(exchangeData, total))}
+    ${card('Pengalaman Organisasi', 'ti-users', donut(organisasiData, total))}
   </div>
   <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px">
     ${card('Target Industri MT', 'ti-building-factory', hbar(targetData, total, 15))}
