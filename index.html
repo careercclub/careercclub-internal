@@ -3747,10 +3747,11 @@ async function renderCRMStats(){
     totalTransaksi=buyers.filter(b=>b.paymentStatus==='SUCCESS').reduce((sum,b)=>{
       return sum+((b.riwayat&&b.riwayat.length)?b.riwayat.length:1);
     },0),
+    repeatBuyers=buyers.filter(b=>b.riwayat&&b.riwayat.length>1).length,
     belumPool=buyers.filter(b=>!b.talentPool).length,
     aktif=buyers.filter(b=>b.status!=="Belum diblast"&&!b.status.includes("convert")).length,
     convert=buyers.filter(b=>b.status.includes("convert")).length;
-  el.innerHTML=`<div class="stat-card"><div class="stat-label">Total Buyers</div><div class="stat-val">${totalBuyers}</div></div><div class="stat-card"><div class="stat-label">Total Transaksi</div><div class="stat-val">${totalTransaksi}</div></div><div class="stat-card"><div class="stat-label">Belum Isi Pool</div><div class="stat-val" style="color:var(--red)">${belumPool}</div></div><div class="stat-card"><div class="stat-label">Sedang Diblast</div><div class="stat-val" style="color:var(--blue)">${aktif}</div></div><div class="stat-card"><div class="stat-label">Sudah Convert</div><div class="stat-val" style="color:var(--green)">${convert}</div></div>`;
+  el.innerHTML=`<div class="stat-card"><div class="stat-label">Total Buyers</div><div class="stat-val">${totalBuyers}</div></div><div class="stat-card"><div class="stat-label">Total Transaksi</div><div class="stat-val">${totalTransaksi}</div></div><div class="stat-card"><div class="stat-label">Repeat Buyers</div><div class="stat-val" style="color:var(--purple-mid)">${repeatBuyers}</div></div><div class="stat-card"><div class="stat-label">Belum Isi Pool</div><div class="stat-val" style="color:var(--red)">${belumPool}</div></div><div class="stat-card"><div class="stat-label">Sedang Diblast</div><div class="stat-val" style="color:var(--blue)">${aktif}</div></div><div class="stat-card"><div class="stat-label">Sudah Convert</div><div class="stat-val" style="color:var(--green)">${convert}</div></div>`;
 }
 function populateFilters(){
   const iSet=new Set(),tSet=new Set(),sSet=new Set();
