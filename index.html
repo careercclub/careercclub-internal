@@ -3703,7 +3703,6 @@ function _buyerRowToJS(d) {
 }
 function _buyerJSToRow(b) {
   return {
-    id: b.id,
     name: b.name || '',
     wa: b.wa || '',
     email: b.email || '',
@@ -3715,7 +3714,6 @@ function _buyerJSToRow(b) {
     sumber: b.sumber || '',
     status: b.status || 'Belum diblast',
     payment_status: b.paymentStatus || '',
-    talent_pool: b.talentPool || false,
     tanggal: b.tanggal || '',
     riwayat: b.riwayat || []
   };
@@ -3744,7 +3742,7 @@ async function renderCRMStats(){
   try{
     const res=await supabase.rpc('count_unique_buyers');
     if(res.data!==null&&res.data!==undefined)uniqueBuyers=Number(res.data);
-  }catch(e){}
+  }catch(e){console.warn('[CRM] count_unique_buyers failed:',e);}
   const totalBuyers=uniqueBuyers,
     totalTransaksi=buyers.filter(b=>b.paymentStatus==='SUCCESS').reduce((sum,b)=>{
       return sum+((b.riwayat&&b.riwayat.length)?b.riwayat.length:1);
@@ -4803,11 +4801,11 @@ async function confirmImportCRM(){
     qcRows.forEach((r,i)=>{
       if(!qcSelected.has(i)) return;
       if(buyers.find(b=>b.wa===r.wa&&b.produk===r.produk&&(!r.tanggal||b.tanggal===r.tanggal))){skipped++;return;}
-      const newBuyer={id:crypto.randomUUID(),name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",paymentStatus:r.paymentStatus||'',talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
+      const newBuyer={name:r.name,wa:r.wa,email:r.email||'',produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,industri:r.notes.industri,tahap:r.notes.tahap,sumber:r.notes.sumber,status:"Belum diblast",paymentStatus:r.paymentStatus||'',talentPool:false,tanggal:r.tanggal,riwayat:[{produk:r.produk,klasifikasi:r.klasifikasi,harga:r.harga,tanggal:r.tanggal}]};
       buyers.push(newBuyer);
       toInsert.push(newBuyer);
       if(!masterProduk.find(m=>m.nama.toLowerCase()===r.produk.toLowerCase())&&r.klasifikasi!=="Belum Diklasifikasi"){
-        masterProduk.push({id:crypto.randomUUID(),nama:r.produk,klasifikasi:r.klasifikasi});
+        masterProduk.push({nama:r.produk,klasifikasi:r.klasifikasi});
       }
       added++;
     });
@@ -13463,7 +13461,7 @@ function renderStoryVsBuyer(c){
   const stories=evalContents.filter(x=>x.format==='Story'&&evalDateFilter(x))
     .sort((a,b)=>a.tanggal<b.tanggal?1:-1);
   const igBuyers=buyers.filter(b=>b.sumber==='Instagram Story'&&evalDateFilter(b));
-  const totalBuyers=buyers.length;
+  const totalBuyers=[...new Set(buyers.map(b=>b.wa||String(b.id)))].length;
   const igBuyerCount=igBuyers.length;
   const convRate=totalBuyers>0?(igBuyerCount/totalBuyers*100).toFixed(1):0;
 
@@ -19932,12 +19930,12 @@ async function tpFetchSheets() {
         fakultas: get(14),
         angkatan: get(15),
         tahun_lulus: get(16),
-        organisasi: get(17),
-        exchange: get(18),
-        target_mt: get(19),
-        posisi_mt: get(20),
-        linkedin: get(21),
-        produk_dibeli: get(23),
+        organisasi: get(18),
+        exchange: get(19),
+        target_mt: get(20),
+        posisi_mt: get(21),
+        linkedin: get(22),
+        produk_dibeli: get(24),
         kepuasan: get(24),
         membantu: get(25),
         nps: get(26),
