@@ -20267,8 +20267,11 @@ function renderTpAnalytics() {
     ${card('Campus Tier', 'ti-building-community', donut(tierData, total))}
     ${card('Range IPK', 'ti-star', donut(ipkRangeData, ipks.length))}
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
-    ${card('Angkatan / Tahun Lulus', 'ti-calendar', hbar(angkatanData, total, 10))}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+    ${card('Angkatan', 'ti-calendar', hbar(angkatanData, total, 10))}
+    ${card('Tahun Lulus', 'ti-calendar-event', hbar(lulusData, total, 10))}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
     ${card('Universitas Terbanyak', 'ti-building', hbar(univData, total, 10))}
     ${card('Minat Posisi MT', 'ti-briefcase', hbar(posisiData, total, 10))}
   </div>
