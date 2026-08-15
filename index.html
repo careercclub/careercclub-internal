@@ -3740,7 +3740,7 @@ async function renderCRMStats(){
   const el=document.getElementById("crm-stats");if(!el)return;
   let uniqueBuyers=buyers.filter(b=>b.paymentStatus==='SUCCESS').length;
   try{
-    const res=await supabase.rpc('count_unique_buyers');
+    const res=await _sb.rpc('count_unique_buyers');
     if(res.data!==null&&res.data!==undefined)uniqueBuyers=Number(res.data);
   }catch(e){console.warn('[CRM] count_unique_buyers failed:',e);}
   const totalBuyers=uniqueBuyers,
