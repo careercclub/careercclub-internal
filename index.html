@@ -20241,7 +20241,8 @@ function renderTpAnalytics() {
   const statusData     = freq(data.map(d=>d.status));
   const pendidikanData = freq(data.map(d=>d.pendidikan));
   const tierData       = freq(data.map(d=>d.campus_tier));
-  const angkatanData   = freq(data.map(d=>d.angkatan||d.tahun_lulus));
+  const angkatanData   = freq(data.map(d=>d.angkatan));
+  const lulusData      = freq(data.map(d=>d.tahun_lulus));
   const univData       = freq(data.map(d=>d.universitas));
   const posisiData     = freqMulti(data.map(d=>d.posisi_mt));
   const targetData     = freqMulti(data.map(d=>d.target_mt));
