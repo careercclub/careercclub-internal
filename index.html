@@ -2647,7 +2647,11 @@ function sb_contentPhotoPublicUrl(path) {
   return data.publicUrl;
 }
 
-async function sb_loadContentLib() { return await sb_load('content_library', { order: 'created_at', ascending: false }); }
+async function sb_loadContentLib(tipe) {
+  const rows = await sb_load('content_library', { order: 'created_at', ascending: false });
+  if (tipe) return rows.filter(r => (r.tipe || 'organic') === tipe);
+  return rows;
+}
 async function sb_saveContentLib(row) { return await sb_insert('content_library', row); }
 async function sb_updateContentLib(id, row) { return await sb_update('content_library', id, row); }
 async function sb_deleteContentLib(id) { return await sb_delete('content_library', id); }
@@ -15877,6 +15881,12 @@ function daSendToContentLib(id) {
     </div>` : ''}
 
     <div style="display:flex;flex-direction:column;gap:11px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">TIPE KONTEN</label>
+        <div style="display:flex;gap:14px">
+          ${CL_TIPE.map(t => `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="radio" name="cl-tipe" value="${t}" ${_clSubTab===t?'checked':''}> ${CL_TIPE_LABEL[t]}</label>`).join('')}
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PLATFORM</label>
@@ -15936,6 +15946,7 @@ function daSendToContentLib(id) {
 async function clDoSendFromDA(daId) {
   const a = daAssets.find(x => _idEq(x.id, daId));
   if (!a) return;
+  const tipe = document.querySelector('input[name="cl-tipe"]:checked')?.value || 'organic';
   const platform = _cddGetValue('cl-platform')||'';
   const jenis = _cddGetValue('cl-jenis')||'';
   const link        = document.getElementById('cl-link')?.value.trim()||'';
@@ -15970,11 +15981,11 @@ async function clDoSendFromDA(daId) {
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
   const storage_paths = [...(a.storage_paths||[])];
-  const row = { platform, jenis, link, copywriting, views, likes, comments, shares, notes, labels, storage_paths };
+  const row = { tipe, platform, jenis, link, copywriting, views, likes, comments, shares, notes, labels, storage_paths };
   const saved = await sb_saveContentLib(row);
   if (!saved) { showToast('Gagal kirim', 'error'); if(btn){btn.disabled=false;btn.textContent='Kirim';} return; }
   if (!window.clData) window.clData = [];
-  clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
+  if (tipe === _clSubTab) clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
   gcalCloseModal();
   showToast('Berhasil dikirim ke Content Library ✓');
 }
@@ -21846,6 +21857,7 @@ async function deleteRes(id) {
 
 var clData = [];
 var clCarouselIdx = {};
+var _clSubTab = 'organic'; // 'organic' | 'ads'
 
 const CL_JENIS    = ['Carousel', 'Reels/Video', 'Single Image', 'Thread/Text'];
 const CL_PLATFORM = ['Instagram', 'TikTok', 'X', 'Threads', 'YouTube'];
@@ -21856,12 +21868,25 @@ const CL_PLATFORM_ICON = {
   Threads: 'ti-brand-threads',
   YouTube: 'ti-brand-youtube'
 };
+const CL_TIPE = ['organic', 'ads'];
+const CL_TIPE_LABEL = { organic: 'Organic Ideas', ads: 'Ad Ideas' };
+
+function _clSwitchTab(tab) {
+  _clSubTab = tab;
+  const c = document.getElementById('mainContent');
+  if (c) c.innerHTML = contentLibHTML();
+  initContentLib();
+}
 
 function contentLibHTML() {
   return `
   <div style="margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <h2 style="font-size:18px;font-weight:700;margin:0">Content Library</h2>
+    </div>
+    <div class="tab-row" style="margin-bottom:10px">
+      <div class="tab ${_clSubTab==='organic'?'active':''}" onclick="_clSwitchTab('organic')"><i class="ti ti-leaf" style="font-size:12px"></i> Organic Ideas</div>
+      <div class="tab ${_clSubTab==='ads'?'active':''}" onclick="_clSwitchTab('ads')"><i class="ti ti-ad-2" style="font-size:12px"></i> Ad Ideas</div>
     </div>
     <div class="filter-bar">
       <select id="cl-filter-platform" onchange="clUpdateSortOptions();clRenderGallery()">
@@ -21892,15 +21917,13 @@ function contentLibHTML() {
 }
 
 async function initContentLib() {
-  if (!clData || !clData.length) {
-    clData = (await sb_loadContentLib()).map(c => ({
-      id: c.id, jenis: c.jenis, platform: c.platform, link: c.link||'',
-      copywriting: c.copywriting||'', views: c.views||0, likes: c.likes||0,
-      comments: c.comments||0, shares: c.shares||0,
-      storage_paths: c.storage_paths||[], notes: c.notes||'',
-      labels: c.labels||[], created_at: c.created_at
-    }));
-  }
+  clData = (await sb_loadContentLib(_clSubTab)).map(c => ({
+    id: c.id, jenis: c.jenis, platform: c.platform, link: c.link||'',
+    copywriting: c.copywriting||'', views: c.views||0, likes: c.likes||0,
+    comments: c.comments||0, shares: c.shares||0,
+    storage_paths: c.storage_paths||[], notes: c.notes||'',
+    labels: c.labels||[], created_at: c.created_at, tipe: c.tipe || 'organic'
+  }));
   clPopulateLabelFilter();
   clRenderGallery();
   document.removeEventListener('paste', clPasteHandler);
@@ -22036,6 +22059,12 @@ function clOpenUploadModal(prefillFile) {
       </div>
       <input id="cl-file-input" type="file" accept="image/*" multiple style="display:none" onchange="clHandleFiles(this.files)">
       <div id="cl-preview-area" style="display:none;flex-wrap:wrap;gap:8px"></div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">TIPE KONTEN</label>
+        <div style="display:flex;gap:14px">
+          ${CL_TIPE.map(t => `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="radio" name="cl-tipe" value="${t}" ${_clSubTab===t?'checked':''}> ${CL_TIPE_LABEL[t]}</label>`).join('')}
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PLATFORM</label>
@@ -22252,6 +22281,7 @@ function clDDConfirmNew() {
 // ── End custom label dropdown ────────────────────────────────────
 
 async function clDoUpload() {
+  const tipe     = document.querySelector('input[name="cl-tipe"]:checked')?.value || 'organic';
   const platform = _cddGetValue('cl-platform')||'';
   const jenis    = _cddGetValue('cl-jenis')||'';
   const link     = document.getElementById('cl-link').value.trim();
@@ -22298,15 +22328,17 @@ async function clDoUpload() {
     if (sp) storagePaths.push(sp);
   }
 
-  const row = { platform, jenis, link, copywriting, views, likes, comments, shares, notes, labels, storage_paths: storagePaths };
+  const row = { tipe, platform, jenis, link, copywriting, views, likes, comments, shares, notes, labels, storage_paths: storagePaths };
   const saved = await sb_saveContentLib(row);
   if (!saved) { showToast('Gagal simpan', 'error'); if(btn){btn.disabled=false;btn.textContent='Simpan';} return; }
 
-  clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
   logActivity('TAMBAH', 'content_library', `${row.jenis||''} · ${row.platform||''} · ${(row.link||'').substring(0,50)}`);
   gcalCloseModal();
-  clPopulateLabelFilter();
-  clRenderGallery();
+  if (tipe === _clSubTab) {
+    clData.unshift({ id: saved.id, ...row, created_at: saved.created_at });
+    clPopulateLabelFilter();
+    clRenderGallery();
+  }
   showToast('Konten ditambah ✓');
 }
 
