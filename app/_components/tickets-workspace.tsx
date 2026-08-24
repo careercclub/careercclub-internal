@@ -12,7 +12,8 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
-import { GoogleCalendarTool } from "./google-calendar-tool";
+import { GoogleCalendarScript } from "./google-calendar-tool";
+import { TicketGoogleCalendarModal } from "./ticket-google-calendar-modal";
 import { Pagination, usePagination } from "./ui-kit";
 
 const PRIORITIES = ["High", "Med", "Low"];
@@ -21,6 +22,7 @@ function text(value: unknown) { return value === null || value === undefined ? "
 function initials(name: string) { return name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase() || "?"; }
 function arr(value: unknown): Record<string, unknown>[] { return Array.isArray(value) ? value as Record<string, unknown>[] : []; }
 function personName(people: ApiRecord[], id: string) { const person = people.find((row) => String(row.id) === id); return person ? text(person.nama) || text(person.name) || text(person.email) || id : id; }
+function calendarAdded(row: ApiRecord) { return row.gcal_added === true || row.gcal_added === "true"; }
 
 const PILL_COLORS: Record<string, { bg: string; fg: string }> = {
   Todo: { bg: "var(--bg)", fg: "var(--text-muted)" },
@@ -104,7 +106,7 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
   );
 }
 
-function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted, onDuplicated }: { ticket: ApiRecord; people: ApiRecord[]; divisions: ApiRecord[]; onClose: () => void; onSaved: (row: ApiRecord) => void; onDeleted: (id: string) => void; onDuplicated: (row: ApiRecord) => void }) {
+function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted, onDuplicated, onCalendar }: { ticket: ApiRecord; people: ApiRecord[]; divisions: ApiRecord[]; onClose: () => void; onSaved: (row: ApiRecord) => void; onDeleted: (id: string) => void; onDuplicated: (row: ApiRecord) => void; onCalendar: () => void }) {
   const [form, setForm] = useState({ title: text(ticket.title), description: text(ticket.description), status: text(ticket.status) || "Todo", priority: text(ticket.priority) || "Med", dueDate: text(ticket.due_date).slice(0, 10) });
   const [divisionId, setDivisionId] = useState(text(ticket.divisi_id));
   const [assignees, setAssignees] = useState<string[]>(Array.isArray(ticket.assigned_to_ids) ? ticket.assigned_to_ids.map(String) : []);
@@ -112,6 +114,7 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const links = arr(ticket.links);
+  const synced = calendarAdded(ticket);
   async function save() {
     setBusy(true); setError("");
     try {
@@ -150,7 +153,7 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
         <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
-          <div className="flex gap-2"><Button type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i className="ti ti-copy" /> Duplikat</Button><Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Hapus</Button></div>
+          <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" onClick={onCalendar} disabled={busy} style={synced ? { background: "var(--green)", borderColor: "var(--green)", color: "#fff" } : undefined}><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} /> {synced ? "Re-sync Calendar" : "Google Calendar"}</Button><Button type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i className="ti ti-copy" /> Duplikat</Button><Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Hapus</Button></div>
           <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={save} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button></div>
         </DialogFooter>
       </DialogContent>
@@ -167,6 +170,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   const [fPrio, setFPrio] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [calendarId, setCalendarId] = useState<string | null>(null);
 
   const personMap = useMemo(() => new Map(people.map((person) => [String(person.id), person])), [people]);
   const divisionMap = useMemo(() => new Map(divisions.map((division) => [String(division.id), division])), [divisions]);
@@ -185,6 +189,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   });
   const { pageItems: visiblePage, page: ticketPage, setPage: setTicketPage, totalPages: ticketTotalPages } = usePagination(visible, 15);
   const detail = items.find((row) => String(row.id) === detailId) || null;
+  const calendarTicket = items.find((row) => String(row.id) === calendarId) || null;
 
   function firstAssignee(row: ApiRecord) {
     const ids = Array.isArray(row.assigned_to_ids) ? row.assigned_to_ids.map(String) : row.assigned_to_id ? [String(row.assigned_to_id)] : [];
@@ -200,6 +205,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
 
   return (
     <div className="grid gap-4">
+      <GoogleCalendarScript />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
         <StatCard icon="ti-circle-dashed" color="#5F5E5A" bg="#F1EFE8" value={todo} label="Todo" />
         <StatCard icon="ti-circle-check" color="#3B6D11" bg="#EAF3DE" value={done} label="Done" />
@@ -232,6 +238,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
                 const division = divisionMap.get(divId);
                 const type = typeMap.get(text(row.type_id));
                 const att = arr(row.files).length + arr(row.links).length;
+                const synced = calendarAdded(row);
                 return (
                   <tr key={String(row.id)} onClick={() => setDetailId(String(row.id))} style={{ borderBottom: "0.5px solid var(--border)", cursor: "pointer", opacity: isDone ? 0.5 : 1 }}>
                     <td style={tdStyle} onClick={(e) => { e.stopPropagation(); void toggleDone(row); }}><div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isDone ? "#0f52ba" : "var(--border-md)"}`, background: isDone ? "#0f52ba" : "transparent", display: "grid", placeItems: "center", margin: "0 auto" }}>{isDone ? <i className="ti ti-check" style={{ fontSize: 10, color: "#fff" }} /> : null}</div></td>
@@ -242,7 +249,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
                     <td style={{ ...tdStyle, textAlign: "center" }}><span style={pill(text(row.status) || "Todo")}>{text(row.status) || "Todo"}</span></td>
                     <td style={tdStyle}><div style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}><span style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--purple-dark)", color: "#fff", fontSize: 9, display: "grid", placeItems: "center", flexShrink: 0 }}>{initials(firstAssignee(row))}</span>{firstAssignee(row)}</div></td>
                     <td style={{ ...tdStyle, fontSize: 11, color: "var(--text-muted)", textAlign: "center", whiteSpace: "nowrap" }}>{text(row.due_date).slice(0, 10) || "—"}</td>
-                    <td style={{ ...tdStyle, textAlign: "center" }}><i className={`ti ti-calendar-${row.gcal_added ? "check" : "plus"}`} style={{ fontSize: 15, color: row.gcal_added ? "var(--green)" : "var(--text-hint)" }} /></td>
+                    <td style={{ ...tdStyle, textAlign: "center" }} onClick={(event) => event.stopPropagation()}><Button type="button" size="icon-sm" variant="outline" style={synced ? { background: "var(--green)", borderColor: "var(--green)", color: "#fff" } : undefined} title={synced ? "Sudah di Calendar (klik untuk re-sync)" : "Add to Google Calendar"} onClick={() => setCalendarId(String(row.id))}><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} /></Button></td>
                   </tr>
                 );
               })}
@@ -251,9 +258,9 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
         </div>
         <Pagination onChange={setTicketPage} page={ticketPage} totalPages={ticketTotalPages} />
       </div>
-      <GoogleCalendarTool tasks={items} people={people} recordType="ticket" />
       {createOpen ? <CreateTicketModal people={people} divisions={divisions} types={types} onClose={() => setCreateOpen(false)} onCreated={(row) => { setItems((current) => [row, ...current]); setCreateOpen(false); router.refresh(); }} /> : null}
-      {detail ? <DetailTicketModal ticket={detail} people={people} divisions={divisions} onClose={() => setDetailId(null)} onSaved={(row) => { setItems((current) => current.map((item) => String(item.id) === String(row.id) ? row : item)); router.refresh(); }} onDeleted={(id) => { setItems((current) => current.filter((item) => String(item.id) !== id)); setDetailId(null); router.refresh(); }} onDuplicated={(row) => { setItems((current) => [row, ...current]); router.refresh(); }} /> : null}
+      {detail ? <DetailTicketModal ticket={detail} people={people} divisions={divisions} onClose={() => setDetailId(null)} onSaved={(row) => { setItems((current) => current.map((item) => String(item.id) === String(row.id) ? row : item)); router.refresh(); }} onDeleted={(id) => { setItems((current) => current.filter((item) => String(item.id) !== id)); setDetailId(null); router.refresh(); }} onDuplicated={(row) => { setItems((current) => [row, ...current]); router.refresh(); }} onCalendar={() => { setCalendarId(String(detail.id)); setDetailId(null); }} /> : null}
+      {calendarTicket ? <TicketGoogleCalendarModal key={String(calendarTicket.id)} ticket={calendarTicket} people={people} onClose={() => setCalendarId(null)} onSynced={(row) => { setItems((current) => current.map((item) => String(item.id) === String(row.id) ? row : item)); router.refresh(); }} /> : null}
     </div>
   );
 }

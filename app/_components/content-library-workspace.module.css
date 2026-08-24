@@ -1,0 +1,573 @@
+.workspace {
+  display: grid;
+  gap: 10px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: -1px;
+  padding: 8px 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabs button.activeTab {
+  border-bottom-color: var(--purple-accent);
+  color: var(--purple-mid);
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.filterBar select {
+  height: 32px;
+  min-width: 112px;
+  border: 1px solid var(--border-md);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--text);
+  padding: 0 28px 0 9px;
+  font: inherit;
+  font-size: 11px;
+}
+
+.filterSpacer {
+  flex: 1 1 auto;
+}
+
+.notice {
+  flex: 0 0 auto;
+  color: #3b6d11;
+  font-size: 11px;
+}
+
+.addButton {
+  flex: 0 0 auto;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.imageFrame {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.imageButton {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.imageButton > div {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.imageEmpty {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-hint);
+}
+
+.imageEmpty i {
+  font-size: 32px;
+}
+
+.imageEmpty small {
+  font-size: 10px;
+}
+
+.platformBadge,
+.imageCount {
+  position: absolute;
+  top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 62%);
+  color: #fff;
+  padding: 3px 7px;
+  font-size: 10px;
+}
+
+.platformBadge { left: 6px; }
+.imageCount { right: 6px; }
+
+.sourceOverlay {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 62%);
+  color: #fff;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.cardBody {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px 10px;
+}
+
+.contentKind {
+  color: var(--purple-mid);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.labelRow,
+.previewLabels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.labelRow span,
+.previewLabels span {
+  border-radius: 999px;
+  background: var(--purple-light);
+  color: var(--purple-mid);
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.cardBody p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.metrics {
+  display: flex;
+  min-height: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.metrics span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.empty {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.empty i { font-size: 36px; }
+.empty strong { color: var(--text); font-size: 13px; }
+.empty span { font-size: 12px; }
+
+.addDialog {
+  width: min(520px, calc(100vw - 24px));
+  max-width: 520px;
+  max-height: 90vh;
+  gap: 0;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.dialogHeader {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dialogHeader h2,
+.previewHeader h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.dialogHeader h2 i,
+.previewHeader h2 i {
+  color: var(--purple-accent);
+  font-size: 18px;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  padding: 16px 22px 20px;
+}
+
+.dropzone {
+  display: grid;
+  width: 100%;
+  place-items: center;
+  gap: 4px;
+  border: 2px dashed var(--border-md);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 20px;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dropzone:hover,
+.dropzone:focus-visible {
+  border-color: var(--purple-accent);
+}
+
+.dropzone i { margin-bottom: 3px; font-size: 28px; }
+.dropzone strong { color: var(--text); font-size: 12px; }
+.dropzone span { font-size: 11px; font-weight: 400; }
+
+.filePreviewArea {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filePreview {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.filePreview img { object-fit: cover; }
+.filePreview button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 65%);
+  color: #fff;
+  cursor: pointer;
+}
+
+.addMoreFiles {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  border: 1px dashed var(--border-md);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.radioGroup,
+.engagement {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.radioGroup legend,
+.engagement legend,
+.field > span,
+.twoColumns label > span,
+.labelField > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.radioGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.radioGroup legend { width: 100%; }
+.radioGroup label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+
+.twoColumns,
+.engagement {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.engagement {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.engagement legend { grid-column: 1 / -1; }
+.engagement label span { display: block; margin-bottom: 3px; color: var(--text-muted); font-size: 10px; }
+.field small { font-weight: 500; text-transform: lowercase; }
+.field b,
+.labelField b,
+.requiredMetric b { color: #c9362b; font-weight: 700; text-transform: lowercase; }
+
+.field input,
+.field textarea,
+.twoColumns select,
+.engagement input,
+.labelInputRow input {
+  width: 100%;
+  border: 1px solid var(--border-md);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.field textarea { resize: vertical; }
+.requiredMetric input { border-color: #d44a3a; }
+
+.labelField {
+  position: relative;
+}
+
+.selectedLabels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.selectedLabels > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: var(--purple-light);
+  color: var(--purple-mid);
+  padding: 3px 7px 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.selectedLabels button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.labelInputRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.labelSuggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.labelSuggestions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--text-muted);
+  padding: 3px 7px;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  border-radius: 6px;
+  background: #fff1f0;
+  color: #b42318;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+
+.dialogFooter {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.previewDialog {
+  width: min(640px, calc(100vw - 24px));
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.previewHeader { padding-right: 28px; }
+.previewHeader p { font-size: 11px; }
+
+.previewMedia {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.previewMedia > div { width: 100%; height: 100%; min-height: 0; }
+.previewMedia button {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  transform: translateY(-50%);
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 60%);
+  color: #fff;
+  cursor: pointer;
+}
+
+.previousImage { left: 8px; }
+.nextImage { right: 8px; }
+.previewMedia > span {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 60%);
+  color: #fff;
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.previewCopy,
+.previewNotes {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.previewNotes {
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-muted);
+  padding: 9px 10px;
+}
+
+.previewMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.previewMetrics span {
+  display: grid;
+  gap: 2px;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-muted);
+  padding: 8px;
+  font-size: 9px;
+}
+
+.previewMetrics i { color: var(--purple-mid); font-size: 13px; }
+.previewMetrics strong { color: var(--text); font-size: 12px; }
+.openSource { width: max-content; }
+
+@media (max-width: 640px) {
+  .filterSpacer { display: none; }
+  .filterBar { flex-wrap: wrap; overflow: visible; }
+  .filterBar select { flex: 1 1 calc(50% - 7px); min-width: 0; }
+  .addButton { margin-left: auto; }
+  .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .engagement { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .previewMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form { padding: 14px 16px 18px; }
+  .dialogHeader { padding: 16px 16px 13px; }
+}

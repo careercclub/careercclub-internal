@@ -217,7 +217,7 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
   const [endDate, setEndDate] = useState(due);
   const [endTime, setEndTime] = useState("10:00");
   const [invite, setInvite] = useState(true);
-  const { run, busy, message } = useGoogleCalendarAction(() => { onSynced(String(task.id)); onClose(); });
+  const { run, busy, message, clientId, configurationLoaded } = useGoogleCalendarAction(() => { onSynced(String(task.id)); onClose(); });
   function submit() {
     if (!startDate || !endDate) return;
     run({ taskId: String(task.id), title, description: text(task.description), start: `${startDate}T${startTime}:00`, end: `${endDate}T${endTime}:00`, attendees: invite ? assigneePeople.map((person) => text(person.email)) : [] });
@@ -233,9 +233,10 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
             <div className="grid gap-1.5"><Label>Selesai</Label><div className="flex gap-1"><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /><Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
           </div>
           {assigneePeople.length ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Undang {assigneePeople.map((person) => text(person.nama) || text(person.email)).join(", ")}</label> : null}
+          {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar belum dikonfigurasi untuk aplikasi ini.</p> : null}
           {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
         </div>
-        <DialogFooter className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Menghubungkan…" : "Buat Event"}</Button></DialogFooter>
+        <DialogFooter className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={submit} disabled={busy || !configurationLoaded || !clientId}>{busy ? "Menghubungkan…" : "Buat Event"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );

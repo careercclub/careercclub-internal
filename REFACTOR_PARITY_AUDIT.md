@@ -1,8 +1,12 @@
 # CCC Internal Dashboard — Refactor Parity Audit
 
+> Update (24 August 2026): production `main` advanced to `7264991` after this audit. Read
+> [`MAIN_REFACTOR_SYNC_NOTES.md`](MAIN_REFACTOR_SYNC_NOTES.md) for the newer HTML changes and open
+> synchronization work. This document still describes the broader July parity baseline.
+
 **Date:** 2026-07-01
 **Branch audited:** `refactor`
-**Source of truth:** legacy single-file SPA `rawfile.html` (24,186 lines; client JS + Supabase + localStorage) — this is current production behaviour on `main`.
+**Source of truth at audit time:** legacy single-file SPA `rawfile.html` (24,186 lines; client JS + Supabase + localStorage). Current production `main` is newer; see the synchronization note above.
 **Under audit:** Next.js 16 App Router project (Postgres + server actions + NextAuth + R2).
 **Method:** 8 parallel domain reviews comparing every user-facing feature in the HTML against the corresponding Next.js route / component / action / API. Architecture changes (Supabase→Postgres, client→server, localStorage→DB, TypeScript, file layout) are **intended** and are not counted as findings.
 
@@ -135,9 +139,10 @@ These change behaviour quietly and can corrupt data or break matching. Cheap to 
 - **[P0] Status vocabulary changed** (see break #3).
 - **[P0] Ticket detail drawer stripped.** HTML edits judul/deskripsi/status/prioritas/divisi/deadline, multi-assignee chips, attachments w/ preview, links, comments, duplicate/delete/gcal/save (`rawfile.html:5848`). Next.js detail pane is read-mostly: status via `<select>` only; priority/deadline/assignees as plain text; no divisi/type/title/description edit; no delete ([`ticket-tools.tsx:54`](app/_components/ticket-tools.tsx)).
 - **[P0] Auto-email on status/comment replaced by notifications.** HTML auto-opens Gmail compose on status→In Progress/Done and on every new comment (`rawfile.html:6145, 6186`). Next.js fires an in-app notification instead ([`ticket-actions.ts:36`](app/actions/ticket-actions.ts)); a manual "Send email" button exists but mails assignees only.
-- **[P1] "Status & Email" master tab absent** (`rawfile.html:6798`); **per-user ticket visibility gone** (`getVisibleTickets:5693` scoped by role; Next.js lists all tickets to any user); **priority vocabulary changed**; **per-ticket "add to calendar" has no UI entry point** (HTML `gcalAddTicket` on list row + detail).
+- **[P1] "Status & Email" master tab absent** (`rawfile.html:6798`); **per-user ticket visibility gone** (`getVisibleTickets:5693` scoped by role; Next.js lists all tickets to any user); **priority vocabulary changed**.
+- **[Remediated] Per-ticket Google Calendar flow restored.** The list row and detail modal now open a dedicated modal with editable title/description, all-day or timed ranges, automatic assignee/requester guests, and optional CC guests ([`ticket-google-calendar-modal.tsx`](app/_components/ticket-google-calendar-modal.tsx)). Event IDs are stored so later actions update the existing event instead of creating an untracked duplicate.
 - **[P2] New-ticket modal richness reduced** (CC tag input, multi-link rows, inline assignee picker → generic form + JSON textareas); **inline "Done" checkbox toggle absent** (`toggleTktDone:5825`).
-- **Parity OK:** numbering, duplication, task↔ticket sync (server-side), Google Calendar creation.
+- **Parity OK:** numbering, duplication, task↔ticket sync (server-side), and Google Calendar creation/re-sync.
 
 ### 6.4 Content Planning + Content Evaluation + Meta Ads
 

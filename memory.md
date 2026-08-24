@@ -1,12 +1,16 @@
 # CareerCclub Internal Ops Refactor Memory
 
-Last updated: 1 July 2026
+Last updated: 24 August 2026
 
 ## Objective
 
 Replace the founder's single-file HTML/Supabase application with a maintainable TypeScript Next.js
 App Router application while preserving the production workflows from `rawfile.html`.
 `REFACTOR_PARITY_AUDIT.md` is the parity checklist used for the current correction pass.
+
+Production `main` continued changing after that audit. `MAIN_REFACTOR_SYNC_NOTES.md` compares
+`main` at `7264991` with this branch at `9f5c9fc` and is the active checklist for those newer
+Content Library, Content Planning, KOL, Talent Pool, CRM, and Story-vs-Buyer changes.
 
 ## Current Architecture
 
@@ -40,6 +44,8 @@ Migrations must be applied in filename order:
 10. `010_instagram_baseline_parity.sql`: persisted Instagram follower baseline.
 11. `011_program_post_event_parity.sql`: post-event outcomes, notes, type, and links.
 12. `012_normalize_legacy_gallery_keys.sql`: normalizes relative gallery and collaborator paths for R2.
+13. `013_competitor_intel_tables.sql`: competitor profile, product, pricing, snapshot, and flag tables.
+14. `014_content_library_parity.sql`: Organic/Ad Ideas type, backfill, validation, and gallery index.
 
 The Supabase schema/data and R2 objects have already been migrated. The VPS database contains both
 `buyers` and `crm_buyers`; application role `ccc_ops_app` has access to `public`, and buyer counts were
@@ -58,6 +64,8 @@ verified during migration.
 
 - Ticket board, role visibility, full detail editing, assignments, comments, links, attachments,
   duplication, deletion, and Google Calendar integration.
+- Ticket Calendar actions are available from each row and the detail modal, with all-day/timed events,
+  automatic assignee/requester guests, optional CC guests, and stored event IDs for re-sync.
 - Ticket/task status, priority, and phase vocabularies match the legacy contracts.
 - Ticket changes produce role/user-targeted notification records and optional email/push delivery.
 - Notifications intentionally remain ticket-only because that was the requested first scope.
@@ -112,6 +120,9 @@ verified during migration.
 
 The major workflows and backend integration are implemented, but these audit items remain candidates
 for a later polish pass rather than reasons to claim exact pixel/interaction parity:
+
+- The remaining post-audit production changes are tracked in `MAIN_REFACTOR_SYNC_NOTES.md`.
+- Highest-risk open items are the changed Talent Pool sheet layout and KOL multi-platform data contract.
 
 - CRM import has direct processing but not the legacy staged QC preview experience.
 - Settings can hide menu entries, but full dynamic menu relabeling and drag reordering are not restored.
