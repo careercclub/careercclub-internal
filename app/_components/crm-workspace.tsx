@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
-import { DistributionPie } from "./charts";
+import { AnalyticsCard, AnalyticsHeader, analyticsGrid, BarBreakdown, DonutBreakdown, downloadJson, freq, freqMulti, type Entry } from "./analytics-cards";
 import { CrmEmailBlast } from "./crm-email-blast";
 import { CrmTools } from "./crm-tools";
 import { Pagination, usePagination } from "./ui-kit";
@@ -56,9 +56,6 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
 
   function mutate(operation: "status" | "talent" | "delete", value?: string) { if (!selectedIds.length) return; if (operation === "delete" && !window.confirm(`Hapus ${selectedIds.length} transaksi?`)) return; startTransition(async () => { try { await bulkUpdateCrmBuyers(selectedIds, operation, value); setSelected([]); setMessage("CRM records updated."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Update failed."); } }); }
   function exportCsv() { const data = selected.length ? filtered.filter((row) => selected.includes(String(row._key))) : filtered; const csv = [["Name","WhatsApp","Email","Product","Classification","Spend","Transactions","Industry","Stage","Source","Status","Payment"], ...data.map((row) => [row.name,row.wa,row.email,row.produk,row.klasifikasi,row.spend,row.txCount,row.industri,row.tahap,row.sumber,row.status,row.payment_status])].map((line) => line.map(csvCell).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "ccc-crm-buyers.csv"; anchor.click(); URL.revokeObjectURL(url); }
-  // Full distribution, not a top-10 cut: DistributionPie folds its own tail, and
-  // truncating here would make its "Lainnya" slice understate the remainder.
-  function distribution(key: string) { const counts = new Map<string, number>(); customers.forEach((row) => { const value = String(row[key] || "Unknown"); counts.set(value, (counts.get(value) || 0) + 1); }); return [...counts.entries()].sort((a, b) => b[1] - a[1]); }
 
   return (
     <div>
@@ -149,19 +146,7 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
             <Pagination onChange={setPage} page={page} totalPages={totalPages} />
           </>
         ) : null}
-        {tab === "analytics" ? (
-          <div className={styles.analyticsGrid}>
-            {([["Repeat order","_repeat"],["Klasifikasi","klasifikasi"],["Talent Pool","_talent"],["Tahapan","tahap"],["Industri","industri"],["Sumber","sumber"],["Payment","payment_status"]] as const).map(([label, key]) => {
-              const data = key === "_repeat" ? [["Repeat", customers.filter((row) => row.txCount > 1).length], ["Single", customers.filter((row) => row.txCount === 1).length]] as [string, number][] : key === "_talent" ? [["Sudah isi", customers.filter((row) => row.talent_pool || row.talent_pool_match).length], ["Belum isi", customers.filter((row) => !(row.talent_pool || row.talent_pool_match)).length]] as [string, number][] : distribution(key);
-              return (
-                <section className={styles.analyticsCard} key={key}>
-                  <h3>{label}</h3>
-                  <DistributionPie rows={data} />
-                </section>
-              );
-            })}
-          </div>
-        ) : null}
+        {tab === "analytics" ? <CrmAnalytics customers={customers} /> : null}
         {tab === "blast" ? <CrmEmailBlast daily={blastDaily} history={blastHistory} rows={customers} /> : null}
         {tab === "import" ? <CrmTools rows={rows} /> : null}
       </div>
@@ -190,6 +175,49 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
           </section>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/* ══════════════ ANALYTICS (ported from legacy renderCRMAnalytics) ══════════════ */
+function CrmAnalytics({ customers }: { customers: Customer[] }) {
+  const total = customers.length;
+
+  // Legacy buckets repeat orders by exact transaction count, labelling the first
+  // "1x (new)", and orders the axis numerically rather than by frequency.
+  const repeatData: Entry[] = useMemo(() => {
+    const counts = new Map<string, number>();
+    customers.forEach((row) => { const key = row.txCount === 1 ? "1x (new)" : `${row.txCount}x`; counts.set(key, (counts.get(key) || 0) + 1); });
+    return [...counts.entries()].sort((a, b) => parseInt(a[0], 10) - parseInt(b[0], 10));
+  }, [customers]);
+
+  const poolFilled = customers.filter((row) => row.talent_pool || row.talent_pool_match).length;
+  const poolData: Entry[] = [["Sudah isi pool", poolFilled], ["Belum isi pool", total - poolFilled]];
+
+  const klasData = useMemo(() => freq(customers.map((row) => row.klasifikasi)), [customers]);
+  const tahapData = useMemo(() => freq(customers.map((row) => row.tahap)), [customers]);
+  const sumberData = useMemo(() => freq(customers.map((row) => row.sumber)), [customers]);
+  // One buyer can list several industries ("FMCG, Finance"); legacy also uppercases.
+  const industriData = useMemo(() => freqMulti(customers.map((row) => row.industri), true), [customers]);
+
+  // Payment is counted per transaction, not per buyer, so it has its own total.
+  const paymentRaw = useMemo(() => customers.flatMap((row) => row.transactions.map((tx) => tx.paymentStatus).filter(Boolean)), [customers]);
+  const paymentData = useMemo(() => freq(paymentRaw), [paymentRaw]);
+
+  return (
+    <div>
+      <AnalyticsHeader count={`${total} buyers`} onExport={() => downloadJson(customers, `crm-analytics-${new Date().toISOString().slice(0, 10)}.json`)} title="Analytics CRM" />
+      <div style={analyticsGrid(3)}>
+        <AnalyticsCard icon="ti-repeat" title="Repeat Order" total={total}><BarBreakdown entries={repeatData} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-tag" title="Klasifikasi Produk" total={total}><DonutBreakdown entries={klasData} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-user-check" title="Talent Pool Status" total={total}><DonutBreakdown entries={poolData} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-stairs" title="Tahapan" total={total}><BarBreakdown entries={tahapData} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-building-factory" title="Industri Diminati" total={total}><BarBreakdown entries={industriData} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-source-code" title="Sumber" total={total}><DonutBreakdown entries={sumberData} total={total} /></AnalyticsCard>
+      </div>
+      <div style={{ ...analyticsGrid(1), marginTop: 12 }}>
+        <AnalyticsCard icon="ti-credit-card" title="Status Payment" total={paymentRaw.length}><DonutBreakdown entries={paymentData} total={paymentRaw.length} /></AnalyticsCard>
+      </div>
     </div>
   );
 }

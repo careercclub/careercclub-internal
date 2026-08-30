@@ -3,7 +3,7 @@
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { DistributionPie } from "./charts";
+import { AnalyticsCard, AnalyticsHeader, analyticsGrid, ANALYTICS_COLORS_TP, BarBreakdown, DonutBreakdown, downloadJson, freq, freqMulti, type Entry } from "./analytics-cards";
 import styles from "./talent-pool.module.css";
 import { TalentPoolTools } from "./talent-pool-tools";
 import { Pagination, usePagination } from "./ui-kit";
@@ -30,9 +30,6 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
   const { pageItems, page, setPage, totalPages } = usePagination(visible, 15);
   const detail = rows.find((row) => String(row.id) === detailId);
   const sudahBeli = rows.filter(isBuyer).length;
-  // Returns the full distribution: DistributionPie folds its own tail, and a list cut
-  // to 10 here would make that chart's "Lainnya" slice silently understate the rest.
-  function distribution(field: string) { const counts = new Map<string, number>(); rows.forEach((row) => { const value = String(row[field] || "Unknown"); counts.set(value, (counts.get(value) || 0) + 1); }); return [...counts.entries()].sort((a, b) => b[1] - a[1]); }
   const waLink = detail?.wa ? `https://wa.me/${String(detail.wa).replace(/\D/g, "")}` : "";
 
   return (
@@ -100,16 +97,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
           <Pagination onChange={setPage} page={page} totalPages={totalPages} />
         </div>
       ) : null}
-      {tab === "analytics" ? (
-        <div className={styles.analyticsGrid}>
-          {["domisili", "universitas", "campus_tier", "pendidikan", "angkatan", "tahun_lulus", "organisasi", "exchange", "target_mt", "posisi_mt", "sumber", "pipeline"].map((field) => (
-            <section className={styles.analyticsCard} key={field}>
-              <h3>{field.replaceAll("_", " ")}</h3>
-              <DistributionPie rows={distribution(field)} />
-            </section>
-          ))}
-        </div>
-      ) : null}
+      {tab === "analytics" ? <TalentPoolAnalytics rows={rows} /> : null}
       {tab === "outreach" ? <TalentPoolTools rows={rows} /> : null}
       {tab === "manage" ? <div className={styles.toolStack}>{sheetsImport}{management}</div> : null}
       {detail ? (
@@ -172,6 +160,68 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
           </section>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/* ══════════════ ANALYTICS (ported from legacy renderTpAnalytics) ══════════════ */
+function TalentPoolAnalytics({ rows }: { rows: ApiRecord[] }) {
+  const total = rows.length;
+
+  const domisiliData = useMemo(() => freq(rows.map((row) => row.domisili)), [rows]);
+  const sumberData = useMemo(() => freq(rows.map((row) => row.sumber)), [rows]);
+  const statusData = useMemo(() => freq(rows.map((row) => row.status)), [rows]);
+  const pendidikanData = useMemo(() => freq(rows.map((row) => row.pendidikan)), [rows]);
+  const tierData = useMemo(() => freq(rows.map((row) => row.campus_tier)), [rows]);
+  const angkatanData = useMemo(() => freq(rows.map((row) => row.angkatan)), [rows]);
+  const lulusData = useMemo(() => freq(rows.map((row) => row.tahun_lulus)), [rows]);
+  const univData = useMemo(() => freq(rows.map((row) => row.universitas)), [rows]);
+  const exchangeData = useMemo(() => freq(rows.map((row) => row.exchange)), [rows]);
+  const organisasiData = useMemo(() => freq(rows.map((row) => row.organisasi)), [rows]);
+  // A candidate can name several target roles/industries in one field.
+  const posisiData = useMemo(() => freqMulti(rows.map((row) => row.posisi_mt)), [rows]);
+  const targetData = useMemo(() => freqMulti(rows.map((row) => row.target_mt)), [rows]);
+
+  // GPA is bucketed rather than counted per distinct value, and its share is measured
+  // against the candidates who actually reported one — not the whole pool.
+  const { ipkData, ipkTotal } = useMemo(() => {
+    const values = rows.map((row) => parseFloat(String(row.ipk))).filter((value) => !Number.isNaN(value));
+    const buckets: Array<[string, number]> = [["< 3.0", 0], ["3.0 – 3.25", 0], ["3.26 – 3.50", 0], ["3.51 – 3.75", 0], ["3.76 – 4.00", 0]];
+    values.forEach((value) => {
+      const index = value < 3 ? 0 : value <= 3.25 ? 1 : value <= 3.5 ? 2 : value <= 3.75 ? 3 : 4;
+      buckets[index][1] += 1;
+    });
+    return { ipkData: buckets.filter(([, count]) => count > 0) as Entry[], ipkTotal: values.length };
+  }, [rows]);
+
+  const donut = (entries: Entry[], entriesTotal = total) => <DonutBreakdown colors={ANALYTICS_COLORS_TP} entries={entries} total={entriesTotal} />;
+
+  return (
+    <div>
+      <AnalyticsHeader count={`${total} peserta`} layout="inline" onExport={() => downloadJson(rows, `talent-pool-analytics-${new Date().toISOString().slice(0, 10)}.json`)} title="Ringkasan Talent Pool" />
+      <div style={analyticsGrid(3)}>
+        <AnalyticsCard icon="ti-map-pin" title="Domisili" total={total}>{donut(domisiliData)}</AnalyticsCard>
+        <AnalyticsCard icon="ti-source-code" title="Sumber" total={total}>{donut(sumberData)}</AnalyticsCard>
+        <AnalyticsCard icon="ti-id-badge" title="Status" total={total}>{donut(statusData)}</AnalyticsCard>
+        <AnalyticsCard icon="ti-school" title="Pendidikan" total={total}>{donut(pendidikanData)}</AnalyticsCard>
+        <AnalyticsCard icon="ti-building-community" title="Campus Tier" total={total}>{donut(tierData)}</AnalyticsCard>
+        <AnalyticsCard icon="ti-star" title="Range IPK" total={ipkTotal}>{donut(ipkData, ipkTotal)}</AnalyticsCard>
+      </div>
+      <div style={{ ...analyticsGrid(2), marginTop: 12 }}>
+        <AnalyticsCard icon="ti-calendar" title="Angkatan" total={total}><BarBreakdown entries={angkatanData} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-calendar-event" title="Tahun Lulus" total={total}><BarBreakdown entries={lulusData} total={total} /></AnalyticsCard>
+      </div>
+      <div style={{ ...analyticsGrid(2), marginTop: 12 }}>
+        <AnalyticsCard icon="ti-building" title="Universitas Terbanyak" total={total}><BarBreakdown entries={univData} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-briefcase" title="Minat Posisi MT" total={total}><BarBreakdown entries={posisiData} total={total} /></AnalyticsCard>
+      </div>
+      <div style={{ ...analyticsGrid(2), marginTop: 12 }}>
+        <AnalyticsCard icon="ti-plane" title="Pengalaman Study Abroad" total={total}>{donut(exchangeData)}</AnalyticsCard>
+        <AnalyticsCard icon="ti-users" title="Pengalaman Organisasi" total={total}>{donut(organisasiData)}</AnalyticsCard>
+      </div>
+      <div style={{ ...analyticsGrid(1), marginTop: 12 }}>
+        <AnalyticsCard icon="ti-building-factory" title="Target Industri MT" total={total}><BarBreakdown entries={targetData} maxBars={15} total={total} /></AnalyticsCard>
+      </div>
     </div>
   );
 }
