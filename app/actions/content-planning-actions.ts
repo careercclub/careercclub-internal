@@ -119,6 +119,7 @@ export type CarouselPlanInput = {
   assignee_id?: string | null;
   status?: string;
   link_brief?: string | null;
+  link_referensi?: string | null;
 };
 
 export async function createCarouselPlanAction(input: CarouselPlanInput) {
@@ -133,6 +134,7 @@ export async function createCarouselPlanAction(input: CarouselPlanInput) {
     assignee_id: cleanText(input.assignee_id),
     status: input.status === "Done" ? "Done" : "Draft",
     link_brief: cleanText(input.link_brief),
+    link_referensi: cleanText(input.link_referensi),
   });
   await logActivity({ userName: name, module: "Carousel planner", action: "Tambah", detail: judul, table: "carousel_plans" });
   refresh();
@@ -150,6 +152,7 @@ export async function updateCarouselPlanAction(id: string, input: CarouselPlanIn
     assignee_id: cleanText(input.assignee_id),
     status: input.status === "Done" ? "Done" : "Draft",
     link_brief: cleanText(input.link_brief),
+    link_referensi: cleanText(input.link_referensi),
   });
   await logActivity({ userName: name, module: "Carousel planner", action: "Update", detail: judul, table: "carousel_plans" });
   refresh();
@@ -170,6 +173,12 @@ export async function setCarouselDateAction(id: string, tanggal: string) {
 export async function setCarouselLinkBriefAction(id: string, url: string | null) {
   await actor();
   await updateCarouselPlan(id, { link_brief: url ? cleanUrl(url) : null });
+  refresh();
+}
+
+export async function setCarouselLinkReferensiAction(id: string, url: string | null) {
+  await actor();
+  await updateCarouselPlan(id, { link_referensi: url ? cleanUrl(url) : null });
   refresh();
 }
 
@@ -231,27 +240,46 @@ export async function deleteStoryItemAction(id: string) {
 
 export type KolInput = {
   nama: string;
-  username?: string | null;
-  platform?: string | null;
   niche?: string | null;
-  followers?: number | null;
-  contact?: string | null;
-  rate_card_url?: string | null;
+  username_ig?: string | null;
+  followers_ig?: number | null;
+  username_tiktok?: string | null;
+  followers_tiktok?: number | null;
+  linkedin_url?: string | null;
+  rate_card_text?: string | null;
+  rate_card_file_url?: string | null;
   foto_url?: string | null;
-  notes?: string | null;
+  catatan?: string | null;
+  contact?: string | null;
 };
+
+// Handles are stored bare because the card builds profile URLs from them; a pasted
+// "@name" would otherwise produce a broken link.
+function cleanHandle(value: unknown) {
+  const handle = typeof value === "string" ? value.trim().replace(/^@+/, "") : "";
+  return handle || null;
+}
+
+// Legacy stores an absent follower count as null rather than 0.
+function cleanCount(value: unknown) {
+  const count = Math.trunc(Number(value));
+  return Number.isFinite(count) && count > 0 ? count : null;
+}
 
 function kolValues(input: KolInput) {
   return {
     nama: input.nama.trim(),
-    username: cleanText(input.username),
-    platform: cleanText(input.platform),
     niche: cleanText(input.niche),
-    followers: Number.isFinite(Number(input.followers)) ? Number(input.followers) : 0,
-    contact: cleanText(input.contact),
-    rate_card_url: cleanText(input.rate_card_url),
+    username_ig: cleanHandle(input.username_ig),
+    followers_ig: cleanCount(input.followers_ig),
+    username_tiktok: cleanHandle(input.username_tiktok),
+    followers_tiktok: cleanCount(input.followers_tiktok),
+    linkedin_url: cleanText(input.linkedin_url),
+    rate_card_text: cleanText(input.rate_card_text),
+    rate_card_file_url: cleanText(input.rate_card_file_url),
     foto_url: cleanText(input.foto_url),
-    notes: cleanText(input.notes),
+    catatan: cleanText(input.catatan),
+    contact: cleanText(input.contact),
   };
 }
 

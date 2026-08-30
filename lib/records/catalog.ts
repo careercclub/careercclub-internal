@@ -164,7 +164,7 @@ export const recordDefinitions = {
   },
   tkt_people: {
     table: "tkt_people", title: "Ticket people", eyebrow: "Tickets", path: "/tickets/people", orderBy: "nama",
-    description: "Manage ticket assignees, email recipients, division membership, and access level.", columns: ["nama", "email", "divisi_id", "level"], fields: [{ name: "nama", label: "Name", required: true }, { name: "email", label: "Email", required: true }, { name: "divisi_id", label: "Division ID" }, { name: "level", label: "Level", type: "select", options: ["staff", "lead", "admin"] }], mutationRoles: ["admin"],
+    description: "Manage ticket assignees, email recipients, division membership, and access level.", columns: ["nama", "email", "divisi_id", "level", "auth_user_id"], fields: [{ name: "nama", label: "Name", required: true }, { name: "email", label: "Email", required: true }, { name: "divisi_id", label: "Division ID" }, { name: "level", label: "Level", type: "select", options: ["staff", "lead", "admin"] }, { name: "auth_user_id", label: "Linked account ID" }], mutationRoles: ["admin"],
   },
   tkt_types: {
     table: "tkt_types", title: "Ticket request types", eyebrow: "Tickets", path: "/tickets/types", orderBy: "nama",
@@ -261,7 +261,7 @@ export const recordDefinitions = {
   carousel_plans: {
     table: "carousel_plans", title: "Carousel planner", eyebrow: "Content planning", path: "/content-planning/carousels", orderBy: "tanggal_posting",
     description: "Plan carousel topics, funnel stage, CTA, owner, brief, and publish date.", columns: ["judul", "tanggal_posting", "funnel", "cta", "status"],
-    fields: [{ name: "judul", label: "Title", required: true }, { name: "tanggal_posting", label: "Publish date", type: "date" }, { name: "funnel", label: "Funnel", type: "select", options: ["TOFU", "MOFU", "BOFU"] }, { name: "cta", label: "CTA" }, { name: "assignee_id", label: "Assignee ID" }, { name: "status", label: "Status", type: "select", options: ["Draft", "Done"] }, { name: "link_brief", label: "Brief URL" }],
+    fields: [{ name: "judul", label: "Title", required: true }, { name: "tanggal_posting", label: "Publish date", type: "date" }, { name: "funnel", label: "Funnel", type: "select", options: ["TOFU", "MOFU", "BOFU"] }, { name: "cta", label: "CTA" }, { name: "assignee_id", label: "Assignee ID" }, { name: "status", label: "Status", type: "select", options: ["Draft", "Done"] }, { name: "link_brief", label: "Brief URL" }, { name: "link_referensi", label: "Reference URL" }],
   },
   carousel_cta_options: {
     table: "carousel_cta_options", title: "Carousel CTA master", eyebrow: "Content planning", path: "/content-planning/cta", orderBy: "label",
@@ -274,8 +274,8 @@ export const recordDefinitions = {
   },
   kol_list: {
     table: "kol_list", title: "KOL directory", eyebrow: "Content planning", path: "/content-planning/kol", orderBy: "created_at", ascending: false,
-    description: "Track creator profiles, niche, reach, contact details, and rate cards.", columns: ["nama", "username", "platform", "niche", "followers"],
-    fields: [{ name: "nama", label: "Name", required: true }, { name: "username", label: "Username" }, { name: "platform", label: "Platform", type: "select", options: ["Instagram", "TikTok", "YouTube", "LinkedIn", "Other"] }, { name: "niche", label: "Niche" }, { name: "followers", label: "Followers", type: "number" }, { name: "engagement_rate", label: "Engagement rate", type: "number" }, { name: "contact", label: "Contact" }, { name: "rate_card_url", label: "Rate card object key / URL", storageArea: "uploads" }, { name: "foto_url", label: "Photo object key / URL", storageArea: "uploads" }, { name: "notes", label: "Notes", type: "textarea" }],
+    description: "Track creator profiles, niche, per-platform reach, contact details, and rate cards.", columns: ["nama", "niche", "username_ig", "followers_ig", "username_tiktok", "followers_tiktok"],
+    fields: [{ name: "nama", label: "Name", required: true }, { name: "niche", label: "Niche" }, { name: "username_ig", label: "Instagram username" }, { name: "followers_ig", label: "Instagram followers", type: "number" }, { name: "username_tiktok", label: "TikTok username" }, { name: "followers_tiktok", label: "TikTok followers", type: "number" }, { name: "linkedin_url", label: "LinkedIn URL" }, { name: "contact", label: "Contact" }, { name: "rate_card_text", label: "Rate card", type: "textarea" }, { name: "rate_card_file_url", label: "Rate card object key / URL", storageArea: "uploads" }, { name: "foto_url", label: "Photo object key / URL", storageArea: "uploads" }, { name: "catatan", label: "Notes", type: "textarea" }],
   },
   mt_story_list: {
     table: "mt_story_list", title: "MT Story", eyebrow: "Content planning", path: "/content-planning/mt-story", orderBy: "created_at", ascending: false,

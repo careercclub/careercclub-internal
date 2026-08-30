@@ -8,7 +8,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { DistributionChart, MonthlyOpenChart } from "./charts";
+import { DistributionPie, MonthlyOpenChart } from "./charts";
 import { FilterBar, Pagination, Pill, StatCard, StatsGrid, filterFieldClass, usePagination } from "./ui-kit";
 
 type Tab = "dashboard" | "database" | "freeclass";
@@ -127,7 +127,7 @@ function DashboardTab({ rows, keywords }: { rows: ApiRecord[]; keywords: Array<[
       </Card>
       <Card className="gap-2 p-4">
         <h3 className="text-xs font-bold">Entri per Platform</h3>
-        {byPlatform.length ? <DistributionChart rows={byPlatform} /> : <p className="py-5 text-center text-[12px] text-muted-foreground">Belum ada data</p>}
+        {byPlatform.length ? <DistributionPie rows={byPlatform} /> : <p className="py-5 text-center text-[12px] text-muted-foreground">Belum ada data</p>}
       </Card>
       <Card className="gap-2 p-4">
         <h3 className="text-xs font-bold">Entri per Bulan</h3>
@@ -353,7 +353,7 @@ function FreeClassTab({ rows }: { rows: ApiRecord[] }) {
       return { key, label, average: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0, count: values.length, dist };
     }).filter((item) => item.count).sort((a, b) => a.average - b.average);
     const overall = ratings.length ? ratings.reduce((sum, item) => sum + item.average, 0) / ratings.length : 0;
-    return { ratings, overall, series: distribution(rows, "seri"), universities: distribution(rows, "universitas").slice(0, 8), cohorts: distribution(rows, "angkatan") };
+    return { ratings, overall, series: distribution(rows, "seri"), universities: distribution(rows, "universitas"), cohorts: distribution(rows, "angkatan") };
   }, [rows]);
 
   async function importRows(formData: FormData) {
@@ -451,7 +451,7 @@ function ImportPanel({ busy, message, onImport }: { busy: boolean; message: stri
 }
 
 function Distribution({ title, rows }: { title: string; rows: [string, number][] }) {
-  return <Card className="gap-2 p-4"><h3 className="text-xs font-bold">{title}</h3>{rows.length ? <DistributionChart rows={rows} /> : <p className="text-[11px] text-muted-foreground">Belum ada data</p>}</Card>;
+  return <Card className="gap-2 p-4"><h3 className="text-xs font-bold">{title}</h3>{rows.length ? <DistributionPie rows={rows} /> : <p className="text-[11px] text-muted-foreground">Belum ada data</p>}</Card>;
 }
 
 function OpenAnswers({ title, field, rows }: { title: string; field: string; rows: ApiRecord[] }) {

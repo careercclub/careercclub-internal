@@ -3,6 +3,7 @@
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { DistributionPie } from "./charts";
 import styles from "./talent-pool.module.css";
 import { TalentPoolTools } from "./talent-pool-tools";
 import { Pagination, usePagination } from "./ui-kit";
@@ -29,7 +30,9 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
   const { pageItems, page, setPage, totalPages } = usePagination(visible, 15);
   const detail = rows.find((row) => String(row.id) === detailId);
   const sudahBeli = rows.filter(isBuyer).length;
-  function distribution(field: string) { const counts = new Map<string, number>(); rows.forEach((row) => { const value = String(row[field] || "Unknown"); counts.set(value, (counts.get(value) || 0) + 1); }); return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10); }
+  // Returns the full distribution: DistributionPie folds its own tail, and a list cut
+  // to 10 here would make that chart's "Lainnya" slice silently understate the rest.
+  function distribution(field: string) { const counts = new Map<string, number>(); rows.forEach((row) => { const value = String(row[field] || "Unknown"); counts.set(value, (counts.get(value) || 0) + 1); }); return [...counts.entries()].sort((a, b) => b[1] - a[1]); }
   const waLink = detail?.wa ? `https://wa.me/${String(detail.wa).replace(/\D/g, "")}` : "";
 
   return (
@@ -99,16 +102,12 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
       ) : null}
       {tab === "analytics" ? (
         <div className={styles.analyticsGrid}>
-          {["domisili", "universitas", "campus_tier", "pendidikan", "angkatan", "tahun_lulus", "target_mt", "posisi_mt", "sumber", "pipeline"].map((field) => {
-            const data = distribution(field);
-            const max = Math.max(...data.map((item) => item[1]), 1);
-            return (
-              <section className={styles.analyticsCard} key={field}>
-                <h3>{field.replaceAll("_", " ")}</h3>
-                {data.map(([name, count]) => <div className={styles.analyticsBar} key={name}><span>{name}</span><i style={{ width: `${(count / max) * 100}%` }} /><strong>{count}</strong></div>)}
-              </section>
-            );
-          })}
+          {["domisili", "universitas", "campus_tier", "pendidikan", "angkatan", "tahun_lulus", "organisasi", "exchange", "target_mt", "posisi_mt", "sumber", "pipeline"].map((field) => (
+            <section className={styles.analyticsCard} key={field}>
+              <h3>{field.replaceAll("_", " ")}</h3>
+              <DistributionPie rows={distribution(field)} />
+            </section>
+          ))}
         </div>
       ) : null}
       {tab === "outreach" ? <TalentPoolTools rows={rows} /> : null}

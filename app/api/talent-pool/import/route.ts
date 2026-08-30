@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { importTalentPoolRows } from "@/lib/api/talent-pool";
 import { googleSheetCsvUrl } from "@/lib/imports/free-class";
+import { detectHeaderRow, mapTalentPoolRow, normalizeHeaderKey } from "@/lib/imports/talent-pool-layout";
 import ExcelJS from "exceljs";
 import { Readable } from "node:stream";
 
@@ -16,22 +17,6 @@ function text(value: ExcelJS.CellValue) {
   }
   return String(value).trim();
 }
-
-function key(value: string) {
-  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-}
-
-const aliases: Record<string, string[]> = {
-  nama: ["nama", "name", "full_name"], email: ["email", "email_address"], wa: ["wa", "whatsapp", "phone", "no_wa"],
-  status: ["status"], sumber: ["sumber", "source"], domisili: ["domisili", "city", "kota"],
-  universitas: ["universitas", "university", "campus"], campus_tier: ["campus_tier", "tier_kampus"], ipk: ["ipk", "gpa"],
-  fakultas: ["fakultas", "faculty"], pendidikan: ["pendidikan", "education"], angkatan: ["angkatan", "cohort"],
-  tahun_lulus: ["tahun_lulus", "graduation_year"], organisasi: ["organisasi", "organization"], exchange: ["exchange"],
-  relocate: ["relocate", "bersedia_relocate"], topik_minat: ["topik_minat", "interest"], target_mt: ["target_mt"],
-  posisi_mt: ["posisi_mt", "target_role"], linkedin: ["linkedin"], pipeline: ["pipeline", "stage"],
-  produk_dibeli: ["produk_dibeli", "purchased_product"], kepuasan: ["kepuasan"], membantu: ["membantu"],
-  nps: ["nps"], feedback: ["feedback", "notes"], kode_voucher: ["kode_voucher", "voucher_code"], timestamp: ["timestamp"],
-};
 
 export async function POST(request: Request) {
   if (!(await auth())?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,19 +37,24 @@ export async function POST(request: Request) {
     }
     const sheet = workbook.worksheets[0];
     if (!sheet) return Response.json({ error: "Workbook is empty." }, { status: 400 });
-    const headers = new Map<number, string>();
-    sheet.getRow(1).eachCell((cell, column) => headers.set(column, key(text(cell.value))));
+
+    // Exports sometimes carry a banner row above the real header, so scan the first
+    // rows for it instead of assuming row 1.
+    const keysAt = (rowNumber: number) => {
+      const row = sheet.getRow(rowNumber);
+      const keys: string[] = [];
+      for (let column = 1; column <= sheet.columnCount; column += 1) keys[column - 1] = normalizeHeaderKey(text(row.getCell(column).value));
+      return keys;
+    };
+    const scanned = [1, 2, 3, 4, 5].filter((rowNumber) => rowNumber <= sheet.rowCount).map(keysAt);
+    const detected = detectHeaderRow(scanned);
+    const headerRowNumber = detected >= 0 ? detected + 1 : 1;
+    const headerKeys = scanned[headerRowNumber - 1] ?? [];
+
     const rows: Array<Record<string, string>> = [];
     sheet.eachRow((row, number) => {
-      if (number === 1) return;
-      const source = new Map<string, string>();
-      headers.forEach((header, column) => source.set(header, text(row.getCell(column).value)));
-      const target: Record<string, string> = {};
-      Object.entries(aliases).forEach(([field, names]) => { target[field] = names.map((name) => source.get(name)).find((value) => value !== undefined) || ""; });
-      if (!target.email && !target.nama && row.cellCount >= 20) {
-        const at = (index: number) => text(row.getCell(index + 1).value);
-        Object.assign(target, { timestamp: at(0), wa: at(1), email: at(2), nama: at(3), status: at(4), sumber: at(5), topik_minat: at(6), domisili: at(8), relocate: at(9), pendidikan: at(10), universitas: at(11), campus_tier: at(12), ipk: at(13), fakultas: at(14), angkatan: at(15), tahun_lulus: at(16), organisasi: at(17), exchange: at(18), target_mt: at(19), posisi_mt: at(20), linkedin: at(21), produk_dibeli: at(23), kepuasan: at(24), membantu: at(25), nps: at(26), feedback: at(27), kode_voucher: at(28) });
-      }
+      if (number <= headerRowNumber) return;
+      const target = mapTalentPoolRow(headerKeys, (index) => text(row.getCell(index + 1).value), row.cellCount);
       if (target.email || target.nama) rows.push(target);
     });
     return Response.json(await importTalentPoolRows(rows));

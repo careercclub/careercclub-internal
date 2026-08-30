@@ -216,10 +216,17 @@ export async function deleteEventLinkAction(eventId: string, index: number) {
   return event;
 }
 
+// The rundown renders in two places — its own page and the event detail on /program —
+// so every mutation has to refresh both.
+function refreshRundown() {
+  revalidatePath("/program/rundown");
+  revalidatePath("/program");
+}
+
 export async function createRundownRowAction(eventId: string, order: number) {
   await requireUser();
   await createEventRundownItem({ event_id: eventId, durasi: 0, activity: "New activity", keterangan: "", link: "", cue_mc: "", urutan: order });
-  revalidatePath("/program/rundown");
+  refreshRundown();
 }
 
 export async function saveRundownRowAction(id: string, formData: FormData) {
@@ -232,17 +239,17 @@ export async function saveRundownRowAction(id: string, formData: FormData) {
     link: String(formData.get("link") || "").trim(),
     cue_mc: String(formData.get("cue_mc") || "").trim(),
   });
-  revalidatePath("/program/rundown");
+  refreshRundown();
 }
 
 export async function deleteRundownRowAction(id: string) {
   await requireUser();
   await deleteEventRundownItem(id);
-  revalidatePath("/program/rundown");
+  refreshRundown();
 }
 
 export async function moveRundownRowAction(id: string, targetId: string, idOrder: number, targetOrder: number) {
   await requireUser();
   await Promise.all([updateEventRundownItem(id, { urutan: targetOrder }), updateEventRundownItem(targetId, { urutan: idOrder })]);
-  revalidatePath("/program/rundown");
+  refreshRundown();
 }

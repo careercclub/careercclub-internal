@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { importCrmTransactions, type CrmImportRow } from "@/lib/api/crm";
+import { importCrmTransactions } from "@/lib/api/crm";
+import { mapCrmRow, type CrmImportRow } from "@/lib/imports/crm-rows";
 import ExcelJS from "exceljs";
 import { Readable } from "node:stream";
 
@@ -14,32 +15,6 @@ function cellText(value: ExcelJS.CellValue) {
     if ("richText" in value) return value.richText.map((item) => item.text).join("");
   }
   return String(value);
-}
-
-function normalizedDate(value: string) {
-  const text = value.trim();
-  if (!text) return null;
-  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const local = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-  if (local) return `${local[3]}-${local[2].padStart(2, "0")}-${local[1].padStart(2, "0")}`;
-  const parsed = new Date(text);
-  return Number.isFinite(parsed.getTime()) ? parsed.toISOString().slice(0, 10) : null;
-}
-
-function normalizeWa(value: string) {
-  let digits = value.replace(/\D/g, "");
-  if (digits.startsWith("0")) digits = `62${digits.slice(1)}`;
-  if (digits && !digits.startsWith("62")) digits = `62${digits}`;
-  return digits;
-}
-
-function find(row: Map<string, string>, names: string[]) {
-  for (const name of names) {
-    const direct = row.get(name.toLowerCase());
-    if (direct !== undefined) return direct;
-  }
-  return "";
 }
 
 async function readRows(file: File): Promise<CrmImportRow[]> {
@@ -59,20 +34,8 @@ async function readRows(file: File): Promise<CrmImportRow[]> {
     if (rowNumber === 1) return;
     const values = new Map<string, string>();
     headers.forEach((header, column) => values.set(header, cellText(sheetRow.getCell(column).value).trim()));
-    const product = find(values, ["judul barang", "product", "produk"]);
-    const email = find(values, ["buyer email", "email"]);
-    const phone = find(values, ["buyer phone (opsional)", "buyer phone", "phone", "wa", "whatsapp"]);
-    if (!product && !email && !phone) return;
-    rows.push({
-      status: find(values, ["status", "payment status"]),
-      name: find(values, ["buyer name (opsional)", "buyer name", "name", "nama"]),
-      wa: normalizeWa(phone),
-      email: email.toLowerCase(),
-      product,
-      price: Number(find(values, ["harga", "price"]).replace(/[^\d.-]/g, "")) || 0,
-      notes: find(values, ["notes (opsional)", "notes"]),
-      date: normalizedDate(find(values, ["tanggal", "date", "created at"])),
-    });
+    const row = mapCrmRow(values);
+    if (row) rows.push(row);
   });
   return rows;
 }

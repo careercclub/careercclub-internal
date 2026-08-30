@@ -3,7 +3,6 @@
 import { rescheduleTicketAction } from "@/app/actions/dashboard-actions";
 import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/actions/program-actions";
 import { deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, type DragEvent, useMemo, useState, useTransition } from "react";
+import { AssigneeField, personName } from "./assignee-field";
 import styles from "../record-manager.module.css";
 
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -30,7 +30,6 @@ function localIso(date: Date) { return `${date.getFullYear()}-${String(date.getM
 // Task/ticket deadlines and event dates are calendar dates; in WIB (UTC+7) the
 // local parts of a UTC-midnight Date resolve to the correct day.
 function dateKey(value: unknown) { if (!value) return ""; return value instanceof Date ? localIso(value) : String(value).slice(0, 10); }
-function personName(people: ApiRecord[], id: string) { const person = people.find((row) => String(row.id) === id); return person ? text(person.nama) || text(person.name) || text(person.email) || id : id; }
 
 type CalItem = { kind: "event" | "task" | "ticket"; row: ApiRecord };
 
@@ -42,30 +41,6 @@ function Legend({ color, label }: { color: string; label: string }) {
   return <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: "inline-block" }} />{label}</span>;
 }
 
-function AssigneeField({ people, value, onChange }: { people: ApiRecord[]; value: string[]; onChange: (ids: string[]) => void }) {
-  const available = people.filter((person) => !value.includes(String(person.id)));
-  return (
-    <div className="grid gap-1.5">
-      <Label>Assignee</Label>
-      <div className="flex flex-wrap gap-1.5">
-        {value.length ? value.map((id) => (
-          <Badge key={id} variant="secondary" className="gap-1 pr-1">
-            {personName(people, id)}
-            <button type="button" onClick={() => onChange(value.filter((current) => current !== id))} className="rounded-full px-1 leading-none hover:bg-black/10" aria-label="Hapus assignee">×</button>
-          </Badge>
-        )) : <span className="text-xs text-muted-foreground">Belum ada assignee</span>}
-      </div>
-      {available.length ? (
-        <Select key={value.length} value="" onValueChange={(id) => { if (id) onChange([...value, id]); }}>
-          <SelectTrigger><SelectValue placeholder="+ Tambah assignee…" /></SelectTrigger>
-          <SelectContent>
-            {available.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{text(person.nama) || text(person.name) || text(person.email)}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      ) : null}
-    </div>
-  );
-}
 
 function CalChip({ item, onOpen, onDragStart }: { item: CalItem; onOpen: () => void; onDragStart: (e: DragEvent) => void }) {
   const row = item.row;

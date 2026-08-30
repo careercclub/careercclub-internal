@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { enhancedNavSections as navSections } from "../_data/navigation-all";
+import { CommandPalette } from "./command-palette";
 import { NotificationCenter } from "./notification-center";
 import styles from "../dashboard.module.css";
 
@@ -123,6 +124,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
         <header className={styles.topbar}>
           <div className={styles.topbarLeft}>
             <div className={styles.pageTitle}>{getTitle(pathname)}</div>
+            <CommandPalette hiddenSlugs={hiddenSlugs} />
           </div>
           <div className={styles.topbarRight}>
             {monthLabel ? <span className={styles.topbarMonth}>{monthLabel}</span> : null}

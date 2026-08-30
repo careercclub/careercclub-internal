@@ -5,6 +5,9 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
+import { DistributionPie } from "./charts";
+import { CrmEmailBlast } from "./crm-email-blast";
 import { CrmTools } from "./crm-tools";
 import { Pagination, usePagination } from "./ui-kit";
 import styles from "./crm.module.css";
@@ -32,11 +35,11 @@ function PaymentPill({ status }: { status: string }) {
   return <span className={styles.paymentPill} style={{ color: style.color, background: style.bg }}><i className={`ti ${style.icon}`} style={{ fontSize: 10 }} />{status}</span>;
 }
 
-export function CrmWorkspace({ rows }: { rows: ApiRecord[] }) {
+export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { rows: ApiRecord[]; blastHistory?: EmailBlastRecord[]; blastDaily?: DailyBlastCount[] }) {
   const router = useRouter();
   const [tab, setTab] = useState<"buyers" | "analytics" | "blast" | "import">("buyers");
   const [query, setQuery] = useState(""); const [classification, setClassification] = useState(""); const [industry, setIndustry] = useState(""); const [stage, setStage] = useState(""); const [status, setStatus] = useState(""); const [talent, setTalent] = useState(""); const [source, setSource] = useState(""); const [payment, setPayment] = useState(""); const [repeat, setRepeat] = useState("");
-  const [selected, setSelected] = useState<string[]>([]); const [detailKey, setDetailKey] = useState(""); const [bulkStatus, setBulkStatus] = useState(""); const [bulkPool, setBulkPool] = useState(""); const [message, setMessage] = useState(""); const [subject, setSubject] = useState(""); const [body, setBody] = useState(""); const [pending, startTransition] = useTransition();
+  const [selected, setSelected] = useState<string[]>([]); const [detailKey, setDetailKey] = useState(""); const [bulkStatus, setBulkStatus] = useState(""); const [bulkPool, setBulkPool] = useState(""); const [message, setMessage] = useState(""); const [pending, startTransition] = useTransition();
   const customers = useMemo(() => {
     const groups = new Map<string, ApiRecord[]>();
     rows.forEach((row) => { const key = normalizedWa(row.wa) || String(row.email || row.id); groups.set(key, [...(groups.get(key) || []), row]); });
@@ -53,8 +56,9 @@ export function CrmWorkspace({ rows }: { rows: ApiRecord[] }) {
 
   function mutate(operation: "status" | "talent" | "delete", value?: string) { if (!selectedIds.length) return; if (operation === "delete" && !window.confirm(`Hapus ${selectedIds.length} transaksi?`)) return; startTransition(async () => { try { await bulkUpdateCrmBuyers(selectedIds, operation, value); setSelected([]); setMessage("CRM records updated."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Update failed."); } }); }
   function exportCsv() { const data = selected.length ? filtered.filter((row) => selected.includes(String(row._key))) : filtered; const csv = [["Name","WhatsApp","Email","Product","Classification","Spend","Transactions","Industry","Stage","Source","Status","Payment"], ...data.map((row) => [row.name,row.wa,row.email,row.produk,row.klasifikasi,row.spend,row.txCount,row.industri,row.tahap,row.sumber,row.status,row.payment_status])].map((line) => line.map(csvCell).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "ccc-crm-buyers.csv"; anchor.click(); URL.revokeObjectURL(url); }
-  async function sendBlast() { const recipients = filtered.map((row) => ({ email: String(row.email || ""), name: String(row.name || "") })).filter((recipient) => recipient.email).slice(0, 100); if (!recipients.length) return setMessage("No filtered recipients have email addresses."); const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: recipients, subject, html: `<div style="font-family:Arial,sans-serif;white-space:pre-wrap">${body.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character)}</div>` }) }); const result = await response.json() as { sent?: number; failed?: number; error?: string }; setMessage(response.ok ? `Sent ${result.sent || 0}; failed ${result.failed || 0}.` : result.error || "Email blast failed."); }
-  function distribution(key: string) { const counts = new Map<string, number>(); customers.forEach((row) => { const value = String(row[key] || "Unknown"); counts.set(value, (counts.get(value) || 0) + 1); }); return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10); }
+  // Full distribution, not a top-10 cut: DistributionPie folds its own tail, and
+  // truncating here would make its "Lainnya" slice understate the remainder.
+  function distribution(key: string) { const counts = new Map<string, number>(); customers.forEach((row) => { const value = String(row[key] || "Unknown"); counts.set(value, (counts.get(value) || 0) + 1); }); return [...counts.entries()].sort((a, b) => b[1] - a[1]); }
 
   return (
     <div>
@@ -149,26 +153,16 @@ export function CrmWorkspace({ rows }: { rows: ApiRecord[] }) {
           <div className={styles.analyticsGrid}>
             {([["Repeat order","_repeat"],["Klasifikasi","klasifikasi"],["Talent Pool","_talent"],["Tahapan","tahap"],["Industri","industri"],["Sumber","sumber"],["Payment","payment_status"]] as const).map(([label, key]) => {
               const data = key === "_repeat" ? [["Repeat", customers.filter((row) => row.txCount > 1).length], ["Single", customers.filter((row) => row.txCount === 1).length]] as [string, number][] : key === "_talent" ? [["Sudah isi", customers.filter((row) => row.talent_pool || row.talent_pool_match).length], ["Belum isi", customers.filter((row) => !(row.talent_pool || row.talent_pool_match)).length]] as [string, number][] : distribution(key);
-              const max = Math.max(...data.map((item) => item[1]), 1);
               return (
                 <section className={styles.analyticsCard} key={key}>
                   <h3>{label}</h3>
-                  {data.map(([name, count]) => <div className={styles.analyticsBar} key={name}><span>{name}</span><i style={{ width: `${(count / max) * 100}%` }} /><strong>{count}</strong></div>)}
+                  <DistributionPie rows={data} />
                 </section>
               );
             })}
           </div>
         ) : null}
-        {tab === "blast" ? (
-          <div className={styles.blastPanel}>
-            <div><strong style={{ fontSize: 13 }}>{filtered.filter((row) => row.email).length} filtered recipients</strong><p className={styles.rowCount}>Gunakan <code>{"{nama}"}</code> untuk personalisasi nama penerima.</p></div>
-            <form action={sendBlast} className={styles.blastForm}>
-              <label><span>Subject</span><input required value={subject} onChange={(event) => setSubject(event.target.value)} /></label>
-              <label><span>Message</span><textarea required rows={10} value={body} onChange={(event) => setBody(event.target.value)} /></label>
-              <button className={`${styles.btn} ${styles.btnPrimary}`} type="submit">Send to filtered recipients</button>
-            </form>
-          </div>
-        ) : null}
+        {tab === "blast" ? <CrmEmailBlast daily={blastDaily} history={blastHistory} rows={customers} /> : null}
         {tab === "import" ? <CrmTools rows={rows} /> : null}
       </div>
       {detail ? (

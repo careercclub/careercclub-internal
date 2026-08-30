@@ -124,6 +124,13 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/009_product_knowl
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/010_instagram_baseline_parity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/011_program_post_event_parity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/012_normalize_legacy_gallery_keys.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/013_competitor_intel_tables.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/014_content_library_parity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/015_google_calendar_event_sync.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/016_kol_multi_platform.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/017_carousel_link_referensi.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/018_ticket_assignee_auth_user.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/019_email_blast_log.sql
 ```
 
 Do not point production at the new VPS database until row counts, foreign keys, CRM buyer counts,

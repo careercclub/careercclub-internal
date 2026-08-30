@@ -137,7 +137,7 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
     let sent = 0; let failed = 0;
     try {
       for (let offset = 0; offset < list.length; offset += 100) {
-        const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: list.slice(offset, offset + 100), subject, from_name: fromName, from_email: fromEmail || undefined, scheduled_at: scheduledAt, html }) });
+        const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: list.slice(offset, offset + 100), subject, from_name: fromName, from_email: fromEmail || undefined, scheduled_at: scheduledAt, html, source: "talent-pool" }) });
         const result = await response.json() as { sent?: number; failed?: number; error?: string };
         if (!response.ok) throw new Error(result.error || "Blast gagal.");
         sent += result.sent || 0; failed += result.failed || 0;

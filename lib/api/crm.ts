@@ -1,6 +1,7 @@
 import "server-only";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
+import { parseBuyerNotes, type CrmImportRow } from "@/lib/imports/crm-rows";
 
 export type BuyerRecord = ApiRecord;
 export type CrmDealRecord = ApiRecord;
@@ -80,16 +81,7 @@ export function listBuyersWithTalentMatches() {
   });
 }
 
-export type CrmImportRow = {
-  status: string;
-  name: string;
-  wa: string;
-  email: string;
-  product: string;
-  price: number;
-  notes: string;
-  date: string | null;
-};
+export type { CrmImportRow } from "@/lib/imports/crm-rows";
 
 type ImportMode = "new" | "results";
 
@@ -101,19 +93,6 @@ const fallbackClassifications = [
   { words: ["playbook", "ebook", "e-book"], value: "E-book MT" },
   { words: ["info mt", "database", "70+"], value: "Database MT" },
 ] as const;
-
-function parseBuyerNotes(raw: string) {
-  try {
-    const notes = JSON.parse(raw) as Record<string, unknown>;
-    return {
-      sumber: String(notes["Kamu tau kita dari mana?"] || ""),
-      tahap: String(notes["Kamu sedang berada di tahap mana saat ini?"] || ""),
-      industri: String(notes["Kamu tertarik di bidang industri apa aja? (FMCG, Finance, Mining, dll)"] || ""),
-    };
-  } catch {
-    return { sumber: "", tahap: "", industri: "" };
-  }
-}
 
 export function importCrmTransactions(rows: CrmImportRow[], mode: ImportMode) {
   return withPostgres(async (sql) => sql.begin(async (tx) => {

@@ -10,6 +10,7 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "start": "next start",
+    "test": "node --test \"lib/**/*.test.mjs\"",
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js",
     "vps:rebuild": "bash scripts/vps-rebuild-full.sh",
     "vps:rebuild:frontend": "bash scripts/vps-rebuild-frontend.sh"

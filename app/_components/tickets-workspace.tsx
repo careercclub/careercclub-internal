@@ -1,7 +1,6 @@
 "use client";
 
 import { addTicketLinkAction, changeTicketStatusAction, createTicketAction, deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
+import { AssigneeField, personName } from "./assignee-field";
 import { GoogleCalendarScript } from "./google-calendar-tool";
 import { TicketGoogleCalendarModal } from "./ticket-google-calendar-modal";
 import { Pagination, usePagination } from "./ui-kit";
@@ -21,7 +21,6 @@ const PRIORITIES = ["High", "Med", "Low"];
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 function initials(name: string) { return name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase() || "?"; }
 function arr(value: unknown): Record<string, unknown>[] { return Array.isArray(value) ? value as Record<string, unknown>[] : []; }
-function personName(people: ApiRecord[], id: string) { const person = people.find((row) => String(row.id) === id); return person ? text(person.nama) || text(person.name) || text(person.email) || id : id; }
 function calendarAdded(row: ApiRecord) { return row.gcal_added === true || row.gcal_added === "true"; }
 
 const PILL_COLORS: Record<string, { bg: string; fg: string }> = {
@@ -47,25 +46,6 @@ function StatCard({ icon, color, bg, value, label }: { icon: string; color: stri
   return <div style={{ ...panelCard, display: "flex", alignItems: "center", gap: 12, padding: 14 }}><div style={{ width: 40, height: 40, borderRadius: 10, background: bg, display: "grid", placeItems: "center", flexShrink: 0 }}><i className={`ti ${icon}`} style={{ color, fontSize: 18 }} /></div><div><div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div><div style={{ fontSize: 11, color: "var(--text-muted)" }}>{label}</div></div></div>;
 }
 
-function AssigneeField({ people, value, onChange }: { people: ApiRecord[]; value: string[]; onChange: (ids: string[]) => void }) {
-  const available = people.filter((person) => !value.includes(String(person.id)));
-  return (
-    <div className="grid gap-1.5">
-      <Label>Assignee</Label>
-      <div className="flex flex-wrap gap-1.5">
-        {value.length ? value.map((id) => (
-          <Badge key={id} variant="secondary" className="gap-1 pr-1">{personName(people, id)}<button type="button" onClick={() => onChange(value.filter((current) => current !== id))} className="rounded-full px-1 leading-none hover:bg-black/10" aria-label="Hapus assignee">×</button></Badge>
-        )) : <span className="text-xs text-muted-foreground">Belum ada assignee</span>}
-      </div>
-      {available.length ? (
-        <Select key={value.length} value="" onValueChange={(id) => { if (id) onChange([...value, id]); }}>
-          <SelectTrigger><SelectValue placeholder="+ Tambah assignee…" /></SelectTrigger>
-          <SelectContent>{available.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{text(person.nama) || text(person.name) || text(person.email)}</SelectItem>)}</SelectContent>
-        </Select>
-      ) : null}
-    </div>
-  );
-}
 
 function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { people: ApiRecord[]; divisions: ApiRecord[]; types: ApiRecord[]; onClose: () => void; onCreated: (row: ApiRecord) => void }) {
   const [form, setForm] = useState({ title: "", description: "", priority: "Med", divisionId: "", typeId: "", dueDate: "" });

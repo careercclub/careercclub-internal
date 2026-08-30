@@ -20,6 +20,7 @@ export const tableNames = [
   "content_plans",
   "crm_deals",
   "design_assets",
+  "email_blast_log",
   "event_link_templates",
   "event_rundown",
   "events",

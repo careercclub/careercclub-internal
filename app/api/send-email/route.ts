@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
+import { logEmailBlast } from "@/lib/api/email-blast";
 
 type Recipient = string | { email?: string; name?: string };
 
@@ -10,6 +11,9 @@ type SendEmailBody = {
   from_name?: string;
   from_email?: string;
   scheduled_at?: string;
+  /** Which screen sent this, and the audience it targeted — recorded for history. */
+  source?: string;
+  segment?: string;
 };
 
 type SendResult = {
@@ -50,13 +54,14 @@ export function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await auth())?.user) {
+  const session = await auth();
+  if (!session?.user) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = (await request.json()) as SendEmailBody;
-    const { to, subject, html, from_name, from_email, scheduled_at } = body;
+    const { to, subject, html, from_name, from_email, scheduled_at, source, segment } = body;
 
     if (!to || !subject || !html || subject.length > 300 || html.length > 500_000) {
       return json(
@@ -123,6 +128,24 @@ export async function POST(request: NextRequest) {
           error: data.message || data.error || "Unknown error",
         });
       }
+    }
+
+    // History must not be able to fail the send it is recording.
+    try {
+      await logEmailBlast({
+        actorUserId: session.user.id || null,
+        actorName: session.user.name || session.user.email || "CCC User",
+        source: String(source || "crm"),
+        segment: String(segment || ""),
+        subject,
+        recipientCount: recipients.length,
+        sentCount: sent,
+        failedCount: failed,
+        scheduledAt: scheduled_at || null,
+        errors: results.filter((result) => result.status === "failed").map((result) => `${result.email || "?"}: ${result.error || "failed"}`),
+      });
+    } catch (error) {
+      console.error("Email blast could not be logged", error);
     }
 
     return json({ success: true, sent, failed, results });

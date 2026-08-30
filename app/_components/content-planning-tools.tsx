@@ -16,6 +16,7 @@ import {
   deleteStoryItemAction,
   setCarouselDateAction,
   setCarouselLinkBriefAction,
+  setCarouselLinkReferensiAction,
   setCarouselStatusAction,
   setMtPostedAction,
   setStoryPlanStatusAction,
@@ -431,7 +432,6 @@ function CarouselTab({ carousels, ctas, links, people }: { carousels: ApiRecord[
               const isDone = status === "Done";
               const fc = FUNNEL_COLORS[funnel] || { bg: "var(--bg)", fg: "#6b7280" };
               const assignee = people.find((p) => String(p.id) === text(plan.assignee_id));
-              const brief = text(plan.link_brief);
               return (
                 <div key={text(plan.id)} className={styles.itemCard} style={{ borderLeftColor: STATUS_BORDER[status] || "#888780" }}>
                   <div className={styles.itemCardInner}>
@@ -447,7 +447,9 @@ function CarouselTab({ carousels, ctas, links, people }: { carousels: ApiRecord[
                           <div className={styles.metaLeft}>
                             <button type="button" className={styles.dateTrigger} onClick={() => setDateModal(plan)}><i className="ti ti-calendar" /> {fmtDt(plan.tanggal_posting) || "—"} <i className="ti ti-pencil" style={{ fontSize: 10, opacity: 0.4 }} /></button>
                             <span className={styles.dot}>·</span>
-                            <LinkBriefCell plan={plan} brief={brief} />
+                            <CarouselLinkCell plan={plan} kind="brief" />
+                            <span className={styles.dot}>·</span>
+                            <CarouselLinkCell plan={plan} kind="referensi" />
                           </div>
                           {assignee ? <span className={styles.assignee}><i className="ti ti-user" style={{ fontSize: 10 }} /> {text(assignee.nama)}</span> : null}
                         </div>
@@ -472,31 +474,51 @@ function CarouselTab({ carousels, ctas, links, people }: { carousels: ApiRecord[
   );
 }
 
-function LinkBriefCell({ plan, brief }: { plan: ApiRecord; brief: string }) {
+// A carousel plan carries two independent reference URLs — the written brief and a
+// visual reference — with identical inline-edit behavior. Only the label, icon and
+// chip color differ, so one cell serves both. The brief chip's blue lives in
+// .linkBrief; the reference chip overrides it with the legacy purple.
+const CAROUSEL_LINK_KINDS = {
+  brief: {
+    field: "link_brief", icon: "ti-link", label: "Link Brief", addLabel: "Tambah link brief",
+    save: setCarouselLinkBriefAction, chip: undefined,
+  },
+  referensi: {
+    field: "link_referensi", icon: "ti-photo", label: "Referensi", addLabel: "Link referensi",
+    save: setCarouselLinkReferensiAction, chip: { color: "#7c3aed", borderColor: "#c4b5fd", background: "#f5f3ff" },
+  },
+} as const;
+
+function CarouselLinkCell({ plan, kind }: { plan: ApiRecord; kind: keyof typeof CAROUSEL_LINK_KINDS }) {
+  const { field, icon, label, addLabel, save, chip } = CAROUSEL_LINK_KINDS[kind];
+  const current = text(plan[field]);
   const [editing, setEditing] = useState(false);
-  const [url, setUrl] = useState(brief);
+  const [url, setUrl] = useState(current);
   const [pending, start] = useTransition();
-  useEffect(() => setUrl(brief), [brief]);
+  useEffect(() => setUrl(current), [current]);
+
+  const commit = () => start(() => { void save(text(plan.id), url || null); setEditing(false); });
+  const cancel = () => { setEditing(false); setUrl(current); };
 
   if (editing) {
     return (
       <span className={styles.inlineLinkRow}>
-        <i className="ti ti-link" style={{ fontSize: 13, color: "var(--text-muted)" }} />
-        <input className={styles.inlineLinkInput} type="url" placeholder="https://..." value={url} autoFocus onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") start(() => { void setCarouselLinkBriefAction(text(plan.id), url || null); setEditing(false); }); if (event.key === "Escape") setEditing(false); }} />
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={() => start(() => { void setCarouselLinkBriefAction(text(plan.id), url || null); setEditing(false); })}>Simpan</button>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={() => { setEditing(false); setUrl(brief); }}>Batal</button>
+        <i className={`ti ${icon}`} style={{ fontSize: 13, color: "var(--text-muted)" }} />
+        <input className={styles.inlineLinkInput} type="url" placeholder="https://..." value={url} autoFocus onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commit(); if (event.key === "Escape") cancel(); }} />
+        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={commit}>Simpan</button>
+        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={cancel}>Batal</button>
       </span>
     );
   }
-  if (brief) {
+  if (current) {
     return (
       <>
-        <a className={styles.linkBrief} href={brief} target="_blank" rel="noopener noreferrer"><i className="ti ti-link" /> Link Brief <i className="ti ti-external-link" style={{ fontSize: 10, opacity: 0.7 }} /></a>
+        <a className={styles.linkBrief} style={chip} href={current} target="_blank" rel="noopener noreferrer"><i className={`ti ${icon}`} /> {label} <i className="ti ti-external-link" style={{ fontSize: 10, opacity: 0.7 }} /></a>
         <button type="button" className={styles.iconBtn} onClick={() => setEditing(true)}><i className="ti ti-pencil" style={{ fontSize: 10 }} /></button>
       </>
     );
   }
-  return <button type="button" className={styles.linkBriefAdd} onClick={() => setEditing(true)}><i className="ti ti-plus" style={{ fontSize: 11 }} /> Tambah link brief</button>;
+  return <button type="button" className={styles.linkBriefAdd} onClick={() => setEditing(true)}><i className="ti ti-plus" style={{ fontSize: 11 }} /> {addLabel}</button>;
 }
 
 function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: CarouselModalState; ctas: ApiRecord[]; people: ApiRecord[]; statusMap: Record<string, string[]>; onClose: () => void }) {
@@ -508,11 +530,12 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
   const [assignee, setAssignee] = useState(text(plan?.assignee_id));
   const [status, setStatus] = useState(text(plan?.status) || state.preset.status || "Draft");
   const [linkBrief, setLinkBrief] = useState(text(plan?.link_brief));
+  const [linkReferensi, setLinkReferensi] = useState(text(plan?.link_referensi));
   const [pending, start] = useTransition();
 
   function save() {
     if (!judul.trim()) return;
-    const input: CarouselPlanInput = { judul, tanggal_posting: tanggal, funnel, cta: cta || null, assignee_id: assignee || null, status, link_brief: linkBrief || null };
+    const input: CarouselPlanInput = { judul, tanggal_posting: tanggal, funnel, cta: cta || null, assignee_id: assignee || null, status, link_brief: linkBrief || null, link_referensi: linkReferensi || null };
     start(async () => {
       if (plan) await updateCarouselPlanAction(text(plan.id), input);
       else await createCarouselPlanAction(input);
@@ -569,6 +592,12 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
         <div className={styles.inputRow}>
           <i className="ti ti-link" />
           <input className={styles.input} placeholder="https://docs.google.com/..." value={linkBrief} onChange={(event) => setLinkBrief(event.target.value)} />
+        </div>
+      </Field>
+      <Field label="Link Referensi" optional>
+        <div className={styles.inputRow}>
+          <i className="ti ti-photo" />
+          <input className={styles.input} placeholder="https://..." value={linkReferensi} onChange={(event) => setLinkReferensi(event.target.value)} />
         </div>
       </Field>
     </Modal>
@@ -730,6 +759,26 @@ function StoryDateModal({ preDate, presetItems, onClose }: { preDate?: string; p
 }
 
 /* ══════════════ KOL TAB ══════════════ */
+const KOL_PLATFORM_COLORS = {
+  ig: { bg: "#fce4ec", fg: "#c2185b" },
+  tiktok: { bg: "#f3e5f5", fg: "#7b1fa2" },
+  linkedin: { bg: "#e3f2fd", fg: "#1565c0" },
+};
+
+// A KOL can hold Instagram, TikTok and LinkedIn identities at once. link_ig /
+// link_tiktok are legacy profile-URL overrides and win over a handle-derived link.
+function kolPlatforms(kol: ApiRecord) {
+  const igLink = text(kol.link_ig) || (text(kol.username_ig) ? `https://instagram.com/${text(kol.username_ig)}` : "");
+  const ttLink = text(kol.link_tiktok) || (text(kol.username_tiktok) ? `https://tiktok.com/@${text(kol.username_tiktok)}` : "");
+  const linkedin = text(kol.linkedin_url);
+  const followers = (value: unknown) => (Number(value) ? ` · ${fmtFollowers(Number(value))}` : "");
+  const chips: Array<{ key: string; label: string; href: string; color: { bg: string; fg: string } }> = [];
+  if (igLink) chips.push({ key: "ig", label: `IG${followers(kol.followers_ig)}`, href: igLink, color: KOL_PLATFORM_COLORS.ig });
+  if (ttLink) chips.push({ key: "tiktok", label: `TikTok${followers(kol.followers_tiktok)}`, href: ttLink, color: KOL_PLATFORM_COLORS.tiktok });
+  if (linkedin) chips.push({ key: "linkedin", label: "LinkedIn", href: linkedin, color: KOL_PLATFORM_COLORS.linkedin });
+  return chips;
+}
+
 function KolTab({ kols }: { kols: ApiRecord[] }) {
   const [search, setSearch] = useState("");
   const [niche, setNiche] = useState("all");
@@ -739,7 +788,8 @@ function KolTab({ kols }: { kols: ApiRecord[] }) {
   const niches = useMemo(() => [...new Set(kols.map((k) => text(k.niche)).filter(Boolean))], [kols]);
   const filtered = kols.filter((k) => {
     const q = search.toLowerCase();
-    if (q && !text(k.nama).toLowerCase().includes(q) && !text(k.username).toLowerCase().includes(q)) return false;
+    const haystack = [k.nama, k.username_ig, k.username_tiktok].map((value) => text(value).toLowerCase());
+    if (q && !haystack.some((value) => value.includes(q))) return false;
     if (niche !== "all" && text(k.niche) !== niche) return false;
     return true;
   });
@@ -760,10 +810,7 @@ function KolTab({ kols }: { kols: ApiRecord[] }) {
         <div className={styles.grid3}>
           {filtered.map((k) => {
             const photo = text(k.foto_url);
-            const platform = text(k.platform);
-            const username = text(k.username);
-            const followers = Number(k.followers || 0);
-            const link = username ? (platform === "TikTok" ? `https://tiktok.com/@${username}` : platform === "Instagram" ? `https://instagram.com/${username}` : "") : "";
+            const platforms = kolPlatforms(k);
             return (
               <div key={text(k.id)} className={styles.personCard}>
                 <div className={styles.personTop}>
@@ -774,18 +821,21 @@ function KolTab({ kols }: { kols: ApiRecord[] }) {
                       {k.niche ? <span className={styles.nichePill}>{text(k.niche)}</span> : null}
                     </div>
                   </div>
-                  {platform || username ? (
+                  {platforms.length ? (
                     <div className={styles.personTags} style={{ marginBottom: 8 }}>
-                      {link ? <a className={styles.tagPill} href={link} target="_blank" rel="noopener noreferrer">{platform || "Profil"}{followers ? ` · ${fmtFollowers(followers)}` : ""}</a> : <span className={styles.tagPill}>{platform || username}{followers ? ` · ${fmtFollowers(followers)}` : ""}</span>}
+                      {platforms.map((chip) => (
+                        <a key={chip.key} className={styles.tagPill} href={chip.href} target="_blank" rel="noopener noreferrer" style={{ background: chip.color.bg, color: chip.color.fg, borderColor: "transparent", fontWeight: 600 }}>{chip.label}</a>
+                      ))}
                     </div>
                   ) : null}
+                  {k.rate_card_text ? <div className={styles.rateBox}>Rate: {text(k.rate_card_text)}</div> : null}
                   {k.contact ? <div className={styles.rateBox}>Kontak: {text(k.contact)}</div> : null}
-                  {k.notes ? <div className={styles.personDesc}>{text(k.notes)}</div> : null}
+                  {k.catatan ? <div className={styles.personDesc}>{text(k.catatan)}</div> : null}
                 </div>
                 <div className={styles.cardFooter}>
                   <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px" }} onClick={() => setModal({ kol: k })}><i className="ti ti-edit" style={{ fontSize: 12 }} /></button>
                   <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", color: "var(--red)" }} disabled={pending} onClick={() => { if (window.confirm("Hapus KOL ini?")) start(() => { void deleteKolAction(text(k.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
-                  {k.rate_card_url ? <a className={`${styles.btn} ${styles.btnSm} ${styles.cardFooterSpacer}`} href={text(k.rate_card_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11 }}><i className="ti ti-file" style={{ fontSize: 11 }} /> Rate Card</a> : null}
+                  {k.rate_card_file_url ? <a className={`${styles.btn} ${styles.btnSm} ${styles.cardFooterSpacer}`} href={text(k.rate_card_file_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11 }}><i className="ti ti-file" style={{ fontSize: 11 }} /> Rate Card</a> : null}
                 </div>
               </div>
             );
@@ -799,8 +849,12 @@ function KolTab({ kols }: { kols: ApiRecord[] }) {
 
 function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void }) {
   const [form, setForm] = useState<KolInput>({
-    nama: text(kol?.nama), username: text(kol?.username), platform: text(kol?.platform) || "Instagram", niche: text(kol?.niche),
-    followers: Number(kol?.followers || 0), contact: text(kol?.contact), rate_card_url: text(kol?.rate_card_url), notes: text(kol?.notes), foto_url: text(kol?.foto_url),
+    nama: text(kol?.nama), niche: text(kol?.niche),
+    username_ig: text(kol?.username_ig), followers_ig: Number(kol?.followers_ig) || null,
+    username_tiktok: text(kol?.username_tiktok), followers_tiktok: Number(kol?.followers_tiktok) || null,
+    linkedin_url: text(kol?.linkedin_url), rate_card_text: text(kol?.rate_card_text),
+    rate_card_file_url: text(kol?.rate_card_file_url), foto_url: text(kol?.foto_url),
+    catatan: text(kol?.catatan), contact: text(kol?.contact),
   });
   const [pending, start] = useTransition();
   const set = (patch: Partial<KolInput>) => setForm((f) => ({ ...f, ...patch }));
@@ -819,15 +873,16 @@ function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void
     >
       <Field label="Nama *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
       <Field label="Niche"><input className={styles.input} value={text(form.niche)} onChange={(event) => set({ niche: event.target.value })} placeholder="cth: Career / Finance" /></Field>
-      <Field label="Platform">
-        <select className={styles.select} value={text(form.platform)} onChange={(event) => set({ platform: event.target.value })}>{["Instagram", "TikTok", "YouTube", "LinkedIn", "Other"].map((p) => <option key={p} value={p}>{p}</option>)}</select>
-      </Field>
-      <Field label="Username"><input className={styles.input} value={text(form.username)} onChange={(event) => set({ username: event.target.value })} placeholder="tanpa @" /></Field>
-      <Field label="Followers"><input className={styles.input} type="number" value={String(form.followers ?? 0)} onChange={(event) => set({ followers: Number(event.target.value) })} /></Field>
-      <Field label="Kontak"><input className={styles.input} value={text(form.contact)} onChange={(event) => set({ contact: event.target.value })} placeholder="WA / email" /></Field>
-      <Field label="Rate card URL" optional><input className={styles.input} value={text(form.rate_card_url)} onChange={(event) => set({ rate_card_url: event.target.value })} placeholder="https://..." /></Field>
+      <Field label="Username Instagram" optional><input className={styles.input} value={text(form.username_ig)} onChange={(event) => set({ username_ig: event.target.value })} placeholder="tanpa @" /></Field>
+      <Field label="Followers Instagram" optional><input className={styles.input} type="number" min={0} value={form.followers_ig ?? ""} onChange={(event) => set({ followers_ig: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
+      <Field label="Username TikTok" optional><input className={styles.input} value={text(form.username_tiktok)} onChange={(event) => set({ username_tiktok: event.target.value })} placeholder="tanpa @" /></Field>
+      <Field label="Followers TikTok" optional><input className={styles.input} type="number" min={0} value={form.followers_tiktok ?? ""} onChange={(event) => set({ followers_tiktok: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
+      <Field label="LinkedIn URL" optional><input className={styles.input} value={text(form.linkedin_url)} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://linkedin.com/in/..." /></Field>
+      <Field label="Kontak" optional><input className={styles.input} value={text(form.contact)} onChange={(event) => set({ contact: event.target.value })} placeholder="WA / email" /></Field>
+      <Field label="Rate card" optional><textarea className={styles.textarea} value={text(form.rate_card_text)} onChange={(event) => set({ rate_card_text: event.target.value })} placeholder="cth: 1 feed + 3 story — Rp 2.500.000" /></Field>
+      <Field label="Rate card file URL" optional><input className={styles.input} value={text(form.rate_card_file_url)} onChange={(event) => set({ rate_card_file_url: event.target.value })} placeholder="https://..." /></Field>
       <Field label="Foto URL" optional><input className={styles.input} value={text(form.foto_url)} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Catatan" optional><textarea className={styles.textarea} value={text(form.notes)} onChange={(event) => set({ notes: event.target.value })} /></Field>
+      <Field label="Catatan" optional><textarea className={styles.textarea} value={text(form.catatan)} onChange={(event) => set({ catatan: event.target.value })} /></Field>
     </Modal>
   );
 }

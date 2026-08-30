@@ -1,18 +1,43 @@
 "use client";
 
-import { createRundownRowAction, deleteRundownRowAction, moveRundownRowAction, saveRundownRowAction } from "@/app/actions/program-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useState } from "react";
-import { usePagination } from "./ui-kit";
+import { EventRundown, rundownFor, runningTimes } from "./event-rundown";
 import styles from "../record-manager.module.css";
 
-function addMinutes(time:string,minutes:number){if(!time)return"";const [hours,mins]=time.split(":").map(Number);const total=(hours||0)*60+(mins||0)+minutes;return `${String(Math.floor(total/60)%24).padStart(2,"0")}:${String(total%60).padStart(2,"0")}`;}
+export function RundownWorkspace({ events, rows }: { events: ApiRecord[]; rows: ApiRecord[] }) {
+  const [eventId, setEventId] = useState(String(events[0]?.id || ""));
+  const selected = events.find((event) => String(event.id) === eventId);
+  const startTime = String(selected?.waktu || "").slice(0, 5);
+  const eventRows = useMemo(() => rundownFor(rows, eventId), [rows, eventId]);
+  const finish = runningTimes(eventRows, startTime).next;
 
-export function RundownWorkspace({events,rows}:{events:ApiRecord[];rows:ApiRecord[]}){
-  const [eventId,setEventId]=useState(String(events[0]?.id||""));const selected=events.find((event)=>String(event.id)===eventId);const eventRows=useMemo(()=>rows.filter((row)=>String(row.event_id)===eventId).sort((a,b)=>Number(a.urutan||0)-Number(b.urutan||0)),[rows,eventId]);
-  const timing=eventRows.reduce<{items:Array<{row:ApiRecord;start:string}>;next:string}>((state,row)=>({items:[...state.items,{row,start:state.next}],next:addMinutes(state.next,Number(row.durasi||0))}),{items:[],next:String(selected?.waktu||"").slice(0,5)});
-  const timed=timing.items;const running=timing.next;
-  const timedIndexed=useMemo(()=>timed.map((item,index)=>({...item,index})),[timed]);
-  const {pageItems:timedPage,page,setPage,totalPages}=usePagination(timedIndexed,15);
-  return <div className={styles.rundownWorkspace}><div className={styles.workspaceHeader}><div><p>Program</p><h1>Event rundown</h1><span>Calculated running time, activity notes, live links, MC cues, and execution order.</span></div><select value={eventId} onChange={(event)=>setEventId(event.target.value)}>{events.map((event)=><option key={String(event.id)} value={String(event.id)}>{String(event.nama||"Untitled")} - {String(event.tanggal||"")}</option>)}</select></div>{selected?<><div className={styles.metricStrip}><div><strong>{String(selected.waktu||"-").slice(0,5)}</strong><span>Start time</span></div><div><strong>{eventRows.reduce((sum,row)=>sum+Number(row.durasi||0),0)} min</strong><span>Total duration</span></div><div><strong>{running||"-"}</strong><span>Estimated finish</span></div><div><strong>{eventRows.length}</strong><span>Activities</span></div><div><strong>{String(selected.status||"Planning")}</strong><span>Event status</span></div></div><section className={styles.rundownTable}><header><h2>{String(selected.nama||"Event")}</h2><button className={styles.primaryButton} onClick={()=>createRundownRowAction(eventId,eventRows.length?Math.max(...eventRows.map((row)=>Number(row.urutan||0)))+1:0)}><i className="ti ti-plus"/> Add row</button></header>{timed.length?<div className={styles.tableScroll}><table><thead><tr><th>Time</th><th>Duration</th><th>Activity</th><th>Notes</th><th>Link</th><th>MC cue</th><th>Order</th><th/></tr></thead><tbody>{timedPage.map(({row,start,index})=><tr key={String(row.id)}><td><strong>{start||"-"}</strong></td><td colSpan={5}><form action={saveRundownRowAction.bind(null,String(row.id))} className={styles.rundownForm}><input defaultValue={Number(row.durasi||0)} min="0" name="durasi" type="number"/><textarea defaultValue={String(row.activity||"")} name="activity" required/><textarea defaultValue={String(row.keterangan||"")} name="keterangan"/><input defaultValue={String(row.link||"")} name="link" placeholder="https://"/><textarea defaultValue={String(row.cue_mc||"")} name="cue_mc"/><button aria-label="Save row" className={styles.secondaryButton}><i className="ti ti-device-floppy"/></button></form></td><td><div className={styles.orderButtons}><button disabled={index===0} onClick={()=>{const target=eventRows[index-1];return moveRundownRowAction(String(row.id),String(target.id),Number(row.urutan||0),Number(target.urutan||0));}}><i className="ti ti-chevron-up"/></button><button disabled={index===eventRows.length-1} onClick={()=>{const target=eventRows[index+1];return moveRundownRowAction(String(row.id),String(target.id),Number(row.urutan||0),Number(target.urutan||0));}}><i className="ti ti-chevron-down"/></button></div></td><td><button className={styles.dangerButton} onClick={()=>{if(window.confirm("Delete this rundown row?"))void deleteRundownRowAction(String(row.id));}}><i className="ti ti-trash"/></button></td></tr>)}</tbody></table></div>:<div className={styles.emptyState}><i className="ti ti-list-details"/><strong>No rundown rows</strong><span>Add the first event activity.</span></div>}{totalPages>1?<div className={styles.pagination}><button disabled={page<=0} onClick={()=>setPage(Math.max(0,page-1))} type="button"><i className="ti ti-chevron-left"/></button><span>Page {page+1} / {totalPages}</span><button disabled={page>=totalPages-1} onClick={()=>setPage(Math.min(totalPages-1,page+1))} type="button"><i className="ti ti-chevron-right"/></button></div>:null}</section></>:<div className={styles.emptyState}><i className="ti ti-calendar-off"/><strong>No event selected</strong></div>}</div>;
+  return (
+    <div className={styles.rundownWorkspace}>
+      <div className={styles.workspaceHeader}>
+        <div>
+          <p>Program</p>
+          <h1>Event rundown</h1>
+          <span>Calculated running time, activity notes, live links, MC cues, and execution order.</span>
+        </div>
+        <select value={eventId} onChange={(event) => setEventId(event.target.value)}>
+          {events.map((event) => <option key={String(event.id)} value={String(event.id)}>{String(event.nama || "Untitled")} - {String(event.tanggal || "")}</option>)}
+        </select>
+      </div>
+      {selected ? (
+        <>
+          <div className={styles.metricStrip}>
+            <div><strong>{startTime || "-"}</strong><span>Start time</span></div>
+            <div><strong>{eventRows.reduce((sum, row) => sum + Number(row.durasi || 0), 0)} min</strong><span>Total duration</span></div>
+            <div><strong>{finish || "-"}</strong><span>Estimated finish</span></div>
+            <div><strong>{eventRows.length}</strong><span>Activities</span></div>
+            <div><strong>{String(selected.status || "Planning")}</strong><span>Event status</span></div>
+          </div>
+          <EventRundown eventId={eventId} rows={rows} startTime={startTime} title={String(selected.nama || "Event")} />
+        </>
+      ) : (
+        <div className={styles.emptyState}><i className="ti ti-calendar-off" /><strong>No event selected</strong></div>
+      )}
+    </div>
+  );
 }

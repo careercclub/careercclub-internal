@@ -8,7 +8,13 @@ export const metadata = { title: "Tickets" };
 export default async function TicketsPage() {
   const [workspace, session] = await Promise.all([getTicketWorkspace(), auth()]);
   const role = session?.user?.role || "staff";
-  const currentPerson = workspace.people.find((person) => String(person.email || "").toLowerCase() === String(session?.user?.email || "").toLowerCase());
+  // Prefer the explicit account link (018_ticket_assignee_auth_user.sql); fall back to
+  // the email match for person rows created before it, and for databases where the
+  // migration has not been applied yet.
+  const sessionUserId = String(session?.user?.id || "");
+  const sessionEmail = String(session?.user?.email || "").toLowerCase();
+  const currentPerson = (sessionUserId ? workspace.people.find((person) => String(person.auth_user_id || "") === sessionUserId) : undefined)
+    ?? workspace.people.find((person) => String(person.email || "").toLowerCase() === sessionEmail);
   const divisionPeople = currentPerson ? workspace.people.filter((person) => String(person.divisi_id || "") === String(currentPerson.divisi_id || "")).map((person) => String(person.id)) : [];
   const visibleTickets = role === "admin"
     ? workspace.tickets

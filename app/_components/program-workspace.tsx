@@ -1,7 +1,6 @@
 "use client";
 
 import { addEventLinkAction, createEventAction, createTaskAction, deleteEventLinkAction, deleteTaskAction, updateEventAction, updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/actions/program-actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useMemo, useState } from "react";
+import { AssigneeField, personName } from "./assignee-field";
 import { DashboardCalendar } from "./dashboard-calendar";
+import { EventRundown } from "./event-rundown";
 import { GoogleCalendarScript, useGoogleCalendarAction } from "./google-calendar-tool";
 import { Pagination, usePagination } from "./ui-kit";
 import styles from "../record-manager.module.css";
@@ -28,7 +29,6 @@ function dateKey(value: unknown) { if (!value) return ""; if (value instanceof D
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 function fmtDate(value: unknown) { const key = dateKey(value); if (!key) return ""; const [y, m, d] = key.split("-"); return `${Number(d)} ${MONTHS_ID[Number(m) - 1] || m} ${y}`; }
 function fmtShort(value: unknown) { const key = dateKey(value); if (!key) return "—"; const parts = key.split("-"); return `${Number(parts[2])} ${MONTHS_ID[Number(parts[1]) - 1] || parts[1]}`; }
-function personName(people: ApiRecord[], id: string) { const person = people.find((row) => String(row.id) === id); return person ? text(person.nama) || text(person.name) || text(person.email) || id : id; }
 
 const PILLS: Record<string, { bg: string; fg: string }> = {
   "On Progress": { bg: "var(--amber-bg)", fg: "var(--amber)" },
@@ -48,18 +48,6 @@ const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px so
 const thStyle: CSSProperties = { padding: "8px 10px", fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" };
 const tdStyle: CSSProperties = { padding: "10px", verticalAlign: "middle" };
 
-function AssigneeField({ people, value, onChange }: { people: ApiRecord[]; value: string[]; onChange: (ids: string[]) => void }) {
-  const available = people.filter((person) => !value.includes(String(person.id)));
-  return (
-    <div className="grid gap-1.5">
-      <Label>Assignee</Label>
-      <div className="flex flex-wrap gap-1.5">
-        {value.length ? value.map((id) => <Badge key={id} variant="secondary" className="gap-1 pr-1">{personName(people, id)}<button type="button" onClick={() => onChange(value.filter((current) => current !== id))} className="rounded-full px-1 leading-none hover:bg-black/10" aria-label="Hapus assignee">×</button></Badge>) : <span className="text-xs text-muted-foreground">Belum ada assignee</span>}
-      </div>
-      {available.length ? <Select key={value.length} value="" onValueChange={(id) => { if (id) onChange([...value, id]); }}><SelectTrigger><SelectValue placeholder="+ Tambah assignee…" /></SelectTrigger><SelectContent>{available.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{text(person.nama) || text(person.name) || text(person.email)}</SelectItem>)}</SelectContent></Select> : null}
-    </div>
-  );
-}
 
 function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; onClose: () => void; onSaved: (row: ApiRecord) => void }) {
   const editing = !!event;
@@ -242,7 +230,7 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
   );
 }
 
-export function ProgramWorkspace({ events, tasks, people = [], divisions = [], tickets = [], linkTemplates = [], referenceDate }: { events: ApiRecord[]; tasks: ApiRecord[]; people?: ApiRecord[]; divisions?: ApiRecord[]; tickets?: ApiRecord[]; linkTemplates?: ApiRecord[]; referenceDate: string }) {
+export function ProgramWorkspace({ events, tasks, people = [], divisions = [], tickets = [], linkTemplates = [], rundown = [], referenceDate }: { events: ApiRecord[]; tasks: ApiRecord[]; people?: ApiRecord[]; divisions?: ApiRecord[]; tickets?: ApiRecord[]; linkTemplates?: ApiRecord[]; rundown?: ApiRecord[]; referenceDate: string }) {
   const router = useRouter();
   const [eventsState, setEventsState] = useState(events);
   const [taskRows, setTaskRows] = useState(tasks);
@@ -355,6 +343,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                 </div>
                 <Pagination onChange={setTaskPage} page={taskPage} totalPages={taskTotalPages} />
               </div>
+              <EventRundown eventId={String(selected.id)} rows={rundown} startTime={text(selected.waktu).slice(0, 5)} />
             </>
           ) : <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>Pilih event untuk melihat & mengelola task-nya.</p>}
         </div>
