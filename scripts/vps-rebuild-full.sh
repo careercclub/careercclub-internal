@@ -8,6 +8,10 @@ compose=(docker compose -f docker-compose.production.yml)
 postgres_container="${POSTGRES_CONTAINER:-deploy-postgres-1}"
 postgres_user="${POSTGRES_ADMIN_USER:-ccc_user}"
 postgres_database="${POSTGRES_DATABASE:-ccc_ops}"
+# Migrations run as the admin role, which owns whatever it creates. The application
+# connects as this role, so a table created without a matching grant is invisible to
+# it — the migration succeeds and the page still returns 42501.
+postgres_app_role="${POSTGRES_APP_ROLE:-ccc_ops_app}"
 psql_command=(
   docker exec -i "$postgres_container"
   psql -U "$postgres_user" -d "$postgres_database" -v ON_ERROR_STOP=1
@@ -90,6 +94,56 @@ if (( ${#pending_migrations[@]} > 0 )); then
 else
   echo "No pending database migrations."
 fi
+
+# A migration that creates a table but forgets to grant it leaves the schema correct
+# and the application broken: the migration succeeds, the ledger records it, and the
+# page returns 42501 "permission denied". Assert the application role can actually
+# reach every table before shipping code that depends on it. Runs every deploy, not
+# just when migrations applied, so a manually created table is caught too.
+echo "Verifying $postgres_app_role can reach every table in public..."
+"${psql_command[@]}" -v app_role="$postgres_app_role" <<'SQL'
+-- Interpolated here, outside the dollar-quoted body, because psql does not expand
+-- :variables inside $$ ... $$.
+select set_config('ccc.app_role', :'app_role', false);
+
+do $$
+declare
+  app_role text := current_setting('ccc.app_role', true);
+  blocked text;
+begin
+  if not exists (select 1 from pg_roles where rolname = app_role) then
+    raise notice 'Role % does not exist; skipping grant assertion.', app_role;
+    return;
+  end if;
+
+  select string_agg(missing.relname, ', ' order by missing.relname)
+  into blocked
+  from (
+    select c.relname
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind in ('r', 'p')
+      -- The migration ledger is deployment infrastructure; the app never reads it.
+      and c.relname <> 'app_schema_migrations'
+      and not (
+        has_table_privilege(app_role, c.oid, 'SELECT')
+        and has_table_privilege(app_role, c.oid, 'INSERT')
+        and has_table_privilege(app_role, c.oid, 'UPDATE')
+        and has_table_privilege(app_role, c.oid, 'DELETE')
+      )
+  ) as missing;
+
+  if blocked is not null then
+    raise exception using
+      message = format('%s is missing table privileges on: %s', app_role, blocked),
+      hint = 'Add a migration granting select, insert, update, delete on those tables to the application role (see 020_grant_app_role_access.sql).';
+  end if;
+
+  raise notice 'Grant check passed for %.', app_role;
+end
+$$;
+SQL
 
 echo "Building and starting the complete Next.js application..."
 "${compose[@]}" build web

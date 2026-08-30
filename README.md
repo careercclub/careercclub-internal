@@ -131,7 +131,13 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/016_kol_multi_pla
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/017_carousel_link_referensi.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/018_ticket_assignee_auth_user.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/019_email_blast_log.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/020_grant_app_role_access.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/021_restore_upsert_constraints.sql
 ```
+
+A migration that creates a table must grant it to the application role. `020` sets
+default privileges so this now happens automatically, but check `\dp` after adding a
+table if the app reports `permission denied` (SQLSTATE 42501).
 
 Do not point production at the new VPS database until row counts, foreign keys, CRM buyer counts,
 and sampled records match the Supabase source.
