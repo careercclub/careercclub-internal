@@ -238,6 +238,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const [selectedEvent, setSelectedEvent] = useState(String(events.find((event) => event.status !== "Done")?.id || events[0]?.id || ""));
   const [phaseTab, setPhaseTab] = useState<string>("all");
   const [jenisFilter, setJenisFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState(""); const [dateTo, setDateTo] = useState("");
   const [eventModal, setEventModal] = useState<{ event: ApiRecord | null } | null>(null);
   const [taskModal, setTaskModal] = useState<{ task: ApiRecord | null } | null>(null);
   const [linkModalEvent, setLinkModalEvent] = useState("");
@@ -259,8 +260,18 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
     if (!right) return -1;
     return right.localeCompare(left);
   }), [eventsState]);
-  const overviewEvents = sortedEvents.filter((event) => !jenisFilter || text(event.jenis_program) === jenisFilter);
-  const historyEvents = sortedEvents.filter((event) => ["Done", "Cancelled"].includes(text(event.status))).filter((event) => !jenisFilter || text(event.jenis_program) === jenisFilter);
+  // Date keys are YYYY-MM-DD, so a string compare is a correct range test. An event
+  // with no date is only hidden once a bound is actually set, so an empty filter never
+  // silently drops undated events.
+  const inDateRange = (event: ApiRecord) => {
+    if (!dateFrom && !dateTo) return true;
+    const key = dateKey(event.tanggal);
+    if (!key) return false;
+    return (!dateFrom || key >= dateFrom) && (!dateTo || key <= dateTo);
+  };
+  const matchesFilters = (event: ApiRecord) => (!jenisFilter || text(event.jenis_program) === jenisFilter) && inDateRange(event);
+  const overviewEvents = sortedEvents.filter(matchesFilters);
+  const historyEvents = sortedEvents.filter((event) => ["Done", "Cancelled"].includes(text(event.status))).filter(matchesFilters);
   const selectedTasks = taskRows.filter((task) => String(task.project_id) === selectedEvent);
   const phaseTasks = selectedTasks.filter((task) => phaseTab === "all" || text(task.phase) === phaseTab);
   const { pageItems: phaseTaskPage, page: taskPage, setPage: setTaskPage, totalPages: taskTotalPages } = usePagination(phaseTasks, 10);
@@ -293,8 +304,15 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
           </div>
           <div style={panelCard}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-              <div><strong style={{ fontSize: 14 }}>Semua Event</strong><div style={{ fontSize: 11, color: "var(--text-muted)" }}>Klik card untuk lihat detail tasks & timeline</div></div>
-              <div style={{ display: "flex", gap: 8 }}><Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Jenis</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select><Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" /> Event Baru</Button></div>
+              <div><strong style={{ fontSize: 14 }}>Semua Event ({overviewEvents.length})</strong><div style={{ fontSize: 11, color: "var(--text-muted)" }}>Klik card untuk lihat detail tasks & timeline</div></div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Jenis</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select>
+                <Input aria-label="Tanggal dari" className="w-[150px]" onChange={(e) => setDateFrom(e.target.value)} type="date" value={dateFrom} />
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>s/d</span>
+                <Input aria-label="Tanggal sampai" className="w-[150px]" onChange={(e) => setDateTo(e.target.value)} type="date" value={dateTo} />
+                {dateFrom || dateTo || jenisFilter ? <Button type="button" variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); setJenisFilter(""); }}>Reset</Button> : null}
+                <Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" /> Event Baru</Button>
+              </div>
             </div>
             <div className="grid gap-3">
               {overviewEvents.map((event) => { const p = progressOf(String(event.id)); return (
@@ -305,7 +323,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                   <div style={{ textAlign: "right", fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{p.done}/{p.total} task · {p.pct}%</div>
                 </button>
               ); })}
-              {overviewEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>Belum ada event.</p> : null}
+              {overviewEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>{jenisFilter || dateFrom || dateTo ? "Tidak ada event yang cocok dengan filter." : "Belum ada event."}</p> : null}
             </div>
           </div>
         </div>

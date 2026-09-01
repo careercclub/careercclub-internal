@@ -119,6 +119,20 @@
 
 .tableWrap {
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-md) var(--bg);
+  padding-bottom: 2px;
+}
+.tableWrap::-webkit-scrollbar {
+  height: 10px;
+}
+.tableWrap::-webkit-scrollbar-track {
+  background: var(--bg);
+  border-radius: 5px;
+}
+.tableWrap::-webkit-scrollbar-thumb {
+  background: var(--border-md);
+  border-radius: 5px;
 }
 .table {
   width: 100%;

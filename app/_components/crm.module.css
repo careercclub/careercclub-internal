@@ -170,6 +170,26 @@
 
 .tableWrap {
   overflow-x: auto;
+  /* Chromium on Windows draws overlay scrollbars that are invisible at rest, so the
+     table looked unscrollable even though it overflows. Styling ::-webkit-scrollbar
+     opts back into a classic, always-visible bar. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-md) var(--bg);
+  padding-bottom: 2px;
+}
+.tableWrap::-webkit-scrollbar {
+  height: 10px;
+}
+.tableWrap::-webkit-scrollbar-track {
+  background: var(--bg);
+  border-radius: 5px;
+}
+.tableWrap::-webkit-scrollbar-thumb {
+  background: var(--border-md);
+  border-radius: 5px;
+}
+.tableWrap::-webkit-scrollbar-thumb:hover {
+  background: var(--text-hint);
 }
 .table {
   width: 100%;
