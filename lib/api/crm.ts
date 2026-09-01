@@ -149,7 +149,7 @@ export function importCrmTransactions(rows: CrmImportRow[], mode: ImportMode) {
           ) values (
             ${row.name}, ${row.wa}, ${row.email}, ${row.product}, ${classification}, ${row.price},
             ${notes.industri}, ${notes.tahap}, ${notes.sumber}, 'Belum diblast', 'SUCCESS', false,
-            ${row.date}, ${JSON.stringify([historyItem])}::jsonb
+            ${row.date}, ${tx.json([historyItem])}::jsonb
           )
         `;
         added += 1;
@@ -167,7 +167,7 @@ export function importCrmTransactions(rows: CrmImportRow[], mode: ImportMode) {
         update buyers
         set produk = ${row.product}, klasifikasi = ${classification}, harga = ${row.price},
             payment_status = 'SUCCESS', status = ${`Sudah convert — ${conversion}`},
-            tanggal = ${row.date}, riwayat = ${JSON.stringify([...history, historyItem])}::jsonb
+            tanggal = ${row.date}, riwayat = ${tx.json([...history, historyItem])}::jsonb
         where id = ${existing.id}
       `;
       updated += 1;

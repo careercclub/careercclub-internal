@@ -22,7 +22,14 @@ const PAYMENT_STYLE: Record<string, { color: string; bg: string; icon: string }>
 const styleMap = styles as Record<string, string>;
 
 function normalizedWa(value: unknown) { let digits = String(value || "").replace(/\D/g, ""); if (digits.startsWith("0")) digits = `62${digits.slice(1)}`; else if (digits.startsWith("8")) digits = `62${digits}`; return digits; }
-function history(row: ApiRecord): Transaction[] { const value = Array.isArray(row.riwayat) ? row.riwayat as Transaction[] : []; return value.length ? value : [{ produk: String(row.produk || ""), klasifikasi: String(row.klasifikasi || ""), harga: Number(row.harga || 0), tanggal: String(row.tanggal || "") }]; }
+// Same double-encoding as ticket links: riwayat written before the sql.json() fix is a
+// JSON string, which silently collapsed a buyer's whole history to one synthetic row.
+function jsonRows(value: unknown): Transaction[] {
+  if (typeof value === "string") { try { return jsonRows(JSON.parse(value)); } catch { return []; } }
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => (typeof item === "string" ? jsonRows(item) : item && typeof item === "object" ? [item as Transaction] : []));
+}
+function history(row: ApiRecord): Transaction[] { const value = jsonRows(row.riwayat); return value.length ? value : [{ produk: String(row.produk || ""), klasifikasi: String(row.klasifikasi || ""), harga: Number(row.harga || 0), tanggal: String(row.tanggal || "") }]; }
 function unique(rows: Customer[], key: string) { return [...new Set(rows.map((row) => String(row[key] || "")).filter(Boolean))].sort(); }
 function csvCell(value: unknown) { return `"${String(value ?? "").replaceAll('"', '""')}"`; }
 function rupiahK(value: number) { return `Rp${(value / 1000).toFixed(0)}k`; }

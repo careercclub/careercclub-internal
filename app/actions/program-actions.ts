@@ -188,7 +188,7 @@ export async function addEventLinkAction(eventId: string, input: { label: string
   const event = await withPostgres(async (sql) => {
     const [row] = await sql<ApiRecord[]>`
       update events
-      set links = coalesce(links, '[]'::jsonb) || ${JSON.stringify([{ label, url }])}::jsonb
+      set links = coalesce(links, '[]'::jsonb) || ${sql.json([{ label, url }])}::jsonb
       where id = ${eventId}
       returning *
     `;

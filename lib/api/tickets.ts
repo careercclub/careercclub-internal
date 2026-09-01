@@ -60,7 +60,7 @@ export function appendTicketComment(id: string, comment: { user: string; time: s
   return withPostgres(async (sql) => {
     const [ticket] = await sql<TicketRecord[]>`
       update tickets
-      set komentar = coalesce(komentar, '[]'::jsonb) || ${JSON.stringify([comment])}::jsonb
+      set komentar = coalesce(komentar, '[]'::jsonb) || ${sql.json([comment])}::jsonb
       where id = ${id}
       returning *
     `;
@@ -72,7 +72,7 @@ export function appendTicketFile(id: string, file: { name: string; key: string; 
   return withPostgres(async (sql) => {
     const [ticket] = await sql<TicketRecord[]>`
       update tickets
-      set files = coalesce(files, '[]'::jsonb) || ${JSON.stringify([file])}::jsonb
+      set files = coalesce(files, '[]'::jsonb) || ${sql.json([file])}::jsonb
       where id = ${id}
       returning *
     `;
@@ -84,7 +84,7 @@ export function appendTicketLink(id: string, link: { label: string; url: string 
   return withPostgres(async (sql) => {
     const [ticket] = await sql<TicketRecord[]>`
       update tickets
-      set links = coalesce(links, '[]'::jsonb) || ${JSON.stringify([link])}::jsonb
+      set links = coalesce(links, '[]'::jsonb) || ${sql.json([link])}::jsonb
       where id = ${id}
       returning *
     `;
@@ -110,9 +110,9 @@ export function duplicateTicket(id: string) {
         ${ticketNo}, ${`${String(source.title || "Untitled")} (Copy)`}, ${source.description || ""},
         'Todo', ${source.priority || "Med"}, ${source.type_id || null}, ${source.divisi_id || null},
         ${source.assigned_to_id || null}, ${Array.isArray(source.assigned_to_ids) ? source.assigned_to_ids : []}::uuid[],
-        ${source.requester_id || null}, ${source.due_date || null}, ${JSON.stringify(source.attachments || [])}::jsonb,
-        'Duplicate', ${JSON.stringify(source.cc || [])}::jsonb, ${JSON.stringify(source.links || [])}::jsonb,
-        ${JSON.stringify(source.files || [])}::jsonb, '[]'::jsonb,
+        ${source.requester_id || null}, ${source.due_date || null}, ${tx.json(source.attachments || [])}::jsonb,
+        'Duplicate', ${tx.json(source.cc || [])}::jsonb, ${tx.json(source.links || [])}::jsonb,
+        ${tx.json(source.files || [])}::jsonb, '[]'::jsonb,
         ${Array.isArray(source.notification_roles) ? source.notification_roles : ["admin"]}::text[], false
       ) returning *
     `;
@@ -149,8 +149,8 @@ export function insertTicket(input: {
       ) values (
         ${ticketNo}, ${input.title}, ${input.description || ""}, ${input.status || "Todo"}, ${input.priority || "Med"},
         ${input.typeId || null}, ${input.divisionId || null}, ${assignees[0] || null}, ${assignees}::uuid[],
-        ${input.requesterId || null}, ${input.dueDate || null}, ${JSON.stringify(input.cc || [])}::jsonb,
-        ${JSON.stringify(input.links || [])}::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb,
+        ${input.requesterId || null}, ${input.dueDate || null}, ${tx.json(input.cc || [])}::jsonb,
+        ${tx.json(input.links || [])}::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb,
         ${(input.notificationRoles && input.notificationRoles.length ? input.notificationRoles : ["admin"])}::text[], 'Manual', false
       ) returning *
     `;

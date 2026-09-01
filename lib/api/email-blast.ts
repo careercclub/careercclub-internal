@@ -39,7 +39,7 @@ export function logEmailBlast(input: EmailBlastLogInput) {
       ) values (
         ${input.actorUserId || null}, ${input.actorName}, ${input.source}, ${input.segment}, ${input.subject},
         ${input.recipientCount}, ${input.sentCount}, ${input.failedCount},
-        ${input.scheduledAt || null}, ${JSON.stringify(input.errors.slice(0, 10))}::jsonb
+        ${input.scheduledAt || null}, ${sql.json(input.errors.slice(0, 10))}::jsonb
       )
     `;
   });

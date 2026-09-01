@@ -87,7 +87,12 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
   }, [analytics.monthly, analytics.avgPerDay, baseline, referenceDate]);
 
   async function importSnapshots(formData: FormData) { setBusy(true); setMessage(""); try { const response = await fetch("/api/instagram/import", { method: "POST", body: formData }); const result = await response.json() as { imported?: number; files?: number; error?: string }; if (!response.ok) throw new Error(result.error || "Import failed."); setMessage(`Imported ${result.imported || 0} weekly snapshot(s) from ${result.files || 0} file(s).`); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); } finally { setBusy(false); } }
-  const currentFollowers = numeric(baseline?.followers_total) || numeric(analytics.latest?.computedFollowers); const target = numeric(analytics.currentTarget?.target_followers); const progress = target ? Math.min(100, currentFollowers / target * 100) : 0;
+  const currentFollowers = numeric(baseline?.followers_total) || numeric(analytics.latest?.computedFollowers);
+  // The KPI reads the manually verified baseline, so say when it was last set —
+  // otherwise a stale baseline looks like a live number.
+  const followersUpdatedAt = numeric(baseline?.followers_total)
+    ? day(baseline?.baseline_date) || day(baseline?.updated_at)
+    : day(analytics.latest?.week_start); const target = numeric(analytics.currentTarget?.target_followers); const progress = target ? Math.min(100, currentFollowers / target * 100) : 0;
 
   return (
     <div className="grid gap-3.5">
@@ -100,7 +105,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
         <TabsContent value="dashboard">
           <div className="grid gap-3.5">
             <StatsGrid className="mb-0 grid-cols-2 md:grid-cols-5">
-              <StatCard label="Followers" value={currentFollowers.toLocaleString("id-ID")} />
+              <StatCard label={followersUpdatedAt ? `Followers · per ${followersUpdatedAt}` : "Followers"} value={currentFollowers.toLocaleString("id-ID")} />
               <StatCard label="Reach, 30 days" value={compact(analytics.reach30)} tone="#3b82f6" />
               <StatCard label="Interactions, 30 days" value={compact(analytics.interactions30)} tone="#ec4899" />
               <StatCard label="Average ER" value={`${analytics.er30.toFixed(2)}%`} tone="#0f6e56" />

@@ -271,7 +271,7 @@ export function duplicateProgramEvent(input: {
       ) values (
         ${input.name}, ${event.jenis_program || null}, ${input.date}, ${event.waktu || null},
         'Planning', ${event.deskripsi || null}, ${event.speaker || null}, ${event.platform || null},
-        null, ${event.target || 0}, null, null, ${JSON.stringify(event.links || [])}::jsonb
+        null, ${event.target || 0}, null, null, ${tx.json((event.links || []) as never)}::jsonb
       )
       returning *
     `;

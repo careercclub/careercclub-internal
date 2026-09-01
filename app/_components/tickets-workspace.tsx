@@ -20,7 +20,14 @@ const PRIORITIES = ["High", "Med", "Low"];
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 function initials(name: string) { return name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase() || "?"; }
-function arr(value: unknown): Record<string, unknown>[] { return Array.isArray(value) ? value as Record<string, unknown>[] : []; }
+// jsonb columns written before the sql.json() fix hold a JSON *string* rather than an
+// array — and the append path produced an array of such strings. Unwrap both so
+// existing tickets keep rendering their links without a data migration.
+function arr(value: unknown): Record<string, unknown>[] {
+  if (typeof value === "string") { try { return arr(JSON.parse(value)); } catch { return []; } }
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => (typeof item === "string" ? arr(item) : item && typeof item === "object" ? [item as Record<string, unknown>] : []));
+}
 function calendarAdded(row: ApiRecord) { return row.gcal_added === true || row.gcal_added === "true"; }
 
 const PILL_COLORS: Record<string, { bg: string; fg: string }> = {
