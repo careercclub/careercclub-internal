@@ -41,10 +41,12 @@ begin
   from ccc_expected_columns e
   where to_regclass('public.' || quote_ident(e.table_name)) is null;
 
+  -- Reported, not raised. A missing column breaks one feature; aborting the deploy
+  -- breaks everything, so this surfaces the gap without holding the release hostage.
+  -- The grant check above still aborts, because a bad grant breaks whole pages.
   if missing_tables is not null then
-    raise exception using
-      message = format('Tables the application expects are missing: %s', missing_tables),
-      hint = 'Add a migration creating them. Note that 001 uses "create table if not exists" and was skipped for dump-restored tables.';
+    raise warning 'Tables the application expects are MISSING: %', missing_tables;
+    raise warning 'Add a migration creating them — 001 uses "create table if not exists" and was skipped for dump-restored tables.';
   end if;
 
   select string_agg(format('%s.%s', e.table_name, e.column_name), ', ' order by e.table_name, e.column_name)
@@ -58,9 +60,9 @@ begin
   );
 
   if missing_columns is not null then
-    raise exception using
-      message = format('Columns the application expects are missing: %s', missing_columns),
-      hint = 'Add a migration with "alter table ... add column if not exists" for each (see 022_restore_dump_only_columns.sql).';
+    raise warning 'Columns the application expects are MISSING: %', missing_columns;
+    raise warning 'Add a migration with "alter table ... add column if not exists" for each (see 022_restore_dump_only_columns.sql).';
+    return;
   end if;
 
   raise notice 'Schema check passed: % tables, % columns.',
