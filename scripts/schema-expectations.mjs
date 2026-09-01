@@ -17,7 +17,7 @@ import { recordDefinitions } from "../lib/records/catalog.ts";
 
 const expectations = new Map();
 for (const definition of Object.values(recordDefinitions)) {
-  const columns = expectations.get(definition.table) ?? new Set();
+  const columns = expectations.get(definition.table) || new Set();
   for (const field of definition.fields) columns.add(field.name);
   expectations.set(definition.table, columns);
 }

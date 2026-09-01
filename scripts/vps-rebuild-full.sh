@@ -149,8 +149,17 @@ SQL
 # `create table if not exists`, so for every table the Supabase dump already had, its
 # column declarations never ran. The ledger goes green and the app then fails at
 # runtime with 42703. Assert the catalog's tables and columns actually exist.
+# The assertions are generated from lib/records/catalog.ts and committed, rather than
+# generated here: the VPS host's node is far older than the one in the Docker image and
+# cannot parse modern syntax or read a .ts file. Regenerate with `npm run schema:check`
+# after changing the catalog.
 echo "Verifying the schema matches the application's record catalog..."
-node scripts/schema-expectations.mjs | "${psql_command[@]}"
+if [[ -f database/schema-expectations.sql ]]; then
+  "${psql_command[@]}" < database/schema-expectations.sql
+else
+  echo "database/schema-expectations.sql is missing; run 'npm run schema:check'." >&2
+  exit 1
+fi
 
 echo "Building and starting the complete Next.js application..."
 "${compose[@]}" build web
