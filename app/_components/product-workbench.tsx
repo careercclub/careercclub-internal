@@ -1,6 +1,7 @@
 "use client";
 
 import { createProductKnowledgeAction, deleteProductKnowledgeAction } from "@/app/actions/product-knowledge-actions";
+import { createManagedRecord } from "@/app/actions/record-actions";
 import { duplicateProductAction } from "@/app/actions/product-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,9 +19,11 @@ function isKnowledgeTab(value: Tab): value is KnowledgeTab { return value !== "o
 const KB_LABELS: Record<KnowledgeTab, string> = { pain: "Pain points", passion: "Passion points", benefit: "Benefits", feature: "Features", subProduct: "Sub-products", asset: "Assets", feedback: "Feedback" };
 const STATUS_TONE: Record<string, "green" | "gray" | "amber" | "red"> = { Live: "green", Draft: "gray", "Pre-launch": "amber", Archived: "red" };
 function money(value: unknown) { return `Rp ${Number(value || 0).toLocaleString("id-ID")}`; }
+const addFieldClass = "grid gap-1 text-[10px] font-semibold text-muted-foreground uppercase";
+const addInputClass = "h-9 rounded-md border border-input px-2 text-xs font-normal normal-case text-foreground";
 
 export function ProductWorkbench({ workspace, management }: { workspace: Workspace; management: ReactNode }) {
-  const [query, setQuery] = useState(""); const [type, setType] = useState(""); const [classification, setClassification] = useState(""); const [status, setStatus] = useState(""); const [sort, setSort] = useState("name"); const [selectedId, setSelectedId] = useState(String(workspace.products[0]?.id || "")); const [tab, setTab] = useState<Tab>("overview");
+  const [query, setQuery] = useState(""); const [type, setType] = useState(""); const [classification, setClassification] = useState(""); const [status, setStatus] = useState(""); const [sort, setSort] = useState("name"); const [selectedId, setSelectedId] = useState(String(workspace.products[0]?.id || "")); const [tab, setTab] = useState<Tab>("overview"); const [adding, setAdding] = useState(false);
   const products = useMemo(() => [...workspace.products].filter((product) => (!query || `${product.nama} ${product.kategori}`.toLowerCase().includes(query.toLowerCase())) && (!type || product.type === type) && (!classification || product.kategori === classification) && (!status || product.status === status)).sort((a, b) => sort === "high" ? Number(b.harga || 0) - Number(a.harga || 0) : sort === "low" ? Number(a.harga || 0) - Number(b.harga || 0) : String(a.nama || "").localeCompare(String(b.nama || ""))), [workspace.products, query, type, classification, status, sort]);
   const selected = workspace.products.find((product) => String(product.id) === selectedId) || products[0];
   const id = String(selected?.id || "");
@@ -45,8 +48,29 @@ export function ProductWorkbench({ workspace, management }: { workspace: Workspa
             <div className="mb-1 text-base font-bold">Products</div>
             <div className="text-[13px] text-muted-foreground">{workspace.products.length} total &middot; {satuanCount} satuan &middot; {bundlingCount} bundling</div>
           </div>
-          <Button onClick={exportSelected} size="sm" variant="outline"><i className="ti ti-download" /> Export selected KB</Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setAdding((open) => !open)} size="sm"><i className="ti ti-plus" /> Tambah Produk</Button>
+            <Button onClick={exportSelected} size="sm" variant="outline"><i className="ti ti-download" /> Export selected KB</Button>
+          </div>
         </div>
+
+        {/* A bundle is a product with type "bundling", so one form covers both. Fields
+            mirror the `products` record definition rather than restating it. */}
+        {adding ? (
+          <form action={createManagedRecord.bind(null, "products")} className="grid gap-2.5 rounded-lg border border-border p-3 sm:grid-cols-2">
+            <label className={addFieldClass}><span>Nama *</span><input className={addInputClass} name="nama" required /></label>
+            <label className={addFieldClass}><span>Tipe</span><select className={addInputClass} defaultValue="satuan" name="type"><option value="satuan">satuan</option><option value="bundling">bundling</option></select></label>
+            <label className={addFieldClass}><span>Klasifikasi</span><input className={addInputClass} name="kategori" /></label>
+            <label className={addFieldClass}><span>Harga</span><input className={addInputClass} name="harga" type="number" /></label>
+            <label className={addFieldClass}><span>Status</span><select className={addInputClass} defaultValue="Draft" name="status">{["Draft", "Pre-launch", "Live", "Archived"].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className={addFieldClass}><span>Landing URL</span><input className={addInputClass} name="link" placeholder="https://..." /></label>
+            <label className={`${addFieldClass} sm:col-span-2`}><span>Deskripsi</span><textarea className="min-h-16 rounded-md border border-input px-2 py-1.5 text-xs font-normal normal-case text-foreground" name="deskripsi" /></label>
+            <div className="flex gap-2 sm:col-span-2">
+              <Button size="sm" type="submit">Simpan produk</Button>
+              <Button onClick={() => setAdding(false)} size="sm" type="button" variant="ghost">Batal</Button>
+            </div>
+          </form>
+        ) : null}
         <StatsGrid className="mb-0">
           <StatCard label="Live" value={workspace.products.filter((product) => product.status === "Live").length} tone="var(--green)" />
           <StatCard label="Draft" value={workspace.products.filter((product) => product.status === "Draft").length} />

@@ -249,8 +249,18 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const overdue = taskRows.filter((task) => task.status !== "Done" && task.due_date && dateKey(task.due_date) < referenceDate.slice(0, 10)).length;
   const selected = eventsState.find((event) => String(event.id) === selectedEvent) || null;
   const jenisOptions = useMemo(() => [...new Set(eventsState.map((event) => text(event.jenis_program)).filter(Boolean))], [eventsState]);
-  const overviewEvents = eventsState.filter((event) => !jenisFilter || text(event.jenis_program) === jenisFilter).slice().sort((a, b) => text(b.tanggal).localeCompare(text(a.tanggal)));
-  const historyEvents = eventsState.filter((event) => ["Done", "Cancelled"].includes(text(event.status))).filter((event) => !jenisFilter || text(event.jenis_program) === jenisFilter);
+  // The server returns events newest-first, but creating or editing one appends to
+  // local state and breaks that order. Sorting once here keeps every list — picker,
+  // overview and history — on the same newest-first ordering. Undated events sort
+  // last rather than jumping to the top on an empty string compare.
+  const sortedEvents = useMemo(() => [...eventsState].sort((a, b) => {
+    const left = text(a.tanggal), right = text(b.tanggal);
+    if (!left) return 1;
+    if (!right) return -1;
+    return right.localeCompare(left);
+  }), [eventsState]);
+  const overviewEvents = sortedEvents.filter((event) => !jenisFilter || text(event.jenis_program) === jenisFilter);
+  const historyEvents = sortedEvents.filter((event) => ["Done", "Cancelled"].includes(text(event.status))).filter((event) => !jenisFilter || text(event.jenis_program) === jenisFilter);
   const selectedTasks = taskRows.filter((task) => String(task.project_id) === selectedEvent);
   const phaseTasks = selectedTasks.filter((task) => phaseTab === "all" || text(task.phase) === phaseTab);
   const { pageItems: phaseTaskPage, page: taskPage, setPage: setTaskPage, totalPages: taskTotalPages } = usePagination(phaseTasks, 10);
@@ -304,7 +314,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
       {tab === "events" ? (
         <div className="grid gap-4">
           <div style={{ display: "flex", gap: 8 }}>
-            <Select value={selectedEvent || "none"} onValueChange={(v) => { setSelectedEvent(v === "none" ? "" : v); setPhaseTab("all"); }}><SelectTrigger className="flex-1"><SelectValue placeholder="Pilih event" /></SelectTrigger><SelectContent><SelectItem value="none">Pilih event</SelectItem>{eventsState.map((event) => <SelectItem key={String(event.id)} value={String(event.id)}>{text(event.nama) || "Untitled"}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedEvent || "none"} onValueChange={(v) => { setSelectedEvent(v === "none" ? "" : v); setPhaseTab("all"); }}><SelectTrigger className="flex-1"><SelectValue placeholder="Pilih event" /></SelectTrigger><SelectContent><SelectItem value="none">Pilih event</SelectItem>{sortedEvents.map((event) => <SelectItem key={String(event.id)} value={String(event.id)}>{text(event.nama) || "Untitled"}</SelectItem>)}</SelectContent></Select>
             <Button type="button" disabled={!selectedEvent} onClick={() => setTaskModal({ task: null })}><i className="ti ti-plus" /> Task</Button>
           </div>
           {selected ? (

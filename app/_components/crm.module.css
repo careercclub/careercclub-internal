@@ -173,6 +173,10 @@
 }
 .table {
   width: 100%;
+  /* 13 columns. Without a min-width the table shrinks to the container, so it never
+     overflows and .tableWrap's overflow-x never produces a scrollbar — the columns
+     just squeeze until they are unreadable. */
+  min-width: 1200px;
   border-collapse: collapse;
   font-size: 12px;
 }

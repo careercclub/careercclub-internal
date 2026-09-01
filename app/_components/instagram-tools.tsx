@@ -21,13 +21,26 @@ function day(value: unknown) { if (value instanceof Date) return value.toISOStri
 function computeFollowers(snapshots: ApiRecord[], baseline: ApiRecord | null): ComputedSnapshot[] {
   const sorted = [...snapshots].sort((a, b) => day(a.week_start).localeCompare(day(b.week_start))).map((row) => ({ ...row, computedFollowers: numeric(row.followers_total) } as ComputedSnapshot));
   if (!sorted.length) return sorted;
-  const anchorDate = day(baseline?.baseline_date) || day(sorted.at(-1)?.week_start);
-  const anchorValue = numeric(baseline?.followers_total) || numeric(sorted.at(-1)?.followers_total);
-  let anchor = sorted.length - 1; let distance = Number.POSITIVE_INFINITY;
-  sorted.forEach((row, index) => { const diff = Math.abs(new Date(day(row.week_start)).getTime() - new Date(anchorDate).getTime()); if (diff < distance) { distance = diff; anchor = index; } });
-  sorted[anchor].computedFollowers = anchorValue;
-  for (let index = anchor + 1; index < sorted.length; index += 1) sorted[index].computedFollowers = sorted[index - 1].computedFollowers + numeric(sorted[index].follows_gained);
-  for (let index = anchor - 1; index >= 0; index -= 1) sorted[index].computedFollowers = Math.max(0, sorted[index + 1].computedFollowers - numeric(sorted[index].follows_gained));
+  // A week that reported its own follower total keeps it. The previous version threw
+  // every reported total away and rebuilt the whole series by accumulating
+  // follows_gained forward from the baseline — but Instagram's "Follows" is gross new
+  // follows, not net of unfollows, so the running total drifted further above reality
+  // every week (~18k shown against ~14k actual).
+  const anchorValue = numeric(baseline?.followers_total);
+  if (anchorValue > 0) {
+    const anchorDate = day(baseline?.baseline_date) || day(sorted.at(-1)?.week_start);
+    let anchor = sorted.length - 1; let distance = Number.POSITIVE_INFINITY;
+    sorted.forEach((row, index) => { const diff = Math.abs(new Date(day(row.week_start)).getTime() - new Date(anchorDate).getTime()); if (diff < distance) { distance = diff; anchor = index; } });
+    sorted[anchor].computedFollowers = anchorValue;
+  }
+  // Only fill weeks with no reported total, from the nearest week that has one.
+  for (let index = 1; index < sorted.length; index += 1) {
+    if (!sorted[index].computedFollowers) sorted[index].computedFollowers = sorted[index - 1].computedFollowers + numeric(sorted[index].follows_gained);
+  }
+  for (let index = sorted.length - 2; index >= 0; index -= 1) {
+    // Subtract the *later* week's gain: week[i+1] = week[i] + gained[i+1].
+    if (!sorted[index].computedFollowers) sorted[index].computedFollowers = Math.max(0, sorted[index + 1].computedFollowers - numeric(sorted[index + 1].follows_gained));
+  }
   return sorted;
 }
 

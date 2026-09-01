@@ -122,6 +122,9 @@
 }
 .table {
   width: 100%;
+  /* Same reason as the CRM table: 12 columns need room to overflow before the
+     wrapper's overflow-x can scroll. */
+  min-width: 1100px;
   border-collapse: collapse;
   font-size: 11px;
 }

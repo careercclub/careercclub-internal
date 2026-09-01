@@ -20,7 +20,10 @@ export const crmAliases = {
   phone: ["buyer phone (opsional)", "buyer phone", "phone", "wa", "whatsapp"],
   name: ["buyer name (opsional)", "buyer name", "name", "nama"],
   status: ["status", "payment status"],
-  price: ["harga", "price"],
+  // "Total" is what the buyer actually paid, after voucher and fees. Recent lynk.id
+  // exports leave "Harga" at 0 and put the amount in Total / sub total, so Total is
+  // read first and Harga is only a fallback for older exports.
+  price: ["total", "sub total", "harga", "price"],
   notes: ["notes (opsional)", "notes"],
   date: ["tanggal", "date", "created at"],
 } as const;
@@ -86,10 +89,12 @@ export function parseBuyerNotes(raw: string) {
   }
 }
 
+// A present-but-blank cell must not win over a later alias that actually has a value:
+// lynk.id ships a "Harga" column full of zeros alongside a populated "Total".
 function find(values: Map<string, string>, names: readonly string[]) {
   for (const name of names) {
     const direct = values.get(name.toLowerCase());
-    if (direct !== undefined) return direct;
+    if (direct !== undefined && direct.trim() !== "") return direct;
   }
   return "";
 }

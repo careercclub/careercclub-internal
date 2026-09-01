@@ -145,6 +145,13 @@ end
 $$;
 SQL
 
+# Migrations can succeed while leaving the schema wrong: 001 uses
+# `create table if not exists`, so for every table the Supabase dump already had, its
+# column declarations never ran. The ledger goes green and the app then fails at
+# runtime with 42703. Assert the catalog's tables and columns actually exist.
+echo "Verifying the schema matches the application's record catalog..."
+node scripts/schema-expectations.mjs | "${psql_command[@]}"
+
 echo "Building and starting the complete Next.js application..."
 "${compose[@]}" build web
 "${compose[@]}" up -d --force-recreate web
