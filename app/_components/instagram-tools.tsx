@@ -92,7 +92,16 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
   // otherwise a stale baseline looks like a live number.
   const followersUpdatedAt = numeric(baseline?.followers_total)
     ? day(baseline?.baseline_date) || day(baseline?.updated_at)
-    : day(analytics.latest?.week_start); const target = numeric(analytics.currentTarget?.target_followers); const progress = target ? Math.min(100, currentFollowers / target * 100) : 0;
+    : day(analytics.latest?.week_start);
+  // Weeks after the baseline are derived by adding follows_gained, which is Instagram's
+  // gross "Follows" and ignores unfollows — so the further the baseline is behind the
+  // latest snapshot, the more the derived history overstates reality. Flag it instead of
+  // presenting a months-old figure as today's follower count.
+  const latestWeek = day(analytics.latest?.week_start);
+  const baselineStaleDays = followersUpdatedAt && latestWeek
+    ? Math.round((new Date(latestWeek).getTime() - new Date(followersUpdatedAt).getTime()) / 86400000)
+    : 0;
+  const baselineStale = baselineStaleDays > 21; const target = numeric(analytics.currentTarget?.target_followers); const progress = target ? Math.min(100, currentFollowers / target * 100) : 0;
 
   return (
     <div className="grid gap-3.5">
@@ -105,7 +114,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
         <TabsContent value="dashboard">
           <div className="grid gap-3.5">
             <StatsGrid className="mb-0 grid-cols-2 md:grid-cols-5">
-              <StatCard label={followersUpdatedAt ? `Followers · per ${followersUpdatedAt}` : "Followers"} value={currentFollowers.toLocaleString("id-ID")} />
+              <StatCard label={followersUpdatedAt ? `Followers · per ${followersUpdatedAt}${baselineStale ? " · perlu update" : ""}` : "Followers"} tone={baselineStale ? "var(--amber)" : undefined} value={currentFollowers.toLocaleString("id-ID")} />
               <StatCard label="Reach, 30 days" value={compact(analytics.reach30)} tone="#3b82f6" />
               <StatCard label="Interactions, 30 days" value={compact(analytics.interactions30)} tone="#ec4899" />
               <StatCard label="Average ER" value={`${analytics.er30.toFixed(2)}%`} tone="#0f6e56" />
