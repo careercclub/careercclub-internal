@@ -74,46 +74,46 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
         cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc),
       });
       onSaved({ ...ticket, ...form, due_date: form.dueDate, divisi_id: divisionId, assigned_to_ids: assignees });
-    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); setBusy(false); }
   }
   async function remove() {
     if (!(await confirmAction({ title: "Delete this ticket?", message: "This cannot be undone.", confirmLabel: "Delete ticket", danger: true }))) return;
     setBusy(true); setError("");
-    try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); }
+    try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Could not delete."); setBusy(false); }
   }
   async function duplicate() {
     setBusy(true); setError("");
-    try { await duplicateTicketAction(String(ticket.id)); router.refresh(); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menduplikat."); setBusy(false); }
+    try { await duplicateTicketAction(String(ticket.id)); router.refresh(); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Could not duplicate."); setBusy(false); }
   }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Detail Ticket</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Ticket details</DialogTitle>
           {ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}
         </DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Judul Ticket</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-          <div className="grid gap-1.5"><Label>Deskripsi</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
+          <div className="grid gap-1.5"><Label>Ticket title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "In Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Prioritas</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["High", "Med", "Low"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["High", "Med", "Low"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Divisi</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama) || text(d.name)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama) || text(d.name)}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
+        <DialogFooter sticky className="flex-row flex-wrap justify-between gap-2 sm:justify-between">
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i className="ti ti-copy" /> Duplikat</Button>
-            <Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Hapus</Button>
+            <Button aria-label="Duplicate ticket" title="Duplicate ticket" type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i aria-hidden="true" className="ti ti-copy" /><span className="hidden sm:inline">Duplicate</span></Button>
+            <Button aria-label="Delete ticket" title="Delete ticket" type="button" variant="outline" size="sm" className="border-[var(--red)] text-[var(--red)] hover:bg-[var(--red-bg)]" onClick={remove} disabled={busy}><i aria-hidden="true" className="ti ti-trash" /><span className="hidden sm:inline">Delete</span></Button>
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Batal</Button>
-            <Button type="button" onClick={save} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save ticket"}</Button>
           </div>
         </DialogFooter>
       </DialogContent>
@@ -127,22 +127,22 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function save() {
-    if (!form.title.trim()) { setError("Judul task wajib diisi."); return; }
+    if (!form.title.trim()) { setError("Task title is required."); return; }
     setBusy(true); setError("");
     try {
       await updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees });
       onSaved({ ...task, ...form, due_date: form.dueDate, assignee_ids: assignees });
-    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); setBusy(false); }
   }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> Edit Task</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> Edit task</DialogTitle>
         </DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Judul Task</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-          <div className="grid gap-1.5"><Label>Deskripsi</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
+          <div className="grid gap-1.5"><Label>Task title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase || "none"} onValueChange={(v) => setForm({ ...form, phase: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{["Pre Event", "Hari H", "Post Event"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "On Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
@@ -152,12 +152,12 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
             <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
-          <div className="flex gap-2 rounded-md bg-secondary/60 px-3 py-2 text-xs text-muted-foreground"><i className="ti ti-info-circle mt-0.5" /><span>Upload file &amp; sinkron Google Calendar tersedia di halaman <Link href="/program/tasks" className="text-primary underline">Program tasks</Link>.</span></div>
+          <div className="flex gap-2 rounded-md bg-secondary/60 px-3 py-2 text-xs text-muted-foreground"><i className="ti ti-info-circle mt-0.5" /><span>File uploads and Google Calendar sync are on the <Link href="/program/tasks" className="text-primary underline">Program tasks</Link>.</span></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter className="sm:justify-end">
-          <Button type="button" variant="ghost" onClick={onClose}>Batal</Button>
-          <Button type="button" onClick={save} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
+        <DialogFooter sticky className="sm:justify-end">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save task"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -180,7 +180,7 @@ export function DashboardUpcoming({ tasks, tickets }: { tasks: ApiRecord[]; tick
           <strong style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</strong>
           <span style={{ flexShrink: 0, color: "var(--text-muted)", fontSize: 11 }}>{item.kind} · {item.date}</span>
         </Link>
-      )) : <div style={{ display: "grid", justifyItems: "center", gap: 8, padding: "28px 8px", color: "var(--text-muted)", fontSize: 12, textAlign: "center" }}><i className="ti ti-checks" style={{ fontSize: 22 }} /><span>Tidak ada task dalam 7 hari</span></div>}
+      )) : <div style={{ display: "grid", justifyItems: "center", gap: 8, padding: "28px 8px", color: "var(--text-muted)", fontSize: 12, textAlign: "center" }}><i className="ti ti-checks" style={{ fontSize: 22 }} /><span>No tasks in the next 7 days</span></div>}
     </aside>
   );
 }
@@ -236,11 +236,11 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
     <div className={styles.dashboardOps}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button type="button" onClick={() => setMonthOffset((v) => v - 1)} style={navBtn} aria-label="Bulan sebelumnya"><i className="ti ti-chevron-left" /></button>
+          <button type="button" onClick={() => setMonthOffset((v) => v - 1)} style={navBtn} aria-label="Previous month"><i className="ti ti-chevron-left" /></button>
           <strong style={{ fontSize: 13, minWidth: 110, textAlign: "center" }}>{view.label}</strong>
-          <button type="button" onClick={() => setMonthOffset((v) => v + 1)} style={navBtn} aria-label="Bulan berikutnya"><i className="ti ti-chevron-right" /></button>
-          <button type="button" onClick={() => setMonthOffset(0)} style={{ ...navBtn, fontSize: 11 }}>Hari ini</button>
-          {pending ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Menyimpan…</span> : null}
+          <button type="button" onClick={() => setMonthOffset((v) => v + 1)} style={navBtn} aria-label="Next month"><i className="ti ti-chevron-right" /></button>
+          <button type="button" onClick={() => setMonthOffset(0)} style={{ ...navBtn, fontSize: 11 }}>Today</button>
+          {pending ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Saving…</span> : null}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 10, color: "var(--text-muted)" }}>
           <Legend color="#059669" label="Pre" /><Legend color="#dc2626" label="H" /><Legend color="#2563eb" label="Post" /><Legend color="#c2410c" label="Ticket" />

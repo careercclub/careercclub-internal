@@ -172,8 +172,8 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
                   <label style={label}>SEGMENT</label>
                   <select onChange={(event) => setSegment(event.target.value)} style={input} value={segment}>
                     <option value="all">Semua kontak dengan email</option>
-                    <option value="beli">Sudah Beli</option>
-                    <option value="belum">Belum Beli</option>
+                    <option value="beli">Buyers</option>
+                    <option value="belum">Not a buyer</option>
                     <option value="custom">Filter kustom...</option>
                   </select>
                 </div>

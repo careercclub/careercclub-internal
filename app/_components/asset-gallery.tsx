@@ -210,7 +210,7 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
                 ))}
               </dl>
             ) : null}
-            <DialogFooter className="mt-4 border-t border-border px-5 py-3">
+            <DialogFooter sticky className="bottom-0 mx-0 mt-4 mb-0 border-t border-border px-5 py-3">
               <Button onClick={() => setSelectedId("")} type="button" variant="outline">Close</Button>
               {selected.link ? <Button asChild variant="outline"><a href={String(selected.link)} rel="noreferrer" target="_blank"><i aria-hidden="true" className="ti ti-external-link" /> Open source</a></Button> : null}
               {canSendToLibrary ? <Button onClick={() => { const id = String(selected.id); setSelectedId(""); setTransferId(id); }} type="button"><i aria-hidden="true" className="ti ti-library-plus" /> Add to library</Button> : null}
@@ -221,12 +221,13 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
 
       <Dialog onOpenChange={(open) => { if (!open && !pending) setTransferId(""); }} open={Boolean(transfer)}>
         {transfer ? (
-          <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-xl">
-            <DialogHeader className="text-left">
+          <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+            <DialogHeader className="border-b border-border px-6 pt-6 pb-4 pr-12 text-left">
               <DialogTitle>Add to content library</DialogTitle>
               <DialogDescription>{String(transfer[titleField] || "Untitled")} is copied into the content library with its images. Fields marked <span className="text-[var(--red)]">*</span> are required.</DialogDescription>
             </DialogHeader>
-            <form action={sendToLibrary} className="grid gap-3 sm:grid-cols-2">
+            <form action={sendToLibrary} className="flex min-h-0 flex-1 flex-col">
+              <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto px-6 py-4 sm:grid-cols-2">
               <Field label="Library type" wide><select className={fieldClass} name="tipe"><option value="organic">Organic ideas</option><option value="ads">Ad ideas</option></select></Field>
               <Field label="Platform"><select className={fieldClass} name="platform"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>LinkedIn</option></select></Field>
               <Field label="Content type"><select className={fieldClass} name="jenis"><option>Carousel</option><option>Reels/Video</option><option>Single Image</option><option>Thread/Text</option></select></Field>
@@ -238,7 +239,8 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
               <Field label="Copywriting" wide><textarea className={`${fieldClass} h-auto min-h-20 py-2`} defaultValue={String(transfer.nama || "")} name="copywriting" /></Field>
               <Field label="Labels" wide><input className={fieldClass} defaultValue={String(transfer.kategori || "")} name="labels" placeholder="Comma-separated" /></Field>
               <Field label="Notes" wide><textarea className={`${fieldClass} h-auto min-h-16 py-2`} defaultValue={String(transfer.notes || "")} name="notes" /></Field>
-              <DialogFooter className="sm:col-span-2">
+              </div>
+              <DialogFooter className="border-t border-border px-6 py-3">
                 <Button disabled={pending} onClick={() => setTransferId("")} type="button" variant="outline">Cancel</Button>
                 <Button disabled={pending} type="submit">{pending ? "Adding…" : "Add to content library"}</Button>
               </DialogFooter>

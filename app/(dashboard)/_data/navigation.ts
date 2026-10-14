@@ -137,23 +137,6 @@ const pages: ModulePage[] = [
     ],
   },
   {
-    slug: "voucher",
-    title: "Voucher",
-    path: "/voucher",
-    section: "Marketing",
-    icon: "ti-ticket",
-    kind: "table",
-    description: "Voucher codes, usage rules, campaign attribution, and redemption monitoring.",
-    primaryAction: "Create voucher",
-    tabs: ["Active", "Campaigns", "Usage", "Expired"],
-    stats: [
-      { label: "Active Codes", value: "31", note: "live campaigns", trend: "up" },
-      { label: "Redeemed", value: "486", note: "this month", trend: "up" },
-      { label: "Avg Discount", value: "18%", note: "weighted", trend: "neutral" },
-      { label: "Expiring", value: "6", note: "next 7 days", trend: "down" },
-    ],
-  },
-  {
     slug: "program",
     title: "Program",
     path: "/program",

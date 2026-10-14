@@ -50,11 +50,6 @@ export const recordDefinitions = {
     description: "Track weekly audience growth, reach, engagement, traffic, and operating notes.", columns: ["week_start", "followers_total", "follows_gained", "reach", "views", "interactions"],
     fields: [{ name: "week_start", label: "Week start", type: "date", required: true }, { name: "followers_total", label: "Followers total", type: "number" }, { name: "follows_gained", label: "Follows gained", type: "number" }, { name: "reach", label: "Reach", type: "number" }, { name: "views", label: "Views", type: "number" }, { name: "interactions", label: "Interactions", type: "number" }, { name: "link_clicks", label: "Link clicks", type: "number" }, { name: "profile_visits", label: "Profile visits", type: "number" }, { name: "notes", label: "Notes", type: "textarea" }],
   },
-  vouchers: {
-    table: "vouchers", title: "Vouchers", eyebrow: "Revenue", path: "/voucher", orderBy: "created_at", ascending: false,
-    description: "Create campaign voucher rules, product eligibility, discount limits, and active periods.", columns: ["nama_event", "kode", "tipe", "periode_mulai", "periode_selesai", "diskon_persen"],
-    fields: [{ name: "nama_event", label: "Event name", required: true }, { name: "kode", label: "Code", required: true }, { name: "tipe", label: "Type", type: "select", options: ["Flash Sale", "Mega Sale", "Bundle Sale", "Voucher Gift"] }, { name: "periode_mulai", label: "Start date", type: "date", required: true }, { name: "periode_selesai", label: "End date", type: "date", required: true }, { name: "diskon_persen", label: "Discount percent", type: "number" }, { name: "maks_potongan", label: "Maximum discount", type: "number" }, { name: "min_transaksi", label: "Minimum transaction", type: "number" }, { name: "product_ids", label: "Product UUIDs", type: "uuid-array", placeholder: "uuid, uuid" }, { name: "notes", label: "Notes", type: "textarea" }],
-  },
   partners: {
     table: "partners", title: "B2B partnerships", eyebrow: "Partnerships", path: "/b2b-partnership", orderBy: "name",
     description: "Manage corporate prospects, contacts, tier, pipeline status, scope, and relationship notes.", columns: ["name", "category", "tier", "status", "contact_name", "contact_phone"],

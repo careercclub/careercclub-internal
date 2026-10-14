@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styles from "../record-manager.module.css";
 
-type ParserKind = "ticket" | "partnership" | "carousel" | "voucher" | "task";
+type ParserKind = "ticket" | "partnership" | "carousel" | "task";
 type ParserField = {
   name: string;
   label: string;

@@ -97,7 +97,7 @@ function Modal({ size, title, onClose, children, footer }: { size?: "sm" | "md";
 function Field({ label, optional, children }: { label: string; optional?: boolean; children: ReactNode }) {
   return (
     <label className={styles.field}>
-      <span className={styles.fieldLabel}>{label}{optional ? <span className={styles.optional}> (opsional)</span> : null}</span>
+      <span className={styles.fieldLabel}>{label.replace(/ \*$/, "")}{label.endsWith(" *") ? <span aria-hidden="true" style={{ color: "var(--red)" }}> *</span> : null}{optional ? <span className={styles.optional}> (optional)</span> : null}</span>
       {children}
     </label>
   );
@@ -244,11 +244,11 @@ function LinksPanel({ kind, links }: { kind: "cp" | "sp"; links: ApiRecord[] }) 
                 </div>
               );
             })}
-            <button className={styles.addChip} type="button" onClick={() => setAdding(true)}><i className="ti ti-plus" style={{ fontSize: 11 }} /><span>Tambah link</span></button>
+            <button className={styles.addChip} type="button" onClick={() => setAdding(true)}><i className="ti ti-plus" style={{ fontSize: 11 }} /><span>Add link</span></button>
           </div>
           {adding ? (
             <div className={styles.linkForm}>
-              <div className={styles.linkFormField}><div className={styles.linkFormLabel}>Label</div><input className={styles.input} style={{ height: 32, fontSize: 12 }} placeholder="cth: Template Story" value={label} onChange={(event) => setLabel(event.target.value)} autoFocus /></div>
+              <div className={styles.linkFormField}><div className={styles.linkFormLabel}>Label</div><input className={styles.input} style={{ height: 32, fontSize: 12 }} placeholder="e.g. Story template" value={label} onChange={(event) => setLabel(event.target.value)} autoFocus /></div>
               <div className={`${styles.linkFormField} ${styles.wide}`}><div className={styles.linkFormLabel}>URL</div><input className={styles.input} style={{ height: 32, fontSize: 12 }} placeholder="https://..." value={url} onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") save(); }} /></div>
               <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} style={{ height: 32 }} type="button" disabled={pending} onClick={save}>Save link</button>
               <button className={`${styles.btn} ${styles.btnSm}`} style={{ height: 32 }} type="button" onClick={() => { setAdding(false); setLabel(""); setUrl(""); }}>Cancel</button>
@@ -275,12 +275,12 @@ function AiPanel({ kind, onParsed }: { kind: "carousel" | "story"; onParsed: (da
     try {
       const res = await fetch("/api/ai/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, text: value.trim() }) });
       const payload = await res.json() as { data?: Record<string, unknown>; error?: string };
-      if (!res.ok || !payload.data) throw new Error(payload.error || "Gagal parse, coba lagi.");
+      if (!res.ok || !payload.data) throw new Error(payload.error || "Could not read that text. Try again.");
       onParsed(payload.data);
       setValue("");
       setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal parse, coba lagi.");
+      setError(err instanceof Error ? err.message : "Could not read that text. Try again.");
     } finally {
       setBusy(false);
     }
@@ -403,11 +403,11 @@ function CarouselTab({ carousels, ctas, links, people }: { carousels: ApiRecord[
 
       <div className={styles.sectionRow}>
         <div className={styles.sectionLabel} style={{ marginBottom: 0 }}><i className="ti ti-layout-columns" /> Carousel Plans</div>
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ plan: null, preset: {} })}><i className="ti ti-plus" /> Tambah Plan</button>
+        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ plan: null, preset: {} })}><i className="ti ti-plus" /> Add carousel plan</button>
       </div>
 
       {!carousels.length ? (
-        <div className={styles.empty}><i className="ti ti-layout-columns" />Belum ada carousel plan. Klik &quot;+ Tambah Plan&quot; untuk mulai.</div>
+        <div className={styles.empty}><i className="ti ti-layout-columns" />No carousel plans yet. Click &quot;+ Add carousel plan&quot; to start.</div>
       ) : groups.map(({ wk, ws, plans }) => {
         const isCollapsed = collapsedSet.has(wk);
         const done = plans.filter((p) => text(p.status) === "Done").length;
@@ -466,7 +466,7 @@ function CarouselTab({ carousels, ctas, links, people }: { carousels: ApiRecord[
 
       {modal ? <CarouselModal state={modal} ctas={ctas} people={people} statusMap={statusMap} onClose={() => setModal(null)} /> : null}
       {dateModal ? (
-        <Modal size="sm" title="Ubah Tanggal Posting" onClose={() => setDateModal(null)}>
+        <Modal size="sm" title="Change posting date" onClose={() => setDateModal(null)}>
           <DatePicker selected={dateKey(dateModal.tanggal_posting) || todayKey()} statusMap={statusMap} withCount onPick={(key) => start(() => { void setCarouselDateAction(text(dateModal.id), key); setDateModal(null); })} />
         </Modal>
       ) : null}
@@ -480,7 +480,7 @@ function CarouselTab({ carousels, ctas, links, people }: { carousels: ApiRecord[
 // .linkBrief; the reference chip overrides it with the legacy purple.
 const CAROUSEL_LINK_KINDS = {
   brief: {
-    field: "link_brief", icon: "ti-link", label: "Link Brief", addLabel: "Tambah link brief",
+    field: "link_brief", icon: "ti-link", label: "Link Brief", addLabel: "Add brief link",
     save: setCarouselLinkBriefAction, chip: undefined,
   },
   referensi: {
@@ -554,7 +554,7 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
 
   return (
     <Modal
-      title={`${plan ? "Edit" : "Tambah"} Carousel Plan`}
+      title={`${plan ? "Edit" : "Add"} carousel plan`}
       onClose={onClose}
       footer={
         <>
@@ -564,15 +564,15 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
         </>
       }
     >
-      <Field label="Judul *"><input className={styles.input} placeholder="Judul konten carousel..." value={judul} autoFocus onChange={(event) => setJudul(event.target.value)} /></Field>
-      <Field label="Tanggal Posting"><DatePicker selected={tanggal} statusMap={statusMap} withCount onPick={setTanggal} /></Field>
+      <Field label="Title *"><input className={styles.input} placeholder="Carousel content title…" value={judul} autoFocus onChange={(event) => setJudul(event.target.value)} /></Field>
+      <Field label="Posting date"><DatePicker selected={tanggal} statusMap={statusMap} withCount onPick={setTanggal} /></Field>
       <Field label="Funnel">
         <select className={styles.select} value={funnel} onChange={(event) => setFunnel(event.target.value)}>{["TOFU", "MOFU", "BOFU"].map((f) => <option key={f} value={f}>{f}</option>)}</select>
       </Field>
       <Field label="CTA">
         <div className={styles.inputRow}>
           <select className={styles.select} value={cta} onChange={(event) => setCta(event.target.value)}>
-            <option value="">— Pilih CTA —</option>
+            <option value="">Select CTA</option>
             {ctas.map((option) => <option key={text(option.id)} value={text(option.label)}>{text(option.label)}</option>)}
             {cta && !ctas.some((option) => text(option.label) === cta) ? <option value={cta}>{cta}</option> : null}
           </select>
@@ -581,20 +581,20 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
       </Field>
       <Field label="Assignee">
         <select className={styles.select} value={assignee} onChange={(event) => setAssignee(event.target.value)}>
-          <option value="">— Pilih —</option>
+          <option value="">Select</option>
           {people.map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}</option>)}
         </select>
       </Field>
       <Field label="Status">
         <select className={styles.select} value={status} onChange={(event) => setStatus(event.target.value)}>{["Draft", "Done"].map((s) => <option key={s} value={s}>{s}</option>)}</select>
       </Field>
-      <Field label="Link Brief" optional>
+      <Field label="Brief link" optional>
         <div className={styles.inputRow}>
           <i className="ti ti-link" />
           <input className={styles.input} placeholder="https://docs.google.com/..." value={linkBrief} onChange={(event) => setLinkBrief(event.target.value)} />
         </div>
       </Field>
-      <Field label="Link Referensi" optional>
+      <Field label="Reference link" optional>
         <div className={styles.inputRow}>
           <i className="ti ti-photo" />
           <input className={styles.input} placeholder="https://..." value={linkReferensi} onChange={(event) => setLinkReferensi(event.target.value)} />
@@ -658,11 +658,11 @@ function StoryTab({ dates, items, links }: { dates: ApiRecord[]; items: ApiRecor
 
       <div className={styles.sectionRow}>
         <div className={styles.sectionLabel} style={{ marginBottom: 0 }}><i className="ti ti-layout-rows" /> Jadwal Posting</div>
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setAddModal({ items: [] })}><i className="ti ti-plus" /> Tambah Tanggal</button>
+        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setAddModal({ items: [] })}><i className="ti ti-plus" /> Add story date</button>
       </div>
 
       {!dates.length ? (
-        <div className={styles.empty}><i className="ti ti-calendar-off" />Belum ada jadwal. Klik &quot;+ Tambah Tanggal&quot; untuk mulai.</div>
+        <div className={styles.empty}><i className="ti ti-calendar-off" />No story dates yet. Click &quot;+ Add story date&quot; to start.</div>
       ) : groups.map(({ wk, ws, rows }) => {
         const isCollapsed = collapsedSet.has(wk);
         const done = rows.filter((d) => text(d.status) === "Done").length;
@@ -714,8 +714,8 @@ function StoryDateCard({ date, items, pending, start }: { date: ApiRecord; items
       </div>
       {open ? (
         <div className={styles.storyBody}>
-          {items.length ? items.map((item, index) => <StoryItemRow key={text(item.id)} item={item} index={index} start={start} />) : <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>Belum ada story. Klik &quot;+ Tambah story&quot;.</div>}
-          <button type="button" className={styles.linkTextBtn} onClick={() => start(() => { void addStoryItemAction(text(date.id)); })}><i className="ti ti-plus" style={{ fontSize: 11 }} /> Tambah story</button>
+          {items.length ? items.map((item, index) => <StoryItemRow key={text(item.id)} item={item} index={index} start={start} />) : <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>No stories yet. Click &quot;+ Add story&quot;.</div>}
+          <button type="button" className={styles.linkTextBtn} onClick={() => start(() => { void addStoryItemAction(text(date.id)); })}><i className="ti ti-plus" style={{ fontSize: 11 }} /> Add story</button>
         </div>
       ) : null}
     </div>
@@ -752,13 +752,13 @@ function StoryDateModal({ preDate, presetItems, onClose }: { preDate?: string; p
         <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !stories.some((s) => s.trim())} onClick={save}><i className="ti ti-check" /> Save story date</button>
       </>}
     >
-      <Field label="Tanggal *"><DatePicker selected={tanggal} statusMap={{}} onPick={setTanggal} /></Field>
+      <Field label="Date *"><DatePicker selected={tanggal} statusMap={{}} onPick={setTanggal} /></Field>
       {stories.map((value, index) => (
         <Field key={index} label={`Story ${index + 1}`} optional={index > 0}>
           <input className={styles.input} placeholder={`Konteks / judul / objective story ${index + 1}...`} value={value} onChange={(event) => setStories((list) => list.map((item, i) => (i === index ? event.target.value : item)))} />
         </Field>
       ))}
-      <button type="button" className={styles.linkTextBtn} onClick={() => setStories((list) => [...list, ""])}><i className="ti ti-plus" style={{ fontSize: 11 }} /> Tambah Story</button>
+      <button type="button" className={styles.linkTextBtn} onClick={() => setStories((list) => [...list, ""])}><i className="ti ti-plus" style={{ fontSize: 11 }} /> Add story</button>
     </Modal>
   );
 }
@@ -802,15 +802,15 @@ function KolTab({ kols }: { kols: ApiRecord[] }) {
   return (
     <>
       <div className={styles.filterBar}>
-        <input className={styles.filterInput} placeholder="Cari nama / username..." value={search} onChange={(event) => setSearch(event.target.value)} />
+        <input className={styles.filterInput} placeholder="Search name or username…" value={search} onChange={(event) => setSearch(event.target.value)} />
         {[["all", "Semua"], ...niches.map((n) => [n, n] as [string, string])].map(([value, label]) => (
           <button key={value} type="button" className={`${styles.filterPill} ${niche === value ? styles.filterPillActive : ""}`} onClick={() => setNiche(value)}>{label}</button>
         ))}
         <span className={styles.filterSpacer} />
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ kol: null })}><i className="ti ti-plus" /> Tambah KOL</button>
+        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ kol: null })}><i className="ti ti-plus" /> Add KOL</button>
       </div>
       {!filtered.length ? (
-        <div className={styles.empty}><i className="ti ti-users-group" />Belum ada KOL</div>
+        <div className={styles.empty}><i className="ti ti-users-group" />No KOLs yet</div>
       ) : (
         <div className={styles.grid3}>
           {filtered.map((k) => {
@@ -876,18 +876,18 @@ function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void
         <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Save KOL</button>
       </>}
     >
-      <Field label="Nama *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
-      <Field label="Niche"><input className={styles.input} value={text(form.niche)} onChange={(event) => set({ niche: event.target.value })} placeholder="cth: Career / Finance" /></Field>
-      <Field label="Username Instagram" optional><input className={styles.input} value={text(form.username_ig)} onChange={(event) => set({ username_ig: event.target.value })} placeholder="tanpa @" /></Field>
-      <Field label="Followers Instagram" optional><input className={styles.input} type="number" min={0} value={form.followers_ig ?? ""} onChange={(event) => set({ followers_ig: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
-      <Field label="Username TikTok" optional><input className={styles.input} value={text(form.username_tiktok)} onChange={(event) => set({ username_tiktok: event.target.value })} placeholder="tanpa @" /></Field>
-      <Field label="Followers TikTok" optional><input className={styles.input} type="number" min={0} value={form.followers_tiktok ?? ""} onChange={(event) => set({ followers_tiktok: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
+      <Field label="Name *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
+      <Field label="Niche"><input className={styles.input} value={text(form.niche)} onChange={(event) => set({ niche: event.target.value })} placeholder="e.g. Career / Finance" /></Field>
+      <Field label="Instagram username" optional><input className={styles.input} value={text(form.username_ig)} onChange={(event) => set({ username_ig: event.target.value })} placeholder="tanpa @" /></Field>
+      <Field label="Instagram followers" optional><input className={styles.input} type="number" min={0} value={form.followers_ig ?? ""} onChange={(event) => set({ followers_ig: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
+      <Field label="TikTok username" optional><input className={styles.input} value={text(form.username_tiktok)} onChange={(event) => set({ username_tiktok: event.target.value })} placeholder="tanpa @" /></Field>
+      <Field label="TikTok followers" optional><input className={styles.input} type="number" min={0} value={form.followers_tiktok ?? ""} onChange={(event) => set({ followers_tiktok: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
       <Field label="LinkedIn URL" optional><input className={styles.input} value={text(form.linkedin_url)} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://linkedin.com/in/..." /></Field>
-      <Field label="Kontak" optional><input className={styles.input} value={text(form.contact)} onChange={(event) => set({ contact: event.target.value })} placeholder="WA / email" /></Field>
-      <Field label="Rate card" optional><textarea className={styles.textarea} value={text(form.rate_card_text)} onChange={(event) => set({ rate_card_text: event.target.value })} placeholder="cth: 1 feed + 3 story — Rp 2.500.000" /></Field>
+      <Field label="Contact" optional><input className={styles.input} value={text(form.contact)} onChange={(event) => set({ contact: event.target.value })} placeholder="WA / email" /></Field>
+      <Field label="Rate card" optional><textarea className={styles.textarea} value={text(form.rate_card_text)} onChange={(event) => set({ rate_card_text: event.target.value })} placeholder="e.g. 1 feed + 3 stories — Rp 2.500.000" /></Field>
       <Field label="Rate card file URL" optional><input className={styles.input} value={text(form.rate_card_file_url)} onChange={(event) => set({ rate_card_file_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Foto URL" optional><input className={styles.input} value={text(form.foto_url)} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Catatan" optional><textarea className={styles.textarea} value={text(form.catatan)} onChange={(event) => set({ catatan: event.target.value })} /></Field>
+      <Field label="Photo URL" optional><input className={styles.input} value={text(form.foto_url)} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://..." /></Field>
+      <Field label="Notes" optional><textarea className={styles.textarea} value={text(form.catatan)} onChange={(event) => set({ catatan: event.target.value })} /></Field>
     </Modal>
   );
 }
@@ -910,15 +910,15 @@ function MtTab({ stories }: { stories: ApiRecord[] }) {
   return (
     <>
       <div className={styles.filterBar}>
-        <input className={styles.filterInput} placeholder="Cari nama / perusahaan..." value={search} onChange={(event) => setSearch(event.target.value)} />
-        {([["all", "Semua"], ["posted", "Sudah diposting"], ["unposted", "Belum diposting"]] as const).map(([value, label]) => (
+        <input className={styles.filterInput} placeholder="Search name or company…" value={search} onChange={(event) => setSearch(event.target.value)} />
+        {([["all", "Semua"], ["posted", "Posted"], ["unposted", "Not posted"]] as const).map(([value, label]) => (
           <button key={value} type="button" className={`${styles.filterPill} ${filter === value ? styles.filterPillActive : ""}`} onClick={() => setFilter(value)}>{label}</button>
         ))}
         <span className={styles.filterSpacer} />
         <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ story: null })}><i className="ti ti-plus" /> Add MT story</button>
       </div>
       {!filtered.length ? (
-        <div className={styles.empty}><i className="ti ti-user-off" />Belum ada data</div>
+        <div className={styles.empty}><i className="ti ti-user-off" />No data yet</div>
       ) : (
         <div className={styles.grid3}>
           {filtered.map((s) => {
@@ -937,7 +937,7 @@ function MtTab({ stories }: { stories: ApiRecord[] }) {
                       <div className={styles.personName}>{text(s.nama) || "—"}</div>
                       <div className={styles.personSub}>{[text(s.perusahaan), text(s.batch)].filter(Boolean).join(" · ") || "—"}</div>
                     </div>
-                    <span className={posted ? styles.statusPillPosted : styles.statusPillPending}>{posted ? "Sudah diposting" : "Belum diposting"}</span>
+                    <span className={posted ? styles.statusPillPosted : styles.statusPillPending}>{posted ? "Posted" : "Not posted"}</span>
                   </div>
                   {s.deskripsi ? <div className={styles.personDesc}>{text(s.deskripsi)}</div> : null}
                   {tags.length ? <div className={styles.personTags}>{tags}</div> : null}
@@ -978,16 +978,16 @@ function MtModal({ story, onClose }: { story: ApiRecord | null; onClose: () => v
         <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Save MT story</button>
       </>}
     >
-      <Field label="Nama *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
-      <Field label="Perusahaan"><input className={styles.input} value={text(form.perusahaan)} onChange={(event) => set({ perusahaan: event.target.value })} /></Field>
+      <Field label="Name *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
+      <Field label="Company"><input className={styles.input} value={text(form.perusahaan)} onChange={(event) => set({ perusahaan: event.target.value })} /></Field>
       <Field label="Batch"><input className={styles.input} value={text(form.batch)} onChange={(event) => set({ batch: event.target.value })} /></Field>
       <Field label="WhatsApp"><input className={styles.input} value={text(form.wa)} onChange={(event) => set({ wa: event.target.value })} placeholder="62..." /></Field>
-      <Field label="Deskripsi" optional><textarea className={styles.textarea} value={text(form.deskripsi)} onChange={(event) => set({ deskripsi: event.target.value })} /></Field>
+      <Field label="Description" optional><textarea className={styles.textarea} value={text(form.deskripsi)} onChange={(event) => set({ deskripsi: event.target.value })} /></Field>
       <Field label="Instagram URL" optional><input className={styles.input} value={text(form.ig_url)} onChange={(event) => set({ ig_url: event.target.value })} placeholder="https://..." /></Field>
       <Field label="LinkedIn URL" optional><input className={styles.input} value={text(form.linkedin_url)} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://..." /></Field>
       <Field label="Brief URL" optional><input className={styles.input} value={text(form.brief_url)} onChange={(event) => set({ brief_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Foto URL" optional><input className={styles.input} value={text(form.foto_url)} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://..." /></Field>
-      <label className={styles.inputRow} style={{ gap: 8, cursor: "pointer" }}><input type="checkbox" checked={Boolean(form.is_posted)} onChange={(event) => set({ is_posted: event.target.checked })} /> <span style={{ fontSize: 13 }}>Sudah diposting</span></label>
+      <Field label="Photo URL" optional><input className={styles.input} value={text(form.foto_url)} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://..." /></Field>
+      <label className={styles.inputRow} style={{ gap: 8, cursor: "pointer" }}><input type="checkbox" checked={Boolean(form.is_posted)} onChange={(event) => set({ is_posted: event.target.checked })} /> <span style={{ fontSize: 13 }}>Posted</span></label>
     </Modal>
   );
 }

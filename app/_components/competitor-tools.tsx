@@ -3,6 +3,7 @@
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
@@ -202,7 +203,7 @@ function ProfilesTab({ workspace, onAdd, onEdit }: { workspace: Workspace; onAdd
             <option value="">Semua Kategori</option>
             <option value="direct">Direct</option>
             <option value="indirect">Indirect</option>
-            <option value="substitusi">Substitusi</option>
+            <option value="substitusi">Substitute</option>
           </select>
           <select className={filterFieldClass} onChange={(event) => setAudience(event.target.value)} value={audience}>
             <option value="">Semua Target Audience</option>
@@ -372,55 +373,53 @@ function ProfileModal({ profile, onClose }: { profile: ApiRecord | null; onClose
 
   const chip = (active: boolean) => `cursor-pointer rounded-full border px-2.5 py-1 text-[11px] ${active ? "border-[var(--purple-mid)] bg-[var(--purple-light)] text-[var(--purple-mid)]" : "border-border bg-white text-[var(--text)]"}`;
   const inputClass = "w-full rounded-[var(--radius)] border border-[var(--border-md)] bg-[var(--bg)] px-3 py-2 text-[13px] outline-none focus:border-[var(--purple-accent)]";
-  const labelClass = "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground";
+  const labelClass = "mb-1 block text-xs font-medium text-foreground";
 
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-center bg-black/45 p-4" onMouseDown={onClose}>
-      <Card className="flex max-h-[90vh] w-full max-w-[520px] flex-col gap-0 overflow-hidden p-0" onMouseDown={(event) => event.stopPropagation()}>
+    <Dialog onOpenChange={(open) => { if (!open) onClose(); }} open>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[520px]" showCloseButton={false}>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-bold">{profile ? "Edit" : "Tambah"} Kompetitor</h2>
-          <button onClick={onClose} type="button"><i className="ti ti-x" /></button>
+          <div className="min-w-0"><DialogTitle className="text-base font-bold">{profile ? "Edit competitor" : "Add competitor"}</DialogTitle><DialogDescription className="text-xs">Fields marked * are required.</DialogDescription></div>
+          <button aria-label="Close" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground" onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
         </div>
         <div className="flex flex-col gap-3.5 overflow-y-auto p-5">
           <div className="grid grid-cols-2 gap-2.5">
-            <div><label className={labelClass}>Nama Kompetitor *</label><input className={inputClass} onChange={(event) => setName(event.target.value)} placeholder="Nama akun / brand" value={name} /></div>
-            <div><label className={labelClass}>Kategori</label>
-              <select className={inputClass} onChange={(event) => setCategory(event.target.value)} value={category}>
-                <option value="">Pilih...</option><option value="direct">Direct</option><option value="indirect">Indirect</option><option value="substitusi">Substitusi</option>
-              </select>
-            </div>
+            <label className="block"><span className={labelClass}>Competitor name <span aria-hidden="true" className="text-[var(--red)]">*</span></span><input required className={inputClass} onChange={(event) => setName(event.target.value)} placeholder="Account or brand name" value={name} /></label>
+            <label className="block"><span className={labelClass}>Category</span><select className={inputClass} onChange={(event) => setCategory(event.target.value)} value={category}>
+                <option value="">Select category</option><option value="direct">Direct</option><option value="indirect">Indirect</option><option value="substitusi">Substitute</option>
+              </select></label>
           </div>
-          <div><label className={labelClass}>URL / Link Utama</label><input className={inputClass} onChange={(event) => setPrimaryUrl(event.target.value)} placeholder="https://..." value={primaryUrl} /></div>
+          <label className="block"><span className={labelClass}>Main URL</span><input className={inputClass} onChange={(event) => setPrimaryUrl(event.target.value)} placeholder="https://..." value={primaryUrl} /></label>
           <div>
-            <label className={labelClass}>Platform</label>
+            <span className={labelClass}>Platform</span>
             <div className="flex flex-wrap gap-1.5">
               {PLATFORM_OPTS.map((value) => <button className={chip(platforms.includes(value))} key={value} onClick={() => togglePlatform(value)} type="button">{value}</button>)}
             </div>
           </div>
-          <div><label className={labelClass}>Niche / Positioning</label><input className={inputClass} onChange={(event) => setNiche(event.target.value)} placeholder="cth: career coaching, tes BUMN" value={niche} /></div>
-          <div><label className={labelClass}>Target Audience</label><input className={inputClass} onChange={(event) => setAudience(event.target.value)} placeholder="Fresh grad | Mahasiswa | Jobseeker" value={audience} /><p className="mt-1 text-[10px] text-muted-foreground">Pisahkan dengan tanda |</p></div>
+          <label className="block"><span className={labelClass}>Niche / positioning</span><input className={inputClass} onChange={(event) => setNiche(event.target.value)} placeholder="e.g. career coaching, BUMN test prep" value={niche} /></label>
+          <label className="block"><span className={labelClass}>Target audience</span><input className={inputClass} onChange={(event) => setAudience(event.target.value)} placeholder="Fresh grad | Student | Jobseeker" value={audience} /><p className="mt-1 text-xs text-muted-foreground">Separate with |</p></label>
           <div>
-            <label className={labelClass}>Followers</label>
+            <span className={labelClass}>Followers</span>
             <div className="grid grid-cols-3 gap-2">
-              <div><span className="text-[10px] text-muted-foreground">Instagram</span><input className={inputClass} onChange={(event) => setFolIg(event.target.value)} placeholder="0" type="number" value={folIg} /></div>
-              <div><span className="text-[10px] text-muted-foreground">TikTok</span><input className={inputClass} onChange={(event) => setFolTt(event.target.value)} placeholder="0" type="number" value={folTt} /></div>
-              <div><span className="text-[10px] text-muted-foreground">YouTube</span><input className={inputClass} onChange={(event) => setFolYt(event.target.value)} placeholder="0" type="number" value={folYt} /></div>
+              <div><span className="text-xs text-muted-foreground">Instagram</span><input className={inputClass} onChange={(event) => setFolIg(event.target.value)} placeholder="0" type="number" value={folIg} /></div>
+              <div><span className="text-xs text-muted-foreground">TikTok</span><input className={inputClass} onChange={(event) => setFolTt(event.target.value)} placeholder="0" type="number" value={folTt} /></div>
+              <div><span className="text-xs text-muted-foreground">YouTube</span><input className={inputClass} onChange={(event) => setFolYt(event.target.value)} placeholder="0" type="number" value={folYt} /></div>
             </div>
           </div>
           <div>
-            <label className={labelClass}>Threat Level</label>
+            <span className={labelClass}>Threat level</span>
             <div className="flex gap-4">
               {["low", "medium", "high"].map((value) => <label className="flex cursor-pointer items-center gap-1.5 text-[12px]" key={value}><input checked={threat === value} name="ci-threat" onChange={() => setThreat(value)} type="radio" /> {value.charAt(0).toUpperCase() + value.slice(1)}</label>)}
             </div>
           </div>
-          <div><label className={labelClass}>Logo (URL / object key)</label><input className={inputClass} onChange={(event) => setLogoUrl(event.target.value)} placeholder="design-assets/... atau https://..." value={logoUrl} /></div>
-          <div><label className={labelClass}>Catatan</label><textarea className={inputClass} onChange={(event) => setNotes(event.target.value)} placeholder="Observasi umum..." rows={2} value={notes} /></div>
+          <label className="block"><span className={labelClass}>Logo (URL or file key)</span><input className={inputClass} onChange={(event) => setLogoUrl(event.target.value)} placeholder="design-assets/... or https://..." value={logoUrl} /></label>
+          <label className="block"><span className={labelClass}>Notes</span><textarea className={inputClass} onChange={(event) => setNotes(event.target.value)} placeholder="General observations…" rows={2} value={notes} /></label>
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-          <Button onClick={onClose} size="sm" variant="outline">Batal</Button>
-          <Button disabled={pending} onClick={save} size="sm"><i className="ti ti-check" /> Simpan</Button>
+          <Button onClick={onClose} size="sm" type="button" variant="outline">Cancel</Button>
+          <Button disabled={pending} onClick={save} size="sm" type="button"><i aria-hidden="true" className="ti ti-check" /> {pending ? "Saving…" : "Save competitor"}</Button>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

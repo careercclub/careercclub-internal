@@ -10,6 +10,8 @@ import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@
 import { R2UploadField } from "./r2-upload-field";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
+import { notifyError } from "./app-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import styles from "../record-manager.module.css";
 
 type RecordManagerProps = {
@@ -216,6 +218,8 @@ function DeleteRecord({ definitionKey, id, noun }: { definitionKey: RecordDefini
 }
 
 export function RecordManager({ definitionKey, rows, links = [], tools, fieldOptions = {} }: RecordManagerProps) {
+  const [editingId, setEditingId] = useState("");
+  const editingRow = editingId ? rows.find((row) => String(row.id) === editingId) : undefined;
   const definition = recordDefinitions[definitionKey];
   const noun = ITEM_NOUN[definitionKey] || "record";
   const fields = definition.fields as readonly ManagedField[];
@@ -277,13 +281,7 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
               <tr data-record-id={id} key={id}>
                 {definition.columns.map((column) => <td key={column}>{labelFor(column, row[column])}</td>)}
                 <td>
-                  <details className={styles.rowActions} data-record-open>
-                    <summary aria-label={`Edit ${noun}`} title={`Edit ${noun}`}><i className="ti ti-pencil" aria-hidden="true" /></summary>
-                    <div className={styles.rowEditor}>
-                      <RecordForm action={updateManagedRecord.bind(null, definitionKey, id)} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} row={row} submitLabel={`Save ${noun}`} />
-                      <DeleteRecord definitionKey={definitionKey} id={id} noun={noun} />
-                    </div>
-                  </details>
+                  <button aria-label={`Edit ${noun}`} className={styles.rowEditButton} data-record-open onClick={() => setEditingId(id)} title={`Edit ${noun}`} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
                 </td>
               </tr>
             );
@@ -291,6 +289,20 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
         </tbody></table></div> : <div className={styles.emptyState}><i className="ti ti-database-off" /><strong>No {plural(noun)} yet</strong><span>Click <b>Add {noun}</b> above to create the first one.</span></div>}
         {rows.length && totalPages > 1 ? <div className={styles.pagination}><button aria-label="Previous page" disabled={page <= 0} onClick={() => setPage(Math.max(0, page - 1))} type="button"><i className="ti ti-chevron-left" /></button><span>Page {page + 1} / {totalPages}</span><button aria-label="Next page" disabled={page >= totalPages - 1} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} type="button"><i className="ti ti-chevron-right" /></button></div> : null}
       </div>
+      <Dialog onOpenChange={(open) => { if (!open) setEditingId(""); }} open={Boolean(editingRow)}>
+        {editingRow ? (
+          <DialogContent className={styles.editDialog}>
+            <DialogHeader className={styles.editDialogHeader}>
+              <DialogTitle>Edit {noun}</DialogTitle>
+              <DialogDescription>{definition.title}</DialogDescription>
+            </DialogHeader>
+            <div className={styles.editDialogBody}>
+              <RecordForm action={async (formData: FormData) => { try { await updateManagedRecord(definitionKey, String(editingRow.id), formData); setEditingId(""); } catch (error) { notifyError(error, `Could not save the ${noun}.`); } }} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} row={editingRow} submitLabel={`Save ${noun}`} />
+              <DeleteRecord definitionKey={definitionKey} id={String(editingRow.id)} noun={noun} />
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </section>
   );
 }

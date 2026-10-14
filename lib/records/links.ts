@@ -116,6 +116,11 @@ export const RETIRED_PAGES: Record<string, string> = {
   "/org-partnership/outreach": "/org-partnership?tab=outreach",
 };
 
+/** Modules removed from the app → where an old bookmark lands. Their database tables and data are kept. */
+export const REMOVED_PAGES: Record<string, string> = {
+  "/voucher": "/dashboard", // 15 Okt 2026, user decision; table `vouchers` untouched
+};
+
 /** Adds ?focus=<id> (from a search result) to a redirect target. */
 export function withFocus(href: string, focus: unknown) {
   const id = Array.isArray(focus) ? focus[0] : focus;

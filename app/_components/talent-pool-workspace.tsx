@@ -52,12 +52,12 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
         <div className={styles.card}>
           <div className={styles.statsGrid}>
             <div className={styles.statCard}><div className={styles.statLabel}>Total</div><div className={styles.statVal}>{rows.length}</div></div>
-            <div className={styles.statCard}><div className={styles.statLabel}>Sudah Beli</div><div className={styles.statVal} style={{ color: "var(--green)" }}>{sudahBeli}</div></div>
-            <div className={styles.statCard}><div className={styles.statLabel}>Belum Beli</div><div className={styles.statVal} style={{ color: "var(--amber)" }}>{rows.length - sudahBeli}</div></div>
+            <div className={styles.statCard}><div className={styles.statLabel}>Buyers</div><div className={styles.statVal} style={{ color: "var(--green)" }}>{sudahBeli}</div></div>
+            <div className={styles.statCard}><div className={styles.statLabel}>Not a buyer</div><div className={styles.statVal} style={{ color: "var(--amber)" }}>{rows.length - sudahBeli}</div></div>
           </div>
           <div className={styles.filterBar}>
             <input placeholder="Cari nama / WA..." value={query} onChange={(event) => setQuery(event.target.value)} />
-            <select value={pipeline} onChange={(event) => setPipeline(event.target.value)}><option value="">Pipeline</option><option value="beli">Sudah Beli</option><option value="belum">Belum Beli</option></select>
+            <select value={pipeline} onChange={(event) => setPipeline(event.target.value)}><option value="">Pipeline</option><option value="beli">Buyers</option><option value="belum">Not a buyer</option></select>
             <select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Status</option>{options(rows, "status").map((value) => <option key={value}>{value}</option>)}</select>
             <select value={source} onChange={(event) => setSource(event.target.value)}><option value="">Sumber</option>{options(rows, "sumber").map((value) => <option key={value}>{value}</option>)}</select>
             <select value={tier} onChange={(event) => setTier(event.target.value)}><option value="">Tier</option>{options(rows, "campus_tier").map((value) => <option key={value}>{value}</option>)}</select>
@@ -96,7 +96,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
                     <td className={styles.td}>{text(row.tahun_lulus) || "—"}</td>
                     <td className={styles.td}>{tagList(row.target_mt, styles.tagTarget)}</td>
                     <td className={styles.td}>{tagList(row.posisi_mt, styles.tagPosisi)}</td>
-                    <td className={styles.td}><span className={`${styles.pipelinePill} ${isBuyer(row) ? styles.pipelineYes : styles.pipelineNo}`}>{isBuyer(row) ? "Sudah Beli" : "Belum Beli"}</span></td>
+                    <td className={styles.td}><span className={`${styles.pipelinePill} ${isBuyer(row) ? styles.pipelineYes : styles.pipelineNo}`}>{isBuyer(row) ? "Buyer" : "Not a buyer"}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -118,7 +118,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
                 <h2>{text(detail.nama) || "—"}</h2>
                 <p>{text(detail.email)}</p>
               </div>
-              <span className={`${styles.pipelinePill} ${isBuyer(detail) ? styles.pipelineYes : styles.pipelineNo}`}>{isBuyer(detail) ? "Sudah Beli" : "Belum Beli"}</span>
+              <span className={`${styles.pipelinePill} ${isBuyer(detail) ? styles.pipelineYes : styles.pipelineNo}`}>{isBuyer(detail) ? "Buyer" : "Not a buyer"}</span>
               <button aria-label="Close candidate detail" onClick={() => setDetailId("")} type="button"><i className="ti ti-x" /></button>
             </header>
             <div className={styles.detailActions}>
@@ -127,44 +127,44 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
               {text(detail.linkedin) ? <a className={styles.detailActionLink} href={text(detail.linkedin)} target="_blank" rel="noopener"><i className="ti ti-brand-linkedin" /> LinkedIn</a> : null}
             </div>
             <div className={styles.detailSection}>
-              <div className={styles.detailSectionTitle}><i className="ti ti-address-book" /> Kontak</div>
+              <div className={styles.detailSectionTitle}><i className="ti ti-address-book" /> Contact</div>
               <div className={styles.detailFields}>
                 <DetailField label="WhatsApp" value={detail.wa} />
                 <DetailField label="Email" value={detail.email} />
-                <DetailField label="Domisili" value={detail.domisili} />
-                <DetailField label="Sumber" value={detail.sumber} />
+                <DetailField label="City" value={detail.domisili} />
+                <DetailField label="Source" value={detail.sumber} />
               </div>
             </div>
             <div className={styles.detailSection}>
-              <div className={styles.detailSectionTitle}><i className="ti ti-school" /> Akademik</div>
+              <div className={styles.detailSectionTitle}><i className="ti ti-school" /> Academic</div>
               <div className={styles.detailFields}>
-                <DetailField label="Universitas" value={detail.universitas} />
+                <DetailField label="University" value={detail.universitas} />
                 <DetailField label="Campus Tier" value={detail.campus_tier} />
-                <DetailField label="Fakultas" value={detail.fakultas} />
-                <DetailField label="Pendidikan" value={detail.pendidikan} />
-                <DetailField label="IPK" value={detail.ipk} />
-                <DetailField label="Angkatan / Lulus" value={detail.angkatan || detail.tahun_lulus ? `${text(detail.angkatan) || "—"} / ${text(detail.tahun_lulus) || "—"}` : ""} />
+                <DetailField label="Faculty" value={detail.fakultas} />
+                <DetailField label="Education" value={detail.pendidikan} />
+                <DetailField label="GPA" value={detail.ipk} />
+                <DetailField label="Class / graduation" value={detail.angkatan || detail.tahun_lulus ? `${text(detail.angkatan) || "—"} / ${text(detail.tahun_lulus) || "—"}` : ""} />
               </div>
             </div>
             <div className={styles.detailSection}>
-              <div className={styles.detailSectionTitle}><i className="ti ti-user" /> Profil</div>
+              <div className={styles.detailSectionTitle}><i className="ti ti-user" /> Profile</div>
               <div className={styles.detailFields}>
                 <DetailField label="Status" value={detail.status} />
-                <DetailField label="Organisasi" value={detail.organisasi} />
+                <DetailField label="Organizations" value={detail.organisasi} />
                 <DetailField label="Exchange" value={detail.exchange} />
                 <DetailField label="Relocate" value={detail.relocate} />
-                <DetailField label="Topik minat" value={detail.topik_minat} wide />
+                <DetailField label="Topics of interest" value={detail.topik_minat} wide />
               </div>
             </div>
             <div className={styles.detailSection}>
               <div className={styles.detailSectionTitle}><i className="ti ti-briefcase" /> Management trainee</div>
               <div className={styles.detailFields}>
-                <DetailField label="Target MT" value={detail.target_mt} />
-                <DetailField label="Posisi MT" value={detail.posisi_mt} />
+                <DetailField label="MT target" value={detail.target_mt} />
+                <DetailField label="MT position" value={detail.posisi_mt} />
                 <DetailField label="Pipeline" value={detail.pipeline} />
               </div>
             </div>
-            {text(detail.produk_dibeli) ? <div className={styles.detailHighlight}><span>Produk dibeli</span>{text(detail.produk_dibeli)}</div> : null}
+            {text(detail.produk_dibeli) ? <div className={styles.detailHighlight}><span>Products bought</span>{text(detail.produk_dibeli)}</div> : null}
             {text(detail.feedback) ? <div className={styles.detailFeedback}><span>Feedback</span>{text(detail.feedback)}</div> : null}
           </section>
         </div>

@@ -40,12 +40,12 @@ export function AssigneeField({ people, value, onChange, label = "Assignee" }: {
         <div className="flex gap-2">
           {available.length ? (
             <button type="button" onClick={() => onChange(allIds)} className="text-xs text-primary underline underline-offset-2">
-              Pilih semua ({people.length})
+              Select all ({people.length})
             </button>
           ) : null}
           {value.length ? (
             <button type="button" onClick={() => onChange([])} className="text-xs text-muted-foreground underline underline-offset-2">
-              Hapus semua
+              Clear all
             </button>
           ) : null}
         </div>
@@ -57,12 +57,12 @@ export function AssigneeField({ people, value, onChange, label = "Assignee" }: {
             {personName(people, id)}
             <button type="button" onClick={() => onChange(value.filter((current) => current !== id))} className="rounded-full px-1 leading-none hover:bg-black/10" aria-label="Hapus assignee">×</button>
           </Badge>
-        )) : <span className="text-xs text-muted-foreground">Belum ada assignee</span>}
+        )) : <span className="text-xs text-muted-foreground">No assignee yet</span>}
       </div>
 
       {available.length ? (
         <Select key={value.length} value="" onValueChange={(id) => { if (id) onChange([...value, id]); }}>
-          <SelectTrigger><SelectValue placeholder="+ Tambah assignee…" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="+ Add assignee…" /></SelectTrigger>
           <SelectContent>
             {available.map((person) => (
               <SelectItem key={String(person.id)} value={String(person.id)}>

@@ -18,7 +18,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { MAX_CONTENT_IMAGES, storedImagePaths } from "@/lib/content-library/payload";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { StorageImage } from "./storage-image";
 import { useRecordFocus } from "./use-record-focus";
 import styles from "./content-library-workspace.module.css";
@@ -453,11 +453,10 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
       </Dialog>
 
       <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) closePreview(); }}>
-        <DialogContent className={styles.previewDialog}>
-          {selected ? <ContentPreview row={selected} imageIndex={selectedImage} setImageIndex={setSelectedImage} /> : null}
-          {selected && error ? <p className={styles.error} role="alert">{error}</p> : null}
-          {selected ? (
-            confirmDelete ? (
+        <DialogContent className={styles.previewDialog} showCloseButton={false}>
+          {selected ? <ContentPreview onClose={closePreview} row={selected} imageIndex={selectedImage} setImageIndex={setSelectedImage}>
+          {error ? <p className={styles.error} role="alert">{error}</p> : null}
+          {confirmDelete ? (
               <div className={styles.confirmDelete} role="alertdialog" aria-label="Confirm delete content">
                 <span>Delete this content? This cannot be undone.</span>
                 <Button disabled={busy} onClick={() => setConfirmDelete(false)} ref={cancelDelete} size="sm" type="button" variant="outline">Cancel</Button>
@@ -469,8 +468,8 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
                 <Button disabled={busy} onClick={() => openEdit(selected)} size="sm" type="button" variant="outline"><i className="ti ti-pencil" /> Edit content</Button>
                 <Button className={styles.deleteButton} disabled={busy} onClick={() => setConfirmDelete(true)} size="sm" type="button" variant="ghost"><i className="ti ti-trash" /> Delete content</Button>
               </div>
-            )
-          ) : null}
+            )}
+          </ContentPreview> : null}
         </DialogContent>
       </Dialog>
     </section>
@@ -483,25 +482,45 @@ function withCurrent(options: string[], current: unknown) {
   return value && !options.includes(value) ? [...options, value] : options;
 }
 
-function ContentPreview({ row, imageIndex, setImageIndex }: { row: ApiRecord; imageIndex: number; setImageIndex: (value: number) => void }) {
+function ContentPreview({ row, imageIndex, setImageIndex, onClose, children }: { row: ApiRecord; imageIndex: number; setImageIndex: (value: number) => void; onClose: () => void; children: ReactNode }) {
   const images = rowImages(row.storage_paths);
   const icon = PLATFORM_ICONS[text(row.platform)] || "ti-world";
+  const title = `${text(row.platform) || "Content"} ${text(row.jenis)}`.trim();
+  const step = (delta: number) => setImageIndex((imageIndex + delta + images.length) % images.length);
   return (
-    <>
-      <DialogHeader className={styles.previewHeader}>
-        <DialogTitle><i className={`ti ${icon}`} /> {text(row.platform) || "Content"}</DialogTitle>
-        <DialogDescription>{text(row.jenis) || "Content Library"}</DialogDescription>
-      </DialogHeader>
-      {images.length ? <div className={styles.previewMedia}><StorageImage area="design-assets" label={`${text(row.platform)} ${text(row.jenis)}`} objectKey={images[imageIndex]} />{images.length > 1 ? <><button aria-label="Previous image" className={styles.previousImage} onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} type="button"><i className="ti ti-chevron-left" /></button><button aria-label="Next image" className={styles.nextImage} onClick={() => setImageIndex((imageIndex + 1) % images.length)} type="button"><i className="ti ti-chevron-right" /></button><span>{imageIndex + 1} / {images.length}</span></> : null}</div> : null}
-      {rowLabels(row.labels).length ? <div className={styles.previewLabels}>{rowLabels(row.labels).map((value) => <span key={value}>{value}</span>)}</div> : null}
-      {row.copywriting ? <p className={styles.previewCopy}>{text(row.copywriting)}</p> : null}
-      <div className={styles.previewMetrics}>
-        <span><i className="ti ti-eye" /> <strong>{number(row.views).toLocaleString("id-ID")}</strong> Views</span>
-        <span><i className="ti ti-heart" /> <strong>{number(row.likes).toLocaleString("id-ID")}</strong> Likes</span>
-        <span><i className="ti ti-message" /> <strong>{number(row.comments).toLocaleString("id-ID")}</strong> Comments</span>
-        <span><i className="ti ti-share" /> <strong>{number(row.shares).toLocaleString("id-ID")}</strong> Shares</span>
+    <div className={`${styles.previewLayout} ${images.length ? "" : styles.previewNoMedia}`} onKeyDown={(event) => { if (images.length > 1 && (event.key === "ArrowLeft" || event.key === "ArrowRight")) { event.preventDefault(); step(event.key === "ArrowLeft" ? -1 : 1); } }}>
+      <button aria-label="Close" className={styles.previewClose} onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
+      {images.length ? (
+        <div className={styles.previewMediaColumn}>
+          <div className={styles.previewMedia}>
+            <StorageImage area="design-assets" fit="contain" key={images[imageIndex]} label={`${title}, image ${imageIndex + 1} of ${images.length}`} objectKey={images[imageIndex]} />
+            {images.length > 1 ? <><button aria-label="Previous image" className={styles.previousImage} onClick={() => step(-1)} type="button"><i aria-hidden="true" className="ti ti-chevron-left" /></button><button aria-label="Next image" className={styles.nextImage} onClick={() => step(1)} type="button"><i aria-hidden="true" className="ti ti-chevron-right" /></button><span aria-live="polite">{imageIndex + 1} / {images.length}</span></> : null}
+          </div>
+          {images.length > 1 ? (
+            <div className={styles.previewThumbs}>
+              {images.map((key, index) => <button aria-current={index === imageIndex || undefined} aria-label={`Show image ${index + 1}`} key={key} onClick={() => setImageIndex(index)} type="button"><StorageImage area="design-assets" label={`Image ${index + 1}`} objectKey={key} /></button>)}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <div className={styles.previewInfo}>
+        <DialogHeader className={styles.previewHeader}>
+          <DialogTitle><i aria-hidden="true" className={`ti ${icon}`} /> {text(row.platform) || "Content"}</DialogTitle>
+          <DialogDescription>{text(row.jenis) || "Content Library"}</DialogDescription>
+        </DialogHeader>
+        <div className={styles.previewBody}>
+          <div className={styles.previewMetrics}>
+            <span><i aria-hidden="true" className="ti ti-eye" /> <strong>{number(row.views).toLocaleString("en-US")}</strong> Views</span>
+            <span><i aria-hidden="true" className="ti ti-heart" /> <strong>{number(row.likes).toLocaleString("en-US")}</strong> Likes</span>
+            <span><i aria-hidden="true" className="ti ti-message" /> <strong>{number(row.comments).toLocaleString("en-US")}</strong> Comments</span>
+            <span><i aria-hidden="true" className="ti ti-share" /> <strong>{number(row.shares).toLocaleString("en-US")}</strong> Shares</span>
+          </div>
+          {rowLabels(row.labels).length ? <div className={styles.previewLabels}>{rowLabels(row.labels).map((value) => <span key={value}>{value}</span>)}</div> : null}
+          {row.copywriting ? <section className={styles.previewSection}><h3>Copywriting</h3><p className={styles.previewCopy}>{text(row.copywriting)}</p></section> : null}
+          {row.notes ? <section className={styles.previewSection}><h3>Notes</h3><p className={styles.previewNotes}>{text(row.notes)}</p></section> : null}
+        </div>
+        <div className={styles.previewFooter}>{children}</div>
       </div>
-      {row.notes ? <p className={styles.previewNotes}>{text(row.notes)}</p> : null}
-    </>
+    </div>
   );
 }

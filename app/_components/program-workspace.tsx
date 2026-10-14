@@ -57,35 +57,35 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!form.nama.trim()) { setError("Nama event wajib diisi."); return; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.tanggal)) { setError("Tanggal wajib diisi."); return; }
+    if (!form.nama.trim()) { setError("Event name is required."); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.tanggal)) { setError("Date is required."); return; }
     setBusy(true); setError("");
     try {
       const payload = { nama: form.nama, jenisProgram: form.jenisProgram || null, tanggal: form.tanggal, waktu: form.waktu || null, platform: form.platform, status: form.status, speaker: form.speaker || null, target: form.target || null };
       const row = editing ? await updateEventAction(String(event.id), payload) : await createEventAction(payload);
       onSaved(row);
-    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan event."); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save the event."); setBusy(false); }
   }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-calendar-event" /> {editing ? "Edit Event" : "Event Baru"}</DialogTitle></DialogHeader>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-calendar-event" /> {editing ? "Edit event" : "New event"}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Nama Event *</Label><Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} placeholder="contoh: Free Class: Insider Tips Lolos MT" /></div>
-          <div className="grid gap-1.5"><Label>Jenis Program</Label><Select value={form.jenisProgram || "none"} onValueChange={(v) => setForm({ ...form, jenisProgram: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="— Pilih jenis —" /></SelectTrigger><SelectContent><SelectItem value="none">— Pilih jenis —</SelectItem>{JENIS.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
+          <div className="grid gap-1.5"><Label>Event name <span className="text-[var(--red)]">*</span></Label><Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} placeholder="e.g. Free Class: insider tips to pass MT selection" /></div>
+          <div className="grid gap-1.5"><Label>Program type</Label><Select value={form.jenisProgram || "none"} onValueChange={(v) => setForm({ ...form, jenisProgram: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select program type" /></SelectTrigger><SelectContent><SelectItem value="none">Select program type</SelectItem>{JENIS.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Tanggal *</Label><Input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
-            <div className="grid gap-1.5"><Label>Waktu</Label><Input type="time" value={form.waktu} onChange={(e) => setForm({ ...form, waktu: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Date <span className="text-[var(--red)]">*</span></Label><Input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Time</Label><Input type="time" value={form.waktu} onChange={(e) => setForm({ ...form, waktu: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Platform</Label><Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PLATFORMS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{EVENT_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
-          <div className="grid gap-1.5"><Label>Speaker</Label><Input value={form.speaker} onChange={(e) => setForm({ ...form, speaker: e.target.value })} placeholder="Nama speaker — Posisi/perusahaan" /></div>
-          <div className="grid gap-1.5"><Label>Target Peserta</Label><Input type="number" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Speaker</Label><Input value={form.speaker} onChange={(e) => setForm({ ...form, speaker: e.target.value })} placeholder="Speaker name — position/company" /></div>
+          <div className="grid gap-1.5"><Label>Target participants</Label><Input type="number" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : editing ? "Save event" : "Create event"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -98,21 +98,21 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!form.title.trim()) { setError("Judul task wajib diisi."); return; }
+    if (!form.title.trim()) { setError("Task title is required."); return; }
     setBusy(true); setError("");
     try {
       if (editing && task) { await updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees }); onSaved({ ...task, ...form, due_date: form.dueDate, assignee_ids: assignees }); }
       else { const row = await createTaskAction({ projectId, title: form.title, description: form.description, phase: form.phase, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assigneeIds: assignees }); onSaved(row); }
-    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan task."); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save the task."); setBusy(false); }
   }
-  async function remove() { if (!editing || !task || !(await confirmAction({ title: "Delete this task?", message: "A linked ticket is deleted too. This cannot be undone.", confirmLabel: "Delete task", danger: true }))) return; setBusy(true); setError(""); try { await deleteTaskAction(String(task.id)); onDeleted(String(task.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); } }
+  async function remove() { if (!editing || !task || !(await confirmAction({ title: "Delete this task?", message: "A linked ticket is deleted too. This cannot be undone.", confirmLabel: "Delete task", danger: true }))) return; setBusy(true); setError(""); try { await deleteTaskAction(String(task.id)); onDeleted(String(task.id)); } catch (e) { setError(e instanceof Error ? e.message : "Could not delete."); setBusy(false); } }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> {editing ? "Edit Task" : "Task Baru"}</DialogTitle></DialogHeader>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> {editing ? "Edit task" : "New task"}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Judul Task *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="contoh: Desain flyer & poster promo" /></div>
-          <div className="grid gap-1.5"><Label>Deskripsi</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detail brief, requirement, dll…" /></div>
+          <div className="grid gap-1.5"><Label>Task title <span className="text-[var(--red)]">*</span></Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Promo flyer & poster design" /></div>
+          <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detail brief, requirement, dll…" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase} onValueChange={(v) => setForm({ ...form, phase: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PHASES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TASK_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
@@ -124,9 +124,9 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
-          <div>{editing ? <Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Hapus</Button> : null}</div>
-          <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button></div>
+        <DialogFooter sticky className="flex-row flex-wrap justify-between gap-2 sm:justify-between">
+          <div>{editing ? <Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Delete</Button> : null}</div>
+          <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Save task"}</Button></div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -139,21 +139,21 @@ function AddLinkModal({ eventId, onClose, onSaved }: { eventId: string; onClose:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!label.trim() || !url.trim()) { setError("Label & URL wajib diisi."); return; }
+    if (!label.trim() || !url.trim()) { setError("Label and URL are required."); return; }
     setBusy(true); setError("");
     try { const row = await addEventLinkAction(eventId, { label: label.trim(), url: url.trim() }); onSaved(row); }
-    catch (e) { setError(e instanceof Error ? e.message : "Gagal menambah link."); setBusy(false); }
+    catch (e) { setError(e instanceof Error ? e.message : "Could not add the link."); setBusy(false); }
   }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-link" /> Tambah Link</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-link" /> Add link</DialogTitle></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Label</Label><Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="contoh: Link Slido" /></div>
+          <div className="grid gap-1.5"><Label>Label</Label><Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Slido link" /></div>
           <div className="grid gap-1.5"><Label>URL</Label><Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Menyimpan…" : "Tambah"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Add link"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -186,10 +186,10 @@ function EventLinksPanel({ event, templates, onAdd, onDelete, error }: { event: 
                 <i className="ti ti-link" style={{ fontSize: 11, color: "var(--text-muted)" }} />
                 <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{link.label}</span>
               </a>
-              <button type="button" onClick={() => onDelete(index)} aria-label="Hapus link" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, display: "flex", flexShrink: 0, marginLeft: 2 }}><i className="ti ti-x" style={{ fontSize: 10 }} /></button>
+              <button type="button" onClick={() => onDelete(index)} aria-label="Delete link" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, display: "flex", flexShrink: 0, marginLeft: 2 }}><i className="ti ti-x" style={{ fontSize: 10 }} /></button>
             </span>
           ))}
-          <button type="button" onClick={onAdd} style={{ ...chip, border: "0.5px dashed var(--border)", color: "var(--text-muted)", background: "none", cursor: "pointer" }}><i className="ti ti-plus" style={{ fontSize: 11 }} /><span style={{ whiteSpace: "nowrap" }}>Tambah link</span></button>
+          <button type="button" onClick={onAdd} style={{ ...chip, border: "0.5px dashed var(--border)", color: "var(--text-muted)", background: "none", cursor: "pointer" }}><i className="ti ti-plus" style={{ fontSize: 11 }} /><span style={{ whiteSpace: "nowrap" }}>Add link</span></button>
         </div>
       ) : null}
       {open && error ? <p style={{ fontSize: 11, color: "var(--red)", marginTop: 8 }}>{error}</p> : null}
@@ -215,18 +215,18 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-brand-google" /> Tambah ke Google Calendar</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-brand-google" /> Add to Google Calendar</DialogTitle></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Judul Event</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+          <div className="grid gap-1.5"><Label>Event title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Mulai</Label><div className="flex gap-1"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /><Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div></div>
-            <div className="grid gap-1.5"><Label>Selesai</Label><div className="flex gap-1"><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /><Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
+            <div className="grid gap-1.5"><Label>Start</Label><div className="flex gap-1"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /><Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div></div>
+            <div className="grid gap-1.5"><Label>Finished</Label><div className="flex gap-1"><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /><Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
           </div>
           {assigneePeople.length ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Undang {assigneePeople.map((person) => text(person.nama) || text(person.email)).join(", ")}</label> : null}
-          {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar belum dikonfigurasi untuk aplikasi ini.</p> : null}
+          {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar is not set up for this app yet.</p> : null}
           {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
         </div>
-        <DialogFooter className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={submit} disabled={busy || !configurationLoaded || !clientId}>{busy ? "Menghubungkan…" : "Buat Event"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy || !configurationLoaded || !clientId}>{busy ? "Menghubungkan…" : "Create event"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -293,7 +293,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
       const row = await deleteEventLinkAction(eventId, index);
       setEventsState((current) => current.map((event) => String(event.id) === eventId ? row : event));
       router.refresh();
-    } catch (e) { setLinkError(e instanceof Error ? e.message : "Gagal menghapus link."); }
+    } catch (e) { setLinkError(e instanceof Error ? e.message : "Could not delete the link."); }
   }
 
   return (
@@ -304,21 +304,21 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
       {tab === "overview" ? (
         <div className="grid gap-4">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
-            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Total Event</div><div style={{ fontSize: 26, fontWeight: 700 }}>{eventsState.length}</div></div>
+            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Total events</div><div style={{ fontSize: 26, fontWeight: 700 }}>{eventsState.length}</div></div>
             <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>On Progress</div><div style={{ fontSize: 26, fontWeight: 700, color: "var(--blue)" }}>{eventsState.filter((event) => event.status === "On Progress").length}</div></div>
             <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Planning</div><div style={{ fontSize: 26, fontWeight: 700, color: "var(--text-muted)" }}>{eventsState.filter((event) => event.status === "Planning").length}</div></div>
-            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Task Overdue</div><div style={{ fontSize: 26, fontWeight: 700, color: "var(--red)" }}>{overdue}</div></div>
+            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Overdue tasks</div><div style={{ fontSize: 26, fontWeight: 700, color: "var(--red)" }}>{overdue}</div></div>
           </div>
           <div style={panelCard}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-              <div><strong style={{ fontSize: 14 }}>Semua Event ({overviewEvents.length})</strong><div style={{ fontSize: 11, color: "var(--text-muted)" }}>Klik card untuk lihat detail tasks & timeline</div></div>
+              <div><strong style={{ fontSize: 14 }}>Semua Event ({overviewEvents.length})</strong><div style={{ fontSize: 11, color: "var(--text-muted)" }}>Click a card to see its tasks and timeline</div></div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Jenis</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select>
-                <Input aria-label="Tanggal dari" className="w-[150px]" onChange={(e) => setDateFrom(e.target.value)} type="date" value={dateFrom} />
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>s/d</span>
-                <Input aria-label="Tanggal sampai" className="w-[150px]" onChange={(e) => setDateTo(e.target.value)} type="date" value={dateTo} />
+                <Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select>
+                <Input aria-label="From date" className="w-[150px]" onChange={(e) => setDateFrom(e.target.value)} type="date" value={dateFrom} />
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>to</span>
+                <Input aria-label="To date" className="w-[150px]" onChange={(e) => setDateTo(e.target.value)} type="date" value={dateTo} />
                 {dateFrom || dateTo || jenisFilter ? <Button type="button" variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); setJenisFilter(""); }}>Reset</Button> : null}
-                <Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" /> Event Baru</Button>
+                <Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" /> New event</Button>
               </div>
             </div>
             <div className="grid gap-3">
@@ -330,7 +330,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                   <div style={{ textAlign: "right", fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{p.done}/{p.total} task · {p.pct}%</div>
                 </button>
               ); })}
-              {overviewEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>{jenisFilter || dateFrom || dateTo ? "Tidak ada event yang cocok dengan filter." : "Belum ada event."}</p> : null}
+              {overviewEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>{jenisFilter || dateFrom || dateTo ? "No events match the filters." : "No events yet."}</p> : null}
             </div>
           </div>
         </div>
@@ -339,7 +339,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
       {tab === "events" ? (
         <div className="grid gap-4">
           <div style={{ display: "flex", gap: 8 }}>
-            <Select value={selectedEvent || "none"} onValueChange={(v) => { setSelectedEvent(v === "none" ? "" : v); setPhaseTab("all"); }}><SelectTrigger className="flex-1"><SelectValue placeholder="Pilih event" /></SelectTrigger><SelectContent><SelectItem value="none">Pilih event</SelectItem>{sortedEvents.map((event) => <SelectItem key={String(event.id)} value={String(event.id)}>{text(event.nama) || "Untitled"}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedEvent || "none"} onValueChange={(v) => { setSelectedEvent(v === "none" ? "" : v); setPhaseTab("all"); }}><SelectTrigger className="flex-1"><SelectValue placeholder="Select event" /></SelectTrigger><SelectContent><SelectItem value="none">Select event</SelectItem>{sortedEvents.map((event) => <SelectItem key={String(event.id)} value={String(event.id)}>{text(event.nama) || "Untitled"}</SelectItem>)}</SelectContent></Select>
             <Button type="button" disabled={!selectedEvent} onClick={() => setTaskModal({ task: null })}><i className="ti ti-plus" /> Task</Button>
           </div>
           {selected ? (
@@ -350,15 +350,15 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                   <Button type="button" variant="outline" size="sm" onClick={() => setEventModal({ event: selected })}><i className="ti ti-edit" /> Edit</Button>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{([["all", `Semua (${selectedTasks.length})`], ...PHASES.map((phase) => [phase, `${phase} (${selectedTasks.filter((task) => text(task.phase) === phase).length})`])] as [string, string][]).map(([id, label]) => <button key={id} type="button" onClick={() => setPhaseTab(id)} style={{ ...pillBase, padding: "5px 12px", cursor: "pointer", border: `1px solid ${phaseTab === id ? "var(--purple-mid)" : "var(--border-md)"}`, background: phaseTab === id ? "var(--purple-light)" : "var(--white)", color: phaseTab === id ? "var(--purple-mid)" : "var(--text-muted)" }}>{label}</button>)}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{([["all", `All (${selectedTasks.length})`], ...PHASES.map((phase) => [phase, `${phase} (${selectedTasks.filter((task) => text(task.phase) === phase).length})`])] as [string, string][]).map(([id, label]) => <button key={id} type="button" onClick={() => setPhaseTab(id)} style={{ ...pillBase, padding: "5px 12px", cursor: "pointer", border: `1px solid ${phaseTab === id ? "var(--purple-mid)" : "var(--border-md)"}`, background: phaseTab === id ? "var(--purple-light)" : "var(--white)", color: phaseTab === id ? "var(--purple-mid)" : "var(--text-muted)" }}>{label}</button>)}</div>
               <EventLinksPanel event={selected} templates={linkTemplates} onAdd={() => { setLinkError(""); setLinkModalEvent(String(selected.id)); }} onDelete={(index) => deleteLink(String(selected.id), index)} error={linkError} />
               <div style={{ ...panelCard, padding: 0, overflow: "hidden" }}>
-                <div style={{ padding: "10px 12px", borderBottom: "0.5px solid var(--border)", fontSize: 12 }}><span style={pill("Todo")}>{phaseTab === "all" ? "Semua" : phaseTab}</span> <span style={{ color: "var(--text-muted)" }}>{phaseTasks.length} task · {phaseTasks.filter((task) => task.status === "Done").length} done</span></div>
+                <div style={{ padding: "10px 12px", borderBottom: "0.5px solid var(--border)", fontSize: 12 }}><span style={pill("Todo")}>{phaseTab === "all" ? "All" : phaseTab}</span> <span style={{ color: "var(--text-muted)" }}>{phaseTasks.length} task · {phaseTasks.filter((task) => task.status === "Done").length} done</span></div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                    <thead><tr style={{ background: "var(--bg)" }}><th style={thStyle} /><th style={thStyle}>Task</th><th style={thStyle}>Assignee</th><th style={thStyle}>Deadline</th><th style={thStyle}>Status</th><th style={thStyle}>Priority</th><th style={{ ...thStyle, textAlign: "center" }}>Aksi</th></tr></thead>
+                    <thead><tr style={{ background: "var(--bg)" }}><th style={thStyle} /><th style={thStyle}>Task</th><th style={thStyle}>Assignee</th><th style={thStyle}>Deadline</th><th style={thStyle}>Status</th><th style={thStyle}>Priority</th><th style={{ ...thStyle, textAlign: "center" }}>Actions</th></tr></thead>
                     <tbody>
-                      {phaseTasks.length === 0 ? <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>Belum ada task. Klik &quot;+ Task&quot; untuk menambah.</td></tr> : phaseTaskPage.map((task) => { const isDone = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); return (
+                      {phaseTasks.length === 0 ? <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No tasks yet. Click &quot;+ Task&quot; to add one.</td></tr> : phaseTaskPage.map((task) => { const isDone = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); return (
                         <tr key={String(task.id)} onClick={() => setTaskModal({ task })} style={{ borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
                           <td style={tdStyle} onClick={(e) => { e.stopPropagation(); toggleTask(task); }}><div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isDone ? "#0f52ba" : "var(--border-md)"}`, background: isDone ? "#0f52ba" : "transparent", display: "grid", placeItems: "center" }}>{isDone ? <i className="ti ti-check" style={{ fontSize: 10, color: "#fff" }} /> : null}</div></td>
                           <td style={{ ...tdStyle, textDecoration: isDone ? "line-through" : "none", color: isDone ? "var(--text-muted)" : "var(--text)" }}>{text(task.title) || "Untitled"}</td>
@@ -380,13 +380,13 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
               </div>
               <EventRundown eventId={String(selected.id)} rows={rundown} startTime={text(selected.waktu).slice(0, 5)} />
             </>
-          ) : <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>Pilih event untuk melihat & mengelola task-nya.</p>}
+          ) : <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>Select an event to see and manage its tasks.</p>}
         </div>
       ) : null}
 
       {tab === "history" ? (
         <div className="grid gap-4">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}><span style={{ fontSize: 12, color: "var(--text-muted)" }}>{historyEvents.length} event selesai/dibatalkan</span><Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Jenis</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}><span style={{ fontSize: 12, color: "var(--text-muted)" }}>{historyEvents.length} event selesai/dibatalkan</span><Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
           {historyEvents.map((event) => { const related = taskRows.filter((task) => String(task.project_id) === String(event.id)); const done = related.filter((task) => task.status === "Done").length; const pct = related.length ? Math.round((done / related.length) * 100) : 0; return (
             <details key={String(event.id)} style={panelCard}>
               <summary style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", listStyle: "none" }}>
@@ -400,7 +400,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
               </div>
             </details>
           ); })}
-          {historyEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>Belum ada event selesai.</p> : null}
+          {historyEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>No finished events yet.</p> : null}
         </div>
       ) : null}
 

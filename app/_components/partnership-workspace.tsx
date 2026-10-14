@@ -3,6 +3,7 @@
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
@@ -155,7 +156,7 @@ function MasterTab({ rows, tableKey, aiPanel, onAdd, onEdit }: { rows: ApiRecord
       {aiPanel ? <div>{aiPanel}</div> : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FilterBar>
-          <input className={filterFieldClass} onChange={(event) => setQuery(event.target.value)} placeholder="Cari nama / PIC..." value={query} />
+          <input className={filterFieldClass} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or PIC…" value={query} />
           <select className={filterFieldClass} onChange={(event) => setStatus(event.target.value)} value={status}><option value="">Semua status</option>{STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}</select>
           <select className={filterFieldClass} onChange={(event) => setTier(event.target.value)} value={tier}><option value="">Semua tier</option>{TIERS.map((value) => <option key={value} value={value}>{value}</option>)}</select>
         </FilterBar>
@@ -339,43 +340,43 @@ function PartnerModal({ profile, tableKey, categories, onClose }: { profile: Api
     });
   }
 
-  const labelClass = "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground";
+  const labelClass = "mb-1 block text-xs font-medium text-foreground";
   const inputClass = "w-full rounded-[var(--radius)] border border-[var(--border-md)] bg-[var(--bg)] px-3 py-2 text-[13px] outline-none focus:border-[var(--purple-accent)]";
 
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-center bg-black/45 p-4" onMouseDown={onClose}>
-      <Card className="flex max-h-[90vh] w-full max-w-[520px] flex-col gap-0 overflow-hidden p-0" onMouseDown={(event) => event.stopPropagation()}>
+    <Dialog onOpenChange={(open) => { if (!open) onClose(); }} open>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[520px]" showCloseButton={false}>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-bold">{profile ? text(profile.name) || "Edit Partner" : "Tambah Partner Baru"}</h2>
-          <button onClick={onClose} type="button"><i className="ti ti-x" /></button>
+          <div className="min-w-0"><DialogTitle className="text-base font-bold">{profile ? text(profile.name) || "Edit partner" : "Add partner"}</DialogTitle><DialogDescription className="text-xs">{profile ? "Edit partner details" : "New partner"} · fields marked * are required.</DialogDescription></div>
+          <button aria-label="Close" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground" onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
         </div>
         <div className="flex flex-col gap-3 overflow-y-auto p-5">
-          <div><label className={labelClass}>Nama Company *</label><input className={inputClass} onChange={(event) => set({ name: event.target.value })} placeholder="Nama perusahaan / organisasi" value={form.name} /></div>
+          <label className="block"><span className={labelClass}>Company name <span aria-hidden="true" className="text-[var(--red)]">*</span></span><input required className={inputClass} onChange={(event) => set({ name: event.target.value })} placeholder="Company or organization" value={form.name} /></label>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelClass}>Category</label><select className={inputClass} onChange={(event) => set({ category: event.target.value })} value={form.category}><option value="">— Pilih —</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}{form.category && !categories.includes(form.category) ? <option value={form.category}>{form.category}</option> : null}</select></div>
-            <div><label className={labelClass}>Tier</label><select className={inputClass} onChange={(event) => set({ tier: event.target.value })} value={form.tier}>{TIERS.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
+            <label className="block"><span className={labelClass}>Category</span><select className={inputClass} onChange={(event) => set({ category: event.target.value })} value={form.category}><option value="">Select category</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}{form.category && !categories.includes(form.category) ? <option value={form.category}>{form.category}</option> : null}</select></label>
+            <label className="block"><span className={labelClass}>Tier</span><select className={inputClass} onChange={(event) => set({ tier: event.target.value })} value={form.tier}>{TIERS.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelClass}>Status</label><select className={inputClass} onChange={(event) => set({ status: event.target.value })} value={form.status}>{STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
-            <div><label className={labelClass}>Tanggal Input</label><input className={inputClass} onChange={(event) => set({ input_date: event.target.value })} type="date" value={form.input_date} /></div>
+            <label className="block"><span className={labelClass}>Status</span><select className={inputClass} onChange={(event) => set({ status: event.target.value })} value={form.status}>{STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className="block"><span className={labelClass}>Date added</span><input className={inputClass} onChange={(event) => set({ input_date: event.target.value })} type="date" value={form.input_date} /></label>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelClass}>PIC</label><input className={inputClass} onChange={(event) => set({ contact_name: event.target.value })} value={form.contact_name} /></div>
-            <div><label className={labelClass}>Jabatan PIC</label><input className={inputClass} onChange={(event) => set({ pos: event.target.value })} value={form.pos} /></div>
+            <label className="block"><span className={labelClass}>PIC</span><input className={inputClass} onChange={(event) => set({ contact_name: event.target.value })} value={form.contact_name} /></label>
+            <label className="block"><span className={labelClass}>PIC position</span><input className={inputClass} onChange={(event) => set({ pos: event.target.value })} value={form.pos} /></label>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelClass}>WhatsApp</label><input className={inputClass} onChange={(event) => set({ contact_phone: event.target.value })} value={form.contact_phone} /></div>
-            <div><label className={labelClass}>Email</label><input className={inputClass} onChange={(event) => set({ contact_email: event.target.value })} type="email" value={form.contact_email} /></div>
+            <label className="block"><span className={labelClass}>WhatsApp</span><input className={inputClass} onChange={(event) => set({ contact_phone: event.target.value })} value={form.contact_phone} /></label>
+            <label className="block"><span className={labelClass}>Email</span><input className={inputClass} onChange={(event) => set({ contact_email: event.target.value })} type="email" value={form.contact_email} /></label>
           </div>
-          <div><label className={labelClass}>LinkedIn</label><input className={inputClass} onChange={(event) => set({ li: event.target.value })} placeholder="https://linkedin.com/..." value={form.li} /></div>
-          <div><label className={labelClass}>Scope Kerjasama</label><textarea className={inputClass} onChange={(event) => set({ scope: event.target.value })} rows={2} value={form.scope} /></div>
-          <div><label className={labelClass}>Catatan</label><textarea className={inputClass} onChange={(event) => set({ notes: event.target.value })} rows={2} value={form.notes} /></div>
+          <label className="block"><span className={labelClass}>LinkedIn</span><input className={inputClass} onChange={(event) => set({ li: event.target.value })} placeholder="https://linkedin.com/..." value={form.li} /></label>
+          <label className="block"><span className={labelClass}>Partnership scope</span><textarea className={inputClass} onChange={(event) => set({ scope: event.target.value })} rows={2} value={form.scope} /></label>
+          <label className="block"><span className={labelClass}>Notes</span><textarea className={inputClass} onChange={(event) => set({ notes: event.target.value })} rows={2} value={form.notes} /></label>
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-          <Button onClick={onClose} size="sm" variant="outline">Batal</Button>
-          <Button disabled={pending} onClick={save} size="sm"><i className="ti ti-check" /> Simpan</Button>
+          <Button onClick={onClose} size="sm" type="button" variant="outline">Cancel</Button>
+          <Button disabled={pending} onClick={save} size="sm" type="button"><i aria-hidden="true" className="ti ti-check" /> {pending ? "Saving…" : "Save partner"}</Button>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

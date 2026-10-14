@@ -143,7 +143,7 @@
 .toolForm { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; }
 .toolForm p, .formMessage { margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
 .checkList { grid-column: 1 / -1; max-height: 180px; overflow-y: auto; display: grid; gap: 7px; margin: 0; padding: 10px; border: 1px solid var(--border); border-radius: 7px; }
-.checkList legend { padding: 0 5px; color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.checkList legend { padding: 0 5px; color: var(--text); font-size: 12px; font-weight: 500; }
 .checkList label { display: flex; align-items: center; gap: 7px; color: var(--text); font-size: 11px; }
 .workspaceHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 .workspaceHeader p { margin: 0 0 5px; color: var(--purple-mid); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -159,12 +159,12 @@
 .createPanel summary { display: flex; align-items: center; gap: 7px; padding: 11px 14px; cursor: pointer; color: var(--purple-dark); font-size: 12px; font-weight: 800; list-style: none; }
 .createPanel[open] summary { border-bottom: 1px solid var(--border); }
 .formGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; padding: 14px; }
-.field { display: grid; gap: 5px; color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.field { display: grid; gap: 5px; color: var(--text); font-size: 12px; font-weight: 500; }
 .field input, .field select, .field textarea { width: 100%; min-height: 36px; padding: 7px 9px; border: 1px solid var(--border-md); border-radius: 7px; color: var(--text); background: var(--white); font-size: 12px; text-transform: none; }
 .field select[multiple] { min-height: 86px; }
 .field textarea { resize: vertical; }
 .uploadField { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
-.uploadField small { grid-column: 1 / -1; color: var(--text-muted); font-size: 10px; text-transform: none; }
+.uploadField small { grid-column: 1 / -1; color: var(--text-muted); font-size: 12px; text-transform: none; }
 .uploadButton { min-height: 36px; display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; border: 1px solid var(--border-md); border-radius: 7px; color: var(--purple-dark); background: var(--bg); cursor: pointer; font-size: 11px; text-transform: none; }
 .fileInput { position: absolute; width: 1px !important; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .aiDropzone { display: flex; align-items: center; gap: 10px; margin: 14px 14px 0; padding: 14px; border: 1px dashed var(--border-md); border-radius: 7px; color: var(--text-muted); background: var(--bg); font-size: 11px; }
@@ -182,8 +182,13 @@
 .tableScroll td { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rowActions { position: relative; }
 .rowActions > summary { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; list-style: none; }
-.rowEditor { position: fixed; z-index: 50; inset: 8% 5% auto; max-height: 84vh; overflow-y: auto; padding: 8px; border: 1px solid var(--border-md); border-radius: 8px; background: var(--white); box-shadow: 0 20px 60px rgba(26,26,46,.22); }
-.rowEditor > form:last-child { padding: 0 14px 14px; }
+.rowEditButton { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); background: var(--white); }
+.rowEditButton:hover { color: var(--text); border-color: var(--border-md); }
+/* Edit dialog: header stays, the form scrolls. */
+.editDialog { display: flex; flex-direction: column; gap: 0; width: min(640px, calc(100vw - 24px)); max-width: 640px; max-height: 90dvh; overflow: hidden; padding: 0; }
+.editDialogHeader { padding: 20px 52px 12px 20px; border-bottom: 1px solid var(--border); text-align: left; }
+.editDialogBody { min-height: 0; overflow-y: auto; padding: 4px 6px 12px; }
+.editDialogBody > form:last-child, .editDialogBody > div:last-child { padding: 0 14px 6px; }
 .emptyState { min-height: 220px; display: grid; place-items: center; align-content: center; gap: 6px; color: var(--text-muted); }
 .emptyState i { font-size: 28px; color: var(--purple-mid); }
 .emptyState strong { color: var(--text); }
@@ -513,7 +518,7 @@
 .recordForm { display: grid; }
 .recordForm > .formGrid:first-child { padding-bottom: 6px; }
 .wideField { grid-column: 1 / -1; }
-.requiredMark { color: var(--red); font-weight: 700; text-transform: lowercase; }
+.requiredMark { color: var(--red); font-weight: 600; font-size: 12px; }
 .moreFields { margin: 0 14px 10px; border: 1px solid var(--border); border-radius: 7px; }
 .moreFields > summary { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 .moreFields > summary small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
@@ -552,3 +557,5 @@ fieldset.checkList > legend { padding: 0 4px; color: var(--text-muted); font-siz
 .storageLoading { width: 100%; height: 260px; background: linear-gradient(90deg, var(--bg) 0%, var(--white) 50%, var(--bg) 100%); background-size: 200% 100%; animation: storageShimmer 1.2s ease-in-out infinite; }
 @keyframes storageShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .storageLoading { animation: none; } }
+/* In the edit dialog the Save button stays on screen while the form scrolls. */
+.editDialogBody .recordForm > .formActions { position: sticky; z-index: 2; bottom: -12px; margin: 0 -6px; padding: 10px 20px; border-top: 1px solid var(--border); background: var(--white); }

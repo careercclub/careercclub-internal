@@ -94,16 +94,20 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 function DialogFooter({
   className,
   showCloseButton = false,
+  sticky = false,
   children,
   ...props
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean
+  /** Keeps the actions on screen while a long dialog (default p-6) scrolls. */
+  sticky?: boolean
 }) {
   return (
     <div
       data-slot="dialog-footer"
       className={cn(
         "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        sticky && "sticky -bottom-6 z-10 -mx-6 -mb-6 border-t bg-background px-6 py-3",
         className
       )}
       {...props}

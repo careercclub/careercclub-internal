@@ -64,33 +64,33 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!form.title.trim()) { setError("Judul ticket wajib diisi."); return; }
+    if (!form.title.trim()) { setError("Ticket title is required."); return; }
     setBusy(true); setError("");
     try {
       const row = await createTicketAction({ title: form.title, description: form.description, status: "Todo", priority: form.priority, divisionId: form.divisionId || null, typeId: form.typeId || null, dueDate: form.dueDate || null, assignedToIds: assignees, links: linkUrl.trim() ? [{ label: "Link", url: linkUrl.trim() }] : [] });
       onCreated(row);
-    } catch (e) { setError(e instanceof Error ? e.message : "Gagal membuat ticket."); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not create the ticket."); setBusy(false); }
   }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Buat Ticket</DialogTitle><DialogDescription>Request ke divisi atau assignee tertentu.</DialogDescription></DialogHeader>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Create ticket</DialogTitle><DialogDescription>Send a request to a division or a specific person.</DialogDescription></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Judul Ticket</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="contoh: Desain flyer CCA" /></div>
-          <div className="grid gap-1.5"><Label>Deskripsi</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Ticket title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. CCA flyer design" /></div>
+          <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Divisi</Label><Select value={form.divisionId || "none"} onValueChange={(v) => setForm({ ...form, divisionId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Pilih divisi" /></SelectTrigger><SelectContent><SelectItem value="none">— Pilih divisi —</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Tipe Request</Label><Select value={form.typeId || "none"} onValueChange={(v) => setForm({ ...form, typeId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{types.map((t) => <SelectItem key={String(t.id)} value={String(t.id)}>{text(t.nama)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Division</Label><Select value={form.divisionId || "none"} onValueChange={(v) => setForm({ ...form, divisionId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select division" /></SelectTrigger><SelectContent><SelectItem value="none">Select division</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Request type</Label><Select value={form.typeId || "none"} onValueChange={(v) => setForm({ ...form, typeId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{types.map((t) => <SelectItem key={String(t.id)} value={String(t.id)}>{text(t.nama)}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Prioritas</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
-          <div className="grid gap-1.5"><Label>Link (opsional)</Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /></div>
+          <div className="grid gap-1.5"><Label>Link <span className="font-normal text-muted-foreground">(optional)</span></Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Menyimpan…" : "Buat Ticket"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Create ticket"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -110,41 +110,41 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
     try {
       const updated = await updateTicketDetailsAction(String(ticket.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assignedToIds: assignees, divisionId: divisionId || null, typeId: ticket.type_id ?? null, cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc) });
       onSaved({ ...ticket, ...updated });
-    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); } finally { setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); } finally { setBusy(false); }
   }
   async function addLink() {
     const url = linkUrl.trim(); if (!url) return;
     setBusy(true); setError("");
-    try { const fd = new FormData(); fd.set("url", url); fd.set("label", "Link"); await addTicketLinkAction(String(ticket.id), fd); onSaved({ ...ticket, links: [...links, { label: "Link", url }] }); setLinkUrl(""); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menambah link."); } finally { setBusy(false); }
+    try { const fd = new FormData(); fd.set("url", url); fd.set("label", "Link"); await addTicketLinkAction(String(ticket.id), fd); onSaved({ ...ticket, links: [...links, { label: "Link", url }] }); setLinkUrl(""); } catch (e) { setError(e instanceof Error ? e.message : "Could not add the link."); } finally { setBusy(false); }
   }
-  async function remove() { if (!(await confirmAction({ title: "Delete this ticket?", message: "This cannot be undone.", confirmLabel: "Delete ticket", danger: true }))) return; setBusy(true); setError(""); try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); } }
-  async function duplicate() { setBusy(true); setError(""); try { const row = await duplicateTicketAction(String(ticket.id)); onDuplicated(row); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menduplikat."); setBusy(false); } }
+  async function remove() { if (!(await confirmAction({ title: "Delete this ticket?", message: "This cannot be undone.", confirmLabel: "Delete ticket", danger: true }))) return; setBusy(true); setError(""); try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Could not delete."); setBusy(false); } }
+  async function duplicate() { setBusy(true); setError(""); try { const row = await duplicateTicketAction(String(ticket.id)); onDuplicated(row); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Could not duplicate."); setBusy(false); } }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Detail Ticket</DialogTitle>{ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}</DialogHeader>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Ticket details</DialogTitle>{ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}</DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Judul Ticket</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-          <div className="grid gap-1.5"><Label>Deskripsi</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Ticket title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "In Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Prioritas</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Divisi</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           <div className="grid gap-1.5">
-            <Label>Lampiran &amp; Link</Label>
+            <Label>Attachments &amp; links</Label>
             {links.map((link, index) => <a key={index} href={text(link.url)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-primary underline truncate"><i className="ti ti-link" /> {text(link.label) || text(link.url)}</a>)}
-            <div className="flex gap-2"><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /><Button type="button" variant="outline" size="sm" onClick={addLink} disabled={busy || !linkUrl.trim()}>Tambah</Button></div>
+            <div className="flex gap-2"><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /><Button type="button" variant="outline" size="sm" onClick={addLink} disabled={busy || !linkUrl.trim()}>Add link</Button></div>
           </div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
-          <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" onClick={onCalendar} disabled={busy} style={synced ? { background: "var(--green)", borderColor: "var(--green)", color: "#fff" } : undefined}><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} /> {synced ? "Re-sync Calendar" : "Google Calendar"}</Button><Button type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i className="ti ti-copy" /> Duplikat</Button><Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Hapus</Button></div>
-          <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Batal</Button><Button type="button" onClick={save} disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button></div>
+        <DialogFooter sticky className="flex-row flex-wrap justify-between gap-2 sm:justify-between">
+          <div className="flex gap-1.5"><Button aria-label={synced ? "Re-sync Google Calendar" : "Add to Google Calendar"} title={synced ? "Re-sync Google Calendar" : "Add to Google Calendar"} type="button" variant="outline" size="sm" onClick={onCalendar} disabled={busy} style={synced ? { background: "var(--green)", borderColor: "var(--green)", color: "#fff" } : undefined}><i aria-hidden="true" className={`ti ti-calendar-${synced ? "check" : "plus"}`} /><span className="hidden sm:inline">{synced ? "Re-sync Calendar" : "Google Calendar"}</span></Button><Button aria-label="Duplicate ticket" title="Duplicate ticket" type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i aria-hidden="true" className="ti ti-copy" /><span className="hidden sm:inline">Duplicate</span></Button><Button aria-label="Delete ticket" title="Delete ticket" type="button" variant="outline" size="sm" className="border-[var(--red)] text-[var(--red)] hover:bg-[var(--red-bg)]" onClick={remove} disabled={busy}><i aria-hidden="true" className="ti ti-trash" /><span className="hidden sm:inline">Delete</span></Button></div>
+          <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save ticket"}</Button></div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -209,14 +209,14 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
       {aiPanel}
       <div style={panelCard}>
         <div style={{ padding: 12, borderBottom: "0.5px solid var(--border)", display: "grid", gap: 10 }}>
-          <div style={{ display: "flex", gap: 4 }}>{([["all", "Semua"], ["todo", "Todo"], ["done", "Done"]] as const).map(([id, label]) => <button key={id} type="button" onClick={() => setTab(id)} style={tabStyle(tab === id)}>{label}</button>)}</div>
+          <div style={{ display: "flex", gap: 4 }}>{([["all", "All"], ["todo", "Todo"], ["done", "Done"]] as const).map(([id, label]) => <button key={id} type="button" onClick={() => setTab(id)} style={tabStyle(tab === id)}>{label}</button>)}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Input placeholder="Cari ticket..." value={query} onChange={(e) => setQuery(e.target.value)} className="min-w-[160px] flex-1" />
-            <Button type="button" onClick={() => setCreateOpen(true)}><i className="ti ti-plus" /> Buat Ticket</Button>
+            <Input placeholder="Search tickets…" value={query} onChange={(e) => setQuery(e.target.value)} className="min-w-[160px] flex-1" />
+            <Button type="button" onClick={() => setCreateOpen(true)}><i className="ti ti-plus" /> Create ticket</Button>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <Select value={fDiv || "all"} onValueChange={(v) => setFDiv(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua divisi</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select>
-            <Select value={fPrio || "all"} onValueChange={(v) => setFPrio(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua prioritas</SelectItem>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select>
+            <Select value={fDiv || "all"} onValueChange={(v) => setFDiv(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All divisions</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select>
+            <Select value={fPrio || "all"} onValueChange={(v) => setFPrio(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All priorities</SelectItem>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select>
             <Link href={settingsHref("tickets", "divisions")} style={ghostBtnStyle}><i className="ti ti-adjustments" /> Ticket setup</Link>
           </div>
         </div>
@@ -224,11 +224,11 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "var(--bg)", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>
-                <th style={thStyle} /><th style={thStyle}>ID</th><th style={{ ...thStyle, textAlign: "left" }}>Judul &amp; Deskripsi</th><th style={thStyle}>Divisi</th><th style={thStyle}>Prioritas</th><th style={thStyle}>Status</th><th style={{ ...thStyle, textAlign: "left" }}>Assignee</th><th style={thStyle}>Tanggal</th><th style={thStyle} />
+                <th style={thStyle} /><th style={thStyle}>ID</th><th style={{ ...thStyle, textAlign: "left" }}>Title &amp; description</th><th style={thStyle}>Division</th><th style={thStyle}>Priority</th><th style={thStyle}>Status</th><th style={{ ...thStyle, textAlign: "left" }}>Assignee</th><th style={thStyle}>Date</th><th style={thStyle} />
               </tr>
             </thead>
             <tbody>
-              {visible.length === 0 ? <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}><i className="ti ti-inbox" style={{ fontSize: 28, display: "block", marginBottom: 8 }} />Tidak ada ticket ditemukan</td></tr> : visiblePage.map((row) => {
+              {visible.length === 0 ? <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}><i className="ti ti-inbox" style={{ fontSize: 28, display: "block", marginBottom: 8 }} />No tickets found</td></tr> : visiblePage.map((row) => {
                 const isDone = row.status === "Done";
                 const divId = text(row.divisi_id);
                 const division = divisionMap.get(divId);

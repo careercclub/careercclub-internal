@@ -6,9 +6,8 @@ const schemas = {
   partnership: "{name, category, tier: Strategic|Standard, status: Approached|Sales Meet|Negotiation|Closed Deal|Closed Lost, contact_name, contact_email, contact_phone, scope, notes, input_date: YYYY-MM-DD|null}",
   story: "{tanggal: YYYY-MM-DD|null, status: Draft|Done, items: [{urutan, isi}]}",
   carousel: "{judul, tanggal_posting: YYYY-MM-DD|null, funnel: TOFU|MOFU|BOFU, cta, status: Draft|Done}",
-  voucher: "{nama_event, kode, tipe: Flash Sale|Mega Sale|Bundle Sale|Voucher Gift, periode_mulai: YYYY-MM-DD|null, periode_selesai: YYYY-MM-DD|null, diskon_persen, maks_potongan, min_transaksi, kuota, notes}",
   task: "{title, description, status: Todo|On Progress|Done, priority: High|Med|Low, phase: Pre Event|Hari H|Post Event, due_date: YYYY-MM-DD|null}",
-  dashboard: "{module: ticket|task|carousel|voucher|partnership, data: object containing the fields for that module}",
+  dashboard: "{module: ticket|task|carousel|partnership, data: object containing the fields for that module}",
 } as const;
 
 type ParseKind = keyof typeof schemas;

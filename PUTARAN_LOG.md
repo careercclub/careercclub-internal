@@ -526,3 +526,59 @@ Dipicu screenshot user dari internal.ccclub.id/design-assets. Nomor putaran "Ing
 
 - Edit/hapus aset langsung dari popup (sekarang lewat tab Manage data).
 - Kartu yang gambar pertamanya hilang masih menampilkan ikon; bisa memakai gambar berikutnya yang berhasil dimuat.
+
+---
+
+## Putaran 12 — Semua popup: muat di layar, bisa ditutup, tombol selalu terlihat (15 Okt 2026)
+
+Dipicu screenshot user dari Content Library (popup lebih tinggi dari layar, gambar terpotong) + permintaan "terus evaluasi UI modul lain, terutama popup". Nomor "Inggris semua" mundur ke 13.
+
+**Keputusan user:** modul **Voucher dihapus dari app, data tetap** (tabel `vouchers` tidak disentuh).
+
+### Plan — audit heuristik terukur (sebelum)
+
+Alat: skrip yang membuka **29 popup** (lewat `?focus=` hasil search, tombol Add/New, dan langkah khusus per modul) di **laptop 1280×720, desktop 1920×1080, HP 390×844**, lalu mengukur: muat di layar, isi terpotong, tombol tutup terlihat, tombol aksi terakhir terlihat tanpa scroll, Esc menutup, diumumkan sebagai dialog, gambar *cover* (terpotong), teks <11px, kata bahasa Indonesia, isi melebar ke samping.
+
+| # | Temuan | Heuristik | Prioritas |
+|---|--------|-----------|-----------|
+| Q1 | Content Library preview: gambar dipaksa kotak 1:1 *cover* (postingan 4:5 terpotong), tombol aksi di bawah lipatan | Visibilitas; estetika & minimalis | Prioritas |
+| Q2 | Collaborators detail: **tidak ada tombol tutup**, Esc tidak menutup, bukan dialog | Kontrol & kebebasan user | Prioritas |
+| Q3 | Form B2B/Org Partnership, Competitor, Customer Knowledge: overlay buatan sendiri, bukan dialog, Esc (B2B) tidak menutup, label tidak terhubung ke kolom, bahasa Indonesia | Konsistensi; aksesibilitas | Prioritas |
+| Q4 | Editor baris "Manage data" (±36 halaman): panel melayang tanpa latar, tanpa tombol tutup, Esc tidak menutup | Kontrol & kebebasan user | Prioritas |
+| Q5 | Tickets, Program, Dashboard, Content Evaluation: tombol Save baru terlihat setelah scroll ke paling bawah | Visibilitas; efisiensi | Prioritas |
+| Q6 | Tickets di HP: baris tombol tidak bisa turun → isi popup melebar, "Save ticket" terpotong | Pencegahan error | Prioritas |
+| Q7 | Label 7–10px huruf kapital di form popup (Content Library, Job Vacancy, Content Planning, CRM/Talent detail, Eval, RecordManager) | Keterbacaan | Prioritas |
+| Q8 | Teks campur bahasa di popup (Batal/Simpan/Tambah, Judul/Deskripsi/Divisi, placeholder "contoh:/cth:/Cari…") | Konsistensi (keputusan "Inggris semua") | Prioritas |
+| Q9 | Tombol Simpan generik di popup | Prinsip: tombol menyebut objek | Prioritas |
+
+### Do — yang berubah
+
+- **Content Library preview** dirombak: desktop dua kolom (gambar utuh kiri + thumbnail; info kanan dengan metrik, label, copywriting, notes yang bisa di-scroll; **tombol aksi selalu di bawah**); HP satu kolom, tombol aksi menempel di bawah, tombol × di pojok atas; ←/→ di keyboard.
+- **Collaborators detail** → Dialog: foto sekarang tampil (klik foto untuk ganti), × dan Esc, form scroll dengan Cancel · Save profile menempel di bawah.
+- **Partnership, Competitor, Customer Knowledge** → Dialog bersama: judul "Add/Edit partner|competitor|pain point", label terhubung ke kolom, kolom wajib bertanda merah, tombol **Save partner / Save competitor / Save pain point**.
+- **Editor baris RecordManager** → Dialog "Edit {item}" (berlaku di semua tab Manage data & halaman tabel), Save menempel di bawah, tutup otomatis setelah simpan; hasil search tetap membuka editornya.
+- **Footer menempel** (`DialogFooter sticky`) untuk Tickets, Program (event, task, link, Google Calendar), Dashboard calendar, Google Calendar modal, Design Assets; Content Evaluation & Content Library add memakai versi CSS yang sama.
+- Aksi sekunder tiket (Google Calendar, Duplicate, Delete) jadi tombol ikon berlabel di HP; Delete bergaya garis merah (merah hanya untuk bahaya).
+- Ukuran teks label popup naik ke 12px (kalimat biasa, bukan huruf kapital kecil).
+- Bahasa Inggris di semua popup yang disentuh + placeholder pencarian; tombol menyebut objek (Save ticket/task/event, Create event, Add link, Save vacancy, Add carousel plan, …).
+- **Voucher dihapus**: menu, halaman, komponen, API, katalog/search, AI command & parser; `/voucher` → Dashboard (`REMOVED_PAGES`); `kode_voucher` di Talent Pool tetap.
+
+### Check — iterative design review
+
+1. Audit 1: 9 jenis temuan di 14 modul (lihat tabel).
+2. Review 2: Content Library desktop ✔, tapi tombol × di HP berada di bawah gambar → dipindah ke pojok popup.
+3. Review 3: **Tickets di HP melebar** (tombol tidak turun baris) → footer boleh membungkus; audit ditambah cek "isi melebar ke samping" (awalnya salah deteksi teks pembaca layar → disaring).
+4. Review 4: footer Tickets di HP makan 3 baris → aksi sekunder jadi ikon. Deskripsi editor "fields marked *" tidak cocok dengan tanda "required" → dihapus.
+5. Audit akhir: **87 pengukuran (29 popup × 3 layar) lolos semua**; satu-satunya tanda tersisa adalah kata "Catatan" di data contoh, bukan teks app.
+
+### Check — regression
+
+- Unit **94/94** (baru: modul yang dihapus tidak ada di menu/katalog/search/AI dan alamat lama diarahkan; tidak ada overlay buatan sendiri atau editor melayang; dialog yang di-scroll wajib footer menempel)
+- E2E: form & tabel umum **893/893** (sekarang juga cek editor = dialog dan tertutup setelah simpan; uji pilihan banyak dipindah dari voucher ke assignee task), Design Assets 49/49, popup 31/31, navigasi 32/32, modul 12/12 (Voucher dihapus), search 46/46, Content Library 51/51
+- tsc bersih; lint bersih untuk kode baru; `npm run build` lolos
+
+### Antrean
+
+- Putaran 13 "Inggris semua" untuk halaman (bukan popup): kotak search atas masih "Cari apa saja…", tombol "Tambah" di beberapa halaman, judul statistik (TOTAL BUYERS/BELUM ISI POOL), Settings.
+- Nilai data berbahasa Indonesia (fase "Hari H", status "On Progress", opsi aksi "Boost ke Meta Ads") sengaja tidak diterjemahkan karena tersimpan di database — perlu keputusan & migrasi kalau mau diganti.
+- Popup modul lama yang masih memakai gaya CSS sendiri (Content Planning, Job Vacancy, Content Evaluation) sudah berperilaku sama; penyeragaman tampilan masuk putaran palet warna.

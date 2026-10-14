@@ -92,7 +92,7 @@ export function JobVacancyMtTools({ rows, industries, referenceDate }: { rows: A
             </button>
           ))}
         </div>
-        <button type="button" className={styles.addBtn} onClick={() => setFormState({ record: null })}><i className="ti ti-plus" /> Tambah Loker</button>
+        <button type="button" className={styles.addBtn} onClick={() => setFormState({ record: null })}><i className="ti ti-plus" /> Add vacancy</button>
       </div>
       <div className={styles.body}>
         <div className={styles.page}>
@@ -129,7 +129,7 @@ function Modal({ size, title, onClose, children, footer }: { size?: "sm" | "lg";
 function Field({ label, optional, children }: { label: string; optional?: boolean; children: ReactNode }) {
   return (
     <label className={styles.field}>
-      <span className={styles.fieldLabel}>{label}{optional ? <span className={styles.optional}> (opsional)</span> : null}</span>
+      <span className={styles.fieldLabel}>{label}{optional ? <span className={styles.optional}> (optional)</span> : null}</span>
       {children}
     </label>
   );
@@ -268,7 +268,7 @@ function DashboardTab({ rows, now, onJumpToList }: { rows: ApiRecord[]; now: Dat
 
       <div className={styles.sectionLabel} style={{ marginTop: 16, marginBottom: 8 }}>Ringkasan per Kategori</div>
       {!industryCounts.length ? (
-        <div className={styles.empty}>Belum ada data. Tambahkan loker MT pertama!</div>
+        <div className={styles.empty}>No vacancies yet. Add the first MT vacancy.</div>
       ) : (
         <div className={styles.categoryList}>
           {industryCounts.map(([name, count]) => {
@@ -321,7 +321,7 @@ function ListTab({ rows, industryNames, presetIndustry, onEdit }: { rows: ApiRec
     <>
       <SheetImportPanel existingRows={rows} />
       <div className={styles.filterBar}>
-        <input className={styles.filterInput} onChange={(event) => setSearch(event.target.value)} placeholder="Cari perusahaan..." value={search} />
+        <input className={styles.filterInput} onChange={(event) => setSearch(event.target.value)} placeholder="Search company…" value={search} />
         <select className={styles.nlSelect} onChange={(event) => setIndustry(event.target.value)} value={industry}>
           <option value="">Industri</option>
           {industryNames.map((nama) => <option key={nama} value={nama}>{nama}</option>)}
@@ -370,7 +370,7 @@ function ListTab({ rows, industryNames, presetIndustry, onEdit }: { rows: ApiRec
             </table>
           </div>
         ) : (
-          <div className={styles.empty}><i className="ti ti-search" />Tidak ada data</div>
+          <div className={styles.empty}><i className="ti ti-search" />No data</div>
         )}
       </div>
       <Pager onChange={setPage} page={page} totalPages={totalPages} />
@@ -423,52 +423,52 @@ function VacancyForm({ record, industryNames, onClose }: { record: ApiRecord | n
     <Modal
       footer={<>
         <button className={`${styles.btn} ${styles.btnSm}`} onClick={onClose} type="button">Cancel</button>
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={save} type="button"><i className="ti ti-device-floppy" /> {record ? "Simpan Perubahan" : "Simpan Loker"}</button>
+        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={save} type="button"><i className="ti ti-device-floppy" /> {record ? "Save changes" : "Save vacancy"}</button>
       </>}
       onClose={onClose}
       size="lg"
-      title={record ? `Edit Loker — ${text(record.company)}` : "Tambah Loker MT Baru"}
+      title={record ? `Edit vacancy — ${text(record.company)}` : "Add MT vacancy"}
     >
       <div className={styles.formSection}>
-        <div className={styles.formSectionTitle}><i className="ti ti-building" /> Info Perusahaan</div>
+        <div className={styles.formSectionTitle}><i className="ti ti-building" /> Company</div>
         <div className={styles.formGrid}>
-          <Field label="Nama Perusahaan *"><input className={styles.input} onChange={(event) => setCompany(event.target.value)} placeholder="contoh: Bank BCA" value={company} /></Field>
-          <Field label="Kategori Industri *">
+          <Field label="Company name *"><input className={styles.input} onChange={(event) => setCompany(event.target.value)} placeholder="e.g. Bank BCA" value={company} /></Field>
+          <Field label="Industry *">
             <select className={styles.select} onChange={(event) => setIndustry(event.target.value)} value={industry}>
-              <option value="">Pilih industri...</option>
+              <option value="">Select industry…</option>
               {industryNames.map((nama) => <option key={nama} value={nama}>{nama}</option>)}
             </select>
           </Field>
-          <div className={styles.fieldFull}><Field label="Nama Program MT *"><input className={styles.input} onChange={(event) => setProgram(event.target.value)} placeholder="contoh: Officer Development Program (ODP)" value={program} /></Field></div>
+          <div className={styles.fieldFull}><Field label="MT program name *"><input className={styles.input} onChange={(event) => setProgram(event.target.value)} placeholder="e.g. Officer Development Program (ODP)" value={program} /></Field></div>
         </div>
       </div>
 
       <div className={styles.formSection}>
         <div className={styles.formSectionTitle}><i className="ti ti-target" /> Requirements</div>
         <div className={styles.formGrid}>
-          <div className={styles.fieldFull}><Field label="Roles"><TagInput onChange={setRoles} placeholder="Ketik lalu Enter..." values={roles} /></Field></div>
-          <Field label="Education"><input className={styles.input} onChange={(event) => setEdu(event.target.value)} placeholder="contoh: Min. S1, S1/S2" value={edu} /></Field>
-          <Field label="Minimum GPA"><input className={styles.input} onChange={(event) => setGpa(event.target.value)} placeholder="contoh: Min. 3.0" value={gpa} /></Field>
-          <div className={styles.fieldFull}><Field label="Majors"><TagInput onChange={setMajors} placeholder="Ketik jurusan lalu Enter..." values={majors} /></Field></div>
-          <div className={styles.fieldFull}><Field label="Placement"><TagInput onChange={setPlacement} placeholder="contoh: Jakarta, Seluruh Indonesia..." values={placement} /></Field></div>
-          <div className={styles.fieldFull}><Field label="Another Requirements"><textarea className={styles.textarea} onChange={(event) => setOtherReq(event.target.value)} placeholder="Syarat tambahan lainnya..." value={otherReq} /></Field></div>
+          <div className={styles.fieldFull}><Field label="Roles"><TagInput onChange={setRoles} placeholder="Type, then press Enter…" values={roles} /></Field></div>
+          <Field label="Education"><input className={styles.input} onChange={(event) => setEdu(event.target.value)} placeholder="e.g. Min. S1, S1/S2" value={edu} /></Field>
+          <Field label="Minimum GPA"><input className={styles.input} onChange={(event) => setGpa(event.target.value)} placeholder="e.g. Min. 3.0" value={gpa} /></Field>
+          <div className={styles.fieldFull}><Field label="Majors"><TagInput onChange={setMajors} placeholder="Type a major, then press Enter…" values={majors} /></Field></div>
+          <div className={styles.fieldFull}><Field label="Placement"><TagInput onChange={setPlacement} placeholder="e.g. Jakarta, anywhere in Indonesia…" values={placement} /></Field></div>
+          <div className={styles.fieldFull}><Field label="Other requirements"><textarea className={styles.textarea} onChange={(event) => setOtherReq(event.target.value)} placeholder="Any other requirements…" value={otherReq} /></Field></div>
         </div>
       </div>
 
       <div className={styles.formSection}>
         <div className={styles.formSectionTitle}><i className="ti ti-list-numbers" /> Tahapan Seleksi</div>
-        <Field label="Selection Steps"><TagInput onChange={setSelection} ordered placeholder="Ketik tahapan lalu Enter (urutan = alur seleksi)..." values={selection} /></Field>
-        <div className={styles.fieldHint}>Input pertama = Step 1, kedua = Step 2, dst.</div>
+        <Field label="Selection steps"><TagInput onChange={setSelection} ordered placeholder="Type a stage, then press Enter (order = selection flow)…" values={selection} /></Field>
+        <div className={styles.fieldHint}>The first entry is step 1, the second step 2, and so on.</div>
       </div>
 
       <div className={styles.formSection}>
-        <div className={styles.formSectionTitle}><i className="ti ti-calendar" /> Info Program &amp; Waktu</div>
+        <div className={styles.formSectionTitle}><i className="ti ti-calendar" /> Program &amp; timing</div>
         <div className={styles.formGrid}>
-          <Field label="Durasi Program"><input className={styles.input} onChange={(event) => setDuration(event.target.value)} placeholder="contoh: 2 tahun, 18 bulan" value={duration} /></Field>
-          <Field label="Open Date" optional><input className={styles.input} onChange={(event) => setOpenDate(event.target.value)} type="date" value={openDate} /></Field>
+          <Field label="Program duration"><input className={styles.input} onChange={(event) => setDuration(event.target.value)} placeholder="e.g. 2 years, 18 months" value={duration} /></Field>
+          <Field label="Open date" optional><input className={styles.input} onChange={(event) => setOpenDate(event.target.value)} type="date" value={openDate} /></Field>
           <Field label="Deadline" optional><input className={styles.input} onChange={(event) => setDeadline(event.target.value)} type="date" value={deadline} /></Field>
-          <div className={styles.fieldFull}><Field label="Buka di Bulan *"><MonthGrid onChange={setMonths} selected={months} /></Field></div>
-          <Field label="Tahun Buka">
+          <div className={styles.fieldFull}><Field label="Opening months *"><MonthGrid onChange={setMonths} selected={months} /></Field></div>
+          <Field label="Opening year">
             <select className={styles.select} onChange={(event) => setYear(event.target.value)} value={year}>{yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}</select>
           </Field>
         </div>
@@ -476,12 +476,12 @@ function VacancyForm({ record, industryNames, onClose }: { record: ApiRecord | n
 
       <div className={styles.formSection} style={{ borderBottom: "none", paddingBottom: 0 }}>
         <div className={styles.formSectionTitle}><i className="ti ti-link" /> Source</div>
-        <Field label="Career Platform Links *"><TagInput onChange={setCareerLinks} placeholder="Paste link lalu Enter..." values={careerLinks} /></Field>
-        <div className={styles.fieldHint}>Tampil di newsletter customer</div>
-        <div style={{ marginTop: 10 }}><Field label="Source Referensi (internal)" optional><TagInput onChange={setRefLinks} placeholder="Paste link sumber riset..." values={refLinks} /></Field></div>
-        <div className={styles.fieldHint}>Internal only — tidak tampil di newsletter</div>
-        <div style={{ marginTop: 10 }}><Field label="Catatan Tambahan" optional><textarea className={styles.textarea} onChange={(event) => setNotes(event.target.value)} placeholder="Info tambahan..." value={notes} /></Field></div>
-        <div className={styles.inputDateAuto} style={{ marginTop: 10 }}><i className="ti ti-clock" /> Tanggal input otomatis tercatat: <strong>{fmtShort(createdAt || new Date())}</strong></div>
+        <Field label="Career Platform Links *"><TagInput onChange={setCareerLinks} placeholder="Paste a link, then press Enter…" values={careerLinks} /></Field>
+        <div className={styles.fieldHint}>Shown in the customer newsletter</div>
+        <div style={{ marginTop: 10 }}><Field label="Reference source (internal)" optional><TagInput onChange={setRefLinks} placeholder="Paste link sumber riset..." values={refLinks} /></Field></div>
+        <div className={styles.fieldHint}>Internal only — not shown in the newsletter</div>
+        <div style={{ marginTop: 10 }}><Field label="Additional notes" optional><textarea className={styles.textarea} onChange={(event) => setNotes(event.target.value)} placeholder="Info tambahan..." value={notes} /></Field></div>
+        <div className={styles.inputDateAuto} style={{ marginTop: 10 }}><i className="ti ti-clock" /> Date added is recorded automatically: <strong>{fmtShort(createdAt || new Date())}</strong></div>
       </div>
     </Modal>
   );
@@ -576,7 +576,7 @@ function NewsletterTab({ rows, now }: { rows: ApiRecord[]; now: Date }) {
         <div className={styles.newsletterGroup}><span className={styles.newsletterLabel}>Minggu ke-</span><select className={styles.nlSelect} onChange={(event) => setWeek(Number(event.target.value))} value={week}>{[1, 2, 3, 4].map((w) => <option key={w} value={w}>Minggu {w} (tgl {WEEK_RANGES[w - 1]})</option>)}</select></div>
         <div className={`${styles.newsletterGroup} ${styles.nlIndContainer}`}>
           <span className={styles.newsletterLabel}>Industri</span>
-          <button className={styles.nlIndBtn} onClick={() => setIndustryDdOpen((value) => !value)} type="button">{selectedIndustries.length ? `${selectedIndustries.length} industri dipilih` : "Semua Industri"} <i className="ti ti-chevron-down" /></button>
+          <button className={styles.nlIndBtn} onClick={() => setIndustryDdOpen((value) => !value)} type="button">{selectedIndustries.length ? `${selectedIndustries.length} industri dipilih` : "All industries"} <i className="ti ti-chevron-down" /></button>
           {industryDdOpen ? (
             <>
               <div onClick={() => setIndustryDdOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 15 }} />
@@ -602,7 +602,7 @@ function NewsletterTab({ rows, now }: { rows: ApiRecord[]; now: Date }) {
           <button className={styles.copyBtn} onClick={copy} type="button"><i className="ti ti-copy" /> {copyLabel}</button>
         </>
       ) : (
-        <div className={styles.emptyNl}><i className="ti ti-mood-empty" />Tidak ada loker yang diinput di minggu ini</div>
+        <div className={styles.emptyNl}><i className="ti ti-mood-empty" />No vacancies added this week</div>
       )}
     </div>
   );
@@ -632,10 +632,10 @@ function MasterDataTab({ industries, names }: { industries: ApiRecord[]; names: 
 
   return (
     <div className={styles.masterWrap}>
-      <div className={styles.masterTitle}><i className="ti ti-database" style={{ color: "#0f52ba" }} /> Master Data Industri</div>
-      <div className={styles.masterSub}>Kelola kategori industri yang muncul di form input loker</div>
+      <div className={styles.masterTitle}><i className="ti ti-database" style={{ color: "#0f52ba" }} /> Industries</div>
+      <div className={styles.masterSub}>Manage the industries offered in the vacancy form</div>
       <div className={styles.addIndRow}>
-        <input className={styles.input} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") add(); }} placeholder="Nama industri baru..." value={value} />
+        <input className={styles.input} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") add(); }} placeholder="New industry name…" value={value} />
         <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={pending} onClick={add} type="button"><i className="ti ti-plus" /> Add industry</button>
       </div>
       <div className={styles.indList}>
@@ -652,7 +652,7 @@ function MasterDataTab({ industries, names }: { industries: ApiRecord[]; names: 
             </div>
           );
         })}
-        {!sorted.length ? <div className={styles.empty}>Belum ada industri</div> : null}
+        {!sorted.length ? <div className={styles.empty}>No industries yet</div> : null}
       </div>
     </div>
   );
@@ -684,14 +684,14 @@ function CompanyIntelTab({ rows }: { rows: ApiRecord[] }) {
   return (
     <>
       <div className={styles.filterBar}>
-        <input className={styles.filterInput} onChange={(event) => setSearch(event.target.value)} placeholder="Cari perusahaan..." value={search} />
+        <input className={styles.filterInput} onChange={(event) => setSearch(event.target.value)} placeholder="Search company…" value={search} />
         <select className={styles.nlSelect} onChange={(event) => setIndustry(event.target.value)} value={industry}>
-          <option value="">Semua Industri</option>
+          <option value="">All industries</option>
           {industries.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
         </select>
       </div>
       {!companies.length ? (
-        <div className={styles.empty}><i className="ti ti-search" />Tidak ada data</div>
+        <div className={styles.empty}><i className="ti ti-search" />No data</div>
       ) : (
         <div className={styles.companyGrid}>
           {companies.map(([company, entry]) => {

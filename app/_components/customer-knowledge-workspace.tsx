@@ -3,6 +3,7 @@
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
@@ -166,7 +167,7 @@ function DatabaseTab({ rows, platforms, categories, onAdd, onEdit }: { rows: Api
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FilterBar>
-          <input className={filterFieldClass} onChange={(event) => setQuery(event.target.value)} placeholder="Cari komentar / username" value={query} />
+          <input className={filterFieldClass} onChange={(event) => setQuery(event.target.value)} placeholder="Search comments or usernames" value={query} />
           <select className={filterFieldClass} onChange={(event) => setPlatform(event.target.value)} value={platform}><option value="">Semua Platform</option>{platformOptions.map((value) => <option key={value}>{value}</option>)}</select>
           <select className={filterFieldClass} onChange={(event) => setMonth(event.target.value)} value={month}><option value="">Semua Bulan</option>{MONTHS_SHORT.map((value) => <option key={value}>{value}</option>)}</select>
           <select className={filterFieldClass} onChange={(event) => setCategory(event.target.value)} value={category}><option value="">Semua Kategori</option>{categoryOptions.map((value) => <option key={value}>{value}</option>)}</select>
@@ -249,7 +250,7 @@ function LabelPicker({ selected, allLabels, onChange }: { selected: string[]; al
           {!available.length && !creating ? <p className="px-2 py-1 text-[10px] text-muted-foreground">Tidak ada label lain</p> : null}
           {creating ? (
             <div className="flex gap-1 p-1">
-              <input autoFocus className="h-7 flex-1 rounded border border-border px-2 text-[11px]" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commitDraft(); }} placeholder="Nama label baru..." value={draft} />
+              <input autoFocus className="h-7 flex-1 rounded border border-border px-2 text-[11px]" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commitDraft(); }} placeholder="New label name…" value={draft} />
               <button className="rounded bg-[var(--purple-mid)] px-2 text-[10px] text-white" onClick={commitDraft} type="button">Add label</button>
             </div>
           ) : (
@@ -314,37 +315,37 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
   }
 
   const inputClass = "w-full rounded-[var(--radius)] border border-[var(--border-md)] bg-[var(--bg)] px-3 py-2 text-[13px] outline-none focus:border-[var(--purple-accent)]";
-  const labelClass = "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground";
+  const labelClass = "mb-1 block text-xs font-medium text-foreground";
 
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-center bg-black/45 p-4" onMouseDown={onClose}>
-      <Card className="flex max-h-[90vh] w-full max-w-[560px] flex-col gap-0 overflow-hidden p-0" onMouseDown={(event) => event.stopPropagation()}>
+    <Dialog onOpenChange={(open) => { if (!open) onClose(); }} open>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]" showCloseButton={false}>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-bold">{record ? "Edit" : "Tambah"} Data</h2>
-          <button onClick={onClose} type="button"><i className="ti ti-x" /></button>
+          <div className="min-w-0"><DialogTitle className="text-base font-bold">{record ? "Edit pain point" : "Add pain point"}</DialogTitle><DialogDescription className="text-xs">Fields marked * are required.</DialogDescription></div>
+          <button aria-label="Close" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground" onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
         </div>
         <div className="flex flex-col gap-3.5 overflow-y-auto p-5">
           {!record ? (
             <div className="rounded-lg border border-dashed border-[var(--border-md)] p-3 text-center" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const image = Array.from(event.dataTransfer.files).find((file) => file.type.startsWith("image/")); if (image) void parseScreenshot(image); }} onPaste={(event) => { const image = Array.from(event.clipboardData.files).find((file) => file.type.startsWith("image/")); if (image) { event.preventDefault(); void parseScreenshot(image); } }} tabIndex={0}>
-              <button className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--purple-mid)]" onClick={() => inputRef.current?.click()} type="button"><i className="ti ti-camera" /> Upload atau paste screenshot (Ctrl+V)</button>
+              <button className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--purple-mid)]" onClick={() => inputRef.current?.click()} type="button"><i className="ti ti-camera" /> Upload or paste a screenshot (Ctrl+V)</button>
               <input accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void parseScreenshot(file); }} ref={inputRef} type="file" />
-              <p className="mt-1 text-[10px] text-muted-foreground">{aiStatus}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{aiStatus}</p>
             </div>
           ) : null}
-          <div><label className={labelClass}>Komentar / Diskusi *</label><textarea className={inputClass} onChange={(event) => setKomentar(event.target.value)} placeholder="Paste komentar dari TikTok, IG, X..." rows={3} value={komentar} /></div>
+          <label className="block"><span className={labelClass}>Comment or discussion <span aria-hidden="true" className="text-[var(--red)]">*</span></span><textarea required className={inputClass} onChange={(event) => setKomentar(event.target.value)} placeholder="Paste a comment from TikTok, IG, X…" rows={3} value={komentar} /></label>
           <div className="grid grid-cols-3 gap-2.5">
-            <div><label className={labelClass}>Platform *</label><select className={inputClass} onChange={(event) => setPlatform(event.target.value)} value={platform}>{platformNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
-            <div><label className={labelClass}>Bulan *</label><select className={inputClass} onChange={(event) => setBulan(event.target.value)} value={bulan}>{MONTHS_SHORT.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
-            <div><label className={labelClass}>Kategori *</label><select className={inputClass} onChange={(event) => setKategori(event.target.value)} value={kategori}>{categoryNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
+            <label className="block"><span className={labelClass}>Platform <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setPlatform(event.target.value)} value={platform}>{platformNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className="block"><span className={labelClass}>Month <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setBulan(event.target.value)} value={bulan}>{MONTHS_SHORT.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className="block"><span className={labelClass}>Category <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setKategori(event.target.value)} value={kategori}>{categoryNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           </div>
-          <div><label className={labelClass}>Labels</label><LabelPicker allLabels={allLabels} onChange={setSelectedLabels} selected={selectedLabels} /></div>
+          <div><span className={labelClass}>Labels</span><LabelPicker allLabels={allLabels} onChange={setSelectedLabels} selected={selectedLabels} /></div>
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-          <Button onClick={onClose} size="sm" variant="outline">Batal</Button>
-          <Button disabled={pending} onClick={save} size="sm"><i className="ti ti-check" /> Simpan</Button>
+          <Button onClick={onClose} size="sm" type="button" variant="outline">Cancel</Button>
+          <Button disabled={pending} onClick={save} size="sm" type="button"><i aria-hidden="true" className="ti ti-check" /> {pending ? "Saving…" : "Save pain point"}</Button>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -88,7 +88,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
   function submit() {
     setValidationError("");
     if (!title.trim() || !startDate || !endDate) {
-      setValidationError("Judul dan tanggal event wajib diisi.");
+      setValidationError("Event title and date are required.");
       return;
     }
 
@@ -98,7 +98,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
       ? new Date(end) <= new Date(start)
       : endDate < startDate;
     if (invalidRange) {
-      setValidationError("Waktu selesai harus setelah waktu mulai.");
+      setValidationError("End time must be after the start time.");
       return;
     }
 
@@ -121,7 +121,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[480px]">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[480px]">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#E8F0FE] text-[#4285F4]">
@@ -171,14 +171,14 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
             role="switch"
             type="button"
           >
-            <span className="flex items-center gap-1.5"><i className="ti ti-clock text-sm" /> Tambah waktu spesifik</span>
+            <span className="flex items-center gap-1.5"><i className="ti ti-clock text-sm" /> Add a specific time</span>
             <span className={`relative h-[18px] w-8 rounded-full transition-colors ${specificTime ? "bg-[#0f52ba]" : "bg-border"}`}>
               <span className={`absolute top-0.5 size-3.5 rounded-full bg-white shadow-sm transition-all ${specificTime ? "left-4" : "left-0.5"}`} />
             </span>
           </button>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="ticket-gcal-description">Deskripsi</Label>
+            <Label htmlFor="ticket-gcal-description">Description</Label>
             <Textarea id="ticket-gcal-description" rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
           </div>
 
@@ -198,7 +198,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
 
           {additionalPeople.length ? (
             <fieldset className="grid gap-2">
-              <legend className="mb-1 text-[11px] font-semibold text-muted-foreground uppercase">CC tambahan</legend>
+              <legend className="mb-1 text-[11px] font-semibold text-muted-foreground uppercase">Extra CC</legend>
               <div className="grid max-h-[120px] gap-1.5 overflow-y-auto pr-1">
                 {additionalPeople.map((person) => {
                   const email = text(person.email);
@@ -213,15 +213,15 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
             </fieldset>
           ) : null}
 
-          {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar belum dikonfigurasi untuk aplikasi ini.</p> : null}
+          {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar is not set up for this app yet.</p> : null}
           {error ? <p className="text-xs text-destructive" role="status">{error}</p> : null}
         </div>
 
-        <DialogFooter className="sm:justify-end">
-          <Button disabled={busy} onClick={onClose} type="button" variant="ghost">Batal</Button>
+        <DialogFooter sticky className="sm:justify-end">
+          <Button disabled={busy} onClick={onClose} type="button" variant="ghost">Cancel</Button>
           <Button disabled={busy || !configurationLoaded || !clientId} onClick={submit} type="button">
             <i className="ti ti-calendar-plus" aria-hidden="true" />
-            {busy ? "Menghubungkan..." : synced ? "Sinkronkan Ulang" : "Buat Event"}
+            {busy ? "Menghubungkan..." : synced ? "Sinkronkan Ulang" : "Create event"}
           </Button>
         </DialogFooter>
       </DialogContent>

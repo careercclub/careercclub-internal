@@ -24,7 +24,6 @@ const EVENTS: ReferenceSource = { table: "events", label: ["nama", "tanggal"], o
 /** "definitionKey.field" → where the names come from. Field names alone are ambiguous (product_id). */
 export const REFERENCES: Record<string, ReferenceSource> = {
   "ads_contents.eval_id": { table: "content_evaluations", label: ["judul"], orderBy: "tanggal" },
-  "vouchers.product_ids": PRODUCTS,
   "crm_deals.buyer_id": { table: "buyers", label: ["name", "email"], orderBy: "name" },
   "tasks.project_id": EVENTS,
   "tasks.assignee_id": PEOPLE,
@@ -138,7 +137,7 @@ export function addTag(list: string[], raw: string) {
 /** What a person calls one item of each table, for "Add feature", "No features yet", etc. */
 export const ITEM_NOUN: Record<string, string> = {
   events: "program", buyers: "buyer", content_evaluations: "evaluation", ads_contents: "ad",
-  ig_snapshots: "weekly snapshot", vouchers: "voucher", partners: "partner", org_partners: "organization",
+  ig_snapshots: "weekly snapshot", partners: "partner", org_partners: "organization",
   design_assets: "design asset", competitor_profiles: "competitor", content_library: "content",
   resources: "resource", app_settings: "setting", crm_deals: "deal", tasks: "task",
   event_link_templates: "link template", ig_targets: "target", partner_deals: "deal",

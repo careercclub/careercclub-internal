@@ -744,18 +744,14 @@
   gap: 5px;
 }
 .fieldLabel {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
 }
 .fieldLabel .optional {
   font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text-hint);
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 .input,
 .select,
@@ -830,7 +826,7 @@
   margin-bottom: 6px;
 }
 .pickerWeekday {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   text-align: center;
   padding: 2px 0;
@@ -870,7 +866,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 .pickerLegendSwatch {
@@ -992,7 +988,7 @@
   flex-wrap: wrap;
 }
 .tagPill {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 8px;
   border-radius: 20px;
   border: 0.5px solid var(--border);
@@ -1002,7 +998,7 @@
   font-weight: 500;
 }
 .nichePill {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 20px;
   background: var(--bg);
@@ -1020,7 +1016,7 @@
   line-height: 1.5;
 }
 .statusPillPosted {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 20px;
   background: #e8f0fc;
@@ -1030,7 +1026,7 @@
   flex-shrink: 0;
 }
 .statusPillPending {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 20px;
   background: var(--bg);

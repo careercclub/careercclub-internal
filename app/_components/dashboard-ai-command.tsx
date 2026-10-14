@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styles from "../record-manager.module.css";
 
-const modules = { ticket: { label: "Ticket", definition: "tickets", kind: "ticket" }, task: { label: "Program task", definition: "tasks", kind: "task" }, carousel: { label: "Carousel plan", definition: "carousel_plans", kind: "carousel" }, voucher: { label: "Voucher", definition: "vouchers", kind: "voucher" }, partnership: { label: "B2B partner", definition: "partners", kind: "partnership" } } as const;
+const modules = { ticket: { label: "Ticket", definition: "tickets", kind: "ticket" }, task: { label: "Program task", definition: "tasks", kind: "task" }, carousel: { label: "Carousel plan", definition: "carousel_plans", kind: "carousel" }, partnership: { label: "B2B partner", definition: "partners", kind: "partnership" } } as const;
 type ModuleKey = keyof typeof modules;
 type ModuleSelection = ModuleKey | "auto";
 function value(input: unknown) { if (input === null || input === undefined) return ""; return typeof input === "object" ? JSON.stringify(input) : String(input); }
@@ -27,7 +27,7 @@ export function DashboardAiCommand() {
       const result = await response.json() as { data?: Record<string, unknown>; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error || "Tidak bisa memproses perintah.");
       if (module === "auto") {
-        const aliases: Record<string, ModuleKey> = { ticket: "ticket", tickets: "ticket", task: "task", tasks: "task", carousel: "carousel", voucher: "voucher", partnership: "partnership", b2b: "partnership" };
+        const aliases: Record<string, ModuleKey> = { ticket: "ticket", tickets: "ticket", task: "task", tasks: "task", carousel: "carousel", partnership: "partnership", b2b: "partnership" };
         const target = aliases[String(result.data.module || "").toLowerCase()];
         if (!target || !result.data.data || typeof result.data.data !== "object") throw new Error("AI tidak menemukan modul tujuan yang didukung.");
         setModule(target); setParsed(result.data.data as Record<string, unknown>);
