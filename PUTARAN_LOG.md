@@ -479,3 +479,50 @@ Menjawab temuan A5 (popup beda-beda), A6 (label tombol umum), N14 (ukuran teks t
 | # | Keputusan | Tanggal |
 |---|-----------|---------|
 | N13 | Hak **mengubah** tiket (edit, hapus, sinkron Google Calendar) **tidak** mengikuti aturan lihat per role — biarkan seperti sekarang | 15 Okt 2026 |
+
+---
+
+## Putaran 11 — Design Assets: popup detail & galeri gambar (15 Okt 2026)
+
+Dipicu screenshot user dari internal.ccclub.id/design-assets. Nomor putaran "Inggris semua" mundur ke 12.
+
+### Plan — audit heuristik (sebelum)
+
+| # | Temuan | Heuristik / prinsip | Prioritas |
+|---|--------|--------------------|-----------|
+| D1 | Gambar di popup **terpotong**: kotak setinggi 150px dengan mode *cover* — banner lebar kehilangan atas-bawah, poster tegak hanya tampil sepotong | Visibilitas status; kecocokan dengan dunia nyata (aset harus terlihat utuh) | Prioritas |
+| D2 | File yang gagal dimuat hanya tampil sebagai ikon abu-abu, tanpa penjelasan | Bantu user mengenali & memulihkan error | Prioritas |
+| D3 | Label detail = nama kolom database: KATEGORI, NAMA, TIPE, LINK; nama & kategori diulang padahal sudah di judul | Kecocokan bahasa; konsistensi (bahasa Inggris) ; minimalis | Prioritas |
+| D4 | Link sumber berupa teks panjang yang tidak bisa diklik dan memecah baris | Fleksibilitas & efisiensi | Prioritas |
+| D5 | Popup buatan sendiri: Esc tidak menutup, fokus tidak masuk, tidak diumumkan sebagai dialog; tidak ada tombol aksi di popup | Kontrol & kebebasan user; konsistensi dengan Putaran 10 | Prioritas |
+| D6 | Klik "Add to library" di kartu memunculkan form **di dasar halaman** — dari atas terlihat seperti tidak terjadi apa-apa | Visibilitas status sistem | Prioritas |
+| D7 | Di production tombol "Add to library" jauh lebih besar dari "Source" (efek N14 di versi lama) | Konsistensi; estetika | Prioritas |
+| D8 | Teks kartu 7–9px; "3 item" bukan "3 items" | Keterbacaan | Nice-to-have |
+| D9 | `storage_path` & `storage_paths` yang menunjuk file sama dihitung dua gambar | Pencegahan error | Nice-to-have |
+| D10 | Hasil search ke Design Assets tidak membuka asetnya | Konsistensi dengan modul lain (Putaran 6) | Nice-to-have |
+
+### Do — yang berubah
+
+- **Penampil gambar** (`StorageImage fit="contain"`): gambar selalu utuh (rasio dijaga), tinggi kotak mengikuti gambar sampai maks 56% layar (46% di HP); status *loading* (shimmer) dan **"Image could not be loaded — The file may have been moved or deleted."**
+- **Popup detail** pakai Dialog bersama: judul = nama aset, kategori di atasnya; panah kiri/kanan + tombol keyboard ←/→, penghitung 1 / 2, **thumbnail** untuk lompat; detail dengan label dari katalog (Type, Source link, Notes…), link bisa diklik (domain + ikon), catatan menjaga baris baru; tombol **Close · Open source · Add to library**; Esc menutup.
+- **Add to library** jadi popup "Add to content library" di tengah layar, terisi dari aset, kolom wajib bertanda merah (Source URL, Likes), sukses → pesan di bawah layar dan popup tertutup.
+- **Kartu**: teks 10–12px, aksi Source & Add to library satu ukuran (11px) dipisah garis tipis, "3 items", gambar ganda dihitung sekali.
+- Hasil search Design Assets langsung membuka popup aset (`?focus=`).
+- Berlaku juga untuk galeri KOL & MT Story (komponen yang sama, label dari katalog masing-masing).
+
+### Check — iterative design review
+
+1. Review 1 (desktop): gambar lebar utuh, form jadi popup ✔; **gambar tegak masih terpotong** (tinggi `img` 100% tidak berlaku di grid) → diganti `max-height` + rasio asli. Ruang kosong besar di atas/bawah banner lebar → kotak sekarang mengikuti bentuk gambar.
+2. Review 2 (HP 390px): teks "file may have been moved" **tertabrak tombol panah** → diberi jarak samping.
+3. Review 3: desktop & HP bersih, tanpa scroll ke samping.
+
+### Check — regression
+
+- E2E baru Design Assets **49/49** (desktop + HP): gambar lebar & tegak tampil utuh tanpa terpotong/melar (rasio diukur), Esc menutup, pesan file hilang tidak tertabrak panah, label Inggris, link bisa diklik, ← → dan thumbnail, form Add to library sebagai popup + terisi + Likes kosong menahan kirim + kirim sekali + pesan sukses, ukuran aksi kartu sama, hasil search membuka popup
+- Regresi: unit 91/91, search 46/46, modul 13/13, navigasi 32/32, popup 31/31, form & tabel 804/804, Content Library 51/51
+- tsc bersih; lint bersih untuk kode baru; `npm run build` lolos
+
+### Antrean
+
+- Edit/hapus aset langsung dari popup (sekarang lewat tab Manage data).
+- Kartu yang gambar pertamanya hilang masih menampilkan ikon; bisa memakai gambar berikutnya yang berhasil dimuat.
