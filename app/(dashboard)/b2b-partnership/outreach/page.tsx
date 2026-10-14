@@ -1,7 +1,7 @@
-import { RecordManager } from "@/app/_components/record-manager";
-import { listPartnerOutreach } from "@/lib/api/b2b-partnership";
-import { partnershipLinks } from "@/lib/records/links";
+import { RETIRED_PAGES, withFocus } from "@/lib/records/links";
+import { redirect } from "next/navigation";
 
-export default async function PartnerOutreachPage() {
-  return <RecordManager definitionKey="partner_outreach" links={partnershipLinks} rows={await listPartnerOutreach()} />;
+// This data is now managed in one place; the old address forwards there (and keeps ?focus from search).
+export default async function RetiredPage({ searchParams }: { searchParams: Promise<{ focus?: string | string[] }> }) {
+  redirect(withFocus(RETIRED_PAGES["/b2b-partnership/outreach"], (await searchParams).focus));
 }

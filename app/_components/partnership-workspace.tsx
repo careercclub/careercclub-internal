@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import { FilterBar, Pagination, Pill, StatCard, StatsGrid, filterFieldClass, usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
+import { confirmAction, notify, notifyError } from "./app-dialog";
 
 type Tab = "overview" | "master" | "pipeline" | "deals" | "outreach";
 type PillTone = "green" | "amber" | "red" | "blue" | "purple" | "gray";
@@ -42,11 +44,24 @@ type Props = {
   partnerField: string;
   categories: string[];
   aiPanel?: ReactNode;
+  /** Opened from the sidebar or an old address: ?tab=deals / ?tab=outreach. */
+  initialTab?: string;
 };
 
-export function PartnershipWorkspace({ entityLabel, rows, deals, outreach, tableKey, dealsKey, outreachKey, partnerField, categories, aiPanel }: Props) {
-  const [tab, setTab] = useState<Tab>("overview");
+const TABS: readonly Tab[] = ["overview", "master", "pipeline", "deals", "outreach"];
+
+export function PartnershipWorkspace({ entityLabel, rows, deals, outreach, tableKey, dealsKey, outreachKey, partnerField, categories, aiPanel, initialTab }: Props) {
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? initialTab as Tab : "overview");
   const [editing, setEditing] = useState<{ record: ApiRecord | null } | null>(null);
+  useRecordFocus((id) => {
+    // Deals and outreach logs live in their own tabs; a partner opens its edit form.
+    if (deals.some((deal) => String(deal.id) === id)) { setTab("deals"); return; }
+    if (outreach.some((log) => String(log.id) === id)) { setTab("outreach"); return; }
+    const record = rows.find((row) => String(row.id) === id);
+    if (!record) return;
+    setEditing({ record });
+    return true;
+  });
 
   return (
     <div className="grid gap-3.5">
@@ -124,8 +139,8 @@ function MasterTab({ rows, tableKey, aiPanel, onAdd, onEdit }: { rows: ApiRecord
   const filtered = useMemo(() => rows.filter((row) => (!query || `${text(row.name)} ${text(row.contact_name)}`.toLowerCase().includes(query.toLowerCase())) && (!status || text(row.status) === status) && (!tier || text(row.tier) === tier)), [rows, query, status, tier]);
   const { pageItems, page, setPage, totalPages } = usePagination(filtered, 15);
 
-  function remove(id: string) {
-    if (!window.confirm("Hapus partner ini? Data partner dan deal terkait akan ikut terhapus.")) return;
+  async function remove(id: string) {
+    if (!(await confirmAction({ title: "Delete this partner?", message: "Its deals are deleted too. This cannot be undone.", confirmLabel: "Delete partner", danger: true }))) return;
     start(async () => { await deleteManagedRecord(tableKey, id); });
   }
   function exportCsv() {
@@ -227,7 +242,7 @@ function DealsTab({ rows, deals, dealsKey, partnerField }: { rows: ApiRecord[]; 
   const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || "-";
   const saveField = (deal: ApiRecord, patch: Record<string, unknown>) => start(async () => { await updateManagedRecord(dealsKey, String(deal.id), buildFd(fields, { ...deal, ...patch })); });
   const add = () => start(async () => { await createManagedRecord(dealsKey, buildFd(fields, { [partnerField]: selectedPartner || null, title: "Deal baru", stage: "Negotiation" })); });
-  const remove = (id: string) => { if (window.confirm("Hapus deal ini?")) start(async () => { await deleteManagedRecord(dealsKey, id); }); };
+  const remove = async (id: string) => { if (await confirmAction({ title: "Delete this deal?", confirmLabel: "Delete deal", danger: true })) start(async () => { await deleteManagedRecord(dealsKey, id); }); };
 
   return (
     <Card className="gap-3 p-4">
@@ -243,7 +258,7 @@ function DealsTab({ rows, deals, dealsKey, partnerField }: { rows: ApiRecord[]; 
           <TableHeader><TableRow><TableHead>Nama Deal</TableHead><TableHead>Partner</TableHead><TableHead>Status</TableHead><TableHead>Scope</TableHead><TableHead>Deadline</TableHead><TableHead>Nilai</TableHead><TableHead>Catatan</TableHead><TableHead /></TableRow></TableHeader>
           <TableBody>
             {!deals.length ? <TableRow><TableCell className="py-8 text-center text-muted-foreground" colSpan={8}>Belum ada deal</TableCell></TableRow> : deals.map((deal) => (
-              <TableRow key={String(deal.id)}>
+              <TableRow data-record-id={String(deal.id)} key={String(deal.id)}>
                 <TableCell><input defaultValue={text(deal.title)} onBlur={(event) => { if (event.target.value !== text(deal.title)) saveField(deal, { title: event.target.value }); }} style={inlineInput} /></TableCell>
                 <TableCell className="text-muted-foreground">{partnerName(deal[partnerField])}</TableCell>
                 <TableCell><select defaultValue={text(deal.stage) || "Negotiation"} onChange={(event) => saveField(deal, { stage: event.target.value })} style={inlineInput}>{DEAL_STAGES.map((value) => <option key={value} value={value}>{value}</option>)}</select></TableCell>
@@ -269,7 +284,7 @@ function OutreachTab({ rows, outreach, outreachKey, partnerField }: { rows: ApiR
   const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || "-";
   const saveField = (log: ApiRecord, patch: Record<string, unknown>) => start(async () => { await updateManagedRecord(outreachKey, String(log.id), buildFd(fields, { ...log, ...patch })); });
   const add = () => start(async () => { await createManagedRecord(outreachKey, buildFd(fields, { [partnerField]: selectedPartner || null, channel: "WhatsApp", tanggal: localIso(new Date()), respons: "No Reply" })); });
-  const remove = (id: string) => { if (window.confirm("Hapus log outreach ini?")) start(async () => { await deleteManagedRecord(outreachKey, id); }); };
+  const remove = async (id: string) => { if (await confirmAction({ title: "Delete this outreach log?", confirmLabel: "Delete outreach log", danger: true })) start(async () => { await deleteManagedRecord(outreachKey, id); }); };
 
   return (
     <Card className="gap-3 p-4">
@@ -285,7 +300,7 @@ function OutreachTab({ rows, outreach, outreachKey, partnerField }: { rows: ApiR
           <TableHeader><TableRow><TableHead>Partner</TableHead><TableHead>Channel</TableHead><TableHead>Tanggal</TableHead><TableHead>Isi Outreach</TableHead><TableHead>Respons</TableHead><TableHead>Catatan</TableHead><TableHead /></TableRow></TableHeader>
           <TableBody>
             {!outreach.length ? <TableRow><TableCell className="py-8 text-center text-muted-foreground" colSpan={7}>Belum ada log outreach</TableCell></TableRow> : outreach.map((log) => (
-              <TableRow key={String(log.id)}>
+              <TableRow data-record-id={String(log.id)} key={String(log.id)}>
                 <TableCell className="font-medium">{partnerName(log[partnerField])}</TableCell>
                 <TableCell><select defaultValue={text(log.channel) || "WhatsApp"} onChange={(event) => saveField(log, { channel: event.target.value })} style={inlineInput}>{CHANNELS.map((value) => <option key={value} value={value}>{value}</option>)}</select></TableCell>
                 <TableCell><input defaultValue={dayValue(log.tanggal)} onChange={(event) => saveField(log, { tanggal: event.target.value })} style={{ ...inlineInput, minWidth: 120 }} type="date" /></TableCell>
@@ -313,14 +328,14 @@ function PartnerModal({ profile, tableKey, categories, onClose }: { profile: Api
   const set = (patch: Partial<typeof form>) => setForm((current) => ({ ...current, ...patch }));
 
   function save() {
-    if (!form.name.trim()) { window.alert("Nama wajib diisi!"); return; }
+    if (!form.name.trim()) { notify("Name is required.", "error"); return; }
     const fd = buildFd(PARTNER_FIELDS, { ...form, type: "Corporate" });
     start(async () => {
       try {
         if (profile) await updateManagedRecord(tableKey, String(profile.id), fd);
         else await createManagedRecord(tableKey, fd);
         onClose();
-      } catch (error) { window.alert(error instanceof Error ? error.message : "Gagal simpan partner"); }
+      } catch (error) { notifyError(error, "Could not save partner."); }
     });
   }
 

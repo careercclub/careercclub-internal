@@ -3,6 +3,7 @@
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { askText, confirmAction } from "./app-dialog";
 
 type Template = { name: string; subject: string; headerTitle: string; headerSub: string; headerColor: string; body: string; ctaText: string; ctaUrl: string; footer: string };
 type Log = { subject: string; total: number; sent: number; failed: number; sentAt: string };
@@ -105,11 +106,11 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
     setMessage(`Template "${template.name}" dimuat.`);
   }
 
-  function saveTemplate() {
-    const name = window.prompt("Nama template:");
+  async function saveTemplate() {
+    const name = await askText({ title: "Save as template", label: "Template name", submitLabel: "Save template" });
     if (!name?.trim()) return;
     const next = [...templates, { name: name.trim(), subject, headerTitle, headerSub, headerColor, body, ctaText, ctaUrl, footer }];
-    setTemplates(next); localStorage.setItem("ccc_tp_blast_templates", JSON.stringify(next)); setMessage(`Template "${name.trim()}" disimpan.`);
+    setTemplates(next); localStorage.setItem("ccc_tp_blast_templates", JSON.stringify(next)); setMessage(`Template "${name.trim()}" saved.`);
   }
 
   function deleteTemplate(index: number) {
@@ -129,7 +130,7 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
     const list = recipients.map((row) => ({ email: text(row.email), name: text(row.nama) })).filter((recipient) => recipient.email);
     if (!list.length) { setMessage("Tidak ada penerima dengan email valid."); return; }
     if (schedule && !Number.isFinite(new Date(schedule).getTime())) { setMessage("Jadwal kirim tidak valid."); return; }
-    if (!window.confirm(`Kirim ke ${list.length} penerima?${schedule ? ` Dijadwalkan: ${schedule}` : " Email dikirim sekarang."}`)) return;
+    if (!(await confirmAction({ title: `Send to ${list.length} recipient${list.length === 1 ? "" : "s"}?`, message: schedule ? `Scheduled for ${schedule}.` : "The email is sent now.", confirmLabel: schedule ? "Schedule email" : "Send email" }))) return;
 
     setBusy(true); setMessage("Mengirim... mohon tunggu.");
     const html = buildHtml();

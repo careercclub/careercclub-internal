@@ -9,7 +9,9 @@ import { listMasterProducts, listProductClassifications } from "@/lib/api/produc
 import { listAppSettings } from "@/lib/api/settings";
 import { listTicketDivisions, listTicketPeople, listTicketTypes } from "@/lib/api/tickets";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[]; section?: string | string[] }> }) {
+  const query = await searchParams;
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
   const session = await auth();
   const isAdmin = session?.user.role?.toLowerCase() === "admin";
   const [settings, masterProduk, divisions, people, types, platforms, categories, linkTemplates, klasifikasi, ctaOptions, users] = await Promise.all([
@@ -47,6 +49,10 @@ export default async function SettingsPage() {
       settings={settings}
       types={types}
       users={users}
+      initialTab={first(query.tab)}
+      initialSection={first(query.section)}
+      // A sidebar link to another section remounts with that section open.
+      key={`${first(query.tab) || ""}:${first(query.section) || ""}`}
     />
   );
 }

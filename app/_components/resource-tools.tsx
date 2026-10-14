@@ -6,10 +6,13 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { FilterBar, filterFieldClass } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
 
 export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: ReactNode }) {
   const [items, setItems] = useState([...rows].sort((a, b) => String(a.kategori).localeCompare(String(b.kategori)) || Number(a.urutan || 0) - Number(b.urutan || 0))); const [query, setQuery] = useState(""); const [revealed, setRevealed] = useState<Set<string>>(new Set()); const [message, setMessage] = useState(""); const [pending, startTransition] = useTransition();
   const visible = useMemo(() => items.filter((row) => !query || `${row.kategori} ${row.nama} ${row.url} ${row.email} ${row.username}`.toLowerCase().includes(query.toLowerCase())), [items, query]); const groups = [...new Set(visible.map((row) => String(row.kategori || "Other")))];
+  // Search result opened: clear the local filter so the record cannot be hidden by it.
+  useRecordFocus((id) => { if (query && items.some((item) => String(item.id) === id)) setQuery(""); });
   function move(id: string, direction: -1 | 1) { const index = items.findIndex((item) => String(item.id) === id); const peers = items.map((item, position) => ({ item, position })).filter(({ item }) => item.kategori === items[index]?.kategori); const peerIndex = peers.findIndex(({ position }) => position === index); const target = peers[peerIndex + direction]?.position; if (index < 0 || target === undefined) return; const next = [...items]; [next[index], next[target]] = [next[target], next[index]]; setItems(next); startTransition(() => reorderResourcesAction(next.map((row, position) => ({ id: String(row.id), kategori: String(row.kategori || "Other"), urutan: position })))); }
   function copy(label: string, value: unknown) { navigator.clipboard.writeText(String(value || "")).then(() => setMessage(`${label} copied.`)).catch(() => setMessage("Clipboard access was blocked.")); }
 
@@ -31,7 +34,7 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
                   const isCred = row.tipe === "credential";
                   const show = revealed.has(id);
                   return (
-                    <div className="flex items-start gap-2.5 p-3" key={id}>
+                    <div className="flex items-start gap-2.5 p-3" data-record-id={id} key={id}>
                       <i className={`ti ti-${isCred ? "lock" : "link"} mt-0.5 shrink-0 text-[14px]`} style={{ color: isCred ? "var(--amber)" : "#0f52ba" }} />
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 text-[13px] font-medium">{String(row.nama || "Untitled")}</div>

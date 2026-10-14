@@ -1,7 +1,7 @@
-import { RecordManager } from "@/app/_components/record-manager";
-import { listPainPointPlatforms } from "@/lib/api/customer-knowledge";
-import { customerKnowledgeLinks } from "@/lib/records/links";
+import { RETIRED_PAGES, withFocus } from "@/lib/records/links";
+import { redirect } from "next/navigation";
 
-export default async function PainPointPlatformsPage() {
-  return <RecordManager definitionKey="pain_point_platforms" links={customerKnowledgeLinks} rows={await listPainPointPlatforms()} />;
+// This data is now managed in one place; the old address forwards there (and keeps ?focus from search).
+export default async function RetiredPage({ searchParams }: { searchParams: Promise<{ focus?: string | string[] }> }) {
+  redirect(withFocus(RETIRED_PAGES["/customer-knowledge/platforms"], (await searchParams).focus));
 }

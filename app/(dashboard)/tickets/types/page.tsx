@@ -1,7 +1,7 @@
-import { RecordManager } from "@/app/_components/record-manager";
-import { listTicketTypes } from "@/lib/api/tickets";
-import { ticketLinks } from "@/lib/records/links";
+import { RETIRED_PAGES, withFocus } from "@/lib/records/links";
+import { redirect } from "next/navigation";
 
-export default async function TicketTypesPage() {
-  return <RecordManager definitionKey="tkt_types" links={ticketLinks} rows={await listTicketTypes()} />;
+// This data is now managed in one place; the old address forwards there (and keeps ?focus from search).
+export default async function RetiredPage({ searchParams }: { searchParams: Promise<{ focus?: string | string[] }> }) {
+  redirect(withFocus(RETIRED_PAGES["/tickets/types"], (await searchParams).focus));
 }

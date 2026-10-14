@@ -11,6 +11,9 @@ import { CrmEmailBlast } from "./crm-email-blast";
 import { CrmTools } from "./crm-tools";
 import { Pagination, usePagination } from "./ui-kit";
 import styles from "./crm.module.css";
+import { useRecordFocus } from "./use-record-focus";
+import { DialogBehaviour } from "./use-modal";
+import { confirmAction } from "./app-dialog";
 
 type Transaction = { produk?: string; klasifikasi?: string; harga?: number; tanggal?: string; paymentStatus?: string };
 type Customer = ApiRecord & { ids: string[]; transactions: Transaction[]; spend: number; txCount: number };
@@ -58,10 +61,18 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
   }), [customers, query, classification, industry, stage, status, talent, source, payment, repeat]);
   const { pageItems, page, setPage, totalPages } = usePagination(filtered, 15);
   const detail = customers.find((row) => String(row._key) === detailKey);
+  // Search result opened: a buyer row can hold several transactions, so match on any of its ids.
+  useRecordFocus((id) => {
+    const customer = customers.find((row) => row.ids.includes(id));
+    if (!customer) return;
+    setTab("buyers"); setQuery(""); setClassification(""); setIndustry(""); setStage(""); setStatus(""); setTalent(""); setSource(""); setPayment(""); setRepeat("");
+    setDetailKey(String(customer._key));
+    return true;
+  });
   const selectedIds = customers.filter((row) => selected.includes(String(row._key))).flatMap((row) => row.ids);
   const stats = { buyers: customers.length, transactions: customers.reduce((sum, row) => sum + row.txCount, 0), noPool: customers.filter((row) => !(row.talent_pool || row.talent_pool_match)).length, blasting: customers.filter((row) => String(row.status || "").includes("blast")).length, converted: customers.filter((row) => String(row.status || "").includes("convert")).length };
 
-  function mutate(operation: "status" | "talent" | "delete", value?: string) { if (!selectedIds.length) return; if (operation === "delete" && !window.confirm(`Hapus ${selectedIds.length} transaksi?`)) return; startTransition(async () => { try { await bulkUpdateCrmBuyers(selectedIds, operation, value); setSelected([]); setMessage("CRM records updated."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Update failed."); } }); }
+  async function mutate(operation: "status" | "talent" | "delete", value?: string) { if (!selectedIds.length) return; if (operation === "delete" && !(await confirmAction({ title: `Delete ${selectedIds.length} transaction${selectedIds.length === 1 ? "" : "s"}?`, message: "This cannot be undone.", confirmLabel: selectedIds.length === 1 ? "Delete transaction" : "Delete transactions", danger: true }))) return; startTransition(async () => { try { await bulkUpdateCrmBuyers(selectedIds, operation, value); setSelected([]); setMessage("CRM records updated."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Update failed."); } }); }
   function exportCsv() { const data = selected.length ? filtered.filter((row) => selected.includes(String(row._key))) : filtered; const csv = [["Name","WhatsApp","Email","Product","Classification","Spend","Transactions","Industry","Stage","Source","Status","Payment"], ...data.map((row) => [row.name,row.wa,row.email,row.produk,row.klasifikasi,row.spend,row.txCount,row.industri,row.tahap,row.sumber,row.status,row.payment_status])].map((line) => line.map(csvCell).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "ccc-crm-buyers.csv"; anchor.click(); URL.revokeObjectURL(url); }
 
   return (
@@ -100,11 +111,11 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
               <div className={styles.actionBar}>
                 <strong>{selected.length} dipilih</strong>
                 <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value)}><option value="">Tandai sebagai...</option>{crmStatuses.map((value) => <option key={value}>{value}</option>)}</select>
-                <button className={styles.btn} disabled={!bulkStatus || pending} onClick={() => mutate("status", bulkStatus)} type="button"><i className="ti ti-tag" /> Terapkan</button>
+                <button className={styles.btn} disabled={!bulkStatus || pending} onClick={() => mutate("status", bulkStatus)} type="button"><i className="ti ti-tag" /> Apply status</button>
                 <select value={bulkPool} onChange={(event) => setBulkPool(event.target.value)}><option value="">Talent pool...</option><option value="yes">Tandai sudah isi</option><option value="no">Tandai belum isi</option></select>
-                <button className={styles.btn} disabled={!bulkPool || pending} onClick={() => mutate("talent", bulkPool)} type="button"><i className="ti ti-users" /> Terapkan</button>
+                <button className={styles.btn} disabled={!bulkPool || pending} onClick={() => mutate("talent", bulkPool)} type="button"><i className="ti ti-users" /> Apply talent pool</button>
                 <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={exportCsv} type="button"><i className="ti ti-download" /> Download CSV blast</button>
-                <button className={`${styles.btn} ${styles.btnDanger}`} disabled={pending} onClick={() => mutate("delete")} type="button"><i className="ti ti-trash" /> Hapus ({selected.length})</button>
+                <button className={`${styles.btn} ${styles.btnDanger}`} disabled={pending} onClick={() => mutate("delete")} type="button"><i className="ti ti-trash" /> Delete selected ({selected.length})</button>
               </div>
             ) : null}
             <div className={styles.tableWrap}>
@@ -129,7 +140,7 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
                 </thead>
                 <tbody>
                   {pageItems.map((row) => (
-                    <tr key={String(row._key)}>
+                    <tr data-record-ids={row.ids.join(" ")} key={String(row._key)}>
                       <td className={styles.td}><input checked={selected.includes(String(row._key))} onChange={(event) => setSelected((current) => event.target.checked ? [...current, String(row._key)] : current.filter((key) => key !== String(row._key)))} type="checkbox" /></td>
                       <td className={styles.td}><button className={styles.nameLink} onClick={() => setDetailKey(String(row._key))} type="button">{String(row.name || "-")}</button></td>
                       <td className={styles.td} style={{ fontSize: 11, color: "var(--text-muted)" }}>{String(row.wa || "-")}</td>
@@ -158,11 +169,12 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
         {tab === "import" ? <CrmTools rows={rows} /> : null}
       </div>
       {detail ? (
-        <div className={styles.detailOverlay} role="dialog" aria-modal="true">
+        <div className={styles.detailOverlay} role="dialog" aria-modal="true" aria-label="Customer detail">
+          <DialogBehaviour onClose={() => setDetailKey("")} />
           <section className={styles.detailPanel}>
             <header className={styles.detailHeader}>
               <div><span>Customer detail</span><h2>{String(detail.name || "Unknown")}</h2><p>{String(detail.wa || "-")} · {String(detail.email || "-")}</p></div>
-              <button onClick={() => setDetailKey("")} type="button"><i className="ti ti-x" /></button>
+              <button aria-label="Close customer detail" onClick={() => setDetailKey("")} type="button"><i className="ti ti-x" /></button>
             </header>
             <div className={styles.statsGrid} style={{ gridTemplateColumns: "repeat(3, 1fr)", margin: "12px 0" }}>
               <div className={styles.statCard}><div className={styles.statLabel}>Transaksi</div><div className={styles.statVal}>{detail.txCount}</div></div>

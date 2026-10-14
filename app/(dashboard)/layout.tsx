@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { listAppSettings } from "@/lib/api/settings";
 import { getDashboardCounts } from "@/lib/api/dashboard";
+import { countVisibleTickets } from "@/lib/api/tickets";
 
 type DashboardLayoutProps = Readonly<{
   children: ReactNode;
@@ -26,7 +27,10 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       ? settingValue.hiddenSlugs.map(String)
       : [];
 
+  // The Tickets badge counts what this person can open on the Tickets page, not every ticket.
+  const ticketBadge = await countVisibleTickets({ role: session.user.role, userId: session.user.id, email: session.user.email });
+
   const monthLabel = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date());
 
-  return <AppShell hiddenSlugs={hiddenSlugs} navBadges={{ program: counts.tasks, tickets: counts.tickets }} monthLabel={monthLabel} user={session.user}>{children}</AppShell>;
+  return <AppShell hiddenSlugs={hiddenSlugs} navBadges={{ program: counts.tasks, tickets: ticketBadge }} monthLabel={monthLabel} user={session.user}>{children}</AppShell>;
 }

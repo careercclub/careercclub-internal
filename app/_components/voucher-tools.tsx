@@ -7,6 +7,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Pill, StatCard, StatsGrid } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
 
 function rupiah(value: number) {
   return `Rp ${value.toLocaleString("id-ID")}`;
@@ -16,6 +17,7 @@ function status(row: ApiRecord, today: string): "aktif" | "expired" { return !ro
 export function VoucherTools({ rows, products, referenceDate, create, manage }: { rows: ApiRecord[]; products: ApiRecord[]; referenceDate: string; create: ReactNode; manage: ReactNode }) {
   const [tab, setTab] = useState<"overview" | "list" | "manage">("overview");
   const [selectedId, setSelectedId] = useState("");
+  useRecordFocus((id) => { if (rows.some((row) => String(row.id) === id)) setTab("list"); });
   const [price, setPrice] = useState(0);
   const today = referenceDate.slice(0, 10);
   const active = rows.filter((row) => status(row, today) === "aktif");
@@ -71,7 +73,7 @@ export function VoucherTools({ rows, products, referenceDate, create, manage }: 
         <>
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {rows.map((row) => (
-              <Card className="gap-2 p-3.5" key={String(row.id)}>
+              <Card className="gap-2 p-3.5" data-record-id={String(row.id)} key={String(row.id)}>
                 <div className="flex items-center justify-between gap-2"><strong className="font-mono text-[12px] font-semibold">{String(row.kode || "No code")}</strong><Pill tone={status(row, today) === "aktif" ? "green" : "red"}>{status(row, today) === "aktif" ? "Aktif" : "Expired"}</Pill></div>
                 <p className="text-[11px] text-muted-foreground">{String(row.nama_event || "Untitled campaign")} &middot; {Number(row.diskon_persen || 0)}%</p>
                 <div className="flex items-center justify-between gap-2">

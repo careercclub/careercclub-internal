@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { StorageImage } from "./storage-image";
 import { Pill } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
 
 function array(value: unknown) { if (Array.isArray(value)) return value; if (typeof value === "string") { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; } } return []; }
 function initials(value: unknown) { return String(value || "?").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
@@ -17,6 +18,13 @@ const ADVISOR_STATUS_TONE: Record<string, "blue" | "gray" | "green"> = { Connect
 
 export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[]; management: ReactNode }) {
   const router = useRouter(); const [tab, setTab] = useState<"collaborator" | "advisor" | "manage">("collaborator"); const [selectedId, setSelectedId] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false); const visible = rows.filter((row) => tab === "manage" || row.tipe === tab); const selected = rows.find((row) => String(row.id) === selectedId);
+  useRecordFocus((id) => {
+    const row = rows.find((item) => String(item.id) === id);
+    if (!row) return;
+    setTab(row.tipe === "advisor" ? "advisor" : "collaborator");
+    setSelectedId(id);
+    return true;
+  });
   async function photo(file: File) { if (!selected) return; setBusy(true); setMessage("Uploading photo..."); try { const response = await fetch("/api/storage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ area: "collaborator-photos", filename: file.name || `photo-${Date.now()}.png`, contentType: file.type }) }); const signed = await response.json() as { key?: string; url?: string; error?: string }; if (!response.ok || !signed.key || !signed.url) throw new Error(signed.error || "Upload could not be prepared."); const uploaded = await fetch(signed.url, { method: "PUT", headers: { "Content-Type": file.type }, body: file }); if (!uploaded.ok) throw new Error("R2 rejected the upload."); await updateCollaboratorPhotoAction(String(selected.id), signed.key); setMessage("Photo updated."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Upload failed."); } finally { setBusy(false); } }
 
   return (
@@ -31,7 +39,7 @@ export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[];
       {tab !== "manage" ? (
         <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((row) => (
-            <button className="text-left" key={String(row.id)} onClick={() => setSelectedId(String(row.id))} type="button">
+            <button className="text-left" data-record-id={String(row.id)} key={String(row.id)} onClick={() => setSelectedId(String(row.id))} type="button">
               <Card className="gap-2.5 p-3.5">
                 <div className="flex items-start gap-3">
                   <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-[var(--bg)] text-[13px] font-medium text-[#0c447c]">

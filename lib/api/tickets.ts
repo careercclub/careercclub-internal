@@ -1,6 +1,7 @@
 import "server-only";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
+import { TICKET_VISIBILITY_COLUMNS, ticketVisibility, type TicketViewer } from "@/lib/tickets/visibility";
 
 export type TicketRecord = ApiRecord;
 export type TicketDivisionRecord = ApiRecord;
@@ -54,6 +55,26 @@ export async function getTicketWorkspace() {
     listTickets(), listTicketDivisions(), listTicketPeople(), listTicketTypes(),
   ]);
   return { tickets: ticketRows, divisions: divisionRows, people: peopleRows, types: typeRows };
+}
+
+/**
+ * The ticket workspace limited to what this viewer may see. Every page that shows
+ * tickets (Tickets, Dashboard calendar, Program calendar) goes through here, so the
+ * role rule is applied the same way everywhere.
+ */
+export async function getVisibleTicketWorkspace(viewer: TicketViewer) {
+  const workspace = await getTicketWorkspace();
+  return { ...workspace, tickets: workspace.tickets.filter(ticketVisibility(viewer, workspace.people)) };
+}
+
+/** Nav badge: same rule as the pages, reading only the columns the rule needs. */
+export async function countVisibleTickets(viewer: TicketViewer) {
+  if (String(viewer.role || "").toLowerCase() === "admin") return countTickets();
+  const [peopleRows, ticketRows] = await Promise.all([
+    listTicketPeople(),
+    withPostgres((sql) => sql<TicketRecord[]>`select ${sql(["id", ...TICKET_VISIBILITY_COLUMNS])} from tickets`),
+  ]);
+  return [...ticketRows].filter(ticketVisibility(viewer, peopleRows)).length;
 }
 
 export function appendTicketComment(id: string, comment: { user: string; time: string; text: string }) {

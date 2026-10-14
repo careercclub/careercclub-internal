@@ -7,7 +7,8 @@ export const metadata = { title: "Organization Partnership" };
 const statuses = ["Approached", "Sales Meet", "Negotiation", "Closed Deal", "Closed Lost"] as const;
 const categories = ["BEM / Organisasi Mahasiswa", "Career Center", "Himpunan Mahasiswa", "Unit Kemahasiswaan", "Lainnya"];
 
-export default async function OrgPartnershipPage() {
+export default async function OrgPartnershipPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
+  const requestedTab = (await searchParams).tab;
   const [rows, deals, outreach] = await Promise.all([listOrgPartners(), listOrgDeals(), listOrgOutreach()]);
   const parser = (
     <AiTextRecordParser
@@ -30,6 +31,8 @@ export default async function OrgPartnershipPage() {
       partnerField="org_partner_id"
       categories={categories}
       aiPanel={parser}
+      initialTab={Array.isArray(requestedTab) ? requestedTab[0] : requestedTab}
+      key={Array.isArray(requestedTab) ? requestedTab[0] : requestedTab || "overview"}
     />
   );
 }

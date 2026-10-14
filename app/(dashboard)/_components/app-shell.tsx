@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { Suspense, useState, useSyncExternalStore, type ReactNode } from "react";
 import { enhancedNavSections as navSections } from "../_data/navigation-all";
+import { isChildActive, moduleChildren, type NavLink } from "@/lib/records/links";
+import { AppDialogHost } from "@/app/_components/app-dialog";
 import { CommandPalette } from "./command-palette";
+import { RecordFocus } from "./record-focus";
 import { NotificationCenter } from "./notification-center";
 import styles from "../dashboard.module.css";
 
@@ -21,14 +24,36 @@ type AppShellProps = Readonly<{
   };
 }>;
 
+// Phone bottom bar: daily-work modules first. Hidden modules are skipped and the next
+// one in this list takes the slot; everything else stays one tap away under "More".
 const BOTTOM_NAV = [
   { slug: "dashboard", label: "Home", path: "/dashboard", icon: "ti-home" },
+  { slug: "tickets", label: "Tickets", path: "/tickets", icon: "ti-ticket" },
   { slug: "program", label: "Program", path: "/program", icon: "ti-checklist" },
-  { slug: "content-planning", label: "Konten", path: "/content-planning", icon: "ti-bookmark" },
+  { slug: "content-planning", label: "Content", path: "/content-planning", icon: "ti-bookmark" },
+  { slug: "crm", label: "CRM", path: "/crm", icon: "ti-address-book" },
   { slug: "b2b-partnership", label: "B2B", path: "/b2b-partnership", icon: "ti-users-group" },
-  { slug: "org-partnership", label: "Org", path: "/org-partnership", icon: "ti-school" },
   { slug: "design-assets", label: "Design", path: "/design-assets", icon: "ti-palette" },
 ];
+const BOTTOM_SLOTS = 5;
+
+/** Sub-pages of a module. Needs the query string (?tab=), so it renders inside Suspense. */
+function NavChildren({ links, pathname, onNavigate }: { links: NavLink[]; pathname: string; onNavigate: () => void }) {
+  const search = useSearchParams().toString();
+  return <NavChildList links={links} onNavigate={onNavigate} activeHref={links.find((link) => isChildActive(link.href, pathname, search))?.href} />;
+}
+
+function NavChildList({ links, onNavigate, activeHref }: { links: NavLink[]; onNavigate: () => void; activeHref?: string }) {
+  return (
+    <div className={styles.navChildren}>
+      {links.map((link) => (
+        <Link aria-current={link.href === activeHref ? "page" : undefined} className={link.href === activeHref ? styles.navChildActive : styles.navChild} href={link.href} key={link.href} onClick={onNavigate}>
+          {link.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 function matchesRoute(pathname: string, path: string) {
   return pathname === path || pathname.startsWith(path + "/");
@@ -72,6 +97,9 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const subPages = moduleChildren(String(user.role || "").toLowerCase() === "admin");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const bottomNav = BOTTOM_NAV.filter((item) => !hiddenSlugs.includes(item.slug)).slice(0, BOTTOM_SLOTS);
   const visibleSections = navSections.map((section) => ({
     ...section,
     pages: section.pages.filter((page) => !hiddenSlugs.includes(page.slug)),
@@ -101,19 +129,35 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
             <div className={styles.navLabel}>{section.label}</div>
             {section.pages.map((page) => {
               const isActive = matchesRoute(pathname, page.path);
+              const subLinks = subPages[page.path];
+              // A module's pages open while you are in it; elsewhere the arrow opens them.
+              const open = Boolean(subLinks?.length) && (expanded[page.path] ?? isActive);
 
               return (
-                <Link
-                  className={isActive ? styles.navItemActive : styles.navItem}
-                  href={page.path}
-                  key={page.slug}
-                  title={page.title}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <i className={`ti ${page.icon}`} aria-hidden="true" />
-                  <span>{page.title}</span>
-                  {navBadges[page.slug] ? <span className={page.slug === "tickets" ? styles.navBadgeRed : styles.navBadge}>{navBadges[page.slug] > 99 ? "99+" : navBadges[page.slug]}</span> : null}
-                </Link>
+                <div className={styles.navGroup} key={page.slug}>
+                  <div className={styles.navRow}>
+                    <Link
+                      className={isActive ? styles.navItemActive : styles.navItem}
+                      href={page.path}
+                      title={page.title}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <i className={`ti ${page.icon}`} aria-hidden="true" />
+                      <span>{page.title}</span>
+                      {navBadges[page.slug] ? <span className={page.slug === "tickets" ? styles.navBadgeRed : styles.navBadge}>{navBadges[page.slug] > 99 ? "99+" : navBadges[page.slug]}</span> : null}
+                    </Link>
+                    {subLinks?.length ? (
+                      <button aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} ${page.title} pages`} className={styles.navExpand} onClick={() => setExpanded((current) => ({ ...current, [page.path]: !open }))} type="button">
+                        <i className={`ti ti-chevron-${open ? "up" : "down"}`} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+                  {open && subLinks ? (
+                    <Suspense fallback={<NavChildList links={subLinks} onNavigate={() => setMenuOpen(false)} />}>
+                      <NavChildren links={subLinks} onNavigate={() => setMenuOpen(false)} pathname={pathname} />
+                    </Suspense>
+                  ) : null}
+                </div>
               );
             })}
           </nav>
@@ -124,7 +168,8 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
         <header className={styles.topbar}>
           <div className={styles.topbarLeft}>
             <div className={styles.pageTitle}>{getTitle(pathname)}</div>
-            <CommandPalette hiddenSlugs={hiddenSlugs} />
+            <CommandPalette hiddenSlugs={hiddenSlugs} isAdmin={String(user.role || "").toLowerCase() === "admin"} />
+            <Suspense fallback={null}><RecordFocus /></Suspense>
           </div>
           <div className={styles.topbarRight}>
             {monthLabel ? <span className={styles.topbarMonth}>{monthLabel}</span> : null}
@@ -150,7 +195,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
       </section>
 
       <nav className={styles.bottomNav} aria-label="Mobile navigation">
-        {BOTTOM_NAV.map((item) => {
+        {bottomNav.map((item) => {
           const isActive = matchesRoute(pathname, item.path);
           return (
             <Link className={isActive ? styles.bottomNavItemActive : styles.bottomNavItem} href={item.path} key={item.slug} onClick={() => setMenuOpen(false)}>
@@ -161,10 +206,11 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
         })}
         <button className={styles.bottomNavItem} type="button" onClick={() => setMenuOpen(true)} aria-label="More menu">
           <i className="ti ti-dots" aria-hidden="true" />
-          <span>Lainnya</span>
+          <span>More</span>
         </button>
       </nav>
 
+      <AppDialogHost />
       {menuOpen ? <button className={styles.sidebarBackdrop} type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} /> : null}
     </main>
   );

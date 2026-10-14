@@ -101,7 +101,7 @@ export const recordDefinitions = {
     fields: [{ name: "project_id", label: "Program ID" }, { name: "title", label: "Title", required: true }, { name: "description", label: "Description", type: "textarea" }, { name: "status", label: "Status", type: "select", options: ["Todo", "On Progress", "Done"] }, { name: "priority", label: "Priority", type: "select", options: ["High", "Med", "Low"] }, { name: "phase", label: "Phase", type: "select", options: ["Pre Event", "Hari H", "Post Event"] }, { name: "assignee_id", label: "Primary assignee ID" }, { name: "assignee_ids", label: "Assignee UUIDs", type: "uuid-array", placeholder: "uuid, uuid" }, { name: "due_date", label: "Deadline", type: "date" }, { name: "ticket_id", label: "Linked ticket ID" }, { name: "gcal_added", label: "Added to calendar", type: "checkbox" }, { name: "attachments", label: "Attachments JSON", type: "json", placeholder: "[]" }],
   },
   event_link_templates: {
-    table: "event_link_templates", title: "Event link templates", eyebrow: "Program", path: "/program/link-templates", orderBy: "urutan",
+    table: "event_link_templates", title: "Event link templates", eyebrow: "Program", path: "/settings", orderBy: "urutan",
     description: "Maintain reusable operational links grouped by program type.", columns: ["jenis_program", "label", "url", "urutan"],
     fields: [{ name: "jenis_program", label: "Program type", required: true }, { name: "label", label: "Label", required: true }, { name: "url", label: "URL", required: true }, { name: "urutan", label: "Order", type: "number" }], mutationRoles: ["admin"],
   },
@@ -111,22 +111,22 @@ export const recordDefinitions = {
     fields: [{ name: "year", label: "Year", type: "number", required: true }, { name: "target_followers", label: "Target followers", type: "number", required: true }],
   },
   partner_deals: {
-    table: "partner_deals", title: "B2B partnership deals", eyebrow: "Partnerships", path: "/b2b-partnership/deals", orderBy: "created_at", ascending: false,
+    table: "partner_deals", title: "B2B partnership deals", eyebrow: "Partnerships", path: "/b2b-partnership", orderBy: "created_at", ascending: false,
     description: "Track multiple commercial scopes and values for each corporate partner.", columns: ["title", "partner_id", "stage", "scope", "deadline", "value"],
     fields: [{ name: "partner_id", label: "Partner ID", required: true }, { name: "title", label: "Deal", required: true }, { name: "stage", label: "Stage", type: "select", options: ["Active", "Negotiation", "Done", "Cancelled"] }, { name: "scope", label: "Scope", type: "textarea" }, { name: "deadline", label: "Deadline", type: "date" }, { name: "value", label: "Value", type: "number" }, { name: "notes", label: "Notes", type: "textarea" }],
   },
   partner_outreach: {
-    table: "partner_outreach", title: "B2B outreach log", eyebrow: "Partnerships", path: "/b2b-partnership/outreach", orderBy: "tanggal", ascending: false,
+    table: "partner_outreach", title: "B2B outreach log", eyebrow: "Partnerships", path: "/b2b-partnership", orderBy: "tanggal", ascending: false,
     description: "Record each partner contact attempt and its response.", columns: ["partner_id", "channel", "tanggal", "isi", "respons", "catatan"],
     fields: [{ name: "partner_id", label: "Partner ID", required: true }, { name: "channel", label: "Channel", type: "select", options: ["WhatsApp", "Email", "LinkedIn", "Meeting"] }, { name: "tanggal", label: "Date", type: "date", required: true }, { name: "isi", label: "Outreach message", type: "textarea" }, { name: "respons", label: "Response", type: "select", options: ["Replied", "No Reply", "Meeting Scheduled", "Declined"] }, { name: "catatan", label: "Notes", type: "textarea" }],
   },
   org_deals: {
-    table: "org_deals", title: "Organization partnership deals", eyebrow: "Partnerships", path: "/org-partnership/deals", orderBy: "created_at", ascending: false,
+    table: "org_deals", title: "Organization partnership deals", eyebrow: "Partnerships", path: "/org-partnership", orderBy: "created_at", ascending: false,
     description: "Track scopes, deadlines, values, and status for organization partnerships.", columns: ["title", "org_partner_id", "stage", "scope", "deadline", "value"],
     fields: [{ name: "org_partner_id", label: "Organization ID", required: true }, { name: "title", label: "Deal", required: true }, { name: "stage", label: "Stage", type: "select", options: ["Active", "Negotiation", "Done", "Cancelled"] }, { name: "scope", label: "Scope", type: "textarea" }, { name: "deadline", label: "Deadline", type: "date" }, { name: "value", label: "Value", type: "number" }, { name: "notes", label: "Notes", type: "textarea" }],
   },
   org_outreach: {
-    table: "org_outreach", title: "Organization outreach log", eyebrow: "Partnerships", path: "/org-partnership/outreach", orderBy: "tanggal", ascending: false,
+    table: "org_outreach", title: "Organization outreach log", eyebrow: "Partnerships", path: "/org-partnership", orderBy: "tanggal", ascending: false,
     description: "Record organization contact attempts and responses.", columns: ["org_partner_id", "channel", "tanggal", "isi", "respons", "catatan"],
     fields: [{ name: "org_partner_id", label: "Organization ID", required: true }, { name: "channel", label: "Channel", type: "select", options: ["WhatsApp", "Email", "LinkedIn", "Meeting"] }, { name: "tanggal", label: "Date", type: "date", required: true }, { name: "isi", label: "Outreach message", type: "textarea" }, { name: "respons", label: "Response", type: "select", options: ["Replied", "No Reply", "Meeting Scheduled", "Declined"] }, { name: "catatan", label: "Notes", type: "textarea" }],
   },
@@ -151,23 +151,23 @@ export const recordDefinitions = {
     fields: [{ name: "product_id", label: "Product ID", required: true }, { name: "price_min", label: "Minimum price", type: "number" }, { name: "price_max", label: "Maximum price", type: "number" }, { name: "recorded_at", label: "Recorded date", type: "date", required: true }, { name: "notes", label: "Notes", type: "textarea" }],
   },
   pain_point_platforms: {
-    table: "pain_point_platforms", title: "Pain-point platforms", eyebrow: "Customer knowledge", path: "/customer-knowledge/platforms", orderBy: "nama",
+    table: "pain_point_platforms", title: "Pain-point platforms", eyebrow: "Customer knowledge", path: "/settings", orderBy: "nama",
     description: "Maintain source platforms used by customer-language entries.", columns: ["nama", "created_at"], fields: [{ name: "nama", label: "Platform", required: true }],
   },
   pain_point_categories: {
-    table: "pain_point_categories", title: "Pain-point categories", eyebrow: "Customer knowledge", path: "/customer-knowledge/categories", orderBy: "nama",
+    table: "pain_point_categories", title: "Pain-point categories", eyebrow: "Customer knowledge", path: "/settings", orderBy: "nama",
     description: "Maintain the customer pain-point taxonomy and display colors.", columns: ["nama", "color", "created_at"], fields: [{ name: "nama", label: "Category", required: true }, { name: "color", label: "Color", type: "select", options: ["purple", "blue", "teal", "amber", "coral", "pink", "green", "red"] }],
   },
   tkt_divisi: {
-    table: "tkt_divisi", title: "Ticket divisions", eyebrow: "Tickets", path: "/tickets/divisions", orderBy: "nama",
+    table: "tkt_divisi", title: "Ticket divisions", eyebrow: "Tickets", path: "/settings", orderBy: "nama",
     description: "Manage ticket ownership divisions and notification addresses.", columns: ["nama", "color", "email"], fields: [{ name: "nama", label: "Division", required: true }, { name: "color", label: "Color", type: "select", options: ["purple", "blue", "teal", "amber", "coral", "pink", "green", "red"] }, { name: "email", label: "Email" }], mutationRoles: ["admin"],
   },
   tkt_people: {
-    table: "tkt_people", title: "Ticket people", eyebrow: "Tickets", path: "/tickets/people", orderBy: "nama",
+    table: "tkt_people", title: "Ticket people", eyebrow: "Tickets", path: "/settings", orderBy: "nama",
     description: "Manage ticket assignees, email recipients, division membership, and access level.", columns: ["nama", "email", "divisi_id", "level", "auth_user_id"], fields: [{ name: "nama", label: "Name", required: true }, { name: "email", label: "Email", required: true }, { name: "divisi_id", label: "Division ID" }, { name: "level", label: "Level", type: "select", options: ["staff", "lead", "admin"] }, { name: "auth_user_id", label: "Linked account ID" }], mutationRoles: ["admin"],
   },
   tkt_types: {
-    table: "tkt_types", title: "Ticket request types", eyebrow: "Tickets", path: "/tickets/types", orderBy: "nama",
+    table: "tkt_types", title: "Ticket request types", eyebrow: "Tickets", path: "/settings", orderBy: "nama",
     description: "Maintain request types and their owning division.", columns: ["nama", "divisi_id"], fields: [{ name: "nama", label: "Request type", required: true }, { name: "divisi_id", label: "Division ID" }], mutationRoles: ["admin"],
   },
   pain_points: {
@@ -230,11 +230,11 @@ export const recordDefinitions = {
     fields: [{ name: "bundle_id", label: "Bundle product ID", required: true }, { name: "item_id", label: "Included product ID", required: true }],
   },
   product_klasifikasi: {
-    table: "product_klasifikasi", title: "Product classifications", eyebrow: "Products", path: "/products/classifications", orderBy: "name",
+    table: "product_klasifikasi", title: "Product classifications", eyebrow: "Products", path: "/settings", orderBy: "name",
     description: "Maintain product taxonomy used by CRM imports and product reporting.", columns: ["name", "created_at"], fields: [{ name: "name", label: "Classification", required: true }],
   },
   master_produk: {
-    table: "master_produk", title: "Lynkid product mapping", eyebrow: "Products", path: "/products/mapping", orderBy: "nama",
+    table: "master_produk", title: "Lynkid product mapping", eyebrow: "Products", path: "/settings", orderBy: "nama",
     description: "Normalize imported Lynkid product names into the internal classification system.", columns: ["nama", "klasifikasi"],
     fields: [{ name: "nama", label: "Imported product name", required: true }, { name: "klasifikasi", label: "Classification", required: true }],
   },
@@ -264,7 +264,7 @@ export const recordDefinitions = {
     fields: [{ name: "judul", label: "Title", required: true }, { name: "tanggal_posting", label: "Publish date", type: "date" }, { name: "funnel", label: "Funnel", type: "select", options: ["TOFU", "MOFU", "BOFU"] }, { name: "cta", label: "CTA" }, { name: "assignee_id", label: "Assignee ID" }, { name: "status", label: "Status", type: "select", options: ["Draft", "Done"] }, { name: "link_brief", label: "Brief URL" }, { name: "link_referensi", label: "Reference URL" }],
   },
   carousel_cta_options: {
-    table: "carousel_cta_options", title: "Carousel CTA master", eyebrow: "Content planning", path: "/content-planning/cta", orderBy: "label",
+    table: "carousel_cta_options", title: "Carousel CTA master", eyebrow: "Content planning", path: "/settings", orderBy: "label",
     description: "Maintain the CTA vocabulary used by carousel planning.", columns: ["label", "created_at"], fields: [{ name: "label", label: "CTA", required: true }],
   },
   carousel_plan_links: {

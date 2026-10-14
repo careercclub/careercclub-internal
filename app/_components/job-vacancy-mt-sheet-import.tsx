@@ -4,6 +4,7 @@ import { importVacanciesFromSheetAction } from "@/app/actions/job-vacancy-mt-act
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useState, useTransition } from "react";
 import styles from "./job-vacancy-mt.module.css";
+import { notify } from "./app-dialog";
 
 type SheetRow = Record<string, unknown> & { company: string; industry: string; program: string; months: number[]; year: string; open_date: string | null; deadline: string | null };
 type ClassifiedRow = SheetRow & { classification: "new" | "update" };
@@ -101,7 +102,7 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
 
   async function fetchAndPreview() {
     const csvUrl = deriveCsvUrl(url);
-    if (!csvUrl) { window.alert(url.trim() ? "URL tidak valid." : "Paste dulu URL Google Sheets!"); return; }
+    if (!csvUrl) { notify(url.trim() ? "That is not a valid Google Sheets link." : "Paste a Google Sheets link first.", "error"); return; }
     setStatus({ text: "Mengambil data...", tone: "info" });
     setPreview(null);
     try {
@@ -121,7 +122,7 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
   }
 
   function confirm() {
-    if (!preview || !preview.length) { window.alert("Tidak ada data valid!"); return; }
+    if (!preview || !preview.length) { notify("No valid rows to import.", "error"); return; }
     start(async () => {
       const rows = preview.map(({ classification: _classification, ...row }) => row);
       const result = await importVacanciesFromSheetAction(rows);
@@ -170,7 +171,7 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
                 </table>
               </div>
               <div className={styles.previewFooter}>
-                <button className={`${styles.btn} ${styles.btnSm}`} onClick={() => setPreview(null)} type="button">Batal</button>
+                <button className={`${styles.btn} ${styles.btnSm}`} onClick={() => setPreview(null)} type="button">Cancel import</button>
                 <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={confirm} type="button">{pending ? "Menyimpan..." : `Simpan ${preview.length} Loker ke Supabase`}</button>
               </div>
             </div>

@@ -68,7 +68,7 @@
 
 .notice {
   flex: 0 0 auto;
-  color: #3b6d11;
+  color: var(--purple-mid);
   font-size: 11px;
 }
 
@@ -403,7 +403,7 @@
 }
 
 .field textarea { resize: vertical; }
-.requiredMetric input { border-color: #d44a3a; }
+.requiredMetric input:user-invalid { border-color: var(--red); }
 
 .labelField {
   position: relative;
@@ -482,6 +482,9 @@
   max-width: 640px;
   max-height: 90vh;
   overflow-y: auto;
+  /* Rows keep their natural height inside the capped dialog; otherwise the square image
+     row is squeezed on phones and the labels below overlap it. */
+  grid-auto-rows: max-content;
 }
 
 .previewHeader { padding-right: 28px; }
@@ -558,7 +561,70 @@
 
 .previewMetrics i { color: var(--purple-mid); font-size: 13px; }
 .previewMetrics strong { color: var(--text); font-size: 12px; }
-.openSource { width: max-content; }
+.labelInputRow input.invalid {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px var(--red-bg);
+}
+
+.filePreview > [role="img"] {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  font-size: 16px;
+}
+
+.previewActions,
+.confirmDelete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.previewActions .deleteButton {
+  margin-left: auto;
+  color: var(--red);
+}
+
+.confirmDelete {
+  border-radius: 6px;
+  border-top: 0;
+  background: var(--red-bg);
+  padding: 10px;
+}
+
+.discardBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  background: var(--purple-light);
+  padding: 10px;
+}
+
+.discardBar span {
+  flex: 1 1 180px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.confirmDelete span {
+  flex: 1 1 180px;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .confirmDelete span { flex-basis: 100%; }
+  .confirmDelete button { flex: 1 1 0; }
+  .previewActions > * { flex: 1 1 auto; }
+  .previewActions .deleteButton { margin-left: 0; }
+}
 
 @media (max-width: 640px) {
   .filterSpacer { display: none; }

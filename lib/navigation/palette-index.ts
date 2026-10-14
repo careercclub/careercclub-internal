@@ -17,22 +17,45 @@ export type PaletteNavSection = {
 
 export type PaletteRecord = { path: string; title: string; eyebrow: string; description: string };
 
+/**
+ * Hiding a module in Settings hides its sub-pages too, so neither page results nor
+ * data results can route someone into a section they turned off. Shared by both.
+ */
+export function hiddenPathPredicate(sections: ReadonlyArray<PaletteNavSection>, hiddenSlugs: ReadonlyArray<string> = []) {
+  const hidden = new Set(hiddenSlugs);
+  const hiddenPaths = sections.flatMap((section) => section.pages).filter((page) => hidden.has(page.slug)).map((page) => page.path);
+  // "/settings?tab=users" belongs to /settings just like "/settings/x" would.
+  return (path: string) => hiddenPaths.some((parent) => path === parent || path.startsWith(`${parent}/`) || path.startsWith(`${parent}?`));
+}
+
+/** Icon of the nav module that owns a path (longest matching prefix), for data results. */
+export function iconForPath(sections: ReadonlyArray<PaletteNavSection>, path: string, fallback = "ti-file-text") {
+  const owner = sections.flatMap((section) => section.pages)
+    .filter((page) => path === page.path || path.startsWith(`${page.path}/`))
+    .sort((a, b) => b.path.length - a.path.length)[0];
+  return owner?.icon || fallback;
+}
+
 export function buildPaletteIndex(
   sections: ReadonlyArray<PaletteNavSection>,
   records: ReadonlyArray<PaletteRecord>,
   hiddenSlugs: ReadonlyArray<string> = [],
+  subPages: Readonly<Record<string, ReadonlyArray<{ href: string; label: string }>>> = {},
 ): PaletteEntry[] {
-  const hidden = new Set(hiddenSlugs);
   const navPages = sections.flatMap((section) => section.pages.map((page) => ({ page, section: section.label })));
-  const hiddenPaths = navPages.filter(({ page }) => hidden.has(page.slug)).map(({ page }) => page.path);
-  // Hiding a module in Settings hides its sub-pages too, so the palette can never
-  // route someone into a section they turned off.
-  const isHidden = (path: string) => hiddenPaths.some((parent) => path === parent || path.startsWith(`${parent}/`));
+  const isHidden = hiddenPathPredicate(sections, hiddenSlugs);
 
   const entries = new Map<string, PaletteEntry>();
   for (const { page, section } of navPages) {
     if (isHidden(page.path)) continue;
     entries.set(page.path, { path: page.path, title: page.title, section, icon: page.icon, hint: page.description });
+  }
+  // Sub-pages from the sidebar (incl. Settings sections), titled "Module › Page".
+  for (const { page, section } of navPages) {
+    for (const link of subPages[page.path] || []) {
+      if (link.href === page.path || entries.has(link.href) || isHidden(link.href)) continue;
+      entries.set(link.href, { path: link.href, title: `${page.title} › ${link.label}`, section, icon: page.icon, hint: link.label });
+    }
   }
   // Nav entries are inserted first and win: a module's own page keeps its icon and
   // section rather than the catalog's generic ones.

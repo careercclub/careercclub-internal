@@ -7,7 +7,6 @@ const dashboardCounts: { label: string; table: TableName }[] = [
   { label: "programs", table: "events" },
   { label: "tasks", table: "tasks" },
   { label: "crmDeals", table: "crm_deals" },
-  { label: "tickets", table: "tickets" },
   { label: "contentAssets", table: "content_library" },
 ];
 

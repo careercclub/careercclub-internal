@@ -110,6 +110,58 @@
   background: #e24b4a;
 }
 
+/* Module sub-pages (Putaran 9) */
+.navRow {
+  display: flex;
+  align-items: stretch;
+}
+
+.navRow > a {
+  flex: 1;
+  min-width: 0;
+}
+
+.navExpand {
+  width: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+
+.navExpand:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.navChildren {
+  display: grid;
+  padding: 2px 0 6px;
+}
+
+.navChild,
+.navChildActive {
+  display: block;
+  min-height: 32px;
+  padding: 7px 14px 7px 43px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12.5px;
+  line-height: 18px;
+}
+
+.navChild:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.navChildActive {
+  color: #fff;
+  font-weight: 600;
+}
+
 .main {
   height: 100%;
   min-width: 0;
@@ -946,7 +998,9 @@
   width: 62px;
 }
 
-.sidebarCollapsed .navLabel {
+.sidebarCollapsed .navLabel,
+.sidebarCollapsed .navExpand,
+.sidebarCollapsed .navChildren {
   display: none;
 }
 

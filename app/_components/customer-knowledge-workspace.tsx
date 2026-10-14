@@ -10,6 +10,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { DistributionPie, MonthlyOpenChart } from "./charts";
 import { FilterBar, Pagination, Pill, StatCard, StatsGrid, filterFieldClass, usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
+import { settingsHref } from "@/lib/records/links";
+import { confirmAction, notify, notifyError } from "./app-dialog";
 
 type Tab = "dashboard" | "database" | "freeclass";
 type PillTone = "red" | "amber" | "green" | "blue" | "purple" | "gray" | "coral" | "pink" | "teal";
@@ -64,6 +67,12 @@ function computeKeywords(rows: ApiRecord[]) {
 export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeClassRows }: { rows: ApiRecord[]; platforms: ApiRecord[]; categories: ApiRecord[]; freeClassRows: ApiRecord[] }) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [modal, setModal] = useState<{ record: ApiRecord | null } | null>(null);
+  useRecordFocus((id) => {
+    const record = rows.find((row) => String(row.id) === id);
+    if (!record) return;
+    setModal({ record });
+    return true;
+  });
   const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(), [rows]);
   const keywords = useMemo(() => computeKeywords(rows), [rows]);
 
@@ -78,8 +87,8 @@ export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeCl
           </TabsList>
         </Tabs>
         <nav className="flex gap-3 text-xs font-medium text-[var(--purple-mid)]">
-          <Link href="/customer-knowledge/platforms">Platforms</Link>
-          <Link href="/customer-knowledge/categories">Categories</Link>
+          <Link href={settingsHref("customer-knowledge")}>Platforms</Link>
+          <Link href={settingsHref("customer-knowledge")}>Categories</Link>
         </nav>
       </div>
 
@@ -148,8 +157,8 @@ function DatabaseTab({ rows, platforms, categories, onAdd, onEdit }: { rows: Api
 
   const filtered = useMemo(() => rows.filter((row) => (!platform || row.platform === platform) && (!month || row.bulan === month) && (!category || row.kategori === category) && (!label || labels(row).includes(label)) && (!query || `${row.komentar || ""} ${row.username || ""}`.toLowerCase().includes(query.toLowerCase()))), [rows, platform, month, category, label, query]);
 
-  function remove(id: string) {
-    if (!window.confirm("Hapus data ini?\n\nData pain point akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.")) return;
+  async function remove(id: string) {
+    if (!(await confirmAction({ title: "Delete this pain point?", message: "This cannot be undone.", confirmLabel: "Delete pain point", danger: true }))) return;
     start(async () => { await deleteManagedRecord("pain_points", id); });
   }
 
@@ -241,7 +250,7 @@ function LabelPicker({ selected, allLabels, onChange }: { selected: string[]; al
           {creating ? (
             <div className="flex gap-1 p-1">
               <input autoFocus className="h-7 flex-1 rounded border border-border px-2 text-[11px]" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commitDraft(); }} placeholder="Nama label baru..." value={draft} />
-              <button className="rounded bg-[var(--purple-mid)] px-2 text-[10px] text-white" onClick={commitDraft} type="button">Tambah</button>
+              <button className="rounded bg-[var(--purple-mid)] px-2 text-[10px] text-white" onClick={commitDraft} type="button">Add label</button>
             </div>
           ) : (
             <button className="mt-1 block w-full rounded px-2 py-1 text-left text-[11px] text-[var(--purple-mid)] hover:bg-[var(--bg)]" onClick={() => setCreating(true)} type="button">+ Buat label baru</button>
@@ -285,7 +294,7 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
   }
 
   function save() {
-    if (!komentar.trim()) { window.alert("Komentar wajib diisi"); return; }
+    if (!komentar.trim()) { notify("Comment is required.", "error"); return; }
     const formData = new FormData();
     formData.set("komentar", komentar.trim());
     formData.set("platform", platform);
@@ -300,7 +309,7 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
         if (record) await updateManagedRecord("pain_points", String(record.id), formData);
         else await createManagedRecord("pain_points", formData);
         onClose();
-      } catch (error) { window.alert(error instanceof Error ? error.message : "Gagal simpan data"); }
+      } catch (error) { notifyError(error, "Could not save pain point."); }
     });
   }
 

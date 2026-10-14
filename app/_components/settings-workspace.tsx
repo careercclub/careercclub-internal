@@ -7,6 +7,8 @@ import { UserManagement } from "@/app/_components/user-management";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SETTINGS_SECTIONS, TICKET_SETUP_SECTIONS, isSettingsSection, type SettingsSectionId, type TicketSetupSectionId } from "@/lib/records/links";
+import { useRecordFocus } from "./use-record-focus";
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { AuthUserRecord } from "@/lib/api/auth-users";
 import { useState } from "react";
@@ -39,7 +41,7 @@ function CustomerKnowledgeMasterPanel({ platforms, categories }: { platforms: Ap
         <p className="-mt-2 text-[11px] text-muted-foreground">Sumber komentar/diskusi yang tersedia saat mencatat pain point.</p>
         <div className="flex flex-wrap gap-1.5">
           {platforms.map((platform) => (
-            <form action={deleteManagedRecord.bind(null, "pain_point_platforms", String(platform.id))} className="flex items-center gap-1.5 rounded-full border border-border bg-white py-1 pr-1 pl-2.5 text-[11px]" key={String(platform.id)}>
+            <form action={deleteManagedRecord.bind(null, "pain_point_platforms", String(platform.id))} className="flex items-center gap-1.5 rounded-full border border-border bg-white py-1 pr-1 pl-2.5 text-[11px]" data-record-id={String(platform.id)} key={String(platform.id)}>
               <i className={`ti ${platformIcon(String(platform.nama))} text-muted-foreground`} />
               <span className="font-medium">{String(platform.nama)}</span>
               <button aria-label={`Hapus ${String(platform.nama)}`} className="grid size-5 place-items-center rounded-full text-muted-foreground opacity-60 hover:bg-[var(--red-bg)] hover:text-[var(--red)] hover:opacity-100" type="submit"><i className="ti ti-x text-[11px]" /></button>
@@ -63,7 +65,7 @@ function CustomerKnowledgeMasterPanel({ platforms, categories }: { platforms: Ap
           {categories.map((category) => {
             const tone = categoryTone(category.color);
             return (
-              <div className={`flex items-center gap-2 rounded-lg border border-border p-1.5 pl-2.5 ${TONE_BG[tone]}`} key={String(category.id)}>
+              <div className={`flex items-center gap-2 rounded-lg border border-border p-1.5 pl-2.5 ${TONE_BG[tone]}`} data-record-id={String(category.id)} key={String(category.id)}>
                 <span className={`flex-1 truncate text-[11px] font-semibold ${TONE_TEXT[tone]}`}>{String(category.nama)}</span>
                 <form action={updateManagedRecord.bind(null, "pain_point_categories", String(category.id))} className="flex items-center gap-1">
                   <input name="nama" type="hidden" value={String(category.nama)} />
@@ -234,6 +236,8 @@ export function SettingsWorkspace({
   ctaOptions,
   isAdmin,
   users,
+  initialTab,
+  initialSection,
 }: {
   settings: ApiRecord[];
   pages: Page[];
@@ -248,9 +252,34 @@ export function SettingsWorkspace({
   ctaOptions: ApiRecord[];
   isAdmin: boolean;
   users: SafeUser[];
+  initialTab?: string;
+  initialSection?: string;
 }) {
-  const [tab, setTab] = useState("master-produk");
-  const [ticketTab, setTicketTab] = useState("divisi");
+  const sections = SETTINGS_SECTIONS.filter((section) => isAdmin || !("adminOnly" in section));
+  const startTab = isSettingsSection(initialTab) && sections.some((section) => section.id === initialTab) ? initialTab : sections[0].id;
+  const [tab, setTabState] = useState<SettingsSectionId>(startTab);
+  const [ticketTab, setTicketTab] = useState<TicketSetupSectionId>(TICKET_SETUP_SECTIONS.some((section) => section.id === initialSection) ? initialSection as TicketSetupSectionId : "divisions");
+  // Keep the address in step with the open section so it can be bookmarked or shared.
+  function setTab(next: SettingsSectionId, sub?: TicketSetupSectionId) {
+    setTabState(next);
+    if (sub) setTicketTab(sub);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    if (next === "tickets") url.searchParams.set("section", sub || ticketTab); else url.searchParams.delete("section");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
+  }
+  // Search result opened: open the section that holds the record; its list then shows it.
+  useRecordFocus((id) => {
+    const has = (rows: ApiRecord[]) => rows.some((row) => String(row.id) === id);
+    if (has(divisions)) setTab("tickets", "divisions");
+    else if (has(people)) setTab("tickets", "people");
+    else if (has(types)) setTab("tickets", "types");
+    else if (has(platforms) || has(categories)) setTab("customer-knowledge");
+    else if (has(klasifikasi)) setTab("product-classes");
+    else if (has(masterProduk)) setTab("product-mapping");
+    else if (has(ctaOptions)) setTab("carousel-ctas");
+    else if (has(linkTemplates)) setTab("link-templates");
+  });
   const hidden = new Set(hiddenSlugs(settings));
   const labels = menuLabelMaps(settings);
   const sectionNames = [...new Set(pages.map((page) => page.section))];
@@ -259,40 +288,31 @@ export function SettingsWorkspace({
 
   return (
     <div className="grid gap-3.5">
-      <Tabs onValueChange={setTab} value={tab}>
-        <TabsList className="h-auto w-full flex-wrap justify-start" variant="line">
-          <TabsTrigger value="master-produk">Master Produk</TabsTrigger>
-          <TabsTrigger value="master-ticket">Master Ticket</TabsTrigger>
-          <TabsTrigger value="pain-point">Customer Knowledge Master</TabsTrigger>
-          <TabsTrigger value="menu">Menu</TabsTrigger>
-          <TabsTrigger value="link-templates">Link Template</TabsTrigger>
-          <TabsTrigger value="ci-lists">Competitor Intel</TabsTrigger>
-          <TabsTrigger value="klasifikasi">Klasifikasi Produk</TabsTrigger>
-          <TabsTrigger value="content-planning">Content Planning</TabsTrigger>
-          {isAdmin ? <TabsTrigger value="users">Users & Roles</TabsTrigger> : null}
-        </TabsList>
-      </Tabs>
+      <nav aria-label="Settings sections" className="-mx-1 flex gap-1 overflow-x-auto border-b border-border px-1 pb-0">
+        {sections.map((section) => (
+          <button aria-current={tab === section.id ? "page" : undefined} className={`shrink-0 border-b-2 px-2.5 py-2.5 whitespace-nowrap ${tab === section.id ? "border-[var(--purple-mid)] text-[var(--purple-dark)]" : "border-transparent text-muted-foreground hover:text-foreground"}`} key={section.id} onClick={() => setTab(section.id)} type="button">
+            <span className="text-[13px] font-semibold">{section.label}</span>
+          </button>
+        ))}
+      </nav>
 
-      {tab === "master-produk" ? <RecordManager definitionKey="master_produk" rows={masterProduk} /> : null}
+      {tab === "product-mapping" ? <RecordManager definitionKey="master_produk" rows={masterProduk} /> : null}
 
-      {tab === "master-ticket" ? (
+      {tab === "tickets" ? (
         <div className="grid gap-3">
-          <Tabs onValueChange={setTicketTab} value={ticketTab}>
+          <Tabs onValueChange={(value) => setTab("tickets", value as TicketSetupSectionId)} value={ticketTab}>
             <TabsList variant="line">
-              <TabsTrigger value="divisi">Divisi</TabsTrigger>
-              <TabsTrigger value="people">People</TabsTrigger>
-              <TabsTrigger value="tipe">Tipe Request</TabsTrigger>
-              <TabsTrigger value="flow">Status & Email</TabsTrigger>
+              {TICKET_SETUP_SECTIONS.map((section) => <TabsTrigger key={section.id} value={section.id}>{section.label}</TabsTrigger>)}
             </TabsList>
           </Tabs>
-          {ticketTab === "divisi" ? <RecordManager definitionKey="tkt_divisi" rows={divisions} /> : null}
+          {ticketTab === "divisions" ? <RecordManager definitionKey="tkt_divisi" rows={divisions} /> : null}
           {ticketTab === "people" ? <RecordManager definitionKey="tkt_people" rows={people} /> : null}
-          {ticketTab === "tipe" ? <RecordManager definitionKey="tkt_types" rows={types} /> : null}
+          {ticketTab === "types" ? <RecordManager definitionKey="tkt_types" rows={types} /> : null}
           {ticketTab === "flow" ? <TicketStatusEmailPanel divisions={divisions} people={people} /> : null}
         </div>
       ) : null}
 
-      {tab === "pain-point" ? <CustomerKnowledgeMasterPanel categories={categories} platforms={platforms} /> : null}
+      {tab === "customer-knowledge" ? <CustomerKnowledgeMasterPanel categories={categories} platforms={platforms} /> : null}
 
       {tab === "menu" ? (
         <div className="grid gap-3.5">
@@ -345,11 +365,11 @@ export function SettingsWorkspace({
 
       {tab === "link-templates" ? <RecordManager definitionKey="event_link_templates" rows={linkTemplates} /> : null}
 
-      {tab === "ci-lists" ? <CompetitorIntelLists categories={ciCategories} targetAudience={ciTargetAudience} /> : null}
+      {tab === "competitor-lists" ? <CompetitorIntelLists categories={ciCategories} targetAudience={ciTargetAudience} /> : null}
 
-      {tab === "klasifikasi" ? <RecordManager definitionKey="product_klasifikasi" rows={klasifikasi} /> : null}
+      {tab === "product-classes" ? <RecordManager definitionKey="product_klasifikasi" rows={klasifikasi} /> : null}
 
-      {tab === "content-planning" ? <RecordManager definitionKey="carousel_cta_options" rows={ctaOptions} /> : null}
+      {tab === "carousel-ctas" ? <RecordManager definitionKey="carousel_cta_options" rows={ctaOptions} /> : null}
 
       {tab === "users" && isAdmin ? <UserManagement users={users} /> : null}
     </div>

@@ -7,6 +7,8 @@ import { AnalyticsCard, AnalyticsHeader, analyticsGrid, ANALYTICS_COLORS_TP, Bar
 import styles from "./talent-pool.module.css";
 import { TalentPoolTools } from "./talent-pool-tools";
 import { Pagination, usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
+import { DialogBehaviour } from "./use-modal";
 
 function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => String(row[field] || "")).filter(Boolean))].sort(); }
 function text(value: unknown) { return value === null || value === undefined || value === "" ? "" : String(value); }
@@ -29,6 +31,12 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
   }), [rows, query, pipeline, status, source, tier]);
   const { pageItems, page, setPage, totalPages } = usePagination(visible, 15);
   const detail = rows.find((row) => String(row.id) === detailId);
+  useRecordFocus((id) => {
+    if (!rows.some((row) => String(row.id) === id)) return;
+    setTab("profiles");
+    setDetailId(id);
+    return true;
+  });
   const sudahBeli = rows.filter(isBuyer).length;
   const waLink = detail?.wa ? `https://wa.me/${String(detail.wa).replace(/\D/g, "")}` : "";
 
@@ -76,7 +84,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
               </thead>
               <tbody>
                 {visible.length === 0 ? <tr><td className={styles.empty} colSpan={12}>Belum ada data. Import CSV dulu.</td></tr> : pageItems.map((row) => (
-                  <tr className={styles.row} key={String(row.id)} onClick={() => setDetailId(String(row.id))}>
+                  <tr className={styles.row} data-record-id={String(row.id)} key={String(row.id)} onClick={() => setDetailId(String(row.id))}>
                     <td className={`${styles.td} ${styles.tdName}`}>{text(row.nama) || "—"}</td>
                     <td className={styles.td}>{text(row.wa) || "—"}</td>
                     <td className={styles.td}><span className={styles.pillGray}>{text(row.status) || "—"}</span></td>
@@ -101,7 +109,8 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
       {tab === "outreach" ? <TalentPoolTools rows={rows} /> : null}
       {tab === "manage" ? <div className={styles.toolStack}>{sheetsImport}{management}</div> : null}
       {detail ? (
-        <div className={styles.detailOverlay} role="dialog" aria-modal="true">
+        <div className={styles.detailOverlay} role="dialog" aria-modal="true" aria-label="Candidate detail">
+          <DialogBehaviour onClose={() => setDetailId("")} />
           <section className={styles.detailPanel}>
             <header className={styles.detailHeader}>
               <div className={styles.detailAvatar}>{initials(text(detail.nama) || "?")}</div>
@@ -110,7 +119,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
                 <p>{text(detail.email)}</p>
               </div>
               <span className={`${styles.pipelinePill} ${isBuyer(detail) ? styles.pipelineYes : styles.pipelineNo}`}>{isBuyer(detail) ? "Sudah Beli" : "Belum Beli"}</span>
-              <button onClick={() => setDetailId("")} type="button"><i className="ti ti-x" /></button>
+              <button aria-label="Close candidate detail" onClick={() => setDetailId("")} type="button"><i className="ti ti-x" /></button>
             </header>
             <div className={styles.detailActions}>
               {waLink ? <a className={styles.detailActionWa} href={waLink} target="_blank" rel="noopener"><i className="ti ti-brand-whatsapp" /> Chat WA</a> : null}

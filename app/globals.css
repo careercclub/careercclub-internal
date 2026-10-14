@@ -47,6 +47,15 @@ body {
 .pwa-pull-spin { animation: pwa-pull-spin 800ms linear infinite; }
 @keyframes pwa-pull-spin { to { transform: rotate(360deg); } }
 
+/* Opened from global search: briefly highlight the record that was found. */
+[data-record-focused] {
+  outline: 2px solid var(--purple-mid);
+  outline-offset: 2px;
+  border-radius: 6px;
+  background-color: var(--purple-light);
+}
+tr[data-record-focused] > td { background: var(--purple-light); }
+
 html {
   background: var(--purple-dark);
 }
@@ -68,15 +77,19 @@ body {
   }
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+/* In the base layer so Tailwind text and font utilities on form controls take effect (N14).
+   CSS-module rules are unlayered and still win over this. */
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 
-button {
-  cursor: pointer;
+  button {
+    cursor: pointer;
+  }
 }
 
 a {

@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { type CSSProperties, type DragEvent, useMemo, useState, useTransition } from "react";
 import { AssigneeField, personName } from "./assignee-field";
 import styles from "../record-manager.module.css";
+import { confirmAction } from "./app-dialog";
 
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const WEEKDAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -76,7 +77,7 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
     } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan."); setBusy(false); }
   }
   async function remove() {
-    if (!window.confirm("Hapus ticket ini?")) return;
+    if (!(await confirmAction({ title: "Delete this ticket?", message: "This cannot be undone.", confirmLabel: "Delete ticket", danger: true }))) return;
     setBusy(true); setError("");
     try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); }
   }

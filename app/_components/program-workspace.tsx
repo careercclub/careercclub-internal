@@ -16,6 +16,8 @@ import { EventRundown } from "./event-rundown";
 import { GoogleCalendarScript, useGoogleCalendarAction } from "./google-calendar-tool";
 import { Pagination, usePagination } from "./ui-kit";
 import styles from "../record-manager.module.css";
+import { useRecordFocus } from "./use-record-focus";
+import { confirmAction } from "./app-dialog";
 
 const JENIS = ["CCA", "Webinar", "Workshop", "Bootcamp", "Seminar"];
 const EVENT_STATUS = ["Planning", "On Progress", "Done", "Cancelled"];
@@ -103,7 +105,7 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
       else { const row = await createTaskAction({ projectId, title: form.title, description: form.description, phase: form.phase, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assigneeIds: assignees }); onSaved(row); }
     } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan task."); setBusy(false); }
   }
-  async function remove() { if (!editing || !task || !window.confirm("Hapus task ini?")) return; setBusy(true); setError(""); try { await deleteTaskAction(String(task.id)); onDeleted(String(task.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); } }
+  async function remove() { if (!editing || !task || !(await confirmAction({ title: "Delete this task?", message: "A linked ticket is deleted too. This cannot be undone.", confirmLabel: "Delete task", danger: true }))) return; setBusy(true); setError(""); try { await deleteTaskAction(String(task.id)); onDeleted(String(task.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); } }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -237,6 +239,11 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const [tab, setTab] = useState<"overview" | "events" | "history" | "calendar">("overview");
   const [selectedEvent, setSelectedEvent] = useState(String(events.find((event) => event.status !== "Done")?.id || events[0]?.id || ""));
   const [phaseTab, setPhaseTab] = useState<string>("all");
+  useRecordFocus((id) => {
+    if (!events.some((event) => String(event.id) === id)) return;
+    setSelectedEvent(id); setPhaseTab("all"); setTab("events");
+    return true;
+  });
   const [jenisFilter, setJenisFilter] = useState("");
   const [dateFrom, setDateFrom] = useState(""); const [dateTo, setDateTo] = useState("");
   const [eventModal, setEventModal] = useState<{ event: ApiRecord | null } | null>(null);
@@ -280,7 +287,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; const person = ids.length ? personMap.get(ids[0]) : null; if (!person) return { name: "—", div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
   function toggleTask(task: ApiRecord) { const next = task.status === "Done" ? "Todo" : "Done"; const before = taskRows; setTaskRows((current) => current.map((row) => String(row.id) === String(task.id) ? { ...row, status: next } : row)); void updateProgramTaskWorkflowAction(String(task.id), { status: next }).catch(() => setTaskRows(before)); }
   async function deleteLink(eventId: string, index: number) {
-    if (!window.confirm("Hapus link ini?")) return;
+    if (!(await confirmAction({ title: "Delete this link?", confirmLabel: "Delete link", danger: true }))) return;
     setLinkError("");
     try {
       const row = await deleteEventLinkAction(eventId, index);

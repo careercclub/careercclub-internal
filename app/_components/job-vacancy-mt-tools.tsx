@@ -14,6 +14,9 @@ import { IndustryDoughnutChart, MonthlyOpenChart } from "./charts";
 import { SheetImportPanel } from "./job-vacancy-mt-sheet-import";
 import styles from "./job-vacancy-mt.module.css";
 import { usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
+import { useModal } from "./use-modal";
+import { confirmAction, notify, notifyError } from "./app-dialog";
 
 /* ── Helpers ── */
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
@@ -47,6 +50,13 @@ export function JobVacancyMtTools({ rows, industries, referenceDate }: { rows: A
   const [tab, setTab] = useState<Tab>("dashboard");
   const [listIndustryFilter, setListIndustryFilter] = useState("");
   const [formState, setFormState] = useState<{ record: ApiRecord | null } | null>(null);
+  // Search result opened: open the vacancy's edit form directly.
+  useRecordFocus((id) => {
+    const record = rows.find((row) => text(row.id) === id);
+    if (!record) return;
+    setFormState({ record });
+    return true;
+  });
   const industryNames = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
@@ -100,18 +110,14 @@ export function JobVacancyMtTools({ rows, industries, referenceDate }: { rows: A
 
 /* ── Shared UI ── */
 function Modal({ size, title, onClose, children, footer }: { size?: "sm" | "lg"; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
-  useEffect(() => {
-    const esc = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
-    document.addEventListener("keydown", esc);
-    return () => document.removeEventListener("keydown", esc);
-  }, [onClose]);
+  const { dialogProps, titleId } = useModal(onClose);
   const sizeClass = size === "sm" ? styles.modalSm : size === "lg" ? styles.modalLg : "";
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={`${styles.modal} ${sizeClass}`} onClick={(event) => event.stopPropagation()}>
+      <div className={`${styles.modal} ${sizeClass}`} onClick={(event) => event.stopPropagation()} {...dialogProps}>
         <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>{title}</div>
-          <button aria-label="Tutup" className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon}`} onClick={onClose} type="button"><i className="ti ti-x" /></button>
+          <div className={styles.modalTitle} id={titleId}>{title}</div>
+          <button aria-label="Close" className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon}`} onClick={onClose} type="button"><i className="ti ti-x" /></button>
         </div>
         <div className={styles.modalBody}>{children}</div>
         {footer ? <div className={styles.modalFooter}>{footer}</div> : null}
@@ -126,21 +132,6 @@ function Field({ label, optional, children }: { label: string; optional?: boolea
       <span className={styles.fieldLabel}>{label}{optional ? <span className={styles.optional}> (opsional)</span> : null}</span>
       {children}
     </label>
-  );
-}
-
-function ConfirmModal({ title, description, busy, onCancel, onConfirm }: { title: string; description: string; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
-  return (
-    <div className={styles.overlay} onClick={onCancel}>
-      <div className={`${styles.modal} ${styles.modalSm}`} onClick={(event) => event.stopPropagation()}>
-        <div className={styles.modalHeader}><div className={styles.modalTitle}>{title}</div></div>
-        <div className={styles.modalBody}><p style={{ fontSize: 12, color: "var(--text-muted)" }}>{description}</p></div>
-        <div className={styles.modalFooter}>
-          <button className={`${styles.btn} ${styles.btnSm}`} onClick={onCancel} type="button">Batal</button>
-          <button className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger}`} disabled={busy} onClick={onConfirm} type="button">{busy ? "Menghapus..." : "Ya, Hapus"}</button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -306,7 +297,6 @@ function ListTab({ rows, industryNames, presetIndustry, onEdit }: { rows: ApiRec
   const [appliedPreset, setAppliedPreset] = useState(presetIndustry);
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<ApiRecord | null>(null);
   const [pending, start] = useTransition();
 
   if (presetIndustry !== appliedPreset) {
@@ -371,7 +361,7 @@ function ListTab({ rows, industryNames, presetIndustry, onEdit }: { rows: ApiRec
                       </td>
                       <td className={styles.rowActions}>
                         <button className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon}`} onClick={() => onEdit(row)} type="button"><i className="ti ti-edit" /></button>
-                        <button className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon} ${styles.btnDanger}`} onClick={() => setDeleteTarget(row)} type="button"><i className="ti ti-trash" /></button>
+                        <button className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon} ${styles.btnDanger}`} aria-label="Delete vacancy" disabled={pending} onClick={async () => { if (await confirmAction({ title: "Delete this vacancy?", message: "This cannot be undone.", confirmLabel: "Delete vacancy", danger: true })) start(async () => { await deleteVacancyAction(text(row.id)); }); }} type="button"><i className="ti ti-trash" /></button>
                       </td>
                     </tr>
                   );
@@ -384,15 +374,6 @@ function ListTab({ rows, industryNames, presetIndustry, onEdit }: { rows: ApiRec
         )}
       </div>
       <Pager onChange={setPage} page={page} totalPages={totalPages} />
-      {deleteTarget ? (
-        <ConfirmModal
-          busy={pending}
-          description="Data loker akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."
-          onCancel={() => setDeleteTarget(null)}
-          onConfirm={() => start(async () => { await deleteVacancyAction(text(deleteTarget.id)); setDeleteTarget(null); })}
-          title="Hapus loker ini?"
-        />
-      ) : null}
     </>
   );
 }
@@ -423,9 +404,9 @@ function VacancyForm({ record, industryNames, onClose }: { record: ApiRecord | n
   const yearOptions = [String(new Date().getFullYear() - 1), String(new Date().getFullYear()), String(new Date().getFullYear() + 1)];
 
   function save() {
-    if (!company.trim() || !industry.trim() || !program.trim()) { window.alert("Isi dulu: Nama Perusahaan, Industri, dan Nama Program!"); return; }
-    if (!months.length) { window.alert("Pilih minimal 1 bulan buka!"); return; }
-    if (!careerLinks.length) { window.alert("Isi minimal 1 Career Platform Link!"); return; }
+    if (!company.trim() || !industry.trim() || !program.trim()) { notify("Fill in company, industry and program name first.", "error"); return; }
+    if (!months.length) { notify("Pick at least one opening month.", "error"); return; }
+    if (!careerLinks.length) { notify("Add at least one career platform link.", "error"); return; }
     const input: VacancyInput = { company, industry, program, roles, edu, gpa, majors, placement, other_req: otherReq, duration, selection, months, year, open_date: openDate || null, deadline: deadline || null, career_links: careerLinks, ref_links: refLinks, notes };
     start(async () => {
       try {
@@ -433,7 +414,7 @@ function VacancyForm({ record, industryNames, onClose }: { record: ApiRecord | n
         else await createVacancyAction(input);
         onClose();
       } catch (error) {
-        window.alert(error instanceof Error ? error.message : "Gagal simpan loker");
+        notifyError(error, "Could not save vacancy.");
       }
     });
   }
@@ -441,7 +422,7 @@ function VacancyForm({ record, industryNames, onClose }: { record: ApiRecord | n
   return (
     <Modal
       footer={<>
-        <button className={`${styles.btn} ${styles.btnSm}`} onClick={onClose} type="button">Batal / Reset</button>
+        <button className={`${styles.btn} ${styles.btnSm}`} onClick={onClose} type="button">Cancel</button>
         <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={save} type="button"><i className="ti ti-device-floppy" /> {record ? "Simpan Perubahan" : "Simpan Loker"}</button>
       </>}
       onClose={onClose}
@@ -639,13 +620,13 @@ function MasterDataTab({ industries, names }: { industries: ApiRecord[]; names: 
     if (!trimmed) return;
     start(async () => {
       try { await createIndustryAction(trimmed); setValue(""); }
-      catch (error) { window.alert(error instanceof Error ? error.message : "Gagal simpan industri"); }
+      catch (error) { notifyError(error, "Could not save industry."); }
     });
   }
   function remove(row: ApiRecord) {
     start(async () => {
       try { await deleteIndustryAction(text(row.id), text(row.nama)); }
-      catch (error) { window.alert(error instanceof Error ? error.message : "Gagal hapus industri"); }
+      catch (error) { notifyError(error, "Could not delete industry."); }
     });
   }
 
@@ -655,7 +636,7 @@ function MasterDataTab({ industries, names }: { industries: ApiRecord[]; names: 
       <div className={styles.masterSub}>Kelola kategori industri yang muncul di form input loker</div>
       <div className={styles.addIndRow}>
         <input className={styles.input} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") add(); }} placeholder="Nama industri baru..." value={value} />
-        <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={pending} onClick={add} type="button"><i className="ti ti-plus" /> Tambah</button>
+        <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={pending} onClick={add} type="button"><i className="ti ti-plus" /> Add industry</button>
       </div>
       <div className={styles.indList}>
         {sorted.map((nama) => {

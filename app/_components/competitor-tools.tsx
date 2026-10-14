@@ -8,6 +8,8 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { FilterBar, Pill, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
+import { confirmAction, notify, notifyError } from "./app-dialog";
 
 type Workspace = { profiles: ApiRecord[]; snapshots: ApiRecord[]; flags: ApiRecord[]; products: ApiRecord[]; prices: ApiRecord[] };
 type PillTone = "red" | "amber" | "green" | "blue" | "purple" | "gray";
@@ -68,6 +70,12 @@ function CompetitorLogo({ profile, size = 36 }: { profile: ApiRecord; size?: num
 export function CompetitorTools({ workspace }: { workspace: Workspace }) {
   const [tab, setTab] = useState<"overview" | "profiles" | "products">("overview");
   const [editing, setEditing] = useState<{ record: ApiRecord | null } | null>(null);
+  useRecordFocus((id) => {
+    const record = workspace.profiles.find((row) => String(row.id) === id);
+    if (!record) return;
+    setEditing({ record });
+    return true;
+  });
 
   return (
     <div className="grid gap-3.5">
@@ -171,8 +179,8 @@ function ProfilesTab({ workspace, onAdd, onEdit }: { workspace: Workspace; onAdd
     return rows;
   }, [profiles, category, audience, sort]);
 
-  function remove(id: string) {
-    if (!window.confirm("Hapus kompetitor ini? Data akan dihapus permanen.")) return;
+  async function remove(id: string) {
+    if (!(await confirmAction({ title: "Delete this competitor?", message: "Its products, prices and snapshots stay, but lose their competitor. This cannot be undone.", confirmLabel: "Delete competitor", danger: true }))) return;
     start(async () => { await deleteManagedRecord("competitor_profiles", id); });
   }
 
@@ -337,7 +345,7 @@ function ProfileModal({ profile, onClose }: { profile: ApiRecord | null; onClose
   function togglePlatform(value: string) { setPlatforms((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]); }
 
   function save() {
-    if (!name.trim()) { window.alert("Nama wajib diisi!"); return; }
+    if (!name.trim()) { notify("Competitor name is required.", "error"); return; }
     const fol: Record<string, number> = {};
     if (folIg) fol.Instagram = Number(folIg);
     if (folTt) fol.TikTok = Number(folTt);
@@ -358,7 +366,7 @@ function ProfileModal({ profile, onClose }: { profile: ApiRecord | null; onClose
         if (profile) await updateManagedRecord("competitor_profiles", String(profile.id), fd);
         else await createManagedRecord("competitor_profiles", fd);
         onClose();
-      } catch (error) { window.alert(error instanceof Error ? error.message : "Gagal simpan kompetitor"); }
+      } catch (error) { notifyError(error, "Could not save competitor."); }
     });
   }
 

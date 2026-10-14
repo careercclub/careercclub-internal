@@ -15,6 +15,9 @@ import { AssigneeField, personName } from "./assignee-field";
 import { GoogleCalendarScript } from "./google-calendar-tool";
 import { TicketGoogleCalendarModal } from "./ticket-google-calendar-modal";
 import { Pagination, usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
+import { settingsHref } from "@/lib/records/links";
+import { confirmAction } from "./app-dialog";
 
 const PRIORITIES = ["High", "Med", "Low"];
 
@@ -114,7 +117,7 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
     setBusy(true); setError("");
     try { const fd = new FormData(); fd.set("url", url); fd.set("label", "Link"); await addTicketLinkAction(String(ticket.id), fd); onSaved({ ...ticket, links: [...links, { label: "Link", url }] }); setLinkUrl(""); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menambah link."); } finally { setBusy(false); }
   }
-  async function remove() { if (!window.confirm("Hapus ticket ini?")) return; setBusy(true); setError(""); try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); } }
+  async function remove() { if (!(await confirmAction({ title: "Delete this ticket?", message: "This cannot be undone.", confirmLabel: "Delete ticket", danger: true }))) return; setBusy(true); setError(""); try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus."); setBusy(false); } }
   async function duplicate() { setBusy(true); setError(""); try { const row = await duplicateTicketAction(String(ticket.id)); onDuplicated(row); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal menduplikat."); setBusy(false); } }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
@@ -176,6 +179,12 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   });
   const { pageItems: visiblePage, page: ticketPage, setPage: setTicketPage, totalPages: ticketTotalPages } = usePagination(visible, 15);
   const detail = items.find((row) => String(row.id) === detailId) || null;
+  useRecordFocus((id) => {
+    if (!items.some((row) => String(row.id) === id)) return;
+    setTab("all"); setQuery(""); setFDiv(""); setFPrio("");
+    setDetailId(id);
+    return true;
+  });
   const calendarTicket = items.find((row) => String(row.id) === calendarId) || null;
 
   function firstAssignee(row: ApiRecord) {
@@ -208,7 +217,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <Select value={fDiv || "all"} onValueChange={(v) => setFDiv(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua divisi</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select>
             <Select value={fPrio || "all"} onValueChange={(v) => setFPrio(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua prioritas</SelectItem>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select>
-            <Link href="/tickets/divisions" style={ghostBtnStyle}><i className="ti ti-adjustments" /> Master Data</Link>
+            <Link href={settingsHref("tickets", "divisions")} style={ghostBtnStyle}><i className="ti ti-adjustments" /> Ticket setup</Link>
           </div>
         </div>
         <div style={{ overflowX: "auto" }}>
@@ -227,7 +236,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
                 const att = arr(row.files).length + arr(row.links).length;
                 const synced = calendarAdded(row);
                 return (
-                  <tr key={String(row.id)} onClick={() => setDetailId(String(row.id))} style={{ borderBottom: "0.5px solid var(--border)", cursor: "pointer", opacity: isDone ? 0.5 : 1 }}>
+                  <tr data-record-id={String(row.id)} key={String(row.id)} onClick={() => setDetailId(String(row.id))} style={{ borderBottom: "0.5px solid var(--border)", cursor: "pointer", opacity: isDone ? 0.5 : 1 }}>
                     <td style={tdStyle} onClick={(e) => { e.stopPropagation(); void toggleDone(row); }}><div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isDone ? "#0f52ba" : "var(--border-md)"}`, background: isDone ? "#0f52ba" : "transparent", display: "grid", placeItems: "center", margin: "0 auto" }}>{isDone ? <i className="ti ti-check" style={{ fontSize: 10, color: "#fff" }} /> : null}</div></td>
                     <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{text(row.ticket_no) || String(row.id).slice(0, 6)}</td>
                     <td style={tdStyle}><div style={{ fontWeight: 500, textDecoration: isDone ? "line-through" : "none" }}>{text(row.title) || "—"}</div><div style={{ fontSize: 11, color: "var(--text-muted)" }}>{type ? text(type.nama) : ""}{att > 0 ? ` · 📎 ${att}` : ""}</div></td>

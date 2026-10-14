@@ -8,6 +8,9 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import styles from "./content-evaluation.module.css";
 import { usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
+import { useModal } from "./use-modal";
+import { confirmAction } from "./app-dialog";
 
 type Tab = "overview" | "reel" | "feed" | "story-buyer";
 type Scored = { row: ApiRecord; score: ContentEvaluationResult };
@@ -53,6 +56,12 @@ export function ContentEvaluationTools({ evaluations, buyers }: { evaluations: A
   const [busy, setBusy] = useState(false);
 
   const allScored = useMemo(() => evaluations.map((row) => ({ row, score: evaluateContentEvaluation(row) })), [evaluations]);
+  useRecordFocus((id) => {
+    const item = allScored.find(({ row }) => String(row.id) === id);
+    if (!item) return;
+    setSelected(item);
+    return true;
+  });
   const scored = useMemo(() => {
     if (range === "0") return allScored;
     if (range === "custom") return allScored.filter(({ row }) => (!customStart || day(row.tanggal) >= customStart) && (!customEnd || day(row.tanggal) <= customEnd));
@@ -101,7 +110,7 @@ export function ContentEvaluationTools({ evaluations, buyers }: { evaluations: A
   }
 
   async function removeEvaluation() {
-    if (!editing?.id || !window.confirm("Hapus evaluasi konten ini?")) return;
+    if (!editing?.id || !(await confirmAction({ title: "Delete this evaluation?", message: "This cannot be undone.", confirmLabel: "Delete evaluation", danger: true }))) return;
     await deleteManagedRecord("content_evaluations", String(editing.id));
     setEditing(undefined);
     setSelected(null);
@@ -199,7 +208,7 @@ function EvaluationEditor({ record, save, remove }: { record: ApiRecord | null; 
     {format === "Reel" ? <section><h3>Reel metrics</h3><div className={styles.formGrid}>{numeric("watchtime", "Average watch time")}{numeric("wtr", "Watch-through rate %")}{numeric("duration", "Duration seconds")}{numeric("replays", "Replays")}{numeric("dropoff", "Drop-off second")}</div></section> : null}
     {format === "Story" ? <section><h3>Story metrics</h3><div className={styles.formGrid}>{numeric("taps_forward", "Taps forward")}{numeric("taps_back", "Taps back")}{numeric("exits", "Exits")}{numeric("replies", "Replies")}{numeric("stickers_interact", "Sticker interactions")}</div></section> : null}
     <section><h3>Creative review</h3><div className={styles.formGrid}>{numeric("hook_rating", "Hook rating (1-5)")}<Field label="CTA effectiveness"><select defaultValue={input("cta_eff")} name="cta_eff"><option value="">-</option><option value="high">high</option><option value="med">med</option><option value="low">low</option></select></Field><Field label="Next action"><select defaultValue={input("action")} name="action"><option value="">Pilih action...</option><option>Boost ke Meta Ads</option><option>Jadiin template konten serupa</option><option>Repurpose jadi format lain</option><option>Archive</option></select></Field><Field label="Thumbnail key / URL"><input defaultValue={input("thumbnail_url")} name="thumbnail_url" /></Field></div><div className={styles.formGrid}><Field label="What worked"><textarea defaultValue={input("win")} name="win" rows={3} /></Field><Field label="Needs improvement"><textarea defaultValue={input("improve")} name="improve" rows={3} /></Field></div></section>
-    <footer className={styles.editorFooter}>{record ? <button className={styles.deleteButton} formAction={async () => { await remove(); }} formNoValidate type="submit"><i className="ti ti-trash" /> Hapus</button> : <span />}<div><button className={styles.secondaryButton} type="reset">Reset</button><button className={styles.primaryButton} type="submit"><i className="ti ti-device-floppy" /> Simpan</button></div></footer>
+    <footer className={styles.editorFooter}>{record ? <button className={styles.deleteButton} formAction={async () => { await remove(); }} formNoValidate type="submit"><i className="ti ti-trash" /> Delete evaluation</button> : <span />}<div><button className={styles.secondaryButton} type="reset">Reset</button><button className={styles.primaryButton} type="submit"><i className="ti ti-device-floppy" /> Save evaluation</button></div></footer>
   </form>;
 }
 
@@ -212,5 +221,5 @@ function EvaluationDetail({ item, onClose, edit }: { item: Scored; onClose: () =
   return <Modal wide title={String(row.judul || "Untitled")} close={onClose}><div className={styles.detailMeta}><span>{String(row.format)} - {dateLabel(row.tanggal)}</span><small>{String(row.topik || "No topic")}</small><button className={styles.secondaryButton} onClick={edit}><i className="ti ti-edit" /> Edit konten</button></div><div className={styles.scoreHero}><div><strong>{score.total}</strong><span>{gradeLabel(score.grade)}</span><small>{score.partial ? "Preliminary score - lengkapi advanced metrics." : "Complete adaptive score."}</small></div><progress max="100" value={score.total} /></div><div className={styles.detailGrid}><section><h3>Full metrics</h3>{metrics.map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{typeof value === "number" ? compact(value) : String(value || "-")}</strong></div>)}</section><section><h3>Automatic insights</h3>{score.insights.map((insight, index) => <div className={`${styles.insight} ${insight.type === "positive" ? styles.insightPositive : insight.type === "warning" ? styles.insightWarning : styles.insightNeutral}`} key={`${insight.text}-${index}`}><i className={`ti ti-${insight.type === "positive" ? "circle-check" : insight.type === "warning" ? "alert-triangle" : "info-circle"}`} /><span>{insight.text}</span></div>)}{row.win ? <aside><strong>What worked</strong><p>{String(row.win)}</p></aside> : null}{row.improve ? <aside><strong>Needs improvement</strong><p>{String(row.improve)}</p></aside> : null}{row.url ? <a className={styles.secondaryButton} href={String(row.url)} rel="noreferrer" target="_blank"><i className="ti ti-brand-instagram" /> Open post</a> : null}</section></div></Modal>;
 }
 
-function Modal({ title, close, children, wide = false }: { title: string; close: () => void; children: ReactNode; wide?: boolean }) { return <div className={styles.overlay} onMouseDown={close}><section className={wide ? styles.modalWide : styles.modal} onMouseDown={(event) => event.stopPropagation()}><header><strong>{title}</strong><button onClick={close}><i className="ti ti-x" /></button></header><div className={styles.modalBody}>{children}</div></section></div>; }
+function Modal({ title, close, children, wide = false }: { title: string; close: () => void; children: ReactNode; wide?: boolean }) { const { dialogProps, titleId } = useModal(close); return <div className={styles.overlay} onMouseDown={close}><section className={wide ? styles.modalWide : styles.modal} onMouseDown={(event) => event.stopPropagation()} {...dialogProps}><header><strong id={titleId}>{title}</strong><button aria-label="Close" onClick={close} type="button"><i className="ti ti-x" /></button></header><div className={styles.modalBody}>{children}</div></section></div>; }
 function Empty({ text }: { text: string }) { return <div className={styles.empty}><i className="ti ti-chart-bar-off" /><span>{text}</span></div>; }

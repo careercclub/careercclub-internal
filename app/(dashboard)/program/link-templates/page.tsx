@@ -1,7 +1,7 @@
-import { RecordManager } from "@/app/_components/record-manager";
-import { listEventLinkTemplates } from "@/lib/api/program";
-import { programLinks } from "@/lib/records/links";
+import { RETIRED_PAGES, withFocus } from "@/lib/records/links";
+import { redirect } from "next/navigation";
 
-export default async function ProgramLinkTemplatesPage() {
-  return <RecordManager definitionKey="event_link_templates" links={programLinks} rows={await listEventLinkTemplates()} />;
+// This data is now managed in one place; the old address forwards there (and keeps ?focus from search).
+export default async function RetiredPage({ searchParams }: { searchParams: Promise<{ focus?: string | string[] }> }) {
+  redirect(withFocus(RETIRED_PAGES["/program/link-templates"], (await searchParams).focus));
 }

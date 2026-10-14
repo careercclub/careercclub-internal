@@ -8,6 +8,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { cn } from "@/lib/utils";
 import { useMemo, useState, useTransition } from "react";
 import { FilterBar, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
 
 function number(value: unknown) { const parsed = Number(value || 0); return Number.isFinite(parsed) ? parsed : 0; }
 function compact(value: unknown) { return new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(number(value)); }
@@ -20,6 +21,9 @@ export function MetaAdsTools({ rows }: { rows: ApiRecord[] }) {
   const [funnel, setFunnel] = useState("");
   const [decision, setDecision] = useState("");
   const [signal, setSignal] = useState("");
+  useRecordFocus((id) => {
+    if (rows.some((row) => String(row.id) === id)) { setFunnel(""); setDecision(""); setSignal(""); }
+  });
   const [pending, startTransition] = useTransition();
   const candidates = useMemo(() => rows.map((row) => ({ row, derived: scoreAdsCandidate(row) })).filter((item) => (!funnel || (item.row.funnel || item.derived.funnel) === funnel) && (!decision || (item.row.ad_decision || "Pending") === decision) && (!signal || item.derived.boostSignal === signal)).sort((a, b) => b.derived.score - a.derived.score), [rows, funnel, decision, signal]);
   const counts = (value: string) => rows.filter((row) => (row.ad_decision || "Pending") === value).length;
@@ -57,7 +61,7 @@ export function MetaAdsTools({ rows }: { rows: ApiRecord[] }) {
             const resolvedFunnel = String(row.funnel || derived.funnel);
             const objective = String(row.objective || derived.objective);
             return (
-              <div className="rounded-lg border border-border bg-white p-3" key={String(row.id)} style={{ borderLeft: `3px solid ${DECISION_COLOR[current] || "var(--text-hint)"}` }}>
+              <div className="rounded-lg border border-border bg-white p-3" data-record-id={String(row.id)} key={String(row.id)} style={{ borderLeft: `3px solid ${DECISION_COLOR[current] || "var(--text-hint)"}` }}>
                 <div className="mb-2 flex items-start justify-between gap-1.5">
                   <strong className="line-clamp-2 flex-1 text-[12px] font-semibold">{String(row.judul || "Untitled")}</strong>
                   <span className="shrink-0 text-[10px] text-muted-foreground">{String(row.format || "Carousel")}</span>

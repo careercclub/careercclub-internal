@@ -1,9 +1,7 @@
-import { RecordManager } from "@/app/_components/record-manager";
-import { listProductClassifications } from "@/lib/api/products";
-import { productLinks } from "@/lib/records/links";
+import { RETIRED_PAGES, withFocus } from "@/lib/records/links";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Product Classifications" };
-
-export default async function ProductClassificationsPage() {
-  return <RecordManager definitionKey="product_klasifikasi" links={productLinks} rows={await listProductClassifications()} />;
+// This data is now managed in one place; the old address forwards there (and keeps ?focus from search).
+export default async function RetiredPage({ searchParams }: { searchParams: Promise<{ focus?: string | string[] }> }) {
+  redirect(withFocus(RETIRED_PAGES["/products/classifications"], (await searchParams).focus));
 }

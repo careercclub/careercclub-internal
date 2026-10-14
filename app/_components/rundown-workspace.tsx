@@ -4,9 +4,14 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useState } from "react";
 import { EventRundown, rundownFor, runningTimes } from "./event-rundown";
 import styles from "../record-manager.module.css";
+import { useRecordFocus } from "./use-record-focus";
 
 export function RundownWorkspace({ events, rows }: { events: ApiRecord[]; rows: ApiRecord[] }) {
   const [eventId, setEventId] = useState(String(events[0]?.id || ""));
+  useRecordFocus((id) => {
+    const row = rows.find((item) => String(item.id) === id);
+    if (row && String(row.event_id) !== eventId) setEventId(String(row.event_id));
+  });
   const selected = events.find((event) => String(event.id) === eventId);
   const startTime = String(selected?.waktu || "").slice(0, 5);
   const eventRows = useMemo(() => rundownFor(rows, eventId), [rows, eventId]);

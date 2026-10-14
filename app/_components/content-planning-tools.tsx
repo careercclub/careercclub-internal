@@ -31,6 +31,9 @@ import {
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import styles from "./content-planning.module.css";
+import { useRecordFocus } from "./use-record-focus";
+import { useModal } from "./use-modal";
+import { askText, confirmAction } from "./app-dialog";
 
 /* ── Helpers ── */
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -75,18 +78,14 @@ type Tab = "carousel" | "story" | "kol" | "mt";
 
 /* ── Shared UI ── */
 function Modal({ size, title, onClose, children, footer }: { size?: "sm" | "md"; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
-  useEffect(() => {
-    const esc = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
-    document.addEventListener("keydown", esc);
-    return () => document.removeEventListener("keydown", esc);
-  }, [onClose]);
+  const { dialogProps, titleId } = useModal(onClose);
   const sizeClass = size === "sm" ? styles.modalSm : size === "md" ? styles.modalMd : "";
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={`${styles.modal} ${sizeClass}`} onClick={(event) => event.stopPropagation()}>
+      <div className={`${styles.modal} ${sizeClass}`} onClick={(event) => event.stopPropagation()} {...dialogProps}>
         <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>{title}</div>
-          <button className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon}`} onClick={onClose} type="button" aria-label="Tutup"><i className="ti ti-x" /></button>
+          <div className={styles.modalTitle} id={titleId}>{title}</div>
+          <button className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon}`} onClick={onClose} type="button" aria-label="Close"><i className="ti ti-x" /></button>
         </div>
         <div className={styles.modalBody}>{children}</div>
         {footer ? <div className={styles.modalFooter}>{footer}</div> : null}
@@ -251,8 +250,8 @@ function LinksPanel({ kind, links }: { kind: "cp" | "sp"; links: ApiRecord[] }) 
             <div className={styles.linkForm}>
               <div className={styles.linkFormField}><div className={styles.linkFormLabel}>Label</div><input className={styles.input} style={{ height: 32, fontSize: 12 }} placeholder="cth: Template Story" value={label} onChange={(event) => setLabel(event.target.value)} autoFocus /></div>
               <div className={`${styles.linkFormField} ${styles.wide}`}><div className={styles.linkFormLabel}>URL</div><input className={styles.input} style={{ height: 32, fontSize: 12 }} placeholder="https://..." value={url} onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") save(); }} /></div>
-              <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} style={{ height: 32 }} type="button" disabled={pending} onClick={save}>Simpan</button>
-              <button className={`${styles.btn} ${styles.btnSm}`} style={{ height: 32 }} type="button" onClick={() => { setAdding(false); setLabel(""); setUrl(""); }}>Batal</button>
+              <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} style={{ height: 32 }} type="button" disabled={pending} onClick={save}>Save link</button>
+              <button className={`${styles.btn} ${styles.btnSm}`} style={{ height: 32 }} type="button" onClick={() => { setAdding(false); setLabel(""); setUrl(""); }}>Cancel</button>
             </div>
           ) : null}
         </>
@@ -311,6 +310,7 @@ function AiPanel({ kind, onParsed }: { kind: "carousel" | "story"; onParsed: (da
 
 export function ContentPlanningTools(props: ContentPlanningProps) {
   const [tab, setTab] = useState<Tab>("carousel");
+  useRecordFocus((id) => { if (props.dates.some((date) => text(date.id) === id)) setTab("story"); });
   const tabs: Array<[Tab, string, string]> = [["carousel", "ti-layout-columns", "Carousel Plan"], ["story", "ti-layout-rows", "Story Plan"], ["kol", "ti-users", "KOL List"], ["mt", "ti-star", "MT Story"]];
   return (
     <div className={styles.root}>
@@ -505,8 +505,8 @@ function CarouselLinkCell({ plan, kind }: { plan: ApiRecord; kind: keyof typeof 
       <span className={styles.inlineLinkRow}>
         <i className={`ti ${icon}`} style={{ fontSize: 13, color: "var(--text-muted)" }} />
         <input className={styles.inlineLinkInput} type="url" placeholder="https://..." value={url} autoFocus onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commit(); if (event.key === "Escape") cancel(); }} />
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={commit}>Simpan</button>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={cancel}>Batal</button>
+        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={commit}>Save link</button>
+        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={cancel}>Cancel</button>
       </span>
     );
   }
@@ -542,13 +542,13 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
       onClose();
     });
   }
-  function remove() {
-    if (!plan || !window.confirm("Hapus carousel plan ini? Data akan dihapus permanen.")) return;
+  async function remove() {
+    if (!plan || !(await confirmAction({ title: "Delete this carousel plan?", message: "This cannot be undone.", confirmLabel: "Delete carousel plan", danger: true }))) return;
     start(async () => { await deleteCarouselPlanAction(text(plan.id)); onClose(); });
   }
-  function addCta() {
-    const label = window.prompt("Nama CTA baru:");
-    if (!label || !label.trim()) return;
+  async function addCta() {
+    const label = await askText({ title: "Add CTA", label: "CTA text", submitLabel: "Add CTA", placeholder: "e.g. Register now" });
+    if (!label) return;
     start(async () => { const row = await createCtaAction(label); setCta(row.label); });
   }
 
@@ -558,9 +558,9 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
       onClose={onClose}
       footer={
         <>
-          {plan ? <button type="button" className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger} ${styles.footerSpacer}`} onClick={remove}><i className="ti ti-trash" /> Hapus</button> : null}
-          <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Batal</button>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !judul.trim()} onClick={save}><i className="ti ti-check" /> Simpan</button>
+          {plan ? <button type="button" className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger} ${styles.footerSpacer}`} onClick={remove}><i className="ti ti-trash" /> Delete carousel plan</button> : null}
+          <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
+          <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !judul.trim()} onClick={save}><i className="ti ti-check" /> Save carousel plan</button>
         </>
       }
     >
@@ -635,6 +635,11 @@ function StoryTab({ dates, items, links }: { dates: ApiRecord[]; items: ApiRecor
   const currentWeek = localIso(startOfWeek(todayKey()));
   const collapsedSet = useMemo(() => (initCollapse ? collapsed : new Set(groups.map((g) => g.wk).filter((wk) => wk !== currentWeek))), [initCollapse, collapsed, groups, currentWeek]);
   function toggleWeek(wk: string) { const next = new Set(collapsedSet); if (next.has(wk)) next.delete(wk); else next.add(wk); setCollapsed(next); setInitCollapse(true); }
+  // Search result opened: open the week that holds the date so its card can be shown.
+  useRecordFocus((id) => {
+    const week = groups.find((group) => group.rows.some((date) => text(date.id) === id))?.wk;
+    if (week && collapsedSet.has(week)) { const next = new Set(collapsedSet); next.delete(week); setCollapsed(next); setInitCollapse(true); }
+  });
 
   return (
     <>
@@ -692,7 +697,7 @@ function StoryDateCard({ date, items, pending, start }: { date: ApiRecord; items
   const [open, setOpen] = useState(true);
   const isDone = text(date.status) === "Done";
   return (
-    <div className={styles.itemCard} style={{ borderLeftColor: isDone ? "#3b6d11" : "#888780" }}>
+    <div className={styles.itemCard} data-record-id={text(date.id)} style={{ borderLeftColor: isDone ? "#3b6d11" : "#888780" }}>
       <div className={styles.itemCardInner} style={{ cursor: "pointer" }} onClick={() => setOpen((v) => !v)}>
         <div className={styles.itemHead}>
           <input type="checkbox" className={styles.checkbox} checked={isDone} disabled={pending} onClick={(event) => event.stopPropagation()} onChange={(event) => start(() => { void setStoryPlanStatusAction(text(date.id), event.target.checked ? "Done" : "Draft"); })} />
@@ -703,7 +708,7 @@ function StoryDateCard({ date, items, pending, start }: { date: ApiRecord; items
             <div className={styles.subMeta}><i className="ti ti-file-text" /><span>{items.length} story direncanakan</span>{isDone ? <span style={{ fontSize: 11, color: "#3b6d11", fontWeight: 500 }}> · Selesai diposting</span> : null}</div>
           </div>
           <span className={styles.pill} style={{ background: "#e8f0fc", color: "#185fa5", fontWeight: 500 }}>{items.length} story</span>
-          <button type="button" className={styles.editBtn} onClick={(event) => { event.stopPropagation(); if (window.confirm("Hapus jadwal ini? Semua story dalam jadwal ini akan ikut terhapus.")) start(() => { void deleteStoryDateAction(text(date.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 13 }} /></button>
+          <button aria-label="Delete story date" type="button" className={styles.editBtn} onClick={async (event) => { event.stopPropagation(); if (await confirmAction({ title: "Delete this story date?", message: "All story slides on this date are deleted too. This cannot be undone.", confirmLabel: "Delete story date", danger: true })) start(() => { void deleteStoryDateAction(text(date.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 13 }} /></button>
           <i className={`ti ti-chevron-${open ? "down" : "right"}`} style={{ fontSize: 12, color: "var(--text-muted)", alignSelf: "center" }} />
         </div>
       </div>
@@ -724,7 +729,7 @@ function StoryItemRow({ item, index, start }: { item: ApiRecord; index: number; 
     <div className={styles.storyItemRow}>
       <span className={styles.storyItemNum}>{index + 1}</span>
       <input className={styles.storyItemInput} value={value} onChange={(event) => setValue(event.target.value)} onBlur={() => { if (value !== text(item.isi)) start(() => { void updateStoryItemAction(text(item.id), value); }); }} onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }} />
-      <button type="button" className={styles.chipDelete} style={{ padding: 4 }} onClick={() => { if (window.confirm("Hapus story ini?")) start(() => { void deleteStoryItemAction(text(item.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
+      <button aria-label="Delete story slide" type="button" className={styles.chipDelete} style={{ padding: 4 }} onClick={async () => { if (await confirmAction({ title: "Delete this story slide?", confirmLabel: "Delete story slide", danger: true })) start(() => { void deleteStoryItemAction(text(item.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
     </div>
   );
 }
@@ -741,10 +746,10 @@ function StoryDateModal({ preDate, presetItems, onClose }: { preDate?: string; p
   }
 
   return (
-    <Modal size="md" title="Tambah Tanggal" onClose={onClose}
+    <Modal size="md" title="Add story date" onClose={onClose}
       footer={<>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Batal</button>
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !stories.some((s) => s.trim())} onClick={save}><i className="ti ti-check" /> Simpan</button>
+        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
+        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !stories.some((s) => s.trim())} onClick={save}><i className="ti ti-check" /> Save story date</button>
       </>}
     >
       <Field label="Tanggal *"><DatePicker selected={tanggal} statusMap={{}} onPick={setTanggal} /></Field>
@@ -834,7 +839,7 @@ function KolTab({ kols }: { kols: ApiRecord[] }) {
                 </div>
                 <div className={styles.cardFooter}>
                   <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px" }} onClick={() => setModal({ kol: k })}><i className="ti ti-edit" style={{ fontSize: 12 }} /></button>
-                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", color: "var(--red)" }} disabled={pending} onClick={() => { if (window.confirm("Hapus KOL ini?")) start(() => { void deleteKolAction(text(k.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
+                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", color: "var(--red)" }} aria-label="Delete KOL" disabled={pending} onClick={async () => { if (await confirmAction({ title: "Delete this KOL?", confirmLabel: "Delete KOL", danger: true })) start(() => { void deleteKolAction(text(k.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
                   {k.rate_card_file_url ? <a className={`${styles.btn} ${styles.btnSm} ${styles.cardFooterSpacer}`} href={text(k.rate_card_file_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11 }}><i className="ti ti-file" style={{ fontSize: 11 }} /> Rate Card</a> : null}
                 </div>
               </div>
@@ -865,10 +870,10 @@ function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void
   }
 
   return (
-    <Modal title={`${kol ? "Edit" : "Tambah"} KOL`} onClose={onClose}
+    <Modal title={`${kol ? "Edit" : "Add"} KOL`} onClose={onClose}
       footer={<>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Batal</button>
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Simpan</button>
+        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
+        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Save KOL</button>
       </>}
     >
       <Field label="Nama *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
@@ -910,7 +915,7 @@ function MtTab({ stories }: { stories: ApiRecord[] }) {
           <button key={value} type="button" className={`${styles.filterPill} ${filter === value ? styles.filterPillActive : ""}`} onClick={() => setFilter(value)}>{label}</button>
         ))}
         <span className={styles.filterSpacer} />
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ story: null })}><i className="ti ti-plus" /> Tambah</button>
+        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ story: null })}><i className="ti ti-plus" /> Add MT story</button>
       </div>
       {!filtered.length ? (
         <div className={styles.empty}><i className="ti ti-user-off" />Belum ada data</div>
@@ -940,7 +945,7 @@ function MtTab({ stories }: { stories: ApiRecord[] }) {
                 <div className={styles.cardFooter}>
                   {s.wa ? <a className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", borderColor: "var(--green)", color: "var(--green)" }} href={`https://wa.me/${text(s.wa).replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"><i className="ti ti-brand-whatsapp" style={{ fontSize: 12 }} /></a> : null}
                   <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px" }} onClick={() => setModal({ story: s })}><i className="ti ti-edit" style={{ fontSize: 12 }} /></button>
-                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", color: "var(--red)" }} disabled={pending} onClick={() => { if (window.confirm("Hapus MT Story ini?")) start(() => { void deleteMtStoryAction(text(s.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
+                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", color: "var(--red)" }} aria-label="Delete MT story" disabled={pending} onClick={async () => { if (await confirmAction({ title: "Delete this MT story?", confirmLabel: "Delete MT story", danger: true })) start(() => { void deleteMtStoryAction(text(s.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
                   {posted ? <span className={styles.cardFooterSpacer} style={{ fontSize: 11, color: "var(--text-hint)" }}>✓ Posted</span> : <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm} ${styles.cardFooterSpacer}`} style={{ fontSize: 11 }} disabled={pending} onClick={() => start(() => { void setMtPostedAction(text(s.id), true); })}>Tandai Posted</button>}
                 </div>
               </div>
@@ -967,10 +972,10 @@ function MtModal({ story, onClose }: { story: ApiRecord | null; onClose: () => v
   }
 
   return (
-    <Modal title={`${story ? "Edit" : "Tambah"} MT Story`} onClose={onClose}
+    <Modal title={`${story ? "Edit" : "Add"} MT story`} onClose={onClose}
       footer={<>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Batal</button>
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Simpan</button>
+        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
+        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Save MT story</button>
       </>}
     >
       <Field label="Nama *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>

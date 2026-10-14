@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { FilterBar, FilterPill, Pill, StatCard, StatsGrid, filterFieldClass } from "./ui-kit";
+import { confirmAction } from "./app-dialog";
 
 type Workspace = { products: ApiRecord[]; painPoints: ApiRecord[]; passionPoints: ApiRecord[]; benefits: ApiRecord[]; features: ApiRecord[]; featureLinks: ApiRecord[]; bundles: ApiRecord[]; subProducts: ApiRecord[]; subProductLinks: ApiRecord[]; assets: ApiRecord[]; feedbacks: ApiRecord[] };
 type Tab = "overview" | "pain" | "passion" | "benefit" | "feature" | "subProduct" | "asset" | "feedback" | "manage";
@@ -38,7 +39,7 @@ export function ProductWorkbench({ workspace, management }: { workspace: Workspa
   const bundlingCount = workspace.products.filter((product) => (product.type || "satuan") === "bundling").length;
 
   function exportSelected() { if (!selected) return; const payload = { product: selected, bundleItems: workspace.products.filter((product) => memberIds.has(String(product.id))), painPoints: knowledgeRows("pain"), passionPoints: knowledgeRows("passion"), benefits: knowledgeRows("benefit"), features: knowledgeRows("feature"), subProducts: knowledgeRows("subProduct"), assets: knowledgeRows("asset"), feedbacks: knowledgeRows("feedback") }; const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${String(selected.nama || "product").replace(/\W+/g, "-")}-kb.json`; anchor.click(); URL.revokeObjectURL(url); }
-  async function remove(kind: KnowledgeTab, rowId: string) { if (window.confirm("Delete this knowledge item?")) await deleteProductKnowledgeAction(kind, rowId); }
+  async function remove(kind: KnowledgeTab, rowId: string) { if (await confirmAction({ title: "Delete this item?", message: "It is removed from the product knowledge base. This cannot be undone.", confirmLabel: "Delete item", danger: true })) await deleteProductKnowledgeAction(kind, rowId); }
 
   return (
     <div className="grid gap-3.5">

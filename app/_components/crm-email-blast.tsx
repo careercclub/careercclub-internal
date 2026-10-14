@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { MonthlyOpenChart } from "./charts";
 import styles from "./crm.module.css";
+import { askText, confirmAction } from "./app-dialog";
 
 type BlastTab = "compose" | "templates" | "history" | "settings";
 type Segment = "all" | "has_email" | "belum_diblast" | "custom";
@@ -80,7 +81,7 @@ export function CrmEmailBlast({ rows, history, daily }: { rows: ApiRecord[]; his
     // Resend caps a request at 100 recipients, so send in batches of 100.
     const batches: ApiRecord[][] = [];
     for (let index = 0; index < recipients.length; index += 100) batches.push(recipients.slice(index, index + 100));
-    if (!window.confirm(`Kirim ke ${recipients.length} penerima?${schedule ? `\nDijadwalkan: ${schedule}` : "\nEmail akan dikirim sekarang."}`)) return;
+    if (!(await confirmAction({ title: `Send to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}?`, message: schedule ? `Scheduled for ${schedule}.` : "The email is sent now.", confirmLabel: schedule ? "Schedule email" : "Send email" }))) return;
 
     setMessage(`Mengirim ke ${recipients.length} penerima…`);
     let sent = 0;
@@ -116,13 +117,13 @@ export function CrmEmailBlast({ rows, history, daily }: { rows: ApiRecord[]; his
     router.refresh();
   }
 
-  function saveTemplate() {
-    const name = window.prompt("Nama template:")?.trim();
+  async function saveTemplate() {
+    const name = await askText({ title: "Save as template", label: "Template name", submitLabel: "Save template" });
     if (!name) return;
     const next = [...templates.filter((template) => template.name !== name), { name, subject, body }];
     setTemplates(next);
     writeStore(TEMPLATE_KEY, next);
-    setMessage(`Template "${name}" disimpan.`);
+    setMessage(`Template "${name}" saved.`);
   }
 
   const totalSent = daily.reduce((sum, item) => sum + item.sent, 0);

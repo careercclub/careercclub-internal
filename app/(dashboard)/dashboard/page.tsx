@@ -1,13 +1,16 @@
 import { DashboardAiCommand } from "@/app/_components/dashboard-ai-command";
 import { DashboardCalendar, DashboardUpcoming } from "@/app/_components/dashboard-calendar";
 import { listProgramEvents, listProgramTasks } from "@/lib/api/program";
-import { getTicketWorkspace } from "@/lib/api/tickets";
+import { getVisibleTicketWorkspace } from "@/lib/api/tickets";
+import { auth } from "@/auth";
 import styles from "../dashboard.module.css";
 
 export const metadata = { title: "Dashboard", description: "Program tasks and tickets on one operational calendar." };
 
 export default async function DashboardPage() {
-  const [workspace, tasks, events] = await Promise.all([getTicketWorkspace(), listProgramTasks(), listProgramEvents()]);
+  const session = await auth();
+  // Same role rule as the Tickets page: the calendar only shows tickets this person may see.
+  const [workspace, tasks, events] = await Promise.all([getVisibleTicketWorkspace({ role: session?.user?.role, userId: session?.user?.id, email: session?.user?.email }), listProgramTasks(), listProgramEvents()]);
   return (
     <>
       <DashboardAiCommand />

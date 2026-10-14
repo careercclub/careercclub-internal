@@ -7,7 +7,8 @@ export const metadata = { title: "B2B Partnership" };
 const statuses = ["Approached", "Sales Meet", "Negotiation", "Closed Deal", "Closed Lost"] as const;
 const categories = ["MT Program Company", "HR Services Company"];
 
-export default async function B2bPartnershipPage() {
+export default async function B2bPartnershipPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
+  const requestedTab = (await searchParams).tab;
   const [rows, deals, outreach] = await Promise.all([listPartners(), listPartnerDeals(), listPartnerOutreach()]);
   const parser = (
     <AiTextRecordParser
@@ -30,6 +31,8 @@ export default async function B2bPartnershipPage() {
       partnerField="partner_id"
       categories={categories}
       aiPanel={parser}
+      initialTab={Array.isArray(requestedTab) ? requestedTab[0] : requestedTab}
+      key={Array.isArray(requestedTab) ? requestedTab[0] : requestedTab || "overview"}
     />
   );
 }

@@ -5,6 +5,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo } from "react";
 import { usePagination } from "./ui-kit";
 import styles from "../record-manager.module.css";
+import { confirmAction } from "./app-dialog";
 
 export function addMinutes(time: string, minutes: number) {
   if (!time) return "";
@@ -48,7 +49,7 @@ export function EventRundown({ eventId, rows, startTime, title = "Rundown" }: { 
     <section className={styles.rundownTable}>
       <header>
         <h2>{title}</h2>
-        <button className={styles.primaryButton} type="button" onClick={() => createRundownRowAction(eventId, nextOrder)}><i className="ti ti-plus" /> Tambah</button>
+        <button className={styles.primaryButton} type="button" onClick={() => createRundownRowAction(eventId, nextOrder)}><i className="ti ti-plus" /> Add rundown item</button>
       </header>
       {timed.length ? (
         <>
@@ -59,7 +60,7 @@ export function EventRundown({ eventId, rows, startTime, title = "Rundown" }: { 
               </thead>
               <tbody>
                 {pageItems.map(({ row, start, index }) => (
-                  <tr key={String(row.id)}>
+                  <tr data-record-id={String(row.id)} key={String(row.id)}>
                     <td><strong>{start || "—"}</strong></td>
                     <td colSpan={5}>
                       <form action={saveRundownRowAction.bind(null, String(row.id))} className={styles.rundownForm}>
@@ -78,7 +79,7 @@ export function EventRundown({ eventId, rows, startTime, title = "Rundown" }: { 
                       </div>
                     </td>
                     <td>
-                      <button aria-label="Hapus row" className={styles.dangerButton} type="button" onClick={() => { if (window.confirm("Hapus row ini? Data rundown akan dihapus permanen.")) void deleteRundownRowAction(String(row.id)); }}><i className="ti ti-trash" /></button>
+                      <button aria-label="Delete rundown item" className={styles.dangerButton} type="button" onClick={async () => { if (await confirmAction({ title: "Delete this rundown item?", message: "This cannot be undone.", confirmLabel: "Delete rundown item", danger: true })) void deleteRundownRowAction(String(row.id)); }}><i className="ti ti-trash" /></button>
                     </td>
                   </tr>
                 ))}

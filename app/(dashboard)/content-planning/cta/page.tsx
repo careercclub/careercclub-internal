@@ -1,9 +1,7 @@
-import { RecordManager } from "@/app/_components/record-manager";
-import { listCarouselCtas } from "@/lib/api/content-planning";
-import { contentPlanningLinks } from "@/lib/records/links";
+import { RETIRED_PAGES, withFocus } from "@/lib/records/links";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Carousel CTA Master" };
-
-export default async function CarouselCtaPage() {
-  return <RecordManager definitionKey="carousel_cta_options" links={contentPlanningLinks} rows={await listCarouselCtas()} />;
+// This data is now managed in one place; the old address forwards there (and keeps ?focus from search).
+export default async function RetiredPage({ searchParams }: { searchParams: Promise<{ focus?: string | string[] }> }) {
+  redirect(withFocus(RETIRED_PAGES["/content-planning/cta"], (await searchParams).focus));
 }
