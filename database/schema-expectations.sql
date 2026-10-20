@@ -99,16 +99,6 @@ begin
     ('ig_snapshots','link_clicks'),
     ('ig_snapshots','profile_visits'),
     ('ig_snapshots','notes'),
-    ('vouchers','nama_event'),
-    ('vouchers','kode'),
-    ('vouchers','tipe'),
-    ('vouchers','periode_mulai'),
-    ('vouchers','periode_selesai'),
-    ('vouchers','diskon_persen'),
-    ('vouchers','maks_potongan'),
-    ('vouchers','min_transaksi'),
-    ('vouchers','product_ids'),
-    ('vouchers','notes'),
     ('partners','name'),
     ('partners','type'),
     ('partners','category'),
@@ -430,8 +420,30 @@ begin
     return;
   end if;
 
-  raise notice 'Schema check passed: % tables, % columns.',
+  -- Type check for list-valued columns. Reported separately because a wrong type is a
+  -- different failure from a missing column and needs a different migration.
+  create temporary table ccc_expected_arrays (table_name text, column_name text) on commit drop;
+  insert into ccc_expected_arrays (table_name, column_name) values
+    ('tasks','assignee_ids'),
+    ('tickets','assigned_to_ids'),
+    ('tickets','notification_roles');
+
+  select string_agg(format('%s.%s (is %s, expected ARRAY)', a.table_name, a.column_name, c.data_type), ', ' order by a.table_name, a.column_name)
+  into missing_columns
+  from ccc_expected_arrays a
+  join information_schema.columns c
+    on c.table_schema = 'public' and c.table_name = a.table_name and c.column_name = a.column_name
+  where c.data_type <> 'ARRAY';
+
+  if missing_columns is not null then
+    raise warning 'Columns that must be Postgres arrays have the WRONG TYPE: %', missing_columns;
+    raise warning 'Writes to these fail with 42804 — convert them (see 024_tasks_assignee_ids_uuid_array.sql).';
+    return;
+  end if;
+
+  raise notice 'Schema check passed: % tables, % columns, % array columns.',
     (select count(distinct table_name) from ccc_expected_columns),
-    (select count(*) from ccc_expected_columns);
+    (select count(*) from ccc_expected_columns),
+    (select count(*) from ccc_expected_arrays);
 end
 $$;

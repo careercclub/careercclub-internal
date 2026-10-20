@@ -135,6 +135,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/020_grant_app_rol
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/021_restore_upsert_constraints.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/022_restore_dump_only_columns.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/023_restore_remaining_catalog_columns.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/024_tasks_assignee_ids_uuid_array.sql
 ```
 
 A migration that creates a table must grant it to the application role. `020` sets

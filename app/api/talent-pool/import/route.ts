@@ -57,6 +57,21 @@ export async function POST(request: Request) {
       const target = mapTalentPoolRow(headerKeys, (index) => text(row.getCell(index + 1).value), row.cellCount);
       if (target.email || target.nama) rows.push(target);
     });
+
+    // Every Talent Pool row is keyed on a valid email. If not one row has one, the file
+    // is almost certainly the wrong export — a lynk.id order sheet gets this far because
+    // "Buyer Name" loosely matches `nama`, then every row is dropped for a missing email
+    // and the import reports a bare "0 imported" with no reason.
+    const hasUsableEmail = rows.some((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(row.email || "").trim().toLowerCase()));
+    if (!hasUsableEmail) {
+      const detectedColumns = headerKeys.filter(Boolean).slice(0, 6).join(", ") || "none";
+      return Response.json({
+        error: detected < 0
+          ? `This does not look like a Talent Pool sheet — no recognisable header row was found in the first 5 rows, and no row has an email address. Columns detected: ${detectedColumns}. A lynk.id order export (Judul Barang, Buyer Email, …) belongs in CRM → Import instead.`
+          : `The header row was recognised, but no row has a valid email address, so there is nothing to import. Columns detected: ${detectedColumns}.`,
+      }, { status: 400 });
+    }
+
     return Response.json(await importTalentPoolRows(rows));
   } catch (error) {
     console.error("Talent Pool import failed", error);
