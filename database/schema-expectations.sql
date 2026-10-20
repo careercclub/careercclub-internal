@@ -3,6 +3,10 @@ do $$
 declare
   missing_tables text;
   missing_columns text;
+  -- Each check reports independently. An early return here would let one class of
+  -- problem mask another, so a database with a missing column would never reach the
+  -- array-type check and the second migration would only surface after the first.
+  problems boolean := false;
 begin
   create temporary table ccc_expected_columns (table_name text, column_name text) on commit drop;
   insert into ccc_expected_columns (table_name, column_name) values
@@ -402,6 +406,7 @@ begin
   if missing_tables is not null then
     raise warning 'Tables the application expects are MISSING: %', missing_tables;
     raise warning 'Add a migration creating them — 001 uses "create table if not exists" and was skipped for dump-restored tables.';
+    problems := true;
   end if;
 
   select string_agg(format('%s.%s', e.table_name, e.column_name), ', ' order by e.table_name, e.column_name)
@@ -417,7 +422,7 @@ begin
   if missing_columns is not null then
     raise warning 'Columns the application expects are MISSING: %', missing_columns;
     raise warning 'Add a migration with "alter table ... add column if not exists" for each (see 022_restore_dump_only_columns.sql).';
-    return;
+    problems := true;
   end if;
 
   -- Type check for list-valued columns. Reported separately because a wrong type is a
@@ -438,8 +443,10 @@ begin
   if missing_columns is not null then
     raise warning 'Columns that must be Postgres arrays have the WRONG TYPE: %', missing_columns;
     raise warning 'Writes to these fail with 42804 — convert them (see 024_tasks_assignee_ids_uuid_array.sql).';
-    return;
+    problems := true;
   end if;
+
+  if problems then return; end if;
 
   raise notice 'Schema check passed: % tables, % columns, % array columns.',
     (select count(distinct table_name) from ccc_expected_columns),
