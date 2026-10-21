@@ -275,7 +275,7 @@
 /* Stats row */
 .statsRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
 @media (max-width: 900px) { .statsRow { grid-template-columns: repeat(2, 1fr); } }
-.statCard { background: var(--white); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; }
+.statCard { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; box-shadow: var(--shadow); }
 .statLabel { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
 .statValue { font-size: 22px; font-weight: 700; color: var(--text); }
 .statSub { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--text-muted); }
@@ -285,7 +285,7 @@
 .sectionLabel { font-size: 13px; font-weight: 600; }
 .chartsRow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
 @media (max-width: 900px) { .chartsRow { grid-template-columns: 1fr; } }
-.chartCard { background: var(--white); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; }
+.chartCard { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; box-shadow: var(--shadow); }
 .chartTitle { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
 .chartSub { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
 .chartWrap { height: 200px; position: relative; }
@@ -303,7 +303,7 @@
   color: var(--text);
   background: var(--white);
   border: 0.5px solid var(--border-md);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 0 8px;
 }
 
@@ -335,7 +335,7 @@
 .filterSpacer { flex: 1; }
 
 /* Table */
-.tableWrap { background: var(--white); border: 0.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+.tableWrap { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
 .tableScroll { overflow-x: auto; }
 .table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 11px; }
 .table th { padding: 8px 10px; border-bottom: 0.5px solid var(--border); color: var(--text-muted); background: var(--bg); font-size: 10px; font-weight: 600; text-align: left; white-space: nowrap; }
@@ -358,7 +358,7 @@
 .pillAmber { background: #fdf0d5; color: #8a5a12; }
 
 /* Newsletter */
-.newsletterCard { background: var(--white); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px; }
+.newsletterCard { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow); }
 .newsletterTitle { font-size: 14px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
 .newsletterSub { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
 .newsletterFilterRow { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -391,7 +391,7 @@
   overflow-y: auto;
   background: var(--white);
   border: 0.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
   padding: 8px;
 }
@@ -451,7 +451,7 @@
 .emptyNl i { font-size: 32px; display: block; margin-bottom: 10px; opacity: 0.4; }
 
 /* Master data */
-.masterWrap { background: var(--white); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px; }
+.masterWrap { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow); }
 .masterTitle { font-size: 14px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
 .masterSub { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
 .addIndRow { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -463,7 +463,7 @@
 /* Company intel */
 .companyGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media (max-width: 900px) { .companyGrid { grid-template-columns: 1fr; } }
-.companyCard { background: var(--white); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.companyCard { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow); }
 .companyName2 { font-size: 13px; font-weight: 700; }
 .companySub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .programBlock { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
@@ -473,7 +473,7 @@
 .historyRow:first-child { border-top: none; }
 
 /* Sheet import */
-.importPanel { background: var(--white); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+.importPanel { background: var(--white); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
 .importTitle { font-size: 12px; font-weight: 700; color: var(--purple-mid); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 .importHint { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
 .importRow { display: flex; gap: 8px; flex-wrap: wrap; }

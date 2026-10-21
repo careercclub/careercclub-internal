@@ -290,8 +290,8 @@ export function SettingsWorkspace({
     <div className="grid gap-3.5">
       <nav aria-label="Settings sections" className="-mx-1 flex gap-1 overflow-x-auto border-b border-border px-1 pb-0">
         {sections.map((section) => (
-          <button aria-current={tab === section.id ? "page" : undefined} className={`shrink-0 border-b-2 px-2.5 py-2.5 whitespace-nowrap ${tab === section.id ? "border-[var(--purple-mid)] text-[var(--purple-dark)]" : "border-transparent text-muted-foreground hover:text-foreground"}`} key={section.id} onClick={() => setTab(section.id)} type="button">
-            <span className="text-[13px] font-semibold">{section.label}</span>
+          <button aria-current={tab === section.id ? "page" : undefined} className={`shrink-0 border-b-2 px-[7px] py-2.5 whitespace-nowrap ${tab === section.id ? "border-[var(--purple-mid)] text-[var(--purple-dark)]" : "border-transparent text-muted-foreground hover:text-foreground"}`} key={section.id} onClick={() => setTab(section.id)} type="button">
+            <span className="text-[12px] font-semibold">{section.label}</span>
           </button>
         ))}
       </nav>

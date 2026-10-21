@@ -582,3 +582,38 @@ Alat: skrip yang membuka **29 popup** (lewat `?focus=` hasil search, tombol Add/
 - Putaran 13 "Inggris semua" untuk halaman (bukan popup): kotak search atas masih "Cari apa saja…", tombol "Tambah" di beberapa halaman, judul statistik (TOTAL BUYERS/BELUM ISI POOL), Settings.
 - Nilai data berbahasa Indonesia (fase "Hari H", status "On Progress", opsi aksi "Boost ke Meta Ads") sengaja tidak diterjemahkan karena tersimpan di database — perlu keputusan & migrasi kalau mau diganti.
 - Popup modul lama yang masih memakai gaya CSS sendiri (Content Planning, Job Vacancy, Content Evaluation) sudah berperilaku sama; penyeragaman tampilan masuk putaran palet warna.
+
+---
+
+## Putaran 13 — Tampilan IJIS, tahap 1 (fondasi) & tahap 2 (komponen bersama) (22 Okt 2026)
+
+User menyetujui preview "CareerCclub × gaya IJIS" (kanvas Design: Dashboard desktop, Content Library + popup, Dashboard HP). Pilihan bawaan dari preview: **warna utama biru CareerCclub**, **mode terang dulu** (mode gelap menunggu warna-tetap di modul dibersihkan). "Inggris semua" mundur ke Putaran 14.
+
+### Do — yang berubah
+
+**Tahap 1 — fondasi (berlaku di semua modul tanpa mengubah modul)**
+- Token di `app/globals.css` diganti ke palet IJIS: latar `#edf0f4`, permukaan putih, teks `#14212c`, abu `#5f6b77`, garis `#dde3ea`, aksen biru `#1554c0` + turunannya (gelap `#0f3c8a`, muda `#dee7f6`), merah `#c8331f` hanya untuk telat/bahaya, `--shadow` halus, `--radius-lg` 18px / `--radius-xl` 22px. Nama token lama (`--purple-*`) dipertahankan supaya semua modul ikut; cara ganti aksen ditulis di komentar.
+- Font **Plus Jakarta Sans** (next/font), angka tabular.
+- Shell: sidebar putih dengan logo CareerCclub, label grup kapital kecil, item membulat (aktif = latar aksen muda + teks aksen gelap), sub-halaman bergaris kiri, hitungan berupa angka polos (merah hanya untuk tiket telat); top bar putih 64px, kotak search berbentuk pil "Search anything…", avatar bulat; nav HP putih.
+- Warna tema PWA/manifest mengikuti latar baru.
+
+**Tahap 2 — komponen bersama**
+- Card (radius besar + bayangan), Button (pil, semibold), Dialog (radius 22px), StatCard (angka 28px, label kalimat biasa), filter & FilterPill (aktif = hitam netral, bukan biru).
+- CSS modul diseragamkan otomatis: wadah/kartu → `--radius-lg` + bayangan (60), tombol → pil (16), kolom isian → `--radius` (13).
+
+### Check — iterative design review
+
+1. Screenshot 13 halaman × desktop & HP dengan font asli (Plus Jakarta Sans + ikon Tabler disematkan ke harness).
+2. **Ditemukan & diperbaiki:** skrip penyeragaman membaca kata "Table" di komentar/nama class sebagai tab → wadah tabel Job Vacancy & Rundown jadi berbentuk pil dan **memotong tombol di kolom terakhir** (Delete vacancy tidak bisa diklik); beberapa kartu yang dibuat dari `<button>` (produk, kompetitor, kolaborator, ancaman) ikut jadi pil → dikembalikan ke kartu.
+3. **Ditemukan & diperbaiki:** dengan sidebar 240px dan font baru, bar bagian Settings meluap 42px di layar 1280px → label & jarak dirapatkan, kembali satu baris tanpa digeser.
+
+### Check — regression
+
+- Unit 94/94; tsc bersih; lint bersih untuk kode baru; `npm run build` lolos
+- E2E: form & tabel umum 893/893, popup 31/31, audit popup 84/84 (29 popup × 3 layar), navigasi 32/32, search 46/46, modul 12/12, Design Assets 49/49, Content Library 51/51
+- Tes yang diperbarui karena teks sengaja diganti: tombol & kotak search sekarang "Search anything"
+
+### Antrean (Tahap 3 — per modul)
+
+- Prioritas: Dashboard seperti preview (salam + tanggal, kartu statistik, kartu program dengan cincin progres, "Up next", "This week"); Content Library kartu 4:5; chip status warna-warni (Marketing/Med/Todo, Belum diblast) → satu palet; label statistik kapital kecil (TOTAL BUYERS, BELUM ISI POOL) → kalimat biasa.
+- Nice-to-have: mode gelap (perlu ganti warna tetap `#fff`/`#f8fbff` di modul ke token).

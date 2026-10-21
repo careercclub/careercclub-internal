@@ -117,6 +117,10 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
           <button className={styles.signOutButton} type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Sign out</button>
         </div>
 
+        <div className={styles.brand}>
+          <div className={styles.brandMark} aria-hidden="true">CC</div>
+          <div className={styles.brandText}><b>CareerCclub</b><small>Internal</small></div>
+        </div>
         <div className={styles.sidebarLogo}>
           <button className={styles.sidebarToggle} type="button" onClick={toggleCollapse} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand" : "Collapse"}>
             <i className={`ti ${collapsed ? "ti-layout-sidebar-left-expand" : "ti-layout-sidebar-left-collapse"}`} aria-hidden="true" />

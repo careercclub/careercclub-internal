@@ -54,7 +54,7 @@
   height: 32px;
   min-width: 112px;
   border: 1px solid var(--border-md);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--white);
   color: var(--text);
   padding: 0 28px 0 9px;
@@ -86,9 +86,8 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--white);
-}
+  border-radius: var(--radius-lg);
+  background: var(--white); box-shadow: var(--shadow); }
 
 .imageFrame {
   position: relative;

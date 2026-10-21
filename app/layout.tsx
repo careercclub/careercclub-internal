@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import { PwaRegistration } from "./_components/pwa-registration";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const uiFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-ui",
   display: "swap",
 });
 
@@ -35,7 +36,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#0a3d8f",
+  themeColor: "#edf0f4",
 };
 
 type RootLayoutProps = Readonly<{
@@ -44,14 +45,14 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html className={dmSans.variable} lang="id">
+    <html className={uiFont.variable} lang="id">
       <head>
         <link
           href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"
           rel="stylesheet"
         />
       </head>
-      <body className={dmSans.className}>
+      <body className={uiFont.className}>
         <PwaRegistration />
         {children}
       </body>

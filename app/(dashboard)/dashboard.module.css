@@ -7,16 +7,58 @@
   background: var(--bg);
 }
 
+/* Sidebar — IJIS look: white panel, rounded items, one accent for the current page. */
 .sidebar,
 .sidebarOpen {
-  width: 220px;
+  width: 240px;
   height: 100%;
   min-height: 0;
   flex-shrink: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  background: var(--purple-dark);
+  padding: 0 12px 20px;
+  border-right: 1px solid var(--border);
+  background: var(--white);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 8px 10px;
+}
+
+.brandMark {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #fff;
+  background: var(--purple-mid);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brandText {
+  min-width: 0;
+  display: grid;
+  line-height: 1.2;
+}
+
+.brandText b {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brandText small {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .sidebarBackdrop {
@@ -24,39 +66,41 @@
 }
 
 .sidebarLogo {
-  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
 }
 
 .sidebarToggle {
   width: 100%;
-  min-height: 42px;
+  min-height: 36px;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 14px;
-  color: rgba(255, 255, 255, 0.6);
-  background: transparent;
+  gap: 10px;
+  padding: 8px 10px;
   border: 0;
-  border-left: 3px solid transparent;
+  border-radius: 12px;
+  color: var(--text-muted);
+  background: transparent;
   font-size: 13px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
 }
 
 .sidebarToggle:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  color: var(--text);
+  background: var(--surface-2);
 }
 
 .navSection {
-  padding: 10px 0 2px;
+  padding: 14px 0 2px;
 }
 
 .navLabel {
-  padding: 0 14px 5px;
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 10px;
-  letter-spacing: 1px;
+  padding: 0 10px 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -65,49 +109,63 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
-  min-height: 34px;
-  padding: 8px 14px;
-  color: rgba(255, 255, 255, 0.6);
-  border-left: 3px solid transparent;
-  font-size: 13px;
+  gap: 10px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
   transition:
     background 150ms ease,
-    color 150ms ease,
-    border-color 150ms ease;
+    color 150ms ease;
 }
 
 .navItem:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background: var(--surface-2);
 }
 
 .navItemActive {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.11);
-  border-left-color: var(--purple-accent);
+  color: var(--purple-dark);
+  background: var(--purple-light);
+  font-weight: 700;
 }
 
 .navItem i,
 .navItemActive i,
 .sidebarToggle i {
-  width: 17px;
+  width: 18px;
   flex-shrink: 0;
-  font-size: 15px;
+  color: var(--text-muted);
+  font-size: 16px;
 }
 
+.navItemActive i {
+  color: var(--purple-mid);
+}
+
+/* Counts are plain numbers (IJIS); red only for overdue work. */
 .navBadge,
 .navBadgeRed {
   margin-left: auto;
-  padding: 1px 6px;
-  border-radius: 10px;
-  color: #fff;
-  background: var(--purple-accent);
-  font-size: 10px;
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.navItemActive .navBadge {
+  color: var(--purple-dark);
+  background: var(--white);
 }
 
 .navBadgeRed {
-  background: #e24b4a;
+  color: var(--red);
+  background: var(--red-bg);
 }
 
 /* Module sub-pages (Putaran 9) */
@@ -122,19 +180,20 @@
 }
 
 .navExpand {
-  width: 34px;
+  width: 32px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
   border: 0;
+  border-radius: 10px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted);
   cursor: pointer;
 }
 
 .navExpand:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  background: var(--surface-2);
 }
 
 .navChildren {
@@ -146,20 +205,23 @@
 .navChildActive {
   display: block;
   min-height: 32px;
-  padding: 7px 14px 7px 43px;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 12.5px;
+  margin-left: 18px;
+  padding: 7px 10px 7px 20px;
+  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
   line-height: 18px;
 }
 
 .navChild:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
 }
 
 .navChildActive {
-  color: #fff;
-  font-weight: 600;
+  border-left: 2px solid var(--purple-mid);
+  padding-left: 19px;
+  color: var(--purple-dark);
+  font-weight: 700;
 }
 
 .main {
@@ -172,14 +234,14 @@
 }
 
 .topbar {
-  min-height: 57px;
+  min-height: 64px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 22px;
-  border-bottom: 0.5px solid var(--border);
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--border);
   background: var(--white);
 }
 
@@ -210,11 +272,11 @@
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border-radius: 9px;
-  color: #fff;
-  background: var(--purple-dark);
+  border-radius: 50%;
+  color: var(--white);
+  background: var(--text);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .userText {
@@ -239,10 +301,10 @@
 }
 
 .signOutButton {
-  min-height: 30px;
-  padding: 6px 10px;
-  border: 0.5px solid var(--border-md);
-  border-radius: 8px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   color: var(--text);
   background: var(--white);
   font-size: 11px;
@@ -256,20 +318,21 @@
 }
 
 .pageTitle {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .mobileMenuButton,
 .notifButton {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border: 0.5px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
   color: var(--text-muted);
-  background: var(--bg);
+  background: var(--white);
 }
 
 .mobileMenuButton {
@@ -296,8 +359,8 @@
   border: 2px solid var(--white);
   border-radius: 10px;
   color: #fff;
-  background: #e24b4a;
-  font-size: 9px;
+  background: var(--red);
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -308,10 +371,10 @@
   right: 16px;
   width: min(380px, calc(100vw - 24px));
   overflow: hidden;
-  border: 1px solid var(--border-md);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background: var(--white);
-  box-shadow: 0 18px 50px rgba(26, 26, 46, 0.2);
+  box-shadow: 0 18px 50px rgba(20, 33, 44, 0.18);
 }
 
 .notificationHeader,
@@ -348,7 +411,7 @@
   flex-shrink: 0;
   padding: 5px 8px;
   border: 1px solid var(--border-md);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--purple-dark);
   background: var(--white);
   font-size: 10px;
@@ -456,7 +519,7 @@
   min-width: 0;
   flex: 1;
   overflow-y: auto;
-  padding: 18px 22px;
+  padding: 24px clamp(16px, 2.6vw, 36px) 40px;
 }
 
 .moduleHeader {
@@ -902,8 +965,9 @@
   .sidebarOpen {
     position: fixed;
     z-index: 100;
-    inset: 0 auto 0 -220px;
+    inset: 0 auto 0 -260px;
     padding-top: env(safe-area-inset-top);
+    box-shadow: 0 12px 40px rgba(20, 33, 44, 0.18);
     transition: left 180ms ease;
   }
 
@@ -917,7 +981,7 @@
     inset: 0;
     display: block;
     border: 0;
-    background: rgba(26, 26, 46, 0.42);
+    background: rgba(10, 16, 22, 0.4);
   }
 
   .mobileMenuButton {
@@ -995,7 +1059,11 @@
 }
 
 .sidebarCollapsed {
-  width: 62px;
+  width: 72px;
+}
+
+.sidebarCollapsed .brandText {
+  display: none;
 }
 
 .sidebarCollapsed .navLabel,
@@ -1070,7 +1138,8 @@
 }
 
 .bottomNavItemActive {
-  color: var(--purple-mid);
+  color: var(--purple-dark);
+  font-weight: 700;
 }
 
 @media (max-width: 900px) {
@@ -1080,12 +1149,8 @@
     gap: 10px;
     padding: 10px 16px;
     padding-top: max(10px, env(safe-area-inset-top));
-    background: var(--purple-dark);
-    border-bottom: 0;
-  }
-
-  .pageTitle {
-    color: #fff;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
   }
 
   .topbarRight {
@@ -1095,7 +1160,7 @@
   }
 
   .topbarMonth {
-    color: rgba(255, 255, 255, 0.85);
+    display: none;
   }
 
   .userMenu {
@@ -1103,12 +1168,8 @@
   }
 
   .notifButton {
-    width: 36px;
-    height: 36px;
-    border-color: transparent;
-    border-radius: 10px;
-    color: var(--purple-dark);
-    background: #fff;
+    width: 38px;
+    height: 38px;
   }
 
   .content {
@@ -1117,10 +1178,11 @@
   }
 
   .sidebarCollapsed {
-    width: 220px;
+    width: 240px;
   }
 
-  .sidebarLogo {
+  .sidebarLogo,
+  .brand {
     display: none;
   }
 
@@ -1130,7 +1192,7 @@
     gap: 9px;
     padding: 14px;
     padding-top: max(14px, env(safe-area-inset-top));
-    border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border);
   }
 
   .sidebarUser .userText {
@@ -1140,15 +1202,6 @@
 
   .sidebarUser .userText strong {
     max-width: none;
-    color: #fff;
-  }
-
-  .sidebarUser .userText span {
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .sidebarUser .userAvatar {
-    background: var(--purple-accent);
   }
 
   .bottomNav {
@@ -1158,8 +1211,8 @@
     inset: auto 0 0 0;
     align-items: stretch;
     padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
-    border-top: 0.5px solid var(--border);
+    border-top: 1px solid var(--border);
     background: var(--white);
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -4px 16px rgba(20, 33, 44, 0.04);
   }
 }

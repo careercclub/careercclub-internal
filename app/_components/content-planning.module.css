@@ -80,9 +80,8 @@
 .aiCard {
   padding: 10px 12px;
   border: 1px solid #0f52ba44;
-  border-radius: 12px;
-  background: var(--white);
-}
+  border-radius: var(--radius-lg);
+  background: var(--white); box-shadow: var(--shadow); }
 .aiTextarea {
   width: 100%;
   border: none;
@@ -116,9 +115,8 @@
   margin-bottom: 16px;
   background: var(--white);
   border: 0.5px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 16px;
-}
+  border-radius: var(--radius-lg);
+  padding: 12px 16px; box-shadow: var(--shadow); }
 .linksHeader {
   display: flex;
   align-items: center;
@@ -241,9 +239,8 @@
 .calCard {
   background: var(--white);
   border: 0.5px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-}
+  border-radius: var(--radius-lg);
+  padding: 10px 12px; box-shadow: var(--shadow); }
 .calTopbar {
   display: flex;
   align-items: center;
@@ -254,7 +251,7 @@
   width: 26px;
   height: 26px;
   border: 0.5px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--white);
   cursor: pointer;
   display: flex;
@@ -353,11 +350,10 @@
   gap: 8px;
   padding: 7px 10px;
   border: 0.5px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--white);
   cursor: pointer;
-  user-select: none;
-}
+  user-select: none; box-shadow: var(--shadow); }
 .weekHeader i {
   font-size: 11px;
   color: var(--text-muted);
@@ -793,10 +789,9 @@
 /* Modal date picker */
 .picker {
   border: 0.5px solid var(--border-md);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 10px;
-  background: var(--white);
-}
+  background: var(--white); box-shadow: var(--shadow); }
 .pickerTop {
   display: flex;
   align-items: center;

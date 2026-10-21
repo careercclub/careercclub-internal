@@ -18,13 +18,13 @@
 .secondaryButton { color: var(--text); background: var(--white); }
 .statsFive, .statsThree { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
 .statsThree { grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: 16px; }
-.stat { min-width: 0; padding: 14px; border: .5px solid var(--border); border-radius: 10px; background: var(--white); }
+.stat { min-width: 0; padding: 14px; border: .5px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .stat > span { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 10px; letter-spacing: .5px; text-transform: uppercase; }
 .stat > strong { display: block; font-size: 20px; line-height: 1.15; }
 .stat > small { display: block; margin-top: 3px; color: var(--text-muted); font-size: 11px; }
 .accent { color: var(--purple-mid) !important; }
 .chartGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
-.chartCard, .leaderCard, .tableCard, .calendarCard { min-width: 0; overflow: hidden; border: .5px solid var(--border); border-radius: 14px; background: var(--white); }
+.chartCard, .leaderCard, .tableCard, .calendarCard { min-width: 0; overflow: hidden; border: .5px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .chartCard { padding: 12px; }
 .chartCard h3 { margin: 0 0 8px; color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
 .chartCard h3 i { color: var(--purple-mid); }
@@ -38,7 +38,7 @@
 .sectionHeader > div, .storyHeader > div { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .smallButton, .smallActive { border-radius: 8px; }
 .topGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
-.topCard { min-width: 0; display: grid; gap: 8px; padding: 12px; border: .5px solid var(--border); border-radius: 14px; color: var(--text); background: var(--white); text-align: left; transition: border-color .15s,transform .15s,box-shadow .15s; }
+.topCard { min-width: 0; display: grid; gap: 8px; padding: 12px; border: .5px solid var(--border); border-radius: var(--radius-lg); color: var(--text); background: var(--white); text-align: left; transition: border-color .15s,transform .15s,box-shadow .15s; }
 .topCard:hover { border-color: var(--purple-accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,82,186,.12); }
 .topCard header { min-width: 0; display: flex; align-items: center; gap: 8px; }
 .topCard header strong { min-width: 0; flex: 1; overflow: hidden; font-size: 12px; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -80,7 +80,7 @@
 .leaderCard p { min-width: 0; flex: 1; margin: 0; }.leaderCard p strong { display: block; overflow: hidden; font-size: 11px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }.leaderCard p small, .leaderCard > div > button > small { color: var(--text-muted); font-size: 9px; }
 .formatToolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .formatToolbar > div { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.formatToolbar input, .formatToolbar select { height: 30px; padding: 0 10px; border: .5px solid var(--border-md); border-radius: 8px; color: var(--text); background: var(--white); font-size: 11px; }
+.formatToolbar input, .formatToolbar select { height: 30px; padding: 0 10px; border: .5px solid var(--border-md); border-radius: var(--radius); color: var(--text); background: var(--white); font-size: 11px; }
 .formatToolbar input { min-width: 200px; }
 .tableCard { border-radius: 14px; }
 .tableScroll { overflow-x: auto; }
@@ -93,7 +93,7 @@
 .pagination span { color: var(--text-muted); font-size: 11px; }
 .storyHeader { margin-bottom: 10px; }
 .storyDays { display: grid; gap: 8px; }
-.storyDays details { overflow: hidden; border: .5px solid var(--border); border-radius: 14px; background: var(--white); }
+.storyDays details { overflow: hidden; border: .5px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .storyDays summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; cursor: pointer; list-style: none; }
 .storyDays summary > span { font-size: 12px; font-weight: 600; }.storyDays details[open] summary i { transform: rotate(90deg); }
 .buyerActive, .buyerEmpty { padding: 2px 10px; border: .5px solid var(--border); border-radius: 20px; color: var(--text-muted); background: var(--bg); font-size: 11px; font-weight: 500; }.buyerActive { color: #fff; border-color: var(--purple-mid); background: var(--purple-mid); font-weight: 600; }
@@ -109,7 +109,7 @@
 .formGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
 .editorField { min-width: 0; display: grid; gap: 4px; }
 .editorField > span { color: var(--text-muted); font-size: 11px; font-weight: 500; }
-.editorField input, .editorField select, .editorField textarea { width: 100%; min-width: 0; min-height: 34px; padding: 7px 10px; border: .5px solid var(--border-md); border-radius: 8px; color: var(--text); background: var(--white); font-size: 12px; }
+.editorField input, .editorField select, .editorField textarea { width: 100%; min-width: 0; min-height: 34px; padding: 7px 10px; border: .5px solid var(--border-md); border-radius: var(--radius); color: var(--text); background: var(--white); font-size: 12px; }
 .editorField textarea { line-height: 1.5; resize: vertical; }
 .editorField input:focus, .editorField select:focus, .editorField textarea:focus { outline: none; border-color: var(--purple-accent); }
 /* Pinned to the bottom of the scrolling modal body so Save is always reachable. */

@@ -55,9 +55,9 @@ export function StatsGrid({ className, ...props }: React.ComponentProps<"div">) 
 
 export function StatCard({ label, value, tone, className }: { label: string; value: React.ReactNode; tone?: string; className?: string }) {
   return (
-    <Card className={cn("gap-1 p-3.5", className)}>
-      <div className="text-[10px] tracking-wide text-muted-foreground uppercase">{label}</div>
-      <div className="text-xl font-bold" style={tone ? { color: tone } : undefined}>{value}</div>
+    <Card className={cn("gap-1 px-5 py-4", className)}>
+      <div className="text-[13px] font-semibold text-muted-foreground">{label}</div>
+      <div className="text-[28px] leading-tight font-extrabold tracking-tight" style={tone ? { color: tone } : undefined}>{value}</div>
     </Card>
   );
 }
@@ -67,7 +67,7 @@ export function FilterBar({ className, ...props }: React.ComponentProps<"div">) 
   return <div className={cn("mb-3 flex flex-wrap items-center gap-1.5", className)} {...props} />;
 }
 
-export const filterFieldClass = "h-8 max-w-[160px] shrink-0 rounded-full border border-input bg-white px-2.5 text-xs";
+export const filterFieldClass = "h-9 max-w-[180px] shrink-0 rounded-full border border-input bg-white px-3 text-[13px]";
 
 /** Pill-shaped toggle button reproducing the legacy `.filter-bar-btn`. */
 export function FilterPill({ active, className, ...props }: React.ComponentProps<"button"> & { active?: boolean }) {
@@ -75,8 +75,8 @@ export function FilterPill({ active, className, ...props }: React.ComponentProps
     <button
       type="button"
       className={cn(
-        "h-8 shrink-0 rounded-full border px-3 text-xs font-medium whitespace-nowrap",
-        active ? "border-[var(--purple-mid)] bg-[var(--purple-mid)] text-white" : "border-input bg-white text-foreground",
+        "h-9 shrink-0 rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap",
+        active ? "border-[var(--text)] bg-[var(--text)] text-white" : "border-input bg-white text-foreground",
         className
       )}
       {...props}

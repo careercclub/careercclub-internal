@@ -171,12 +171,12 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
       <button
         type="button"
         onClick={openPalette}
-        aria-label="Cari apa saja"
-        className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
+        aria-label="Search anything"
+        className="flex h-10 items-center gap-2 rounded-full border bg-background px-3.5 text-sm text-muted-foreground transition-colors hover:border-[var(--border-md)] sm:min-w-[260px]"
       >
         <i className="ti ti-search" aria-hidden="true" />
-        <span className="hidden sm:inline">Cari apa saja…</span>
-        <kbd className="ml-3 hidden rounded border bg-muted px-1.5 py-0.5 font-sans text-[10px] sm:inline">Ctrl K</kbd>
+        <span className="hidden sm:inline">Search anything…</span>
+        <kbd className="ml-auto hidden rounded-md border px-1.5 py-0.5 font-sans text-[11px] sm:inline">Ctrl K</kbd>
       </button>
 
       <Dialog open={open} onOpenChange={(next) => { if (next) openPalette(); else setOpen(false); }}>
@@ -185,7 +185,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
           className="top-[12%] max-w-xl translate-y-0 gap-0 overflow-hidden p-0"
           aria-describedby={undefined}
         >
-          <DialogTitle className="sr-only">Cari apa saja</DialogTitle>
+          <DialogTitle className="sr-only">Search anything</DialogTitle>
 
           <div className="flex items-center gap-2 border-b px-3">
             <i className={`ti ${data.status === "loading" && searchingData ? "ti-loader-2 animate-spin" : "ti-search"} text-muted-foreground`} aria-hidden="true" />
@@ -194,8 +194,8 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
               value={query}
               onChange={(event) => { setQuery(event.target.value); setActive(0); }}
               onKeyDown={onInputKeyDown}
-              placeholder="Cari halaman atau data: nama, email, catatan…"
-              aria-label="Cari apa saja"
+              placeholder="Search pages or data: names, emails, notes…"
+              aria-label="Search anything"
               role="combobox"
               aria-expanded={items.length > 0}
               aria-controls="palette-listbox"
