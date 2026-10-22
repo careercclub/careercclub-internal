@@ -802,3 +802,33 @@ Customer Knowledge → Content Planning, lalu Products, Job Vacancy, Competitor,
 ### Antrean
 
 Content Planning, lalu Products, Job Vacancy, Competitor, Settings.
+
+## Putaran 19 — Content Planning (IJIS layout) (22 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Tab bergaris Carousel Plan / Story Plan / KOL List / MT Story; panel "Input dengan AI" lipat; panel Links | Judul + "N carousels this month · M story dates · K still in draft"; saklar **Carousels / Stories / KOL list / MT Story** (dengan jumlah); **satu tombol utama di header yang mengikuti view** (Add carousel plan / Add story date / Add KOL / Add MT story) |
+| Kalender kecil berisi titik merah/hijau, lalu daftar mingguan di bawahnya | **Planner dua kolom**: kalender bulan (Senin pertama) yang menampilkan **judul** di tiap hari (2 judul + "+N more"; klik judul = edit, klik hari kosong = rencana baru di tanggal itu) + **agenda per minggu** di sampingnya ("Week 4 · October", "1/4 done"; minggu lalu dilipat, minggu ini & nanti terbuka) |
+| Baris carousel dengan garis kiri warna & pil funnel warna-warni | Baris: centang bulat (sekali klik Done), judul, tanggal (klik = ganti tanggal), funnel · CTA sebagai teks, link Brief/Reference (edit di tempat), avatar assignee |
+| Kartu tanggal story yang bisa dilipat | Kartu tanggal: centang posted, slide bernomor yang bisa diedit di tempat, Add story, hapus |
+| Bar AI & Links terpisah dan dilipat | Bar AI satu baris ("Fill form with AI") + bar Links (chip, hapus link sekarang minta konfirmasi) |
+| Date picker: hari draft **merah**, hari done hijau | Satu palet: hari yang ada draft = biru muda, semua done = abu dicoret, angka jumlah bila >1; Senin pertama |
+| KOL & MT Story: kartu dengan pil platform warna-warni, "Tandai Posted" | Direktori kartu: avatar, nama, niche/perusahaan, link platform netral dengan jumlah follower, Rate/Contact, catatan; filter pil dengan jumlah; **Mark as posted**; chip "Posted" hanya untuk yang sudah posted |
+
+- Logika kalender/agenda di `lib/content-planning/view.ts` (`weekStart`, `weekLabel`, `weekRange`, `groupByWeek`, `monthCells`, `byDay`) + 3 unit test.
+- Field wajib (judul carousel, minimal satu story, nama KOL/MT, label link) sekarang ditandai merah & difokus saat disimpan kosong — sebelumnya tombol Save hanya dimatikan tanpa penjelasan.
+- Semua teks Inggris (bulan, hari, "Week N · Month", placeholder AI, form).
+- **Lint:** 3 error lama di file ini (setState di effect pada Avatar, link inline, slide story) beres; sisa error lint di repo tinggal 1 (competitor-tools).
+
+### Check
+
+- Desain 1440 & 390. Di HP judul di kalender diganti titik (biar tidak terpotong), tombol AI selebar layar. Audit popup menemukan angka kecil 9px di date picker → dinaikkan ke 11px.
+- E2E baru Content Planning **26/26** (bulan ini & Inggris, Senin pertama, judul di kalender + "+1 more", klik judul = edit, klik hari kosong = tanggal terisi, judul kosong ditandai & fokus, minggu lalu dilipat, label minggu + done, centang Done, ganti tanggal lewat picker, link brief inline, AI mengisi form, tombol header mengikuti view, slide story & links, story kosong ditandai, follower KOL, filter niche, filter Not posted + Mark as posted, HP).
+- Regresi: unit 118/118, Customer Knowledge 20/20, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31 (selector tab MT Story diperbarui), navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Content Planning bersih.
+- tsc bersih; `npm run build` lolos.
+
+### Antrean
+
+Urutan dari user selesai (Talent Pool → CRM → Partnership → Customer Knowledge → Content Planning). Sisa: Products, Job Vacancy, Competitor, Settings, Content Evaluation / Meta Ads / Instagram, Design Assets, Resources, Collaborators.

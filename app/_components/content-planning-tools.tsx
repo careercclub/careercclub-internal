@@ -29,309 +29,22 @@ import {
   type MtStoryInput,
 } from "@/app/actions/content-planning-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
-import styles from "./content-planning.module.css";
+import { byDay, dayKey, fmtFollowers, groupByWeek, iso, monthCells, MONTHS, shortDay, weekdayDay, weekStart, WEEKDAYS } from "@/lib/content-planning/view";
+import { useEffect, useId, useMemo, useState, useTransition, type ReactNode } from "react";
+import { askText, confirmAction } from "./app-dialog";
+import s from "./content-planning.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { useModal } from "./use-modal";
-import { askText, confirmAction } from "./app-dialog";
 
-/* ── Helpers ── */
-const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
-const WEEKDAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+// Content Planning in the IJIS layout: each plan type gets a planner — a month calendar that
+// shows what is planned on each day, next to a week-by-week agenda. KOL and MT Story are
+// people directories. Same data and actions as before.
+
+type View = "carousel" | "story" | "kol" | "mt";
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
-function localIso(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
-function dateKey(value: unknown) { if (!value) return ""; return value instanceof Date ? localIso(value) : String(value).slice(0, 10); }
-function fmtDt(value: unknown) { const key = dateKey(value); if (!key) return ""; const [y, m, d] = key.split("-").map(Number); return `${d} ${MONTHS_SHORT[m - 1]} ${y}`; }
-function todayKey() { return localIso(new Date()); }
-
-function startOfWeek(key: string) {
-  const [y, m, d] = key.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  const day = dt.getDay();
-  dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
-  dt.setHours(0, 0, 0, 0);
-  return dt;
-}
-function weekLabel(ws: Date) {
-  const firstWeekStart = startOfWeek(localIso(new Date(ws.getFullYear(), ws.getMonth(), 1)));
-  const weekNum = Math.floor((ws.getTime() - firstWeekStart.getTime()) / (7 * 86400000)) + 1;
-  return `Minggu ${weekNum} ${MONTHS[ws.getMonth()]}`;
-}
-function weekRange(ws: Date) {
-  const end = new Date(ws);
-  end.setDate(end.getDate() + 6);
-  return `${ws.getDate()} ${MONTHS_SHORT[ws.getMonth()]} – ${end.getDate()} ${MONTHS_SHORT[end.getMonth()]}`;
-}
+function todayKey() { return iso(new Date()); }
 function initials(name: string) { return name.split(" ").slice(0, 2).map((w) => w[0] || "").join("").toUpperCase() || "?"; }
-function fmtFollowers(n: number) { if (!n) return ""; if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`; if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`; return String(n); }
-
-const FUNNEL_COLORS: Record<string, { bg: string; fg: string }> = {
-  TOFU: { bg: "#e8f0fc", fg: "#0f52ba" },
-  MOFU: { bg: "#fef3c7", fg: "#854f0b" },
-  BOFU: { bg: "#d1fae5", fg: "#3b6d11" },
-};
-const STATUS_BORDER: Record<string, string> = { Draft: "#888780", Done: "#3b6d11" };
-
-type Tab = "carousel" | "story" | "kol" | "mt";
-
-/* ── Shared UI ── */
-function Modal({ size, title, onClose, children, footer }: { size?: "sm" | "md"; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
-  const { dialogProps, titleId } = useModal(onClose);
-  const sizeClass = size === "sm" ? styles.modalSm : size === "md" ? styles.modalMd : "";
-  return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={`${styles.modal} ${sizeClass}`} onClick={(event) => event.stopPropagation()} {...dialogProps}>
-        <div className={styles.modalHeader}>
-          <div className={styles.modalTitle} id={titleId}>{title}</div>
-          <button className={`${styles.btn} ${styles.btnSm} ${styles.btnIcon}`} onClick={onClose} type="button" aria-label="Close"><i className="ti ti-x" /></button>
-        </div>
-        <div className={styles.modalBody}>{children}</div>
-        {footer ? <div className={styles.modalFooter}>{footer}</div> : null}
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, optional, children }: { label: string; optional?: boolean; children: ReactNode }) {
-  return (
-    <label className={styles.field}>
-      <span className={styles.fieldLabel}>{label.replace(/ \*$/, "")}{label.endsWith(" *") ? <span aria-hidden="true" style={{ color: "var(--red)" }}> *</span> : null}{optional ? <span className={styles.optional}> (optional)</span> : null}</span>
-      {children}
-    </label>
-  );
-}
-
-/* Circular avatar that resolves R2 object keys (or uses http URLs / initials). */
-function Avatar({ url, name }: { url: string; name: string }) {
-  const [src, setSrc] = useState(url.startsWith("http") ? url : "");
-  useEffect(() => {
-    if (!url || url.startsWith("http")) { setSrc(url.startsWith("http") ? url : ""); return; }
-    const controller = new AbortController();
-    fetch("/api/storage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation: "download", key: url }), signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("unavailable"))))
-      .then((result: { url?: string }) => setSrc(result.url || ""))
-      .catch(() => { if (!controller.signal.aborted) setSrc(""); });
-    return () => controller.abort();
-  }, [url]);
-  if (src) return <div className={styles.avatar} role="img" aria-label={name} style={{ backgroundImage: `url("${src.replaceAll('"', "%22")}")`, backgroundSize: "cover", backgroundPosition: "center" }} />;
-  return <div className={styles.avatarFallback}>{initials(name)}</div>;
-}
-
-/* ── Custom date picker (matches legacy _cpBuildDatePicker) ── */
-function DatePicker({ selected, statusMap, onPick, withCount }: { selected: string; statusMap: Record<string, string[]>; onPick: (date: string) => void; withCount?: boolean }) {
-  const initial = selected && /^\d{4}-\d{2}-\d{2}$/.test(selected) ? selected : todayKey();
-  const [view, setView] = useState(() => { const [y, m] = initial.split("-").map(Number); return { y, m: m - 1 }; });
-  const first = new Date(view.y, view.m, 1).getDay();
-  const total = new Date(view.y, view.m + 1, 0).getDate();
-  const today = todayKey();
-  const cells: ReactNode[] = [];
-  for (let i = 0; i < first; i++) cells.push(<div key={`e${i}`} />);
-  for (let d = 1; d <= total; d++) {
-    const key = `${view.y}-${String(view.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    const statuses = statusMap[key] || [];
-    const draft = statuses.filter((s) => s !== "Done").length;
-    const done = statuses.filter((s) => s === "Done").length;
-    const count = statuses.length;
-    const isSelected = key === selected;
-    const isToday = key === today;
-    const style: React.CSSProperties = { border: isToday && !isSelected ? "1.5px solid #0f52ba" : "none", fontWeight: isSelected || isToday ? 500 : 400 };
-    let badge: ReactNode = null;
-    let split = false;
-    if (isSelected) { style.background = "#0f52ba"; style.color = "#fff"; }
-    else if (withCount && count >= 3) { style.background = "#e6f1fb"; style.color = "#0c447c"; badge = <span style={{ position: "absolute", top: 1, right: 2, fontSize: 9, fontWeight: 600, color: "#0c447c" }}>{count}</span>; }
-    else if (draft > 0 && done > 0) { style.color = "#444441"; split = true; }
-    else if (draft > 0) { style.background = "#fcebeb"; style.color = "#791f1f"; }
-    else if (done > 0) { style.background = "#eaf3de"; style.color = "#27500a"; }
-    cells.push(
-      <button key={key} type="button" className={styles.pickerDay} style={style} onClick={() => onPick(key)}>
-        {split ? <span style={{ position: "absolute", inset: 0, borderRadius: 6, overflow: "hidden" }}><span style={{ position: "absolute", top: 0, left: 0, width: "50%", height: "100%", background: "#fcebeb" }} /><span style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "100%", background: "#eaf3de" }} /></span> : null}
-        {badge}
-        <span>{d}</span>
-      </button>,
-    );
-  }
-  return (
-    <div className={styles.picker}>
-      <div className={styles.pickerTop}>
-        <button type="button" className={styles.pickerNavBtn} onClick={() => setView((v) => (v.m === 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 }))}><i className="ti ti-chevron-left" style={{ fontSize: 11 }} /></button>
-        <span className={styles.pickerMonth}>{MONTHS[view.m]} {view.y}</span>
-        <button type="button" className={styles.pickerNavBtn} onClick={() => setView((v) => (v.m === 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m: v.m + 1 }))}><i className="ti ti-chevron-right" style={{ fontSize: 11 }} /></button>
-      </div>
-      <div className={styles.pickerWeekdays}>{WEEKDAYS.map((d) => <div key={d} className={styles.pickerWeekday}>{d}</div>)}</div>
-      <div className={styles.pickerGrid}>{cells}</div>
-      <div className={styles.pickerLegend}>
-        <div className={styles.pickerLegendItem}><span className={styles.pickerLegendSwatch} style={{ background: "#fcebeb", border: "0.5px solid #f09595" }} /> Draft</div>
-        <div className={styles.pickerLegendItem}><span className={styles.pickerLegendSwatch} style={{ background: "#eaf3de", border: "0.5px solid #97c459" }} /> Done</div>
-        {withCount ? <div className={styles.pickerLegendItem}><span className={styles.pickerLegendSwatch} style={{ background: "#e6f1fb", border: "0.5px solid #85b7eb" }} /> 3+</div> : null}
-      </div>
-    </div>
-  );
-}
-
-/* ── Overview calendar (dots) ── */
-function OverviewCalendar({ month, year, onNav, dotsForDay, onDayClick }: { month: number; year: number; onNav: (delta: number) => void; dotsForDay: (key: string) => string[]; onDayClick: (key: string, hasItems: boolean) => void }) {
-  const first = new Date(year, month, 1).getDay();
-  const total = new Date(year, month + 1, 0).getDate();
-  const today = todayKey();
-  const cells: ReactNode[] = [];
-  for (let i = 0; i < first; i++) cells.push(<div key={`e${i}`} />);
-  for (let d = 1; d <= total; d++) {
-    const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    const dots = dotsForDay(key);
-    const isToday = key === today;
-    cells.push(
-      <div key={key} className={styles.calDay} onClick={() => onDayClick(key, dots.length > 0)}>
-        {isToday ? <div className={styles.calToday}><span>{d}</span></div> : <div className={styles.calDayNum}>{d}</div>}
-        <div className={styles.calDots}>{dots.map((color, i) => <span key={i} className={styles.calDot} style={{ background: color }} />)}</div>
-      </div>,
-    );
-  }
-  return (
-    <div className={styles.calCard}>
-      <div className={styles.calTopbar}>
-        <button type="button" className={styles.calNavBtn} onClick={() => onNav(-1)}><i className="ti ti-chevron-left" style={{ fontSize: 12 }} /></button>
-        <div className={styles.calMonth}>{MONTHS[month]} {year}</div>
-        <button type="button" className={styles.calNavBtn} onClick={() => onNav(1)}><i className="ti ti-chevron-right" style={{ fontSize: 12 }} /></button>
-      </div>
-      <div className={styles.calGrid}>
-        {WEEKDAYS.map((d) => <div key={d} className={styles.calWeekday}>{d}</div>)}
-        {cells}
-      </div>
-      <div className={styles.calLegend}>
-        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#c0392b" }} />Draft</span>
-        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#3b6d11" }} />Done</span>
-      </div>
-    </div>
-  );
-}
-
-/* ── Reusable links panel ── */
-function LinksPanel({ kind, links }: { kind: "cp" | "sp"; links: ApiRecord[] }) {
-  const [open, setOpen] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [label, setLabel] = useState("");
-  const [url, setUrl] = useState("");
-  const [pending, start] = useTransition();
-
-  function save() {
-    if (!label.trim() || !url.trim()) return;
-    start(async () => {
-      await addContentLinkAction(kind, label, url);
-      setLabel(""); setUrl(""); setAdding(false);
-    });
-  }
-
-  return (
-    <div className={styles.linksCard}>
-      <div className={styles.linksHeader} onClick={() => setOpen((v) => !v)}>
-        <i className="ti ti-link" />
-        <span className={styles.linksTitle}>Links{links.length ? <span> ({links.length})</span> : null}</span>
-        <i className={`ti ti-chevron-${open ? "up" : "down"}`} style={{ fontSize: 13, color: "var(--text-muted)" }} />
-      </div>
-      {open ? (
-        <>
-          <div className={styles.chips}>
-            {links.map((link) => {
-              const href = text(link.url);
-              const valid = /^https?:\/\//.test(href);
-              return (
-                <div key={text(link.id)} className={`${styles.chip} ${valid ? styles.clickable : ""}`} title={text(link.label)} onClick={() => valid && window.open(href, "_blank")}>
-                  <i className="ti ti-external-link" />
-                  <span>{text(link.label)}</span>
-                  <button className={styles.chipDelete} type="button" onClick={(event) => { event.stopPropagation(); void deleteContentLinkAction(kind, text(link.id)); }}><i className="ti ti-x" style={{ fontSize: 10 }} /></button>
-                </div>
-              );
-            })}
-            <button className={styles.addChip} type="button" onClick={() => setAdding(true)}><i className="ti ti-plus" style={{ fontSize: 11 }} /><span>Add link</span></button>
-          </div>
-          {adding ? (
-            <div className={styles.linkForm}>
-              <div className={styles.linkFormField}><div className={styles.linkFormLabel}>Label</div><input className={styles.input} style={{ height: 32, fontSize: 12 }} placeholder="e.g. Story template" value={label} onChange={(event) => setLabel(event.target.value)} autoFocus /></div>
-              <div className={`${styles.linkFormField} ${styles.wide}`}><div className={styles.linkFormLabel}>URL</div><input className={styles.input} style={{ height: 32, fontSize: 12 }} placeholder="https://..." value={url} onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") save(); }} /></div>
-              <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} style={{ height: 32 }} type="button" disabled={pending} onClick={save}>Save link</button>
-              <button className={`${styles.btn} ${styles.btnSm}`} style={{ height: 32 }} type="button" onClick={() => { setAdding(false); setLabel(""); setUrl(""); }}>Cancel</button>
-            </div>
-          ) : null}
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-/* ── AI input panel ── */
-function AiPanel({ kind, onParsed }: { kind: "carousel" | "story"; onParsed: (data: Record<string, unknown>) => void }) {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const placeholder = kind === "carousel" ? "carousel tips lolos MT FMCG buat Falah, posting 25 Juni, awareness" : "story 28 Juni: hook dulu, terus pain point, solusi CCA, tutup CTA daftar";
-  const hintFields = kind === "carousel" ? "judul, tanggal posting, funnel, dan assignee" : "tanggal dan isi tiap slide";
-
-  async function parse() {
-    if (!value.trim()) { setError("Tulis dulu sebelum di-parse."); return; }
-    setBusy(true); setError("");
-    try {
-      const res = await fetch("/api/ai/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, text: value.trim() }) });
-      const payload = await res.json() as { data?: Record<string, unknown>; error?: string };
-      if (!res.ok || !payload.data) throw new Error(payload.error || "Could not read that text. Try again.");
-      onParsed(payload.data);
-      setValue("");
-      setOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not read that text. Try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className={styles.aiPanel}>
-      <div className={styles.aiHeader} onClick={() => setOpen((v) => !v)}>
-        <i className="ti ti-sparkles" />
-        <span className={styles.aiHeaderLabel}>Input dengan AI</span>
-        <i className={`ti ti-chevron-down ${styles.aiChevron}`} style={{ transform: open ? "rotate(180deg)" : undefined }} />
-      </div>
-      {open ? (
-        <div className={styles.aiCard}>
-          <textarea className={styles.aiTextarea} rows={2} placeholder={placeholder} value={value} onChange={(event) => setValue(event.target.value)} />
-          <div className={styles.aiActions}>
-            <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" disabled={busy} onClick={parse}>
-              <i className={busy ? "ti ti-loader-2" : "ti ti-sparkles"} style={{ fontSize: 11 }} /> {busy ? "Parsing..." : "Parse"}
-            </button>
-          </div>
-          <div className={styles.aiHint}>Tulis bebas — AI akan ekstrak {hintFields} otomatis.{error ? <><br /><span style={{ color: "var(--red)" }}>{error}</span></> : null}</div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-export function ContentPlanningTools(props: ContentPlanningProps) {
-  const [tab, setTab] = useState<Tab>("carousel");
-  useRecordFocus((id) => { if (props.dates.some((date) => text(date.id) === id)) setTab("story"); });
-  const tabs: Array<[Tab, string, string]> = [["carousel", "ti-layout-columns", "Carousel Plan"], ["story", "ti-layout-rows", "Story Plan"], ["kol", "ti-users", "KOL List"], ["mt", "ti-star", "MT Story"]];
-  return (
-    <div className={styles.root}>
-      <div className={styles.tabRow}>
-        {tabs.map(([key, icon, label]) => (
-          <button key={key} type="button" className={`${styles.tab} ${tab === key ? styles.tabActive : ""}`} onClick={() => setTab(key)}>
-            <i className={`ti ${icon}`} /> {label}
-          </button>
-        ))}
-      </div>
-      <div className={styles.body}>
-        <div className={styles.page}>
-          {tab === "carousel" ? <CarouselTab carousels={props.carousels} ctas={props.ctas} links={props.carouselLinks} people={props.people} /> : null}
-          {tab === "story" ? <StoryTab dates={props.dates} items={props.stories} links={props.storyLinks} /> : null}
-          {tab === "kol" ? <KolTab kols={props.kols} /> : null}
-          {tab === "mt" ? <MtTab stories={props.mtStories} /> : null}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 type ContentPlanningProps = {
   dates: ApiRecord[];
@@ -345,186 +58,347 @@ type ContentPlanningProps = {
   people: ApiRecord[];
 };
 
-/* ══════════════ CAROUSEL TAB ══════════════ */
+export function ContentPlanningTools(props: ContentPlanningProps) {
+  const [view, setView] = useState<View>("carousel");
+  const [adding, setAdding] = useState<View | null>(null);
+  useRecordFocus((id) => { if (props.dates.some((date) => text(date.id) === id)) setView("story"); });
+  const thisMonth = todayKey().slice(0, 7);
+  const monthCarousels = props.carousels.filter((plan) => dayKey(plan.tanggal_posting).startsWith(thisMonth));
+  const views: Array<[View, string, number]> = [["carousel", "Carousels", props.carousels.length], ["story", "Stories", props.dates.length], ["kol", "KOL list", props.kols.length], ["mt", "MT Story", props.mtStories.length]];
+  const addLabel: Record<View, string> = { carousel: "Add carousel plan", story: "Add story date", kol: "Add KOL", mt: "Add MT story" };
+  const drafts = props.carousels.filter((plan) => text(plan.status) !== "Done").length + props.dates.filter((date) => text(date.status) !== "Done").length;
+
+  return (
+    <div className={s.page}>
+      <header className={s.head}>
+        <div>
+          <span className={s.eyebrow}>Marketing</span>
+          <h1>Content Planning</h1>
+          <p>{monthCarousels.length} carousel{monthCarousels.length === 1 ? "" : "s"} this month · {props.dates.length} story dates · {drafts} still in draft</p>
+        </div>
+        <button className={s.primary} onClick={() => setAdding(view)} type="button"><i className="ti ti-plus" aria-hidden="true" /> {addLabel[view]}</button>
+      </header>
+
+      <div className={s.segmented} role="tablist" aria-label="Content Planning view">
+        {views.map(([id, label, count]) => <button aria-selected={view === id} className={view === id ? s.segmentActive : s.segment} key={id} onClick={() => setView(id)} role="tab" type="button">{label} <span>{count}</span></button>)}
+      </div>
+
+      {view === "carousel" ? <CarouselView adding={adding === "carousel"} carousels={props.carousels} ctas={props.ctas} links={props.carouselLinks} onAdded={() => setAdding(null)} people={props.people} /> : null}
+      {view === "story" ? <StoryView adding={adding === "story"} dates={props.dates} items={props.stories} links={props.storyLinks} onAdded={() => setAdding(null)} /> : null}
+      {view === "kol" ? <KolView adding={adding === "kol"} kols={props.kols} onAdded={() => setAdding(null)} /> : null}
+      {view === "mt" ? <MtView adding={adding === "mt"} onAdded={() => setAdding(null)} stories={props.mtStories} /> : null}
+    </div>
+  );
+}
+
+/* ── Shared UI ── */
+function Modal({ size, title, onClose, children, footer }: { size?: "sm" | "md"; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
+  const { dialogProps, titleId } = useModal(onClose);
+  return (
+    <div className={s.overlay} onClick={onClose}>
+      <div className={size === "sm" ? s.modalSm : size === "md" ? s.modalMd : s.modal} onClick={(event) => event.stopPropagation()} {...dialogProps}>
+        <div className={s.modalHeader}>
+          <div className={s.modalTitle} id={titleId}>{title}</div>
+          <button aria-label="Close" className={s.iconButton} onClick={onClose} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
+        </div>
+        <div className={s.modalBody}>{children}</div>
+        {footer ? <div className={s.modalFooter}>{footer}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, optional, required, children }: { label: string; optional?: boolean; required?: boolean; children: ReactNode }) {
+  return (
+    <label className={s.field}>
+      <span className={s.fieldLabel}>{label}{required ? <span aria-hidden="true" className={s.req}> *</span> : null}{optional ? <span className={s.optional}> (optional)</span> : null}</span>
+      {children}
+    </label>
+  );
+}
+
+/** Required text input: marked red and focused when saved empty. */
+function useRequired() {
+  const id = useId();
+  const [invalid, setInvalid] = useState(false);
+  return { id, invalid, clear: () => setInvalid(false), check: (value: string) => { if (value.trim()) return true; setInvalid(true); document.getElementById(id)?.focus(); return false; } };
+}
+
+/* Circular avatar that resolves stored object keys (or uses http URLs / initials). */
+function Avatar({ url, name, large }: { url: string; name: string; large?: boolean }) {
+  const [resolved, setResolved] = useState<{ key: string; src: string } | null>(null);
+  useEffect(() => {
+    if (!url || url.startsWith("http")) return;
+    const controller = new AbortController();
+    fetch("/api/storage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation: "download", key: url }), signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("unavailable"))))
+      .then((result: { url?: string }) => setResolved({ key: url, src: result.url || "" }))
+      .catch(() => { if (!controller.signal.aborted) setResolved({ key: url, src: "" }); });
+    return () => controller.abort();
+  }, [url]);
+  const src = url.startsWith("http") ? url : resolved?.key === url ? resolved.src : "";
+  const className = large ? s.avatarLg : s.avatar;
+  if (src) return <span className={className} role="img" aria-label={name} style={{ backgroundImage: `url("${src.replaceAll('"', "%22")}")` }} />;
+  return <span className={className} aria-hidden="true">{initials(name)}</span>;
+}
+
+/* ── Date picker (Monday-first) with what is already planned on each day ── */
+function DatePicker({ selected, planned, onPick }: { selected: string; planned: Record<string, string[]>; onPick: (date: string) => void }) {
+  const initial = /^\d{4}-\d{2}-\d{2}$/.test(selected) ? selected : todayKey();
+  const [cursor, setCursor] = useState(() => ({ y: Number(initial.slice(0, 4)), m: Number(initial.slice(5, 7)) - 1 }));
+  const today = todayKey();
+  const move = (delta: number) => setCursor((c) => { const m = c.m + delta; return m > 11 ? { y: c.y + 1, m: 0 } : m < 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m }; });
+  return (
+    <div className={s.picker}>
+      <div className={s.pickerTop}>
+        <button aria-label="Previous month" className={s.iconButton} onClick={() => move(-1)} type="button"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
+        <b>{MONTHS[cursor.m]} {cursor.y}</b>
+        <button aria-label="Next month" className={s.iconButton} onClick={() => move(1)} type="button"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+      </div>
+      <div className={s.pickerGrid}>
+        {WEEKDAYS.map((d) => <span className={s.pickerWeekday} key={d}>{d.slice(0, 2)}</span>)}
+        {monthCells(cursor.y, cursor.m).map((key, index) => {
+          if (!key) return <span key={`e${index}`} />;
+          const statuses = planned[key] || [];
+          const allDone = statuses.length > 0 && statuses.every((st) => st === "Done");
+          const cls = key === selected ? s.dayPicked : statuses.length ? (allDone ? s.dayDone : s.dayPlanned) : s.day;
+          return (
+            <button aria-label={`${weekdayDay(key)}${statuses.length ? `, ${statuses.length} planned` : ""}`} aria-pressed={key === selected} className={`${cls} ${key === today ? s.dayToday : ""}`} key={key} onClick={() => onPick(key)} type="button">
+              {Number(key.slice(8))}{statuses.length > 1 ? <small>{statuses.length}</small> : null}
+            </button>
+          );
+        })}
+      </div>
+      <div className={s.legend}><span><i className={s.swatchPlanned} /> Draft planned</span><span><i className={s.swatchDone} /> All done</span></div>
+    </div>
+  );
+}
+
+/* ── Planner calendar: titles inside the days ── */
+type CalendarItem = { id: string; title: string; done: boolean };
+function PlannerCalendar({ label, itemsFor, onItem, onEmptyDay }: { label: string; itemsFor: (day: string) => CalendarItem[]; onItem: (id: string) => void; onEmptyDay: (day: string) => void }) {
+  const now = new Date();
+  const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const today = todayKey();
+  const move = (delta: number) => setCursor((c) => { const m = c.m + delta; return m > 11 ? { y: c.y + 1, m: 0 } : m < 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m }; });
+  return (
+    <section aria-label={label} className={s.calendar}>
+      <div className={s.calendarTop}>
+        <h2>{MONTHS[cursor.m]} {cursor.y}</h2>
+        <div className={s.calendarNav}>
+          <button aria-label="Previous month" className={s.iconButton} onClick={() => move(-1)} type="button"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
+          <button className={s.todayButton} onClick={() => setCursor({ y: now.getFullYear(), m: now.getMonth() })} type="button">Today</button>
+          <button aria-label="Next month" className={s.iconButton} onClick={() => move(1)} type="button"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+        </div>
+      </div>
+      <div className={s.calendarGrid}>
+        {WEEKDAYS.map((d) => <span className={s.weekday} key={d}>{d}</span>)}
+        {monthCells(cursor.y, cursor.m).map((key, index) => {
+          if (!key) return <span className={s.cellBlank} key={`e${index}`} />;
+          const items = itemsFor(key);
+          return (
+            <div className={key === today ? s.cellToday : s.cell} key={key}>
+              <button aria-label={`Plan on ${weekdayDay(key)}`} className={s.cellAdd} onClick={() => onEmptyDay(key)} type="button"><span>{Number(key.slice(8))}</span><i className="ti ti-plus" aria-hidden="true" /></button>
+              <div className={s.cellItems}>
+                {items.slice(0, 2).map((item) => <button className={item.done ? s.chipDone : s.chipPlanned} key={item.id} onClick={() => onItem(item.id)} title={item.title} type="button">{item.done ? <i className="ti ti-check" aria-hidden="true" /> : null}{item.title}</button>)}
+                {items.length > 2 ? <button className={s.chipMore} onClick={() => onItem(items[2].id)} type="button">+{items.length - 2} more</button> : null}
+              </div>
+              {items.length ? <span className={items.every((item) => item.done) ? s.dotDone : s.dotPlanned} aria-hidden="true" /> : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ── Week agenda shell ── */
+function WeekGroup({ label, range, count, done, open, onToggle, children }: { label: string; range: string; count: number; done: number; open: boolean; onToggle: () => void; children: ReactNode }) {
+  return (
+    <section className={s.week}>
+      <button aria-expanded={open} className={s.weekHead} onClick={onToggle} type="button">
+        <i className={`ti ti-chevron-${open ? "down" : "right"}`} aria-hidden="true" />
+        <b>{label}</b><span>{range}</span>
+        <span className={s.weekCount}>{done}/{count} done</span>
+      </button>
+      {open ? <div className={s.weekBody}>{children}</div> : null}
+    </section>
+  );
+}
+
+function useWeekToggles(weeks: string[]) {
+  const current = weekStart(todayKey());
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  // Default: this week and later are open, past weeks folded.
+  const isOpen = (wk: string) => overrides[wk] ?? wk >= current;
+  return { isOpen, toggle: (wk: string) => setOverrides((o) => ({ ...o, [wk]: !isOpen(wk) })), open: (wk: string) => setOverrides((o) => ({ ...o, [wk]: true })), weeks };
+}
+
+/* ── Links + AI bar ── */
+function LinksBar({ kind, links }: { kind: "cp" | "sp"; links: ApiRecord[] }) {
+  const [adding, setAdding] = useState(false);
+  const [label, setLabel] = useState(""); const [url, setUrl] = useState("");
+  const [pending, start] = useTransition();
+  const req = useRequired();
+  function save() {
+    if (!label.trim()) { req.check(""); return; }
+    if (!url.trim()) return;
+    start(async () => { await addContentLinkAction(kind, label, url); setLabel(""); setUrl(""); setAdding(false); });
+  }
+  return (
+    <div className={s.links} aria-label="Links" role="group">
+      <span className={s.linksLabel}><i className="ti ti-link" aria-hidden="true" /> Links</span>
+      {links.map((link) => {
+        const href = text(link.url); const valid = /^https?:\/\//.test(href);
+        return (
+          <span className={s.linkChip} key={text(link.id)}>
+            {valid ? <a href={href} rel="noopener noreferrer" target="_blank">{text(link.label)}</a> : <span>{text(link.label)}</span>}
+            <button aria-label={`Remove link ${text(link.label)}`} onClick={async () => { if (await confirmAction({ title: `Remove link "${text(link.label)}"?`, confirmLabel: "Remove link", danger: true })) void deleteContentLinkAction(kind, text(link.id)); }} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
+          </span>
+        );
+      })}
+      {adding ? (
+        <span className={s.linkForm}>
+          <input aria-invalid={req.invalid || undefined} aria-label="Link label" className={req.invalid ? s.inputInvalid : s.input} onChange={(event) => { setLabel(event.target.value); req.clear(); }} placeholder="Label, e.g. Story template" id={req.id} value={label} />
+          <input aria-label="Link URL" className={s.input} onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") save(); }} placeholder="https://…" type="url" value={url} />
+          <button className={s.primarySm} disabled={pending} onClick={save} type="button">Save link</button>
+          <button className={s.ghostSm} onClick={() => { setAdding(false); setLabel(""); setUrl(""); }} type="button">Cancel</button>
+        </span>
+      ) : <button className={s.addChip} onClick={() => setAdding(true)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add link</button>}
+    </div>
+  );
+}
+
+function AiBar({ kind, onParsed }: { kind: "carousel" | "story"; onParsed: (data: Record<string, unknown>) => void }) {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const placeholder = kind === "carousel" ? "Describe it, e.g. carousel tips lolos MT FMCG for Falah, post 25 June, awareness" : "Describe it, e.g. story 28 June: hook, then pain point, CCA solution, close with sign-up CTA";
+  async function parse() {
+    if (!value.trim()) { setError("Write a short description first."); return; }
+    setBusy(true); setError("");
+    try {
+      const res = await fetch("/api/ai/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, text: value.trim() }) });
+      const payload = await res.json() as { data?: Record<string, unknown>; error?: string };
+      if (!res.ok || !payload.data) throw new Error(payload.error || "Could not read that text. Try again.");
+      onParsed(payload.data); setValue("");
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not read that text. Try again."); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className={s.ai}>
+      <i className="ti ti-sparkles" aria-hidden="true" />
+      <input aria-label={`Describe a ${kind === "carousel" ? "carousel plan" : "story date"} for AI`} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void parse(); }} placeholder={placeholder} value={value} />
+      <button className={s.primarySm} disabled={busy} onClick={parse} type="button">{busy ? "Reading…" : "Fill form with AI"}</button>
+      {error ? <span className={s.aiError} role="status">{error}</span> : null}
+    </div>
+  );
+}
+
+/* ══════════════ CAROUSELS ══════════════ */
 type CarouselModalState = { plan: ApiRecord | null; preset: Partial<CarouselPlanInput> & { tanggal_posting?: string } };
 
-function CarouselTab({ carousels, ctas, links, people }: { carousels: ApiRecord[]; ctas: ApiRecord[]; links: ApiRecord[]; people: ApiRecord[] }) {
-  const now = new Date();
-  const [cal, setCal] = useState({ m: now.getMonth(), y: now.getFullYear() });
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
-  const [initCollapse, setInitCollapse] = useState(false);
+function CarouselView({ carousels, ctas, links, people, adding, onAdded }: { carousels: ApiRecord[]; ctas: ApiRecord[]; links: ApiRecord[]; people: ApiRecord[]; adding: boolean; onAdded: () => void }) {
   const [modal, setModal] = useState<CarouselModalState | null>(null);
   const [dateModal, setDateModal] = useState<ApiRecord | null>(null);
   const [pending, start] = useTransition();
-
-  const statusMap = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    carousels.forEach((plan) => { const key = dateKey(plan.tanggal_posting); if (!key) return; (map[key] ||= []).push(text(plan.status) || "Draft"); });
-    return map;
-  }, [carousels]);
-
-  const groups = useMemo(() => {
-    const byWeek: Record<string, { ws: Date; plans: ApiRecord[] }> = {};
-    carousels.forEach((plan) => {
-      const key = dateKey(plan.tanggal_posting) || todayKey();
-      const ws = startOfWeek(key);
-      const wk = localIso(ws);
-      (byWeek[wk] ||= { ws, plans: [] }).plans.push(plan);
-    });
-    return Object.keys(byWeek).sort().map((wk) => ({ wk, ...byWeek[wk] }));
-  }, [carousels]);
-
-  const currentWeek = localIso(startOfWeek(todayKey()));
-  const collapsedSet = useMemo(() => {
-    if (initCollapse) return collapsed;
-    return new Set(groups.map((g) => g.wk).filter((wk) => wk !== currentWeek));
-  }, [initCollapse, collapsed, groups, currentWeek]);
-
-  function toggleWeek(wk: string) {
-    const next = new Set(collapsedSet);
-    if (next.has(wk)) next.delete(wk); else next.add(wk);
-    setCollapsed(next); setInitCollapse(true);
-  }
+  const today = todayKey();
+  const perDay = useMemo(() => byDay(carousels, "tanggal_posting"), [carousels]);
+  const planned = useMemo(() => Object.fromEntries(Object.entries(perDay).map(([key, rows]) => [key, rows.map((row) => text(row.status) || "Draft")])), [perDay]);
+  const weeks = useMemo(() => groupByWeek(carousels, "tanggal_posting", today), [carousels, today]);
+  const toggles = useWeekToggles(weeks.map((w) => w.start));
+  const shownModal = modal || (adding ? { plan: null, preset: {} } : null);
+  const close = () => { setModal(null); onAdded(); };
 
   return (
     <>
-      <AiPanel kind="carousel" onParsed={(data) => setModal({ plan: null, preset: { judul: text(data.judul), tanggal_posting: dateKey(data.tanggal_posting), funnel: text(data.funnel) || "TOFU", cta: text(data.cta) || null, status: text(data.status) === "Done" ? "Done" : "Draft" } })} />
-      <LinksPanel kind="cp" links={links} />
-
-      <div className={styles.sectionBlock}>
-        <div className={styles.sectionLabel}><i className="ti ti-calendar" /> Kalender Carousel</div>
-        <OverviewCalendar
-          month={cal.m} year={cal.y}
-          onNav={(delta) => setCal((c) => { const m = c.m + delta; if (m > 11) return { m: 0, y: c.y + 1 }; if (m < 0) return { m: 11, y: c.y - 1 }; return { m, y: c.y }; })}
-          dotsForDay={(key) => (statusMap[key] || []).slice(0, 3).map((s) => (s === "Done" ? "#3b6d11" : "#c0392b"))}
-          onDayClick={(key, has) => { if (!has) setModal({ plan: null, preset: { tanggal_posting: key } }); }}
+      <div className={s.tools}><AiBar kind="carousel" onParsed={(data) => setModal({ plan: null, preset: { judul: text(data.judul), tanggal_posting: dayKey(data.tanggal_posting), funnel: text(data.funnel) || "TOFU", cta: text(data.cta) || null, status: text(data.status) === "Done" ? "Done" : "Draft" } })} /><LinksBar kind="cp" links={links} /></div>
+      <div className={s.planner}>
+        <PlannerCalendar
+          itemsFor={(day) => (perDay[day] || []).map((plan) => ({ id: text(plan.id), title: text(plan.judul) || "Untitled", done: text(plan.status) === "Done" }))}
+          label="Carousel calendar"
+          onEmptyDay={(day) => setModal({ plan: null, preset: { tanggal_posting: day } })}
+          onItem={(id) => { const plan = carousels.find((row) => text(row.id) === id); if (plan) setModal({ plan, preset: {} }); }}
         />
-      </div>
-
-      <div className={styles.sectionRow}>
-        <div className={styles.sectionLabel} style={{ marginBottom: 0 }}><i className="ti ti-layout-columns" /> Carousel Plans</div>
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ plan: null, preset: {} })}><i className="ti ti-plus" /> Add carousel plan</button>
-      </div>
-
-      {!carousels.length ? (
-        <div className={styles.empty}><i className="ti ti-layout-columns" />No carousel plans yet. Click &quot;+ Add carousel plan&quot; to start.</div>
-      ) : groups.map(({ wk, ws, plans }) => {
-        const isCollapsed = collapsedSet.has(wk);
-        const done = plans.filter((p) => text(p.status) === "Done").length;
-        const draft = plans.length - done;
-        return (
-          <div key={wk} className={styles.weekGroup}>
-            <div className={styles.weekHeader} onClick={() => toggleWeek(wk)}>
-              <i className={`ti ti-chevron-${isCollapsed ? "right" : "down"}`} />
-              <span className={styles.weekLabel}>{weekLabel(ws)}</span>
-              <span className={styles.weekRange}>{weekRange(ws)}</span>
-              <span className={styles.weekSpacer} />
-              {isCollapsed ? (
-                <span className={styles.weekBadges}>
-                  {draft > 0 ? <span className={`${styles.badge} ${styles.badgeDraft}`}>{draft} draft</span> : null}
-                  {done > 0 ? <span className={`${styles.badge} ${styles.badgeDone}`}>{done} done</span> : null}
-                </span>
-              ) : null}
-            </div>
-            {!isCollapsed ? plans.map((plan) => {
-              const funnel = text(plan.funnel) || "TOFU";
-              const status = text(plan.status) || "Draft";
-              const isDone = status === "Done";
-              const fc = FUNNEL_COLORS[funnel] || { bg: "var(--bg)", fg: "#6b7280" };
-              const assignee = people.find((p) => String(p.id) === text(plan.assignee_id));
-              return (
-                <div key={text(plan.id)} className={styles.itemCard} style={{ borderLeftColor: STATUS_BORDER[status] || "#888780" }}>
-                  <div className={styles.itemCardInner}>
-                    <div className={styles.itemHead}>
-                      <input type="checkbox" className={styles.checkbox} checked={isDone} disabled={pending} onChange={(event) => start(() => { void setCarouselStatusAction(text(plan.id), event.target.checked ? "Done" : "Draft"); })} />
-                      <div className={styles.itemGrow}>
-                        <div className={styles.titleRow}>
-                          <span className={`${styles.itemTitle} ${isDone ? styles.itemTitleDone : ""}`}>{text(plan.judul) || "Tanpa judul"}</span>
-                          <span className={styles.pill} style={{ background: fc.bg, color: fc.fg }}>{funnel}</span>
-                          {plan.cta ? <span className={styles.ctaPill}>{text(plan.cta)}</span> : null}
-                        </div>
-                        <div className={styles.metaRow}>
-                          <div className={styles.metaLeft}>
-                            <button type="button" className={styles.dateTrigger} onClick={() => setDateModal(plan)}><i className="ti ti-calendar" /> {fmtDt(plan.tanggal_posting) || "—"} <i className="ti ti-pencil" style={{ fontSize: 10, opacity: 0.4 }} /></button>
-                            <span className={styles.dot}>·</span>
-                            <CarouselLinkCell plan={plan} kind="brief" />
-                            <span className={styles.dot}>·</span>
-                            <CarouselLinkCell plan={plan} kind="referensi" />
-                          </div>
-                          {assignee ? <span className={styles.assignee}><i className="ti ti-user" style={{ fontSize: 10 }} /> {text(assignee.nama)}</span> : null}
-                        </div>
+        <section aria-label="Carousel agenda" className={s.agenda}>
+          {!carousels.length ? <p className={s.empty}>No carousel plans yet. Pick a day on the calendar or use “Add carousel plan”.</p> : weeks.map((week) => (
+            <WeekGroup count={week.items.length} done={week.done} key={week.start} label={week.label} onToggle={() => toggles.toggle(week.start)} open={toggles.isOpen(week.start)} range={week.range}>
+              <ul className={s.rows}>
+                {week.items.map((plan) => {
+                  const done = text(plan.status) === "Done";
+                  const assignee = people.find((p) => String(p.id) === text(plan.assignee_id));
+                  const title = text(plan.judul) || "Untitled";
+                  return (
+                    <li className={done ? s.rowDone : s.row} key={text(plan.id)}>
+                      <button aria-label={done ? `Mark as draft: ${title}` : `Mark done: ${title}`} aria-pressed={done} className={done ? s.checkOn : s.check} disabled={pending} onClick={() => start(() => { void setCarouselStatusAction(text(plan.id), done ? "Draft" : "Done"); })} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
+                      <div className={s.rowMain}>
+                        <button className={s.rowTitle} onClick={() => setModal({ plan, preset: {} })} type="button">{title}</button>
+                        <span className={s.rowMeta}>
+                          <button className={s.dateButton} onClick={() => setDateModal(plan)} type="button"><i className="ti ti-calendar" aria-hidden="true" /> {dayKey(plan.tanggal_posting) ? weekdayDay(dayKey(plan.tanggal_posting)) : "No date"}</button>
+                          <span>{text(plan.funnel) || "TOFU"}</span>
+                          {plan.cta ? <span>CTA: {text(plan.cta)}</span> : null}
+                        </span>
+                        <span className={s.rowLinks}><CarouselLinkCell kind="brief" plan={plan} /><CarouselLinkCell kind="referensi" plan={plan} /></span>
                       </div>
-                      <button type="button" className={styles.editBtn} onClick={() => setModal({ plan, preset: {} })}><i className="ti ti-edit" style={{ fontSize: 13 }} /></button>
-                    </div>
-                  </div>
-                </div>
-              );
-            }) : null}
-          </div>
-        );
-      })}
-
-      {modal ? <CarouselModal state={modal} ctas={ctas} people={people} statusMap={statusMap} onClose={() => setModal(null)} /> : null}
+                      {assignee ? <span className={s.person} title={text(assignee.nama)}>{initials(text(assignee.nama))}</span> : <span className={s.personEmpty} title="No assignee">?</span>}
+                      <button aria-label={`Edit ${title}`} className={s.iconButton} onClick={() => setModal({ plan, preset: {} })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </WeekGroup>
+          ))}
+        </section>
+      </div>
+      {shownModal ? <CarouselModal ctas={ctas} onClose={close} people={people} planned={planned} state={shownModal} /> : null}
       {dateModal ? (
-        <Modal size="sm" title="Change posting date" onClose={() => setDateModal(null)}>
-          <DatePicker selected={dateKey(dateModal.tanggal_posting) || todayKey()} statusMap={statusMap} withCount onPick={(key) => start(() => { void setCarouselDateAction(text(dateModal.id), key); setDateModal(null); })} />
+        <Modal onClose={() => setDateModal(null)} size="sm" title="Change posting date">
+          <DatePicker onPick={(key) => start(() => { void setCarouselDateAction(text(dateModal.id), key); setDateModal(null); })} planned={planned} selected={dayKey(dateModal.tanggal_posting) || todayKey()} />
         </Modal>
       ) : null}
     </>
   );
 }
 
-// A carousel plan carries two independent reference URLs — the written brief and a
-// visual reference — with identical inline-edit behavior. Only the label, icon and
-// chip color differ, so one cell serves both. The brief chip's blue lives in
-// .linkBrief; the reference chip overrides it with the legacy purple.
+// A carousel plan carries two reference URLs — the brief and a visual reference — with the same inline edit.
 const CAROUSEL_LINK_KINDS = {
-  brief: {
-    field: "link_brief", icon: "ti-link", label: "Link Brief", addLabel: "Add brief link",
-    save: setCarouselLinkBriefAction, chip: undefined,
-  },
-  referensi: {
-    field: "link_referensi", icon: "ti-photo", label: "Referensi", addLabel: "Link referensi",
-    save: setCarouselLinkReferensiAction, chip: { color: "#7c3aed", borderColor: "#c4b5fd", background: "#f5f3ff" },
-  },
+  brief: { field: "link_brief", icon: "ti-file-text", label: "Brief", addLabel: "Add brief link", save: setCarouselLinkBriefAction },
+  referensi: { field: "link_referensi", icon: "ti-photo", label: "Reference", addLabel: "Add reference link", save: setCarouselLinkReferensiAction },
 } as const;
 
 function CarouselLinkCell({ plan, kind }: { plan: ApiRecord; kind: keyof typeof CAROUSEL_LINK_KINDS }) {
-  const { field, icon, label, addLabel, save, chip } = CAROUSEL_LINK_KINDS[kind];
+  const { field, icon, label, addLabel, save } = CAROUSEL_LINK_KINDS[kind];
   const current = text(plan[field]);
   const [editing, setEditing] = useState(false);
   const [url, setUrl] = useState(current);
   const [pending, start] = useTransition();
-  useEffect(() => setUrl(current), [current]);
-
   const commit = () => start(() => { void save(text(plan.id), url || null); setEditing(false); });
-  const cancel = () => { setEditing(false); setUrl(current); };
+  const edit = () => { setUrl(current); setEditing(true); };
 
   if (editing) {
     return (
-      <span className={styles.inlineLinkRow}>
-        <i className={`ti ${icon}`} style={{ fontSize: 13, color: "var(--text-muted)" }} />
-        <input className={styles.inlineLinkInput} type="url" placeholder="https://..." value={url} autoFocus onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commit(); if (event.key === "Escape") cancel(); }} />
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={commit}>Save link</button>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={cancel}>Cancel</button>
+      <span className={s.inlineLink}>
+        <input aria-label={`${label} link`} autoFocus className={s.input} onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commit(); if (event.key === "Escape") setEditing(false); }} placeholder="https://…" type="url" value={url} />
+        <button className={s.primarySm} disabled={pending} onClick={commit} type="button">Save link</button>
+        <button className={s.ghostSm} onClick={() => setEditing(false)} type="button">Cancel</button>
       </span>
     );
   }
   if (current) {
     return (
-      <>
-        <a className={styles.linkBrief} style={chip} href={current} target="_blank" rel="noopener noreferrer"><i className={`ti ${icon}`} /> {label} <i className="ti ti-external-link" style={{ fontSize: 10, opacity: 0.7 }} /></a>
-        <button type="button" className={styles.iconBtn} onClick={() => setEditing(true)}><i className="ti ti-pencil" style={{ fontSize: 10 }} /></button>
-      </>
+      <span className={s.refLink}>
+        <a href={current} rel="noopener noreferrer" target="_blank"><i className={`ti ${icon}`} aria-hidden="true" /> {label}</a>
+        <button aria-label={`Change ${label.toLowerCase()} link`} onClick={edit} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
+      </span>
     );
   }
-  return <button type="button" className={styles.linkBriefAdd} onClick={() => setEditing(true)}><i className="ti ti-plus" style={{ fontSize: 11 }} /> {addLabel}</button>;
+  return <button className={s.refAdd} onClick={edit} type="button"><i className="ti ti-plus" aria-hidden="true" /> {addLabel}</button>;
 }
 
-function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: CarouselModalState; ctas: ApiRecord[]; people: ApiRecord[]; statusMap: Record<string, string[]>; onClose: () => void }) {
+function CarouselModal({ state, ctas, people, planned, onClose }: { state: CarouselModalState; ctas: ApiRecord[]; people: ApiRecord[]; planned: Record<string, string[]>; onClose: () => void }) {
   const plan = state.plan;
   const [judul, setJudul] = useState(text(plan?.judul) || text(state.preset.judul));
-  const [tanggal, setTanggal] = useState(dateKey(plan?.tanggal_posting) || state.preset.tanggal_posting || todayKey());
+  const [tanggal, setTanggal] = useState(dayKey(plan?.tanggal_posting) || state.preset.tanggal_posting || todayKey());
   const [funnel, setFunnel] = useState(text(plan?.funnel) || state.preset.funnel || "TOFU");
   const [cta, setCta] = useState(text(plan?.cta) || text(state.preset.cta));
   const [assignee, setAssignee] = useState(text(plan?.assignee_id));
@@ -532,15 +406,12 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
   const [linkBrief, setLinkBrief] = useState(text(plan?.link_brief));
   const [linkReferensi, setLinkReferensi] = useState(text(plan?.link_referensi));
   const [pending, start] = useTransition();
+  const req = useRequired();
 
   function save() {
-    if (!judul.trim()) return;
+    if (!req.check(judul)) return;
     const input: CarouselPlanInput = { judul, tanggal_posting: tanggal, funnel, cta: cta || null, assignee_id: assignee || null, status, link_brief: linkBrief || null, link_referensi: linkReferensi || null };
-    start(async () => {
-      if (plan) await updateCarouselPlanAction(text(plan.id), input);
-      else await createCarouselPlanAction(input);
-      onClose();
-    });
+    start(async () => { if (plan) await updateCarouselPlanAction(text(plan.id), input); else await createCarouselPlanAction(input); onClose(); });
   }
   async function remove() {
     if (!plan || !(await confirmAction({ title: "Delete this carousel plan?", message: "This cannot be undone.", confirmLabel: "Delete carousel plan", danger: true }))) return;
@@ -553,302 +424,211 @@ function CarouselModal({ state, ctas, people, statusMap, onClose }: { state: Car
   }
 
   return (
-    <Modal
-      title={`${plan ? "Edit" : "Add"} carousel plan`}
-      onClose={onClose}
-      footer={
-        <>
-          {plan ? <button type="button" className={`${styles.btn} ${styles.btnSm} ${styles.btnDanger} ${styles.footerSpacer}`} onClick={remove}><i className="ti ti-trash" /> Delete carousel plan</button> : null}
-          <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !judul.trim()} onClick={save}><i className="ti ti-check" /> Save carousel plan</button>
-        </>
-      }
+    <Modal onClose={onClose} title={`${plan ? "Edit" : "Add"} carousel plan`}
+      footer={<>
+        {plan ? <button className={s.dangerSm} onClick={remove} type="button"><i className="ti ti-trash" aria-hidden="true" /> Delete carousel plan</button> : null}
+        <span className={s.spacer} />
+        <button className={s.ghostSm} onClick={onClose} type="button">Cancel</button>
+        <button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save carousel plan</button>
+      </>}
     >
-      <Field label="Title *"><input className={styles.input} placeholder="Carousel content title…" value={judul} autoFocus onChange={(event) => setJudul(event.target.value)} /></Field>
-      <Field label="Posting date"><DatePicker selected={tanggal} statusMap={statusMap} withCount onPick={setTanggal} /></Field>
-      <Field label="Funnel">
-        <select className={styles.select} value={funnel} onChange={(event) => setFunnel(event.target.value)}>{["TOFU", "MOFU", "BOFU"].map((f) => <option key={f} value={f}>{f}</option>)}</select>
-      </Field>
-      <Field label="CTA">
-        <div className={styles.inputRow}>
-          <select className={styles.select} value={cta} onChange={(event) => setCta(event.target.value)}>
-            <option value="">Select CTA</option>
-            {ctas.map((option) => <option key={text(option.id)} value={text(option.label)}>{text(option.label)}</option>)}
-            {cta && !ctas.some((option) => text(option.label) === cta) ? <option value={cta}>{cta}</option> : null}
-          </select>
-          <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ whiteSpace: "nowrap" }} onClick={addCta}>+ CTA Baru</button>
+      <Field label="Title" required><input aria-invalid={req.invalid || undefined} autoFocus className={req.invalid ? s.inputInvalid : s.input} onChange={(event) => { setJudul(event.target.value); req.clear(); }} placeholder="Carousel content title…" id={req.id} value={judul} /></Field>
+      <div className={s.formSplit}>
+        <Field label="Posting date"><DatePicker onPick={setTanggal} planned={planned} selected={tanggal} /></Field>
+        <div className={s.formStack}>
+          <Field label="Status"><select className={s.input} onChange={(event) => setStatus(event.target.value)} value={status}>{["Draft", "Done"].map((v) => <option key={v} value={v}>{v}</option>)}</select></Field>
+          <Field label="Funnel"><select className={s.input} onChange={(event) => setFunnel(event.target.value)} value={funnel}>{["TOFU", "MOFU", "BOFU"].map((v) => <option key={v} value={v}>{v}</option>)}</select></Field>
+          <Field label="CTA">
+            <span className={s.inputRow}>
+              <select className={s.input} onChange={(event) => setCta(event.target.value)} value={cta}>
+                <option value="">Select CTA</option>
+                {ctas.map((option) => <option key={text(option.id)} value={text(option.label)}>{text(option.label)}</option>)}
+                {cta && !ctas.some((option) => text(option.label) === cta) ? <option value={cta}>{cta}</option> : null}
+              </select>
+              <button className={s.ghostSm} onClick={addCta} type="button">New CTA</button>
+            </span>
+          </Field>
+          <Field label="Assignee"><select className={s.input} onChange={(event) => setAssignee(event.target.value)} value={assignee}><option value="">No assignee</option>{people.map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}</option>)}</select></Field>
         </div>
-      </Field>
-      <Field label="Assignee">
-        <select className={styles.select} value={assignee} onChange={(event) => setAssignee(event.target.value)}>
-          <option value="">Select</option>
-          {people.map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}</option>)}
-        </select>
-      </Field>
-      <Field label="Status">
-        <select className={styles.select} value={status} onChange={(event) => setStatus(event.target.value)}>{["Draft", "Done"].map((s) => <option key={s} value={s}>{s}</option>)}</select>
-      </Field>
-      <Field label="Brief link" optional>
-        <div className={styles.inputRow}>
-          <i className="ti ti-link" />
-          <input className={styles.input} placeholder="https://docs.google.com/..." value={linkBrief} onChange={(event) => setLinkBrief(event.target.value)} />
-        </div>
-      </Field>
-      <Field label="Reference link" optional>
-        <div className={styles.inputRow}>
-          <i className="ti ti-photo" />
-          <input className={styles.input} placeholder="https://..." value={linkReferensi} onChange={(event) => setLinkReferensi(event.target.value)} />
-        </div>
-      </Field>
+      </div>
+      <Field label="Brief link" optional><input className={s.input} onChange={(event) => setLinkBrief(event.target.value)} placeholder="https://docs.google.com/…" value={linkBrief} /></Field>
+      <Field label="Reference link" optional><input className={s.input} onChange={(event) => setLinkReferensi(event.target.value)} placeholder="https://…" value={linkReferensi} /></Field>
     </Modal>
   );
 }
 
-/* ══════════════ STORY TAB ══════════════ */
-function StoryTab({ dates, items, links }: { dates: ApiRecord[]; items: ApiRecord[]; links: ApiRecord[] }) {
-  const now = new Date();
-  const [cal, setCal] = useState({ m: now.getMonth(), y: now.getFullYear() });
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
-  const [initCollapse, setInitCollapse] = useState(false);
+/* ══════════════ STORIES ══════════════ */
+function StoryView({ dates, items, links, adding, onAdded }: { dates: ApiRecord[]; items: ApiRecord[]; links: ApiRecord[]; adding: boolean; onAdded: () => void }) {
   const [addModal, setAddModal] = useState<{ preDate?: string; items: string[] } | null>(null);
   const [pending, start] = useTransition();
-
+  const today = todayKey();
   const itemsByDate = useMemo(() => {
     const map: Record<string, ApiRecord[]> = {};
     items.forEach((item) => { (map[text(item.date_id)] ||= []).push(item); });
     Object.values(map).forEach((list) => list.sort((a, b) => Number(a.urutan || 0) - Number(b.urutan || 0)));
     return map;
   }, [items]);
-
-  const statusMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    dates.forEach((date) => { const key = dateKey(date.tanggal); if (key) map[key] = text(date.status) || "Draft"; });
-    return map;
-  }, [dates]);
-
-  const groups = useMemo(() => {
-    const byWeek: Record<string, { ws: Date; rows: ApiRecord[] }> = {};
-    dates.forEach((date) => { const key = dateKey(date.tanggal) || todayKey(); const ws = startOfWeek(key); (byWeek[localIso(ws)] ||= { ws, rows: [] }).rows.push(date); });
-    return Object.keys(byWeek).sort().map((wk) => ({ wk, ...byWeek[wk] }));
-  }, [dates]);
-
-  const currentWeek = localIso(startOfWeek(todayKey()));
-  const collapsedSet = useMemo(() => (initCollapse ? collapsed : new Set(groups.map((g) => g.wk).filter((wk) => wk !== currentWeek))), [initCollapse, collapsed, groups, currentWeek]);
-  function toggleWeek(wk: string) { const next = new Set(collapsedSet); if (next.has(wk)) next.delete(wk); else next.add(wk); setCollapsed(next); setInitCollapse(true); }
+  const perDay = useMemo(() => byDay(dates, "tanggal"), [dates]);
+  const planned = useMemo(() => Object.fromEntries(Object.entries(perDay).map(([key, rows]) => [key, rows.map((row) => text(row.status) || "Draft")])), [perDay]);
+  const weeks = useMemo(() => groupByWeek(dates, "tanggal", today), [dates, today]);
+  const toggles = useWeekToggles(weeks.map((w) => w.start));
   // Search result opened: open the week that holds the date so its card can be shown.
-  useRecordFocus((id) => {
-    const week = groups.find((group) => group.rows.some((date) => text(date.id) === id))?.wk;
-    if (week && collapsedSet.has(week)) { const next = new Set(collapsedSet); next.delete(week); setCollapsed(next); setInitCollapse(true); }
-  });
+  useRecordFocus((id) => { const week = weeks.find((w) => w.items.some((date) => text(date.id) === id)); if (week) toggles.open(week.start); });
+  const shownModal = addModal || (adding ? { items: [] } : null);
+  const close = () => { setAddModal(null); onAdded(); };
+  const scrollTo = (id: string) => { const week = weeks.find((w) => w.items.some((date) => text(date.id) === id)); if (week) toggles.open(week.start); requestAnimationFrame(() => document.querySelector(`[data-record-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" })); };
 
   return (
     <>
-      <AiPanel kind="story" onParsed={(data) => setAddModal({ preDate: dateKey(data.tanggal) || undefined, items: Array.isArray(data.items) ? (data.items as Array<{ isi?: string }>).map((it) => text(it.isi)).filter(Boolean) : [] })} />
-      <LinksPanel kind="sp" links={links} />
-
-      <div className={styles.sectionBlock}>
-        <div className={styles.sectionLabel}><i className="ti ti-calendar" /> Kalender Story</div>
-        <OverviewCalendar
-          month={cal.m} year={cal.y}
-          onNav={(delta) => setCal((c) => { const m = c.m + delta; if (m > 11) return { m: 0, y: c.y + 1 }; if (m < 0) return { m: 11, y: c.y - 1 }; return { m, y: c.y }; })}
-          dotsForDay={(key) => { const st = statusMap[key]; if (!st) return []; const count = Math.min((itemsByDate[dateIdForKey(dates, key)] || []).length || 1, 3); return Array.from({ length: count }, () => (st === "Done" ? "#3b6d11" : "#c0392b")); }}
-          onDayClick={(key, has) => { if (!has) setAddModal({ preDate: key, items: [] }); }}
+      <div className={s.tools}><AiBar kind="story" onParsed={(data) => setAddModal({ preDate: dayKey(data.tanggal) || undefined, items: Array.isArray(data.items) ? (data.items as Array<{ isi?: string }>).map((it) => text(it.isi)).filter(Boolean) : [] })} /><LinksBar kind="sp" links={links} /></div>
+      <div className={s.planner}>
+        <PlannerCalendar
+          itemsFor={(day) => (perDay[day] || []).map((date) => ({ id: text(date.id), title: (() => { const n = (itemsByDate[text(date.id)] || []).length; return `${n} ${n === 1 ? "story" : "stories"}`; })(), done: text(date.status) === "Done" }))}
+          label="Story calendar"
+          onEmptyDay={(day) => { const existing = perDay[day]?.[0]; if (existing) scrollTo(text(existing.id)); else setAddModal({ preDate: day, items: [] }); }}
+          onItem={scrollTo}
         />
+        <section aria-label="Story agenda" className={s.agenda}>
+          {!dates.length ? <p className={s.empty}>No story dates yet. Pick a day on the calendar or use “Add story date”.</p> : weeks.map((week) => (
+            <WeekGroup count={week.items.length} done={week.done} key={week.start} label={week.label} onToggle={() => toggles.toggle(week.start)} open={toggles.isOpen(week.start)} range={week.range}>
+              {week.items.map((date) => <StoryDateCard date={date} items={itemsByDate[text(date.id)] || []} key={text(date.id)} pending={pending} start={start} />)}
+            </WeekGroup>
+          ))}
+        </section>
       </div>
-
-      <div className={styles.sectionRow}>
-        <div className={styles.sectionLabel} style={{ marginBottom: 0 }}><i className="ti ti-layout-rows" /> Jadwal Posting</div>
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setAddModal({ items: [] })}><i className="ti ti-plus" /> Add story date</button>
-      </div>
-
-      {!dates.length ? (
-        <div className={styles.empty}><i className="ti ti-calendar-off" />No story dates yet. Click &quot;+ Add story date&quot; to start.</div>
-      ) : groups.map(({ wk, ws, rows }) => {
-        const isCollapsed = collapsedSet.has(wk);
-        const done = rows.filter((d) => text(d.status) === "Done").length;
-        const draft = rows.length - done;
-        return (
-          <div key={wk} className={styles.weekGroup}>
-            <div className={styles.weekHeader} onClick={() => toggleWeek(wk)}>
-              <i className={`ti ti-chevron-${isCollapsed ? "right" : "down"}`} />
-              <span className={styles.weekLabel}>{weekLabel(ws)}</span>
-              <span className={styles.weekRange}>{weekRange(ws)}</span>
-              <span className={styles.weekSpacer} />
-              {isCollapsed ? (
-                <span className={styles.weekBadges}>
-                  {draft > 0 ? <span className={`${styles.badge} ${styles.badgeDraft}`}>{draft} draft</span> : null}
-                  {done > 0 ? <span className={`${styles.badge} ${styles.badgeDone}`}>{done} done</span> : null}
-                </span>
-              ) : null}
-            </div>
-            {!isCollapsed ? rows.map((date) => <StoryDateCard key={text(date.id)} date={date} items={itemsByDate[text(date.id)] || []} pending={pending} start={start} />) : null}
-          </div>
-        );
-      })}
-
-      {addModal ? <StoryDateModal preDate={addModal.preDate} presetItems={addModal.items} onClose={() => setAddModal(null)} /> : null}
+      {shownModal ? <StoryDateModal onClose={close} planned={planned} preDate={shownModal.preDate} presetItems={shownModal.items} /> : null}
     </>
   );
 }
 
-function dateIdForKey(dates: ApiRecord[], key: string) { const found = dates.find((d) => dateKey(d.tanggal) === key); return found ? text(found.id) : ""; }
-
 function StoryDateCard({ date, items, pending, start }: { date: ApiRecord; items: ApiRecord[]; pending: boolean; start: (cb: () => void) => void }) {
-  const [open, setOpen] = useState(true);
-  const isDone = text(date.status) === "Done";
+  const done = text(date.status) === "Done";
+  const label = dayKey(date.tanggal) ? weekdayDay(dayKey(date.tanggal)) : "No date";
   return (
-    <div className={styles.itemCard} data-record-id={text(date.id)} style={{ borderLeftColor: isDone ? "#3b6d11" : "#888780" }}>
-      <div className={styles.itemCardInner} style={{ cursor: "pointer" }} onClick={() => setOpen((v) => !v)}>
-        <div className={styles.itemHead}>
-          <input type="checkbox" className={styles.checkbox} checked={isDone} disabled={pending} onClick={(event) => event.stopPropagation()} onChange={(event) => start(() => { void setStoryPlanStatusAction(text(date.id), event.target.checked ? "Done" : "Draft"); })} />
-          <div className={styles.itemGrow}>
-            <div className={styles.titleRow} style={{ marginBottom: 2 }}>
-              <span className={`${styles.itemTitle} ${isDone ? styles.itemTitleDone : ""}`}>{fmtDt(date.tanggal)}</span>
-            </div>
-            <div className={styles.subMeta}><i className="ti ti-file-text" /><span>{items.length} story direncanakan</span>{isDone ? <span style={{ fontSize: 11, color: "#3b6d11", fontWeight: 500 }}> · Selesai diposting</span> : null}</div>
-          </div>
-          <span className={styles.pill} style={{ background: "#e8f0fc", color: "#185fa5", fontWeight: 500 }}>{items.length} story</span>
-          <button aria-label="Delete story date" type="button" className={styles.editBtn} onClick={async (event) => { event.stopPropagation(); if (await confirmAction({ title: "Delete this story date?", message: "All story slides on this date are deleted too. This cannot be undone.", confirmLabel: "Delete story date", danger: true })) start(() => { void deleteStoryDateAction(text(date.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 13 }} /></button>
-          <i className={`ti ti-chevron-${open ? "down" : "right"}`} style={{ fontSize: 12, color: "var(--text-muted)", alignSelf: "center" }} />
-        </div>
-      </div>
-      {open ? (
-        <div className={styles.storyBody}>
-          {items.length ? items.map((item, index) => <StoryItemRow key={text(item.id)} item={item} index={index} start={start} />) : <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>No stories yet. Click &quot;+ Add story&quot;.</div>}
-          <button type="button" className={styles.linkTextBtn} onClick={() => start(() => { void addStoryItemAction(text(date.id)); })}><i className="ti ti-plus" style={{ fontSize: 11 }} /> Add story</button>
-        </div>
-      ) : null}
-    </div>
+    <article className={done ? s.storyDone : s.story} data-record-id={text(date.id)}>
+      <header className={s.storyHead}>
+        <button aria-label={done ? `Mark as draft: ${label}` : `Mark posted: ${label}`} aria-pressed={done} className={done ? s.checkOn : s.check} disabled={pending} onClick={() => start(() => { void setStoryPlanStatusAction(text(date.id), done ? "Draft" : "Done"); })} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
+        <div className={s.storyTitle}><b>{label}</b><small>{items.length} stor{items.length === 1 ? "y" : "ies"}{done ? " · posted" : ""}</small></div>
+        <button aria-label="Delete story date" className={s.iconButton} onClick={async () => { if (await confirmAction({ title: "Delete this story date?", message: "All story slides on this date are deleted too. This cannot be undone.", confirmLabel: "Delete story date", danger: true })) start(() => { void deleteStoryDateAction(text(date.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+      </header>
+      <ol className={s.slides}>
+        {items.map((item, index) => <StoryItemRow index={index} item={item} key={`${text(item.id)}:${text(item.isi)}`} start={start} />)}
+      </ol>
+      <button className={s.addSlide} onClick={() => start(() => { void addStoryItemAction(text(date.id)); })} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add story</button>
+    </article>
   );
 }
 
 function StoryItemRow({ item, index, start }: { item: ApiRecord; index: number; start: (cb: () => void) => void }) {
-  const [value, setValue] = useState(text(item.isi));
-  useEffect(() => setValue(text(item.isi)), [item.isi]);
   return (
-    <div className={styles.storyItemRow}>
-      <span className={styles.storyItemNum}>{index + 1}</span>
-      <input className={styles.storyItemInput} value={value} onChange={(event) => setValue(event.target.value)} onBlur={() => { if (value !== text(item.isi)) start(() => { void updateStoryItemAction(text(item.id), value); }); }} onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }} />
-      <button aria-label="Delete story slide" type="button" className={styles.chipDelete} style={{ padding: 4 }} onClick={async () => { if (await confirmAction({ title: "Delete this story slide?", confirmLabel: "Delete story slide", danger: true })) start(() => { void deleteStoryItemAction(text(item.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
-    </div>
+    <li className={s.slide}>
+      <span className={s.slideNo}>{index + 1}</span>
+      <input aria-label={`Story ${index + 1}`} className={s.slideInput} defaultValue={text(item.isi)} onBlur={(event) => { if (event.target.value !== text(item.isi)) { const value = event.target.value; start(() => { void updateStoryItemAction(text(item.id), value); }); } }} onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }} placeholder="What this story says…" />
+      <button aria-label="Delete story slide" className={s.iconButton} onClick={async () => { if (await confirmAction({ title: "Delete this story slide?", confirmLabel: "Delete story slide", danger: true })) start(() => { void deleteStoryItemAction(text(item.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+    </li>
   );
 }
 
-function StoryDateModal({ preDate, presetItems, onClose }: { preDate?: string; presetItems: string[]; onClose: () => void }) {
+function StoryDateModal({ preDate, presetItems, planned, onClose }: { preDate?: string; presetItems: string[]; planned: Record<string, string[]>; onClose: () => void }) {
   const [tanggal, setTanggal] = useState(preDate || todayKey());
-  const [stories, setStories] = useState<string[]>(() => { const base = presetItems.length ? presetItems : []; return [...base, ...Array(Math.max(3 - base.length, 0)).fill("")]; });
+  const [stories, setStories] = useState<string[]>(() => [...presetItems, ...Array(Math.max(3 - presetItems.length, 0)).fill("")]);
   const [pending, start] = useTransition();
-
+  const req = useRequired();
   function save() {
-    const filled = stories.map((s) => s.trim()).filter(Boolean);
-    if (!filled.length) return;
+    const filled = stories.map((v) => v.trim()).filter(Boolean);
+    if (!filled.length) { req.check(""); return; }
     start(async () => { await createStoryDateAction({ tanggal, items: filled }); onClose(); });
   }
-
   return (
-    <Modal size="md" title="Add story date" onClose={onClose}
+    <Modal onClose={onClose} size="md" title="Add story date"
       footer={<>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !stories.some((s) => s.trim())} onClick={save}><i className="ti ti-check" /> Save story date</button>
+        <span className={s.spacer} />
+        <button className={s.ghostSm} onClick={onClose} type="button">Cancel</button>
+        <button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save story date</button>
       </>}
     >
-      <Field label="Date *"><DatePicker selected={tanggal} statusMap={{}} onPick={setTanggal} /></Field>
-      {stories.map((value, index) => (
-        <Field key={index} label={`Story ${index + 1}`} optional={index > 0}>
-          <input className={styles.input} placeholder={`Konteks / judul / objective story ${index + 1}...`} value={value} onChange={(event) => setStories((list) => list.map((item, i) => (i === index ? event.target.value : item)))} />
-        </Field>
-      ))}
-      <button type="button" className={styles.linkTextBtn} onClick={() => setStories((list) => [...list, ""])}><i className="ti ti-plus" style={{ fontSize: 11 }} /> Add story</button>
+      <div className={s.formSplit}>
+        <Field label="Date" required><DatePicker onPick={setTanggal} planned={planned} selected={tanggal} /></Field>
+        <div className={s.formStack}>
+          <p className={s.hint}>{shortDay(tanggal)} · at least one story</p>
+          {stories.map((value, index) => (
+            <Field key={index} label={`Story ${index + 1}`} optional={index > 0} required={index === 0}>
+              <input aria-invalid={(index === 0 && req.invalid) || undefined} className={index === 0 && req.invalid ? s.inputInvalid : s.input} onChange={(event) => { setStories((list) => list.map((item, i) => (i === index ? event.target.value : item))); if (index === 0) req.clear(); }} placeholder={`Context, title or goal of story ${index + 1}…`} id={index === 0 ? req.id : undefined} value={value} />
+            </Field>
+          ))}
+          <button className={s.addSlide} onClick={() => setStories((list) => [...list, ""])} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add story</button>
+        </div>
+      </div>
     </Modal>
   );
 }
 
-/* ══════════════ KOL TAB ══════════════ */
-const KOL_PLATFORM_COLORS = {
-  ig: { bg: "#fce4ec", fg: "#c2185b" },
-  tiktok: { bg: "#f3e5f5", fg: "#7b1fa2" },
-  linkedin: { bg: "#e3f2fd", fg: "#1565c0" },
-};
-
-// A KOL can hold Instagram, TikTok and LinkedIn identities at once. link_ig /
-// link_tiktok are legacy profile-URL overrides and win over a handle-derived link.
+/* ══════════════ KOL LIST ══════════════ */
+// A KOL can hold Instagram, TikTok and LinkedIn at once. link_ig / link_tiktok are legacy profile-URL overrides.
 function kolPlatforms(kol: ApiRecord) {
   const igLink = text(kol.link_ig) || (text(kol.username_ig) ? `https://instagram.com/${text(kol.username_ig)}` : "");
   const ttLink = text(kol.link_tiktok) || (text(kol.username_tiktok) ? `https://tiktok.com/@${text(kol.username_tiktok)}` : "");
   const linkedin = text(kol.linkedin_url);
-  const followers = (value: unknown) => (Number(value) ? ` · ${fmtFollowers(Number(value))}` : "");
-  const chips: Array<{ key: string; label: string; href: string; color: { bg: string; fg: string } }> = [];
-  if (igLink) chips.push({ key: "ig", label: `IG${followers(kol.followers_ig)}`, href: igLink, color: KOL_PLATFORM_COLORS.ig });
-  if (ttLink) chips.push({ key: "tiktok", label: `TikTok${followers(kol.followers_tiktok)}`, href: ttLink, color: KOL_PLATFORM_COLORS.tiktok });
-  if (linkedin) chips.push({ key: "linkedin", label: "LinkedIn", href: linkedin, color: KOL_PLATFORM_COLORS.linkedin });
+  const chips: Array<{ key: string; icon: string; label: string; count: string; href: string }> = [];
+  if (igLink) chips.push({ key: "ig", icon: "ti-brand-instagram", label: "Instagram", count: fmtFollowers(Number(kol.followers_ig)), href: igLink });
+  if (ttLink) chips.push({ key: "tiktok", icon: "ti-brand-tiktok", label: "TikTok", count: fmtFollowers(Number(kol.followers_tiktok)), href: ttLink });
+  if (linkedin) chips.push({ key: "linkedin", icon: "ti-brand-linkedin", label: "LinkedIn", count: "", href: linkedin });
   return chips;
 }
 
-function KolTab({ kols }: { kols: ApiRecord[] }) {
+function KolView({ kols, adding, onAdded }: { kols: ApiRecord[]; adding: boolean; onAdded: () => void }) {
   const [search, setSearch] = useState("");
-  const [niche, setNiche] = useState("all");
+  const [niche, setNiche] = useState("");
   const [modal, setModal] = useState<{ kol: ApiRecord | null } | null>(null);
   const [pending, start] = useTransition();
-
-  const niches = useMemo(() => [...new Set(kols.map((k) => text(k.niche)).filter(Boolean))], [kols]);
+  const niches = useMemo(() => [...new Set(kols.map((k) => text(k.niche)).filter(Boolean))].sort(), [kols]);
   const filtered = kols.filter((k) => {
     const q = search.toLowerCase();
-    const haystack = [k.nama, k.username_ig, k.username_tiktok].map((value) => text(value).toLowerCase());
-    if (q && !haystack.some((value) => value.includes(q))) return false;
-    if (niche !== "all" && text(k.niche) !== niche) return false;
-    return true;
+    if (q && ![k.nama, k.username_ig, k.username_tiktok].some((value) => text(value).toLowerCase().includes(q))) return false;
+    return !niche || text(k.niche) === niche;
   });
+  const shown = modal || (adding ? { kol: null } : null);
+  const close = () => { setModal(null); onAdded(); };
 
   return (
-    <>
-      <div className={styles.filterBar}>
-        <input className={styles.filterInput} placeholder="Search name or username…" value={search} onChange={(event) => setSearch(event.target.value)} />
-        {[["all", "Semua"], ...niches.map((n) => [n, n] as [string, string])].map(([value, label]) => (
-          <button key={value} type="button" className={`${styles.filterPill} ${niche === value ? styles.filterPillActive : ""}`} onClick={() => setNiche(value)}>{label}</button>
-        ))}
-        <span className={styles.filterSpacer} />
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ kol: null })}><i className="ti ti-plus" /> Add KOL</button>
+    <section aria-label="KOL list" className={s.directory}>
+      <div className={s.toolbar}>
+        <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search KOLs" onChange={(event) => setSearch(event.target.value)} placeholder="Search name or username…" value={search} /></label>
+        <div className={s.pills} role="group" aria-label="Niche">
+          {[["", "All", kols.length] as const, ...niches.map((n) => [n, n, kols.filter((k) => text(k.niche) === n).length] as const)].map(([value, label, count]) => (
+            <button aria-pressed={niche === value} className={niche === value ? s.pillOn : s.pill} key={value || "all"} onClick={() => setNiche(value)} type="button">{label} <span>{count}</span></button>
+          ))}
+        </div>
       </div>
-      {!filtered.length ? (
-        <div className={styles.empty}><i className="ti ti-users-group" />No KOLs yet</div>
-      ) : (
-        <div className={styles.grid3}>
+      {!filtered.length ? <p className={s.empty}>{kols.length ? "No KOLs match." : "No KOLs yet."}</p> : (
+        <ul className={s.cards}>
           {filtered.map((k) => {
-            const photo = text(k.foto_url);
-            const platforms = kolPlatforms(k);
+            const name = text(k.nama) || "Unnamed";
             return (
-              <div key={text(k.id)} className={styles.personCard}>
-                <div className={styles.personTop}>
-                  <div className={styles.personHead}>
-                    <Avatar url={photo} name={text(k.nama)} />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className={styles.personName}>{text(k.nama) || "—"}</div>
-                      {k.niche ? <span className={styles.nichePill}>{text(k.niche)}</span> : null}
-                    </div>
-                  </div>
-                  {platforms.length ? (
-                    <div className={styles.personTags} style={{ marginBottom: 8 }}>
-                      {platforms.map((chip) => (
-                        <a key={chip.key} className={styles.tagPill} href={chip.href} target="_blank" rel="noopener noreferrer" style={{ background: chip.color.bg, color: chip.color.fg, borderColor: "transparent", fontWeight: 600 }}>{chip.label}</a>
-                      ))}
-                    </div>
-                  ) : null}
-                  {k.rate_card_text ? <div className={styles.rateBox}>Rate: {text(k.rate_card_text)}</div> : null}
-                  {k.contact ? <div className={styles.rateBox}>Kontak: {text(k.contact)}</div> : null}
-                  {k.catatan ? <div className={styles.personDesc}>{text(k.catatan)}</div> : null}
+              <li className={s.personCard} key={text(k.id)}>
+                <div className={s.personHead}>
+                  <Avatar large name={name} url={text(k.foto_url)} />
+                  <div className={s.personName}><b>{name}</b>{k.niche ? <small>{text(k.niche)}</small> : null}</div>
                 </div>
-                <div className={styles.cardFooter}>
-                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px" }} onClick={() => setModal({ kol: k })}><i className="ti ti-edit" style={{ fontSize: 12 }} /></button>
-                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", color: "var(--red)" }} aria-label="Delete KOL" disabled={pending} onClick={async () => { if (await confirmAction({ title: "Delete this KOL?", confirmLabel: "Delete KOL", danger: true })) start(() => { void deleteKolAction(text(k.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
-                  {k.rate_card_file_url ? <a className={`${styles.btn} ${styles.btnSm} ${styles.cardFooterSpacer}`} href={text(k.rate_card_file_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11 }}><i className="ti ti-file" style={{ fontSize: 11 }} /> Rate Card</a> : null}
+                {kolPlatforms(k).length ? <div className={s.platforms}>{kolPlatforms(k).map((chip) => <a href={chip.href} key={chip.key} rel="noopener noreferrer" target="_blank"><i className={`ti ${chip.icon}`} aria-hidden="true" /> {chip.count || chip.label}</a>)}</div> : null}
+                <dl className={s.facts}>
+                  {k.rate_card_text ? <div><dt>Rate</dt><dd>{text(k.rate_card_text)}</dd></div> : null}
+                  {k.contact ? <div><dt>Contact</dt><dd>{text(k.contact)}</dd></div> : null}
+                </dl>
+                {k.catatan ? <p className={s.note}>{text(k.catatan)}</p> : null}
+                <div className={s.cardActions}>
+                  {k.rate_card_file_url ? <a className={s.ghostSm} href={text(k.rate_card_file_url)} rel="noopener noreferrer" target="_blank"><i className="ti ti-file" aria-hidden="true" /> Rate card</a> : null}
+                  <span className={s.spacer} />
+                  <button aria-label={`Edit ${name}`} className={s.iconButton} onClick={() => setModal({ kol: k })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                  <button aria-label="Delete KOL" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Delete ${name}?`, confirmLabel: "Delete KOL", danger: true })) start(() => { void deleteKolAction(text(k.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
-      {modal ? <KolModal kol={modal.kol} onClose={() => setModal(null)} /> : null}
-    </>
+      {shown ? <KolModal kol={shown.kol} onClose={close} /> : null}
+    </section>
   );
 }
 
@@ -862,99 +642,90 @@ function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void
     catatan: text(kol?.catatan), contact: text(kol?.contact),
   });
   const [pending, start] = useTransition();
+  const req = useRequired();
   const set = (patch: Partial<KolInput>) => setForm((f) => ({ ...f, ...patch }));
-
   function save() {
-    if (!form.nama?.trim()) return;
+    if (!req.check(text(form.nama))) return;
     start(async () => { if (kol) await updateKolAction(text(kol.id), form); else await createKolAction(form); onClose(); });
   }
-
   return (
-    <Modal title={`${kol ? "Edit" : "Add"} KOL`} onClose={onClose}
-      footer={<>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Save KOL</button>
-      </>}
+    <Modal onClose={onClose} title={`${kol ? "Edit" : "Add"} KOL`}
+      footer={<><span className={s.spacer} /><button className={s.ghostSm} onClick={onClose} type="button">Cancel</button><button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save KOL</button></>}
     >
-      <Field label="Name *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
-      <Field label="Niche"><input className={styles.input} value={text(form.niche)} onChange={(event) => set({ niche: event.target.value })} placeholder="e.g. Career / Finance" /></Field>
-      <Field label="Instagram username" optional><input className={styles.input} value={text(form.username_ig)} onChange={(event) => set({ username_ig: event.target.value })} placeholder="tanpa @" /></Field>
-      <Field label="Instagram followers" optional><input className={styles.input} type="number" min={0} value={form.followers_ig ?? ""} onChange={(event) => set({ followers_ig: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
-      <Field label="TikTok username" optional><input className={styles.input} value={text(form.username_tiktok)} onChange={(event) => set({ username_tiktok: event.target.value })} placeholder="tanpa @" /></Field>
-      <Field label="TikTok followers" optional><input className={styles.input} type="number" min={0} value={form.followers_tiktok ?? ""} onChange={(event) => set({ followers_tiktok: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
-      <Field label="LinkedIn URL" optional><input className={styles.input} value={text(form.linkedin_url)} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://linkedin.com/in/..." /></Field>
-      <Field label="Contact" optional><input className={styles.input} value={text(form.contact)} onChange={(event) => set({ contact: event.target.value })} placeholder="WA / email" /></Field>
-      <Field label="Rate card" optional><textarea className={styles.textarea} value={text(form.rate_card_text)} onChange={(event) => set({ rate_card_text: event.target.value })} placeholder="e.g. 1 feed + 3 stories — Rp 2.500.000" /></Field>
-      <Field label="Rate card file URL" optional><input className={styles.input} value={text(form.rate_card_file_url)} onChange={(event) => set({ rate_card_file_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Photo URL" optional><input className={styles.input} value={text(form.foto_url)} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Notes" optional><textarea className={styles.textarea} value={text(form.catatan)} onChange={(event) => set({ catatan: event.target.value })} /></Field>
+      <div className={s.formGrid}>
+        <Field label="Name" required><input aria-invalid={req.invalid || undefined} autoFocus className={req.invalid ? s.inputInvalid : s.input} onChange={(event) => { set({ nama: event.target.value }); req.clear(); }} id={req.id} value={text(form.nama)} /></Field>
+        <Field label="Niche"><input className={s.input} onChange={(event) => set({ niche: event.target.value })} placeholder="e.g. Career / Finance" value={text(form.niche)} /></Field>
+        <Field label="Instagram username" optional><input className={s.input} onChange={(event) => set({ username_ig: event.target.value })} placeholder="without @" value={text(form.username_ig)} /></Field>
+        <Field label="Instagram followers" optional><input className={s.input} min={0} onChange={(event) => set({ followers_ig: event.target.value === "" ? null : Number(event.target.value) })} type="number" value={form.followers_ig ?? ""} /></Field>
+        <Field label="TikTok username" optional><input className={s.input} onChange={(event) => set({ username_tiktok: event.target.value })} placeholder="without @" value={text(form.username_tiktok)} /></Field>
+        <Field label="TikTok followers" optional><input className={s.input} min={0} onChange={(event) => set({ followers_tiktok: event.target.value === "" ? null : Number(event.target.value) })} type="number" value={form.followers_tiktok ?? ""} /></Field>
+        <Field label="LinkedIn URL" optional><input className={s.input} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://linkedin.com/in/…" value={text(form.linkedin_url)} /></Field>
+        <Field label="Contact" optional><input className={s.input} onChange={(event) => set({ contact: event.target.value })} placeholder="WhatsApp / email" value={text(form.contact)} /></Field>
+      </div>
+      <Field label="Rate card" optional><textarea className={s.textarea} onChange={(event) => set({ rate_card_text: event.target.value })} placeholder="e.g. 1 feed + 3 stories — Rp 2.500.000" value={text(form.rate_card_text)} /></Field>
+      <div className={s.formGrid}>
+        <Field label="Rate card file URL" optional><input className={s.input} onChange={(event) => set({ rate_card_file_url: event.target.value })} placeholder="https://…" value={text(form.rate_card_file_url)} /></Field>
+        <Field label="Photo URL" optional><input className={s.input} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://…" value={text(form.foto_url)} /></Field>
+      </div>
+      <Field label="Notes" optional><textarea className={s.textarea} onChange={(event) => set({ catatan: event.target.value })} value={text(form.catatan)} /></Field>
     </Modal>
   );
 }
 
-/* ══════════════ MT STORY TAB ══════════════ */
-function MtTab({ stories }: { stories: ApiRecord[] }) {
+/* ══════════════ MT STORY ══════════════ */
+function MtView({ stories, adding, onAdded }: { stories: ApiRecord[]; adding: boolean; onAdded: () => void }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "posted" | "unposted">("all");
   const [modal, setModal] = useState<{ story: ApiRecord | null } | null>(null);
   const [pending, start] = useTransition();
-
-  const filtered = stories.filter((s) => {
-    if (filter === "posted" && !s.is_posted) return false;
-    if (filter === "unposted" && s.is_posted) return false;
+  const postedCount = stories.filter((st) => st.is_posted).length;
+  const filtered = stories.filter((st) => {
+    if (filter === "posted" && !st.is_posted) return false;
+    if (filter === "unposted" && st.is_posted) return false;
     const q = search.toLowerCase();
-    if (q && !text(s.nama).toLowerCase().includes(q) && !text(s.perusahaan).toLowerCase().includes(q)) return false;
-    return true;
+    return !q || text(st.nama).toLowerCase().includes(q) || text(st.perusahaan).toLowerCase().includes(q);
   });
+  const shown = modal || (adding ? { story: null } : null);
+  const close = () => { setModal(null); onAdded(); };
+  const options: Array<[typeof filter, string, number]> = [["all", "All", stories.length], ["unposted", "Not posted", stories.length - postedCount], ["posted", "Posted", postedCount]];
 
   return (
-    <>
-      <div className={styles.filterBar}>
-        <input className={styles.filterInput} placeholder="Search name or company…" value={search} onChange={(event) => setSearch(event.target.value)} />
-        {([["all", "Semua"], ["posted", "Posted"], ["unposted", "Not posted"]] as const).map(([value, label]) => (
-          <button key={value} type="button" className={`${styles.filterPill} ${filter === value ? styles.filterPillActive : ""}`} onClick={() => setFilter(value)}>{label}</button>
-        ))}
-        <span className={styles.filterSpacer} />
-        <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} type="button" onClick={() => setModal({ story: null })}><i className="ti ti-plus" /> Add MT story</button>
+    <section aria-label="MT Story" className={s.directory}>
+      <div className={s.toolbar}>
+        <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search MT stories" onChange={(event) => setSearch(event.target.value)} placeholder="Search name or company…" value={search} /></label>
+        <div className={s.pills} role="group" aria-label="Posted">
+          {options.map(([value, label, count]) => <button aria-pressed={filter === value} className={filter === value ? s.pillOn : s.pill} key={value} onClick={() => setFilter(value)} type="button">{label} <span>{count}</span></button>)}
+        </div>
       </div>
-      {!filtered.length ? (
-        <div className={styles.empty}><i className="ti ti-user-off" />No data yet</div>
-      ) : (
-        <div className={styles.grid3}>
-          {filtered.map((s) => {
-            const photo = text(s.foto_url);
-            const posted = Boolean(s.is_posted);
-            const tags: ReactNode[] = [];
-            if (s.ig_url) tags.push(<a key="ig" className={styles.tagPill} href={text(s.ig_url)} target="_blank" rel="noopener noreferrer">IG</a>);
-            if (s.linkedin_url) tags.push(<a key="li" className={styles.tagPill} href={text(s.linkedin_url)} target="_blank" rel="noopener noreferrer">LinkedIn</a>);
-            if (s.brief_url) tags.push(<a key="br" className={styles.tagPill} href={text(s.brief_url)} target="_blank" rel="noopener noreferrer">Brief</a>);
+      {!filtered.length ? <p className={s.empty}>{stories.length ? "No MT stories match." : "No MT stories yet."}</p> : (
+        <ul className={s.cards}>
+          {filtered.map((st) => {
+            const name = text(st.nama) || "Unnamed"; const posted = Boolean(st.is_posted);
+            const links = [["IG", st.ig_url, "ti-brand-instagram"], ["LinkedIn", st.linkedin_url, "ti-brand-linkedin"], ["Brief", st.brief_url, "ti-file-text"]].filter(([, url]) => text(url));
+            const wa = text(st.wa).replace(/\D/g, "").replace(/^0/, "62");
             return (
-              <div key={text(s.id)} className={`${styles.personCard} ${posted ? styles.personCardPosted : ""}`}>
-                <div className={styles.personTop}>
-                  <div className={styles.personHead}>
-                    <Avatar url={photo} name={text(s.nama)} />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className={styles.personName}>{text(s.nama) || "—"}</div>
-                      <div className={styles.personSub}>{[text(s.perusahaan), text(s.batch)].filter(Boolean).join(" · ") || "—"}</div>
-                    </div>
-                    <span className={posted ? styles.statusPillPosted : styles.statusPillPending}>{posted ? "Posted" : "Not posted"}</span>
-                  </div>
-                  {s.deskripsi ? <div className={styles.personDesc}>{text(s.deskripsi)}</div> : null}
-                  {tags.length ? <div className={styles.personTags}>{tags}</div> : null}
+              <li className={posted ? s.personCardMuted : s.personCard} key={text(st.id)}>
+                <div className={s.personHead}>
+                  <Avatar large name={name} url={text(st.foto_url)} />
+                  <div className={s.personName}><b>{name}</b><small>{[text(st.perusahaan), text(st.batch)].filter(Boolean).join(" · ") || "—"}</small></div>
+                  {posted ? <span className={s.postedChip}><i className="ti ti-check" aria-hidden="true" /> Posted</span> : null}
                 </div>
-                <div className={styles.cardFooter}>
-                  {s.wa ? <a className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", borderColor: "var(--green)", color: "var(--green)" }} href={`https://wa.me/${text(s.wa).replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"><i className="ti ti-brand-whatsapp" style={{ fontSize: 12 }} /></a> : null}
-                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px" }} onClick={() => setModal({ story: s })}><i className="ti ti-edit" style={{ fontSize: 12 }} /></button>
-                  <button type="button" className={`${styles.btn} ${styles.btnSm}`} style={{ padding: "4px 8px", color: "var(--red)" }} aria-label="Delete MT story" disabled={pending} onClick={async () => { if (await confirmAction({ title: "Delete this MT story?", confirmLabel: "Delete MT story", danger: true })) start(() => { void deleteMtStoryAction(text(s.id)); }); }}><i className="ti ti-trash" style={{ fontSize: 12 }} /></button>
-                  {posted ? <span className={styles.cardFooterSpacer} style={{ fontSize: 11, color: "var(--text-hint)" }}>✓ Posted</span> : <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm} ${styles.cardFooterSpacer}`} style={{ fontSize: 11 }} disabled={pending} onClick={() => start(() => { void setMtPostedAction(text(s.id), true); })}>Tandai Posted</button>}
+                {st.deskripsi ? <p className={s.note}>{text(st.deskripsi)}</p> : null}
+                {links.length ? <div className={s.platforms}>{links.map(([label, url, icon]) => <a href={text(url)} key={text(label)} rel="noopener noreferrer" target="_blank"><i className={`ti ${text(icon)}`} aria-hidden="true" /> {text(label)}</a>)}</div> : null}
+                <div className={s.cardActions}>
+                  {wa ? <a aria-label={`WhatsApp ${name}`} className={s.iconButton} href={`https://wa.me/${wa}`} rel="noopener noreferrer" target="_blank"><i className="ti ti-brand-whatsapp" aria-hidden="true" /></a> : null}
+                  <button aria-label={`Edit ${name}`} className={s.iconButton} onClick={() => setModal({ story: st })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                  <button aria-label="Delete MT story" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Delete the MT story of ${name}?`, confirmLabel: "Delete MT story", danger: true })) start(() => { void deleteMtStoryAction(text(st.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+                  <span className={s.spacer} />
+                  {!posted ? <button className={s.primarySm} disabled={pending} onClick={() => start(() => { void setMtPostedAction(text(st.id), true); })} type="button">Mark as posted</button> : null}
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
-      {modal ? <MtModal story={modal.story} onClose={() => setModal(null)} /> : null}
-    </>
+      {shown ? <MtModal onClose={close} story={shown.story} /> : null}
+    </section>
   );
 }
 
@@ -964,30 +735,30 @@ function MtModal({ story, onClose }: { story: ApiRecord | null; onClose: () => v
     ig_url: text(story?.ig_url), linkedin_url: text(story?.linkedin_url), brief_url: text(story?.brief_url), foto_url: text(story?.foto_url), is_posted: Boolean(story?.is_posted),
   });
   const [pending, start] = useTransition();
+  const req = useRequired();
   const set = (patch: Partial<MtStoryInput>) => setForm((f) => ({ ...f, ...patch }));
-
   function save() {
-    if (!form.nama?.trim()) return;
+    if (!req.check(text(form.nama))) return;
     start(async () => { if (story) await updateMtStoryAction(text(story.id), form); else await createMtStoryAction(form); onClose(); });
   }
-
   return (
-    <Modal title={`${story ? "Edit" : "Add"} MT story`} onClose={onClose}
-      footer={<>
-        <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={onClose}>Cancel</button>
-        <button type="button" className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending || !form.nama?.trim()} onClick={save}><i className="ti ti-check" /> Save MT story</button>
-      </>}
+    <Modal onClose={onClose} title={`${story ? "Edit" : "Add"} MT story`}
+      footer={<><span className={s.spacer} /><button className={s.ghostSm} onClick={onClose} type="button">Cancel</button><button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save MT story</button></>}
     >
-      <Field label="Name *"><input className={styles.input} value={text(form.nama)} autoFocus onChange={(event) => set({ nama: event.target.value })} /></Field>
-      <Field label="Company"><input className={styles.input} value={text(form.perusahaan)} onChange={(event) => set({ perusahaan: event.target.value })} /></Field>
-      <Field label="Batch"><input className={styles.input} value={text(form.batch)} onChange={(event) => set({ batch: event.target.value })} /></Field>
-      <Field label="WhatsApp"><input className={styles.input} value={text(form.wa)} onChange={(event) => set({ wa: event.target.value })} placeholder="62..." /></Field>
-      <Field label="Description" optional><textarea className={styles.textarea} value={text(form.deskripsi)} onChange={(event) => set({ deskripsi: event.target.value })} /></Field>
-      <Field label="Instagram URL" optional><input className={styles.input} value={text(form.ig_url)} onChange={(event) => set({ ig_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="LinkedIn URL" optional><input className={styles.input} value={text(form.linkedin_url)} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Brief URL" optional><input className={styles.input} value={text(form.brief_url)} onChange={(event) => set({ brief_url: event.target.value })} placeholder="https://..." /></Field>
-      <Field label="Photo URL" optional><input className={styles.input} value={text(form.foto_url)} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://..." /></Field>
-      <label className={styles.inputRow} style={{ gap: 8, cursor: "pointer" }}><input type="checkbox" checked={Boolean(form.is_posted)} onChange={(event) => set({ is_posted: event.target.checked })} /> <span style={{ fontSize: 13 }}>Posted</span></label>
+      <div className={s.formGrid}>
+        <Field label="Name" required><input aria-invalid={req.invalid || undefined} autoFocus className={req.invalid ? s.inputInvalid : s.input} onChange={(event) => { set({ nama: event.target.value }); req.clear(); }} id={req.id} value={text(form.nama)} /></Field>
+        <Field label="Company"><input className={s.input} onChange={(event) => set({ perusahaan: event.target.value })} value={text(form.perusahaan)} /></Field>
+        <Field label="Batch"><input className={s.input} onChange={(event) => set({ batch: event.target.value })} value={text(form.batch)} /></Field>
+        <Field label="WhatsApp"><input className={s.input} onChange={(event) => set({ wa: event.target.value })} placeholder="62…" value={text(form.wa)} /></Field>
+      </div>
+      <Field label="Description" optional><textarea className={s.textarea} onChange={(event) => set({ deskripsi: event.target.value })} value={text(form.deskripsi)} /></Field>
+      <div className={s.formGrid}>
+        <Field label="Instagram URL" optional><input className={s.input} onChange={(event) => set({ ig_url: event.target.value })} placeholder="https://…" value={text(form.ig_url)} /></Field>
+        <Field label="LinkedIn URL" optional><input className={s.input} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://…" value={text(form.linkedin_url)} /></Field>
+        <Field label="Brief URL" optional><input className={s.input} onChange={(event) => set({ brief_url: event.target.value })} placeholder="https://…" value={text(form.brief_url)} /></Field>
+        <Field label="Photo URL" optional><input className={s.input} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://…" value={text(form.foto_url)} /></Field>
+      </div>
+      <label className={s.checkField}><input checked={Boolean(form.is_posted)} onChange={(event) => set({ is_posted: event.target.checked })} type="checkbox" /> Posted</label>
     </Modal>
   );
 }
