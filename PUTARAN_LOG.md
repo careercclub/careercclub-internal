@@ -832,3 +832,29 @@ Content Planning, lalu Products, Job Vacancy, Competitor, Settings.
 ### Antrean
 
 Urutan dari user selesai (Talent Pool → CRM → Partnership → Customer Knowledge → Content Planning). Sisa: Products, Job Vacancy, Competitor, Settings, Content Evaluation / Meta Ads / Instagram, Design Assets, Resources, Collaborators.
+
+## Putaran 20 — Products (IJIS layout) (22 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Kartu atas: judul, "Tambah Produk", form tambah yang muncul inline, 4 kartu angka (Live hijau, Bundles ungu) | Judul + "N products · X live · Y bundles · catalog value Rp…", tombol **Add product** membuka form popup; saklar **Catalog / Manage data** |
+| Daftar kiri: kotak polos + 4 dropdown/pil ("Semua", "Satuan", "Harga tertinggi") | Panel katalog: search, saklar **All / Single / Bundles** dengan jumlah, filter pil Status / Class / Sort; baris produk: ubin inisial (bundle = ikon tumpuk), nama, klasifikasi, harga, **satu** chip status |
+| Detail: kartu judul + 2 pil warna, lalu **9 tab** (Overview, Pain points … Feedback, Manage) | **Halaman produk**: kartu utama (jenis, nama, deskripsi, status, landing page, harga, Duplicate, Export KB); untuk bundle: kartu isi bundle (jumlah produk, harga kalau dibeli terpisah, hemat %) + daftar isi + "Add to bundle"; lalu **papan Knowledge base**: 7 kartu (Pain points, Passion points, Benefits, Features, Sub-products, Assets, Feedback) tampil sekaligus, masing-masing dengan jumlah, tombol + untuk form tambah di tempat, link fitur/sub-produk |
+
+- Logika di `lib/products/view.ts` (`filterProducts`, `catalogSummary`, `bundleMath`, `knowledgeFor`) + 3 unit test (hemat tidak pernah negatif; KB bundle ikut item produk di dalamnya).
+- **Aman dari salah klik:** menghapus produk dari bundle dulu langsung terhapus; sekarang minta konfirmasi.
+- Field wajib (nama produk, nama item KB, deskripsi feedback, nama duplikat) ditandai merah & difokus saat disimpan kosong.
+- Teks Inggris: "Tambah Produk", "Simpan produk", "Batal", "Satuan/Bundling", "Semua label", "Harga tertinggi" → Add product, Save product, Cancel, Single product/Bundle, All, Highest price; nilai yang disimpan tetap ("satuan", "bundling", "Positif", "Lainnya").
+
+### Check
+
+- Desain 1440 & 390; di HP panel katalog jadi kotak bergulir di atas halaman produk.
+- E2E baru Products **17/17** (katalog lengkap, filter Bundles, hitungan bundle 2 produk / hemat 20%, KB bundle ikut item anggota, link fitur, item kosong ditandai & fokus, tambah item ke produk yang benar, hapus item & keluarkan dari bundle minta konfirmasi, duplikat butuh nama, Add product kosong ditandai lalu tersimpan, Manage data, `?focus`, HP).
+- Regresi: unit 121/121, Content Planning 26/26, Customer Knowledge 20/20, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31, navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Products ok.
+- tsc bersih; lint: sisa 1 error lama (competitor-tools); `npm run build` lolos.
+
+### Antrean
+
+Job Vacancy MT → Competitor Intel → Settings → Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.
