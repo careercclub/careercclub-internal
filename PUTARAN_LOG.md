@@ -617,3 +617,36 @@ User menyetujui preview "CareerCclub × gaya IJIS" (kanvas Design: Dashboard des
 
 - Prioritas: Dashboard seperti preview (salam + tanggal, kartu statistik, kartu program dengan cincin progres, "Up next", "This week"); Content Library kartu 4:5; chip status warna-warni (Marketing/Med/Todo, Belum diblast) → satu palet; label statistik kapital kecil (TOTAL BUYERS, BELUM ISI POOL) → kalimat biasa.
 - Nice-to-have: mode gelap (perlu ganti warna tetap `#fff`/`#f8fbff` di modul ke token).
+
+---
+
+## Putaran 14 — Rombak layout per modul (IJIS), bagian 1: Dashboard, Content Library, Tickets (22 Okt 2026)
+
+Masukan user: tahap 1–2 baru mengganti font & warna, susunan halaman masih template lama. Arah baru: **susunan halaman diganti total seperti preview, data & aksi tetap sama.**
+
+### Do — yang berubah
+
+| Modul | Sebelum | Sesudah |
+|---|---|---|
+| Dashboard | Panel "Input dengan AI" + kalender penuh + daftar kosong | Salam + tanggal; 4 kartu angka (tiket terbuka/telat, task minggu ini, task telat, program bulan ini) yang bisa diklik; kartu program mendatang dengan cincin progres task & avatar; **Up next** (telat dulu, tiket dari task tampil sekali); **This week** (7 hari + program minggu ini); AI di bawahnya; kalender paling bawah |
+| Content Library | Tab bergaris, 4 dropdown polos, kartu kecil berisi banyak metrik | Judul + jumlah ide; saklar Organic/Ad Ideas; filter berbentuk pil; kartu 4:5 berisi hook, 1 label (+N) dan **satu** angka sesuai urutan yang dipilih |
+| Tickets | 2 kartu angka, tabel 9 kolom dengan 3 pil warna-warni per baris | Judul + "N open · M late"; saklar Open/Done/All dengan jumlah; search & filter pil; daftar **dikelompokkan** Late / This week / Later / No due date / Done; per baris: centang bulat, judul, info singkat (nomor · divisi · tipe · High priority), avatar, **satu** chip tanggal (merah hanya telat), tombol kalender |
+| Menu | Angka merah = total tiket / total task (production: "99+") | Angka merah = **yang telat saja** (tiket yang boleh dilihat, task program) |
+
+- Satu aturan "telat" (`isOverdue` di `lib/dashboard/summary.ts`) dipakai Dashboard, Tickets dan badge menu; `jakartaNow()` dipakai bersama.
+- "Create ticket" di Dashboard membuka form yang sama di Tickets (`?create=ticket`), bukan form kedua.
+
+### Check — iterative design review
+
+- Render desktop 1440 & HP 390 dengan font asli; dicocokkan ke preview. Ditemukan: angka Content Library berformat Indonesia ("1,2 rb") → "1.2K"; badge menu merah tidak berarti telat → diganti.
+
+### Check — regression
+
+- Unit **102/102** (baru: ringkasan Dashboard 5, grup Tickets 3 — termasuk "grup Late = angka telat di Dashboard"; keterlacakan badge memakai aturan telat yang sama)
+- E2E baru Tickets + Dashboard **19/19** (grup, centang selesai pindah ke Done, search kosong, filter, buka detail, `?create=ticket`, HP tanpa geser, link kartu Dashboard & Up next)
+- Regresi: form & tabel 893/893, popup 31/31, audit popup 84/84, navigasi 32/32, search 46/46, modul 12/12, Content Library 51/51 (1 tes diberi jeda karena fokus pindah setelah render), Design Assets 49/49
+- tsc bersih; lint bersih untuk kode baru; `npm run build` lolos
+
+### Antrean (bagian berikutnya)
+
+Program (daftar event → kartu + timeline task), CRM, Talent Pool, B2B/Org Partnership, Content Planning, Products, Job Vacancy, Competitor, Customer Knowledge, Settings — masing-masing: preview singkat bila susunannya berubah besar, lalu bangun + tes.
