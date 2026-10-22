@@ -3,16 +3,10 @@ import { DashboardCalendar } from "@/app/_components/dashboard-calendar";
 import { DashboardHome } from "@/app/_components/dashboard-home";
 import { listProgramEvents, listProgramTasks } from "@/lib/api/program";
 import { getVisibleTicketWorkspace } from "@/lib/api/tickets";
-import { summarizeDashboard } from "@/lib/dashboard/summary";
+import { jakartaNow, summarizeDashboard } from "@/lib/dashboard/summary";
 import { auth } from "@/auth";
 
 export const metadata = { title: "Dashboard", description: "Today's numbers, upcoming programs, what is due next and the operational calendar." };
-
-/** Today's date and hour in Jakarta; the server may run in UTC. */
-function jakartaNow() {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map((part) => [part.type, part.value]));
-  return { today: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
-}
 
 export default async function DashboardPage() {
   const session = await auth();

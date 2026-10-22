@@ -3,15 +3,17 @@ import { AppShell } from "./_components/app-shell";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { listAppSettings } from "@/lib/api/settings";
-import { getDashboardCounts } from "@/lib/api/dashboard";
-import { countVisibleTickets } from "@/lib/api/tickets";
+import { countLateVisibleTickets } from "@/lib/api/tickets";
+import { countLateTasks } from "@/lib/api/program";
+import { jakartaNow } from "@/lib/dashboard/summary";
 
 type DashboardLayoutProps = Readonly<{
   children: ReactNode;
 }>;
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [session, settings, counts] = await Promise.all([auth(), listAppSettings(), getDashboardCounts()]);
+  const today = jakartaNow().today;
+  const [session, settings, lateTasks] = await Promise.all([auth(), listAppSettings(), countLateTasks(today)]);
 
   if (!session?.user) {
     redirect("/sign-in");
@@ -27,10 +29,11 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       ? settingValue.hiddenSlugs.map(String)
       : [];
 
-  // The Tickets badge counts what this person can open on the Tickets page, not every ticket.
-  const ticketBadge = await countVisibleTickets({ role: session.user.role, userId: session.user.id, email: session.user.email });
+  // Menu badges show only what is late (red = late), using the Dashboard's rule; tickets
+  // are limited to what this person can open on the Tickets page.
+  const lateTickets = await countLateVisibleTickets({ role: session.user.role, userId: session.user.id, email: session.user.email }, today);
 
   const monthLabel = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date());
 
-  return <AppShell hiddenSlugs={hiddenSlugs} navBadges={{ program: counts.tasks, tickets: ticketBadge }} monthLabel={monthLabel} user={session.user}>{children}</AppShell>;
+  return <AppShell hiddenSlugs={hiddenSlugs} navBadges={{ program: lateTasks, tickets: lateTickets }} monthLabel={monthLabel} user={session.user}>{children}</AppShell>;
 }

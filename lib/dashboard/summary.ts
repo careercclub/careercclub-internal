@@ -18,6 +18,12 @@ export function dateKey(value: unknown) {
   return value instanceof Date ? localIso(value) : String(value).slice(0, 10);
 }
 
+/** Today's date (YYYY-MM-DD) and hour in Jakarta; the server may run in UTC. */
+export function jakartaNow(date = new Date()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(date).map((part) => [part.type, part.value]));
+  return { today: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
+}
+
 export function isDone(row: Row) {
   return text(row.status) === "Done" || text(row.status) === "Cancelled";
 }

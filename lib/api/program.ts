@@ -1,6 +1,7 @@
 import "server-only";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
+import { isOverdue } from "@/lib/dashboard/summary";
 
 export type ProgramEventRecord = ApiRecord;
 export type ProgramTaskRecord = ApiRecord;
@@ -347,4 +348,10 @@ export function deleteProgramEventWithWorkflow(eventId: string) {
     const result = await tx`delete from events where id = ${eventId}`;
     return (result.count || 0) > 0;
   }));
+}
+
+/** Nav badge: late program tasks — the same "late" rule as Dashboard and Tickets. */
+export async function countLateTasks(today: string) {
+  const rows = await withPostgres((sql) => sql<ProgramTaskRecord[]>`select id, status, due_date from tasks where status not in ('Done', 'Cancelled') and due_date is not null`);
+  return [...rows].filter((row) => isOverdue(row, today)).length;
 }

@@ -2,6 +2,7 @@ import "server-only";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
 import { TICKET_VISIBILITY_COLUMNS, ticketVisibility, type TicketViewer } from "@/lib/tickets/visibility";
+import { isOverdue } from "@/lib/dashboard/summary";
 
 export type TicketRecord = ApiRecord;
 export type TicketDivisionRecord = ApiRecord;
@@ -65,6 +66,17 @@ export async function getTicketWorkspace() {
 export async function getVisibleTicketWorkspace(viewer: TicketViewer) {
   const workspace = await getTicketWorkspace();
   return { ...workspace, tickets: workspace.tickets.filter(ticketVisibility(viewer, workspace.people)) };
+}
+
+/** Nav badge: late tickets this viewer can open — the same "late" rule as Dashboard and Tickets. */
+export async function countLateVisibleTickets(viewer: TicketViewer, today: string) {
+  const admin = String(viewer.role || "").toLowerCase() === "admin";
+  const [peopleRows, ticketRows] = await Promise.all([
+    admin ? Promise.resolve([] as TicketPersonRecord[]) : listTicketPeople(),
+    withPostgres((sql) => sql<TicketRecord[]>`select ${sql([...new Set(["id", "status", "due_date", ...TICKET_VISIBILITY_COLUMNS])])} from tickets where status not in ('Done', 'Cancelled') and due_date is not null`),
+  ]);
+  const visible = admin ? [...ticketRows] : [...ticketRows].filter(ticketVisibility(viewer, peopleRows));
+  return visible.filter((row) => isOverdue(row, today)).length;
 }
 
 /** Nav badge: same rule as the pages, reading only the columns the rule needs. */

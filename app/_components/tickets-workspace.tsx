@@ -16,6 +16,9 @@ import { GoogleCalendarScript } from "./google-calendar-tool";
 import { TicketGoogleCalendarModal } from "./ticket-google-calendar-modal";
 import { Pagination, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
+import styles from "./tickets-workspace.module.css";
+import { dueChip, groupTickets } from "@/lib/tickets/groups";
+import { isDone, isOverdue, localIso } from "@/lib/dashboard/summary";
 import { settingsHref } from "@/lib/records/links";
 import { confirmAction } from "./app-dialog";
 
@@ -32,29 +35,6 @@ function arr(value: unknown): Record<string, unknown>[] {
   return value.flatMap((item) => (typeof item === "string" ? arr(item) : item && typeof item === "object" ? [item as Record<string, unknown>] : []));
 }
 function calendarAdded(row: ApiRecord) { return row.gcal_added === true || row.gcal_added === "true"; }
-
-const PILL_COLORS: Record<string, { bg: string; fg: string }> = {
-  Todo: { bg: "var(--bg)", fg: "var(--text-muted)" },
-  "In Progress": { bg: "var(--blue-bg)", fg: "var(--blue)" },
-  Done: { bg: "var(--green-bg)", fg: "var(--green)" },
-  High: { bg: "var(--red-bg)", fg: "var(--red)" },
-  Med: { bg: "var(--amber-bg)", fg: "var(--amber)" },
-  Low: { bg: "var(--teal-bg)", fg: "var(--teal)" },
-};
-const DIV_COLORS = [["#fbeaf0", "#993556"], ["#e6f1fb", "#185fa5"], ["#eaf3de", "#3b6d11"], ["#faeeda", "#854f0b"], ["#e1f5ee", "#0f6e56"], ["#eeedfe", "#534ab7"], ["#faece7", "#993c1d"]];
-const pillBase: CSSProperties = { display: "inline-block", padding: "2px 9px", borderRadius: 20, fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" };
-function pill(value: string): CSSProperties { const c = PILL_COLORS[value] || { bg: "var(--bg)", fg: "var(--text-muted)" }; return { ...pillBase, background: c.bg, color: c.fg }; }
-function divPill(index: number): CSSProperties { const [bg, fg] = DIV_COLORS[index % DIV_COLORS.length]; return { ...pillBase, background: bg, color: fg }; }
-
-const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" };
-const ghostBtnStyle: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 12px", border: "0.5px solid var(--border-md)", borderRadius: 8, background: "var(--white)", fontSize: 12, color: "var(--text)", whiteSpace: "nowrap", flexShrink: 0 };
-const thStyle: CSSProperties = { padding: "8px 10px", fontWeight: 600, textAlign: "center", whiteSpace: "nowrap" };
-const tdStyle: CSSProperties = { padding: "10px", verticalAlign: "middle" };
-function tabStyle(active: boolean): CSSProperties { return { padding: "6px 14px", borderRadius: 0, border: 0, background: "transparent", fontSize: 13, fontWeight: 600, color: active ? "var(--purple-mid)" : "var(--text-muted)", borderBottom: active ? "2px solid var(--purple-mid)" : "2px solid transparent", cursor: "pointer" }; }
-
-function StatCard({ icon, color, bg, value, label }: { icon: string; color: string; bg: string; value: number; label: string }) {
-  return <div style={{ ...panelCard, display: "flex", alignItems: "center", gap: 12, padding: 14 }}><div style={{ width: 40, height: 40, borderRadius: 10, background: bg, display: "grid", placeItems: "center", flexShrink: 0 }}><i className={`ti ${icon}`} style={{ color, fontSize: 18 }} /></div><div><div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div><div style={{ fontSize: 11, color: "var(--text-muted)" }}>{label}</div></div></div>;
-}
 
 
 function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { people: ApiRecord[]; divisions: ApiRecord[]; types: ApiRecord[]; onClose: () => void; onCreated: (row: ApiRecord) => void }) {
@@ -155,7 +135,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   const router = useRouter();
   const [items, setItems] = useState(rows);
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<"all" | "todo" | "done">("all");
+  const [tab, setTab] = useState<"open" | "done" | "all">("open");
   const [fDiv, setFDiv] = useState("");
   const [fPrio, setFPrio] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -176,17 +156,22 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   const divisionIndex = useMemo(() => new Map(divisions.map((division, index) => [String(division.id), index])), [divisions]);
   const typeMap = useMemo(() => new Map(types.map((type) => [String(type.id), type])), [types]);
 
-  const todo = items.filter((row) => row.status === "Todo").length;
-  const done = items.filter((row) => row.status === "Done").length;
+  const today = localIso(new Date());
+  const openCount = items.filter((row) => !isDone(row)).length;
+  const doneCount = items.length - openCount;
+  const lateCount = items.filter((row) => isOverdue(row, today)).length;
   const visible = items.filter((row) => {
-    if (tab === "todo" && row.status !== "Todo") return false;
-    if (tab === "done" && row.status !== "Done") return false;
+    if (tab === "open" && isDone(row)) return false;
+    if (tab === "done" && !isDone(row)) return false;
     if (query && !`${text(row.ticket_no)} ${text(row.title)} ${text(row.description)}`.toLowerCase().includes(query.toLowerCase())) return false;
     if (fDiv && text(row.divisi_id) !== fDiv) return false;
     if (fPrio && text(row.priority) !== fPrio) return false;
     return true;
   });
-  const { pageItems: visiblePage, page: ticketPage, setPage: setTicketPage, totalPages: ticketTotalPages } = usePagination(visible, 15);
+  // Sorted by group first so pages follow the groups; the page is then shown grouped.
+  const ordered = groupTickets(visible, today).flatMap((group) => group.rows);
+  const { pageItems: visiblePage, page: ticketPage, setPage: setTicketPage, totalPages: ticketTotalPages } = usePagination(ordered, 20);
+  const pageGroups = groupTickets(visiblePage, today);
   const detail = items.find((row) => String(row.id) === detailId) || null;
   useRecordFocus((id) => {
     if (!items.some((row) => String(row.id) === id)) return;
@@ -209,60 +194,67 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   }
 
   return (
-    <div className="grid gap-4">
+    <div className={styles.page}>
       <GoogleCalendarScript />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
-        <StatCard icon="ti-circle-dashed" color="#5F5E5A" bg="#F1EFE8" value={todo} label="Todo" />
-        <StatCard icon="ti-circle-check" color="#3B6D11" bg="#EAF3DE" value={done} label="Done" />
-      </div>
-      {aiPanel}
-      <div style={panelCard}>
-        <div style={{ padding: 12, borderBottom: "0.5px solid var(--border)", display: "grid", gap: 10 }}>
-          <div style={{ display: "flex", gap: 4 }}>{([["all", "All"], ["todo", "Todo"], ["done", "Done"]] as const).map(([id, label]) => <button key={id} type="button" onClick={() => setTab(id)} style={tabStyle(tab === id)}>{label}</button>)}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Input placeholder="Search tickets…" value={query} onChange={(e) => setQuery(e.target.value)} className="min-w-[160px] flex-1" />
-            <Button type="button" onClick={() => setCreateOpen(true)}><i className="ti ti-plus" /> Create ticket</Button>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <Select value={fDiv || "all"} onValueChange={(v) => setFDiv(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All divisions</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select>
-            <Select value={fPrio || "all"} onValueChange={(v) => setFPrio(v === "all" ? "" : v)}><SelectTrigger className="min-w-[140px] flex-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All priorities</SelectItem>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select>
-            <Link href={settingsHref("tickets", "divisions")} style={ghostBtnStyle}><i className="ti ti-adjustments" /> Ticket setup</Link>
-          </div>
+      <header className={styles.head}>
+        <div>
+          <span className={styles.eyebrow}>Internal</span>
+          <h1>Tickets</h1>
+          <p>{openCount} open{lateCount ? <> · <b className={styles.lateText}>{lateCount} late</b></> : null}</p>
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: "var(--bg)", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" }}>
-                <th style={thStyle} /><th style={thStyle}>ID</th><th style={{ ...thStyle, textAlign: "left" }}>Title &amp; description</th><th style={thStyle}>Division</th><th style={thStyle}>Priority</th><th style={thStyle}>Status</th><th style={{ ...thStyle, textAlign: "left" }}>Assignee</th><th style={thStyle}>Date</th><th style={thStyle} />
-              </tr>
-            </thead>
-            <tbody>
-              {visible.length === 0 ? <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}><i className="ti ti-inbox" style={{ fontSize: 28, display: "block", marginBottom: 8 }} />No tickets found</td></tr> : visiblePage.map((row) => {
-                const isDone = row.status === "Done";
-                const divId = text(row.divisi_id);
-                const division = divisionMap.get(divId);
+        <div className={styles.headActions}>
+          <Link className={styles.ghostButton} href={settingsHref("tickets", "divisions")}><i className="ti ti-adjustments" aria-hidden="true" /> Ticket setup</Link>
+          <Button type="button" onClick={() => setCreateOpen(true)}><i className="ti ti-plus" aria-hidden="true" /> Create ticket</Button>
+        </div>
+      </header>
+
+      {aiPanel}
+
+      <div className={styles.toolbar}>
+        <div className={styles.segmented} role="tablist" aria-label="Ticket status">
+          {([["open", "Open", openCount], ["done", "Done", doneCount], ["all", "All", items.length]] as const).map(([id, label, count]) => (
+            <button aria-selected={tab === id} className={tab === id ? styles.segmentActive : styles.segment} key={id} onClick={() => setTab(id)} role="tab" type="button">{label} <span>{count}</span></button>
+          ))}
+        </div>
+        <label className={styles.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search tickets" placeholder="Search tickets…" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+        <label className={styles.filterPill}><span>Division</span><select aria-label="Filter division" value={fDiv} onChange={(e) => setFDiv(e.target.value)}><option value="">All</option>{divisions.map((d) => <option key={String(d.id)} value={String(d.id)}>{text(d.nama)}</option>)}</select></label>
+        <label className={styles.filterPill}><span>Priority</span><select aria-label="Filter priority" value={fPrio} onChange={(e) => setFPrio(e.target.value)}><option value="">All</option>{PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
+      </div>
+
+      <section className={styles.panel} aria-label="Tickets">
+        {visible.length === 0 ? (
+          <div className={styles.empty}><i className="ti ti-inbox" aria-hidden="true" /><strong>No tickets found</strong><span>{query || fDiv || fPrio ? "Try another search or clear the filters." : tab === "open" ? "Nothing open. Click Create ticket to add one." : "No tickets here yet."}</span></div>
+        ) : pageGroups.map((group) => (
+          <div className={styles.group} key={group.id}>
+            <h2 className={group.id === "late" ? styles.groupLate : styles.groupTitle}>{group.title} <span>{groupTickets(visible, today).find((g) => g.id === group.id)?.rows.length}</span></h2>
+            <ul className={styles.rows}>
+              {group.rows.map((row) => {
+                const done = isDone(row);
+                const division = divisionMap.get(text(row.divisi_id));
                 const type = typeMap.get(text(row.type_id));
                 const att = arr(row.files).length + arr(row.links).length;
                 const synced = calendarAdded(row);
+                const chip = dueChip(row, today);
+                const assignee = firstAssignee(row);
+                const title = text(row.title) || "Untitled ticket";
                 return (
-                  <tr data-record-id={String(row.id)} key={String(row.id)} onClick={() => setDetailId(String(row.id))} style={{ borderBottom: "0.5px solid var(--border)", cursor: "pointer", opacity: isDone ? 0.5 : 1 }}>
-                    <td style={tdStyle} onClick={(e) => { e.stopPropagation(); void toggleDone(row); }}><div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isDone ? "#0f52ba" : "var(--border-md)"}`, background: isDone ? "#0f52ba" : "transparent", display: "grid", placeItems: "center", margin: "0 auto" }}>{isDone ? <i className="ti ti-check" style={{ fontSize: 10, color: "#fff" }} /> : null}</div></td>
-                    <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{text(row.ticket_no) || String(row.id).slice(0, 6)}</td>
-                    <td style={tdStyle}><div style={{ fontWeight: 500, textDecoration: isDone ? "line-through" : "none" }}>{text(row.title) || "—"}</div><div style={{ fontSize: 11, color: "var(--text-muted)" }}>{type ? text(type.nama) : ""}{att > 0 ? ` · 📎 ${att}` : ""}</div></td>
-                    <td style={{ ...tdStyle, textAlign: "center" }}>{division ? <span style={divPill(divisionIndex.get(divId) ?? 0)}>{text(division.nama)}</span> : <span style={{ color: "var(--text-hint)" }}>—</span>}</td>
-                    <td style={{ ...tdStyle, textAlign: "center" }}><span style={pill(text(row.priority) || "Med")}>{text(row.priority) || "Med"}</span></td>
-                    <td style={{ ...tdStyle, textAlign: "center" }}><span style={pill(text(row.status) || "Todo")}>{text(row.status) || "Todo"}</span></td>
-                    <td style={tdStyle}><div style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}><span style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--purple-dark)", color: "#fff", fontSize: 9, display: "grid", placeItems: "center", flexShrink: 0 }}>{initials(firstAssignee(row))}</span>{firstAssignee(row)}</div></td>
-                    <td style={{ ...tdStyle, fontSize: 11, color: "var(--text-muted)", textAlign: "center", whiteSpace: "nowrap" }}>{text(row.due_date).slice(0, 10) || "—"}</td>
-                    <td style={{ ...tdStyle, textAlign: "center" }} onClick={(event) => event.stopPropagation()}><Button type="button" size="icon-sm" variant="outline" style={synced ? { background: "var(--green)", borderColor: "var(--green)", color: "#fff" } : undefined} title={synced ? "Sudah di Calendar (klik untuk re-sync)" : "Add to Google Calendar"} onClick={() => setCalendarId(String(row.id))}><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} /></Button></td>
-                  </tr>
+                  <li className={done ? styles.rowDone : styles.row} data-record-id={String(row.id)} key={String(row.id)}>
+                    <button aria-label={done ? `Reopen ticket: ${title}` : `Mark ticket done: ${title}`} aria-pressed={done} className={done ? styles.checkOn : styles.check} onClick={() => void toggleDone(row)} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
+                    <button className={styles.rowMain} data-record-open onClick={() => setDetailId(String(row.id))} type="button">
+                      <b>{title}</b>
+                      <small>{[text(row.ticket_no), division ? text(division.nama) : "", type ? text(type.nama) : "", text(row.priority) === "High" ? "High priority" : ""].filter(Boolean).join(" · ")}{att ? <> · <i className="ti ti-paperclip" aria-hidden="true" />{att}</> : null}</small>
+                    </button>
+                    <span className={assignee === "—" ? styles.avatarEmpty : styles.avatar} title={assignee === "—" ? "No assignee" : assignee}>{assignee === "—" ? "?" : initials(assignee)}</span>
+                    {chip ? <span className={chip.tone === "late" ? styles.chipLate : chip.tone === "soon" ? styles.chipSoon : styles.chip}>{chip.label}</span> : <span className={styles.chipNone}>No date</span>}
+                    <button aria-label={synced ? `Re-sync ${title} to Google Calendar` : `Add ${title} to Google Calendar`} className={synced ? styles.calOn : styles.cal} onClick={() => setCalendarId(String(row.id))} title={synced ? "On Google Calendar (click to re-sync)" : "Add to Google Calendar"} type="button"><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} aria-hidden="true" /></button>
+                  </li>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          </div>
+        ))}
         <Pagination onChange={setTicketPage} page={ticketPage} totalPages={ticketTotalPages} />
-      </div>
+      </section>
       {createOpen ? <CreateTicketModal people={people} divisions={divisions} types={types} onClose={() => setCreateOpen(false)} onCreated={(row) => { setItems((current) => [row, ...current]); setCreateOpen(false); router.refresh(); }} /> : null}
       {detail ? <DetailTicketModal ticket={detail} people={people} divisions={divisions} onClose={() => setDetailId(null)} onSaved={(row) => { setItems((current) => current.map((item) => String(item.id) === String(row.id) ? row : item)); router.refresh(); }} onDeleted={(id) => { setItems((current) => current.filter((item) => String(item.id) !== id)); setDetailId(null); router.refresh(); }} onDuplicated={(row) => { setItems((current) => [row, ...current]); router.refresh(); }} onCalendar={() => { setCalendarId(String(detail.id)); setDetailId(null); }} /> : null}
       {calendarTicket ? <TicketGoogleCalendarModal key={String(calendarTicket.id)} ticket={calendarTicket} people={people} onClose={() => setCalendarId(null)} onSynced={(row) => { setItems((current) => current.map((item) => String(item.id) === String(row.id) ? row : item)); router.refresh(); }} /> : null}

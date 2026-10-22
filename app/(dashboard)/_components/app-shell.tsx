@@ -148,7 +148,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
                     >
                       <i className={`ti ${page.icon}`} aria-hidden="true" />
                       <span>{page.title}</span>
-                      {navBadges[page.slug] ? <span className={page.slug === "tickets" ? styles.navBadgeRed : styles.navBadge}>{navBadges[page.slug] > 99 ? "99+" : navBadges[page.slug]}</span> : null}
+                      {navBadges[page.slug] ? <span className={styles.navBadgeRed} title={`${navBadges[page.slug]} late`}>{navBadges[page.slug] > 99 ? "99+" : navBadges[page.slug]}</span> : null}
                     </Link>
                     {subLinks?.length ? (
                       <button aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} ${page.title} pages`} className={styles.navExpand} onClick={() => setExpanded((current) => ({ ...current, [page.path]: !open }))} type="button">

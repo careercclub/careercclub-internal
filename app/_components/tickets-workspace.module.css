@@ -1,0 +1,74 @@
+/* Tickets — IJIS layout: header + counts, status switch, pill filters, rows grouped by due date. */
+.page { display: flex; flex-direction: column; gap: 20px; max-width: 1180px; margin: 0 auto; }
+.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.head h1 { margin: 2px 0 0; font-size: clamp(24px, 3vw, 30px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.head p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
+.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.lateText { color: var(--red); font-weight: 700; }
+.headActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.headActions > * { min-height: 42px; padding: 0 18px; }
+.ghostButton { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 14px; font-weight: 600; }
+.ghostButton:hover { background: var(--surface-2); }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
+.segment, .segmentActive { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.segment span, .segmentActive span { font-size: 12px; font-weight: 700; opacity: 0.7; }
+.segment { color: var(--text-muted); background: transparent; }
+.segment:hover { color: var(--text); }
+.segmentActive { color: var(--white); background: var(--text); }
+.search { min-width: 200px; min-height: 42px; flex: 1 1 220px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); }
+.search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 14px; }
+.search:focus-within, .filterPill:focus-within { border-color: var(--purple-mid); }
+.filterPill { min-height: 42px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill select { max-width: 160px; min-height: 36px; padding: 0 6px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.panel { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
+.group { display: flex; flex-direction: column; }
+.groupTitle, .groupLate { margin: 0; padding: 14px 10px 6px; font-size: 13px; font-weight: 800; letter-spacing: -0.005em; }
+.groupTitle span, .groupLate span { margin-left: 4px; color: var(--text-muted); font-weight: 600; }
+.groupLate { color: var(--red); }
+.rows { margin: 0; padding: 0; list-style: none; }
+.row, .rowDone { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 14px; }
+.row:hover, .rowDone:hover { background: var(--surface-2); }
+.rowDone .rowMain b { color: var(--text-muted); text-decoration: line-through; }
+.check, .checkOn { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; font-size: 13px; cursor: pointer; }
+.check { border: 1.5px solid var(--border-md); color: transparent; background: var(--white); }
+.check:hover { border-color: var(--purple-mid); color: var(--purple-mid); }
+.checkOn { border: 1.5px solid var(--purple-mid); color: #fff; background: var(--purple-mid); }
+.rowMain { min-width: 0; min-height: 44px; display: grid; align-content: center; padding: 2px 0; border: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.rowMain b { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.rowMain small { overflow: hidden; display: flex; align-items: center; gap: 2px; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.avatar, .avatarEmpty { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 700; }
+.avatar { color: var(--purple-dark); background: var(--purple-light); }
+.avatarEmpty { border: 1.5px dashed var(--border-md); color: var(--text-muted); }
+.chip, .chipSoon, .chipLate, .chipNone { min-width: 72px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; text-align: center; white-space: nowrap; }
+.chip { color: var(--text-muted); background: var(--surface-2); }
+.chipSoon { color: var(--purple-dark); background: var(--purple-light); }
+.chipLate { color: var(--red); background: var(--red-bg); }
+.chipNone { color: var(--text-hint); }
+.cal, .calOn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; font-size: 16px; cursor: pointer; }
+.cal { border: 1px solid var(--border); color: var(--text-muted); background: var(--white); }
+.cal:hover { color: var(--text); border-color: var(--border-md); }
+.calOn { border: 1px solid var(--purple-light); color: var(--purple-dark); background: var(--purple-light); }
+.empty { display: grid; justify-items: center; gap: 4px; padding: 40px 12px; color: var(--text-muted); text-align: center; }
+.empty i { font-size: 28px; }
+.empty strong { color: var(--text); }
+.empty span { font-size: 13px; }
+
+@media (max-width: 640px) {
+  .headActions { width: 100%; }
+  .headActions > * { flex: 1; justify-content: center; }
+  .segmented { width: 100%; }
+  .segment, .segmentActive { flex: 1; justify-content: center; }
+  .search { flex-basis: 100%; }
+  .filterPill { flex: 1 1 calc(50% - 5px); min-width: 0; }
+  .filterPill select { min-width: 0; flex: 1; }
+  .panel { padding: 6px 6px 10px; }
+  .row, .rowDone { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "check main chip" "check main cal"; row-gap: 2px; column-gap: 10px; }
+  .row > .check, .row > .checkOn, .rowDone > .check, .rowDone > .checkOn { grid-area: check; }
+  .rowMain { grid-area: main; }
+  .row > [class*=chip], .rowDone > [class*=chip] { grid-area: chip; min-width: 0; }
+  .avatar, .avatarEmpty { display: none; }
+  .cal, .calOn { grid-area: cal; justify-self: end; width: 30px; height: 30px; font-size: 14px; }
+}
