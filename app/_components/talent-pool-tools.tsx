@@ -1,9 +1,9 @@
 "use client";
 
 import type { ApiRecord } from "@/lib/api/_crud";
-import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { askText, confirmAction } from "./app-dialog";
+import s from "./talent-pool-tools.module.css";
 
 type Template = { name: string; subject: string; headerTitle: string; headerSub: string; headerColor: string; body: string; ctaText: string; ctaUrl: string; footer: string };
 type Log = { subject: string; total: number; sent: number; failed: number; sentAt: string };
@@ -11,16 +11,13 @@ type BlastTab = "compose" | "templates" | "history" | "settings";
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 function isBuyer(row: ApiRecord) { return Boolean(row.buyer_match) || Boolean(text(row.produk_dibeli)); }
+// Saved on this device only. This view mounts after a click (never server-rendered), so reading storage while initialising state is safe.
+function readStore(key: string, fallback: string) { try { return typeof window === "undefined" ? fallback : localStorage.getItem(key) || fallback; } catch { return fallback; } }
+function readJson<T>(key: string): T[] { try { const value = JSON.parse(readStore(key, "[]")); return Array.isArray(value) ? value : []; } catch { return []; } }
+function writeStore(key: string, value: string | null) { try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* storage blocked: keep in memory */ } }
 function escapeHtml(value: string) { return value.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character); }
 function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => text(row[field]).trim()).filter(Boolean))].sort(); }
 
-const card: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "14px 16px" };
-const sectionTitle: CSSProperties = { fontSize: 12, fontWeight: 700, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 };
-const label: CSSProperties = { fontSize: 11, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 };
-const microLabel: CSSProperties = { fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-hint)", display: "block", marginBottom: 4 };
-const input: CSSProperties = { width: "100%", padding: "7px 10px", border: "0.5px solid var(--border-md)", borderRadius: "var(--radius)", fontSize: 12, background: "var(--white)", color: "var(--text)", outline: "none" };
-const btn: CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "7px 12px", borderRadius: "var(--radius)", border: "0.5px solid var(--border-md)", background: "var(--white)", color: "var(--text)", fontSize: 11, fontWeight: 500, cursor: "pointer" };
-const btnPrimary: CSSProperties = { ...btn, background: "var(--purple-mid)", borderColor: "var(--purple-mid)", color: "#fff" };
 
 export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
   const [tab, setTab] = useState<BlastTab>("compose");
@@ -37,21 +34,16 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
   const [ctaUrl, setCtaUrl] = useState("");
   const [footer, setFooter] = useState("© 2026 CareerCclub | careercclub.com");
   const [schedule, setSchedule] = useState("");
-  const [fromName, setFromName] = useState("CareerCclub");
-  const [fromEmail, setFromEmail] = useState("");
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [logs, setLogs] = useState<Log[]>([]);
+  const [fromName, setFromName] = useState(() => readStore("ccc_blast_from_name", "CareerCclub"));
+  const [fromEmail, setFromEmail] = useState(() => readStore("ccc_blast_from_email", ""));
+  const [templates, setTemplates] = useState<Template[]>(() => readJson("ccc_tp_blast_templates"));
+  const [logs, setLogs] = useState<Log[]>(() => readJson("ccc_tp_blast_logs"));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [invalid, setInvalid] = useState<"" | "subject" | "body">("");
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    try {
-      setTemplates(JSON.parse(localStorage.getItem("ccc_tp_blast_templates") || "[]") as Template[]);
-      setLogs(JSON.parse(localStorage.getItem("ccc_tp_blast_logs") || "[]") as Log[]);
-      setFromName(localStorage.getItem("ccc_blast_from_name") || "CareerCclub");
-      setFromEmail(localStorage.getItem("ccc_blast_from_email") || "");
-    } catch { /* ignore unreadable storage */ }
-  }, []);
 
   const statusOptions = useMemo(() => options(rows, "status"), [rows]);
   const sumberOptions = useMemo(() => options(rows, "sumber"), [rows]);
@@ -71,7 +63,7 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
 
   function buildHtml(preview = false) {
     const nama = (value: string) => (preview ? value.replaceAll("{nama}", "Kak Sample") : value);
-    const safeBody = nama(escapeHtml(body).replace(/\n/g, "<br>")) || "<span style=\"color:#888\">(isi email kosong)</span>";
+    const safeBody = nama(escapeHtml(body).replace(/\n/g, "<br>")) || "<span style=\"color:#888\">(email body is empty)</span>";
     const title = nama(escapeHtml(headerTitle) || "CareerCclub");
     const sub = nama(escapeHtml(headerSub));
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f4f4f7;font-family:'Helvetica Neue',Arial,sans-serif">
@@ -92,47 +84,41 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
   </td></tr></table></body></html>`;
   }
 
-  function preview() {
-    const win = window.open("", "_blank");
-    if (!win) { setMessage("Popup diblokir — izinkan popup untuk preview."); return; }
-    win.document.write(buildHtml(true));
-    win.document.close();
-  }
-
   function applyTemplate(template: Template) {
     setSubject(template.subject); setHeaderTitle(template.headerTitle); setHeaderSub(template.headerSub);
     setHeaderColor(template.headerColor || "#2e2a7a"); setBody(template.body); setCtaText(template.ctaText);
     setCtaUrl(template.ctaUrl); setFooter(template.footer || "© 2026 CareerCclub | careercclub.com");
-    setMessage(`Template "${template.name}" dimuat.`);
+    setMessage(`Template "${template.name}" loaded.`);
   }
 
   async function saveTemplate() {
     const name = await askText({ title: "Save as template", label: "Template name", submitLabel: "Save template" });
     if (!name?.trim()) return;
     const next = [...templates, { name: name.trim(), subject, headerTitle, headerSub, headerColor, body, ctaText, ctaUrl, footer }];
-    setTemplates(next); localStorage.setItem("ccc_tp_blast_templates", JSON.stringify(next)); setMessage(`Template "${name.trim()}" saved.`);
+    setTemplates(next); writeStore("ccc_tp_blast_templates", JSON.stringify(next)); setMessage(`Template "${name.trim()}" saved.`);
   }
 
   function deleteTemplate(index: number) {
     const next = templates.filter((_, itemIndex) => itemIndex !== index);
-    setTemplates(next); localStorage.setItem("ccc_tp_blast_templates", JSON.stringify(next));
+    setTemplates(next); writeStore("ccc_tp_blast_templates", JSON.stringify(next));
   }
 
   function saveSettings() {
-    localStorage.setItem("ccc_blast_from_name", fromName || "CareerCclub");
-    if (fromEmail) localStorage.setItem("ccc_blast_from_email", fromEmail); else localStorage.removeItem("ccc_blast_from_email");
-    setMessage("Pengaturan pengirim tersimpan di device ini. RESEND_API_KEY tetap di server.");
+    writeStore("ccc_blast_from_name", fromName || "CareerCclub");
+    if (fromEmail) writeStore("ccc_blast_from_email", fromEmail); else writeStore("ccc_blast_from_email", null);
+    setMessage("Sender saved on this device. The Resend API key stays on the server.");
   }
 
   async function send() {
-    if (!subject.trim()) { setMessage("Subject wajib diisi."); return; }
-    if (!body.trim()) { setMessage("Isi email tidak boleh kosong."); return; }
+    if (!subject.trim()) { setInvalid("subject"); setMessage("Subject is required."); subjectRef.current?.focus(); return; }
+    if (!body.trim()) { setInvalid("body"); setMessage("Email body is required."); bodyRef.current?.focus(); return; }
+    setInvalid("");
     const list = recipients.map((row) => ({ email: text(row.email), name: text(row.nama) })).filter((recipient) => recipient.email);
-    if (!list.length) { setMessage("Tidak ada penerima dengan email valid."); return; }
-    if (schedule && !Number.isFinite(new Date(schedule).getTime())) { setMessage("Jadwal kirim tidak valid."); return; }
+    if (!list.length) { setMessage("No recipients with a valid email."); return; }
+    if (schedule && !Number.isFinite(new Date(schedule).getTime())) { setMessage("Send time is not valid."); return; }
     if (!(await confirmAction({ title: `Send to ${list.length} recipient${list.length === 1 ? "" : "s"}?`, message: schedule ? `Scheduled for ${schedule}.` : "The email is sent now.", confirmLabel: schedule ? "Schedule email" : "Send email" }))) return;
 
-    setBusy(true); setMessage("Mengirim... mohon tunggu.");
+    setBusy(true); setMessage("Sending… please wait.");
     const html = buildHtml();
     const scheduledAt = schedule ? new Date(schedule).toISOString() : undefined;
     let sent = 0; let failed = 0;
@@ -140,152 +126,127 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
       for (let offset = 0; offset < list.length; offset += 100) {
         const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: list.slice(offset, offset + 100), subject, from_name: fromName, from_email: fromEmail || undefined, scheduled_at: scheduledAt, html, source: "talent-pool" }) });
         const result = await response.json() as { sent?: number; failed?: number; error?: string };
-        if (!response.ok) throw new Error(result.error || "Blast gagal.");
+        if (!response.ok) throw new Error(result.error || "Email blast failed.");
         sent += result.sent || 0; failed += result.failed || 0;
       }
       const nextLogs = [{ subject, total: list.length, sent, failed, sentAt: scheduledAt || new Date().toISOString() }, ...logs].slice(0, 100);
-      setLogs(nextLogs); localStorage.setItem("ccc_tp_blast_logs", JSON.stringify(nextLogs));
-      setMessage(`${schedule ? "Dijadwalkan" : "Terkirim"} ${sent}; gagal ${failed}.`);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Blast gagal."); }
+      setLogs(nextLogs); writeStore("ccc_tp_blast_logs", JSON.stringify(nextLogs));
+      setMessage(`${schedule ? "Scheduled" : "Sent"} ${sent}; failed ${failed}.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Email blast failed."); }
     finally { setBusy(false); }
   }
 
-  const tabs: Array<[BlastTab, string, string]> = [["compose", "ti-send", "Compose & Kirim"], ["templates", "ti-bookmark", "Templates"], ["history", "ti-history", "History"], ["settings", "ti-settings", "Settings"]];
+  const tabs: Array<[BlastTab, string]> = [["compose", "Compose"], ["templates", `Templates`], ["history", "History"], ["settings", "Sender"]];
+  const previewHtml = useMemo(() => buildHtml(true), [subject, headerTitle, headerSub, headerColor, body, ctaText, ctaUrl, footer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ marginTop: 4 }}>
-      <div style={{ display: "flex", gap: 2, borderBottom: "0.5px solid var(--border)", marginBottom: 16, overflowX: "auto" }}>
-        {tabs.map(([key, icon, labelText]) => (
-          <button key={key} onClick={() => setTab(key)} type="button" style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 14px", fontSize: 12, fontWeight: tab === key ? 600 : 500, color: tab === key ? "var(--purple-mid)" : "var(--text-muted)", background: "none", border: "none", borderBottom: `2px solid ${tab === key ? "var(--purple-mid)" : "transparent"}`, cursor: "pointer", whiteSpace: "nowrap" }}>
-            <i className={`ti ${icon}`} /> {labelText}
+    <div className={s.wrap}>
+      <div className={s.subTabs} role="tablist" aria-label="Email blast">
+        {tabs.map(([key, labelText]) => (
+          <button aria-selected={tab === key} className={tab === key ? s.subTabActive : s.subTab} key={key} onClick={() => setTab(key)} role="tab" type="button">
+            {labelText}{key === "templates" && templates.length ? <span>{templates.length}</span> : null}{key === "history" && logs.length ? <span>{logs.length}</span> : null}
           </button>
         ))}
       </div>
 
       {tab === "compose" ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={card}>
-              <div style={sectionTitle}><i className="ti ti-filter" style={{ color: "var(--purple-accent)" }} /> Target Penerima</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div>
-                  <label style={label}>SEGMENT</label>
-                  <select onChange={(event) => setSegment(event.target.value)} style={input} value={segment}>
-                    <option value="all">Semua kontak dengan email</option>
-                    <option value="beli">Buyers</option>
-                    <option value="belum">Not a buyer</option>
-                    <option value="custom">Filter kustom...</option>
-                  </select>
+        <div className={s.compose}>
+          <div className={s.form}>
+            <section className={s.card} aria-labelledby="blast-to">
+              <h3 id="blast-to">Recipients</h3>
+              <label className={s.field}><span>Segment</span>
+                <select onChange={(event) => setSegment(event.target.value)} value={segment}>
+                  <option value="all">Everyone with an email</option>
+                  <option value="beli">Buyers</option>
+                  <option value="belum">Not a buyer</option>
+                  <option value="custom">Custom filter…</option>
+                </select>
+              </label>
+              {segment === "custom" ? (
+                <div className={s.row3}>
+                  <label className={s.field}><span>Status</span><select onChange={(event) => setCStatus(event.target.value)} value={cStatus}><option value="">All</option>{statusOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+                  <label className={s.field}><span>Source</span><select onChange={(event) => setCSumber(event.target.value)} value={cSumber}><option value="">All</option>{sumberOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+                  <label className={s.field}><span>Tier</span><select onChange={(event) => setCTier(event.target.value)} value={cTier}><option value="">All</option>{tierOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
                 </div>
-                {segment === "custom" ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <select onChange={(event) => setCStatus(event.target.value)} style={input} value={cStatus}><option value="">Semua status</option>{statusOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>
-                    <select onChange={(event) => setCSumber(event.target.value)} style={input} value={cSumber}><option value="">Semua sumber</option>{sumberOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>
-                    <select onChange={(event) => setCTier(event.target.value)} style={input} value={cTier}><option value="">Semua tier</option>{tierOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>
-                  </div>
-                ) : null}
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--purple-accent)", padding: "7px 10px", background: "var(--purple-light)", borderRadius: "var(--radius)" }}>
-                  <i className="ti ti-users" /> {recipients.length} penerima
-                </div>
-              </div>
-            </div>
+              ) : null}
+              <p className={s.recipients}><i className="ti ti-users" aria-hidden="true" /> {recipients.length} recipient{recipients.length === 1 ? "" : "s"}</p>
+            </section>
 
-            <div style={card}>
-              <div style={sectionTitle}><i className="ti ti-mail" style={{ color: "var(--purple-accent)" }} /> Detail Email</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div><label style={label}>SUBJECT</label><input onChange={(event) => setSubject(event.target.value)} placeholder="Subject email..." style={input} value={subject} /></div>
-                <div>
-                  <label style={label}>TEMPLATE (opsional)</label>
-                  <select onChange={(event) => { const template = templates[Number(event.target.value)]; if (template) applyTemplate(template); }} style={input} value="">
-                    <option value="">— Pilih template —</option>
+            <section className={s.card} aria-labelledby="blast-email">
+              <h3 id="blast-email">Email</h3>
+              <label className={s.field}><span>Subject <b className={s.req}>*</b></span><input aria-invalid={invalid === "subject" || undefined} className={invalid === "subject" ? s.invalid : undefined} onChange={(event) => { setSubject(event.target.value); if (invalid === "subject") setInvalid(""); }} placeholder="Email subject" ref={subjectRef} value={subject} /></label>
+              <div className={s.row2}>
+                <label className={s.field}><span>Template</span>
+                  <select onChange={(event) => { const template = templates[Number(event.target.value)]; if (template) applyTemplate(template); }} value="">
+                    <option value="">{templates.length ? "Load a template" : "No templates yet"}</option>
                     {templates.map((template, index) => <option key={`${template.name}-${index}`} value={index}>{template.name}</option>)}
                   </select>
-                </div>
-                <div><label style={label}>JADWAL KIRIM (opsional)</label><input onChange={(event) => setSchedule(event.target.value)} type="datetime-local" style={input} value={schedule} /><div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3 }}>Kosongkan untuk kirim sekarang</div></div>
+                </label>
+                <label className={s.field}><span>Send at</span><input onChange={(event) => setSchedule(event.target.value)} type="datetime-local" value={schedule} /><small>Leave empty to send now</small></label>
               </div>
-            </div>
+            </section>
+
+            <section className={s.card} aria-labelledby="blast-content">
+              <div className={s.cardHead}><h3 id="blast-content">Content</h3><button className={s.ghost} onClick={saveTemplate} type="button"><i className="ti ti-bookmark" aria-hidden="true" /> Save as template</button></div>
+              <div className={s.row2}>
+                <label className={s.field}><span>Header title</span><input onChange={(event) => setHeaderTitle(event.target.value)} value={headerTitle} /></label>
+                <label className={s.field}><span>Header subtitle</span><input onChange={(event) => setHeaderSub(event.target.value)} placeholder="Optional" value={headerSub} /></label>
+              </div>
+              <label className={s.colorField}><span>Header color</span><input onChange={(event) => setHeaderColor(event.target.value)} type="color" value={headerColor} /></label>
+              <label className={s.field}><span>Body <b className={s.req}>*</b></span><textarea aria-invalid={invalid === "body" || undefined} className={invalid === "body" ? s.invalid : undefined} onChange={(event) => { setBody(event.target.value); if (invalid === "body") setInvalid(""); }} placeholder="Write the email… use {nama} for each recipient's name." ref={bodyRef} rows={7} value={body} /><small>Tip: <code>{"{nama}"}</code> is replaced with each recipient&apos;s name.</small></label>
+              <div className={s.row2}>
+                <label className={s.field}><span>Button text</span><input onChange={(event) => setCtaText(event.target.value)} placeholder="Optional" value={ctaText} /></label>
+                <label className={s.field}><span>Button link</span><input onChange={(event) => setCtaUrl(event.target.value)} placeholder="https://…" value={ctaUrl} /></label>
+              </div>
+              <label className={s.field}><span>Footer</span><input onChange={(event) => setFooter(event.target.value)} value={footer} /></label>
+            </section>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ ...card, flex: 1 }}>
-              <div style={{ ...sectionTitle, justifyContent: "space-between" }}>
-                <span><i className="ti ti-pencil" style={{ color: "var(--purple-accent)" }} /> Email Builder</span>
-                <span style={{ display: "flex", gap: 6 }}>
-                  <button onClick={preview} style={btn} type="button"><i className="ti ti-eye" /> Preview</button>
-                  <button onClick={saveTemplate} style={btn} type="button"><i className="ti ti-bookmark" /> Simpan Template</button>
-                </span>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label style={microLabel}>HEADER</label>
-                <input onChange={(event) => setHeaderTitle(event.target.value)} placeholder="Judul header email..." style={{ ...input, marginBottom: 5 }} value={headerTitle} />
-                <input onChange={(event) => setHeaderSub(event.target.value)} placeholder="Subtitle (opsional)..." style={input} value={headerSub} />
-                <div style={{ display: "flex", gap: 6, marginTop: 5, alignItems: "center" }}>
-                  <label style={{ fontSize: 11, color: "var(--text-muted)" }}>Warna header:</label>
-                  <input onChange={(event) => setHeaderColor(event.target.value)} type="color" value={headerColor} style={{ width: 32, height: 28, border: "0.5px solid var(--border-md)", borderRadius: 6, cursor: "pointer", padding: 2 }} />
-                </div>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label style={microLabel}>ISI EMAIL</label>
-                <textarea onChange={(event) => setBody(event.target.value)} placeholder="Tulis isi email... Gunakan {nama} untuk personalisasi." rows={7} style={{ ...input, resize: "vertical", lineHeight: 1.6 }} value={body} />
-                <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 5 }}>Tip: gunakan <code style={{ background: "var(--bg)", padding: "1px 4px", borderRadius: 3 }}>{"{nama}"}</code> untuk personalisasi otomatis per penerima.</div>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label style={microLabel}>TOMBOL CTA (opsional)</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                  <input onChange={(event) => setCtaText(event.target.value)} placeholder="Teks tombol" style={input} value={ctaText} />
-                  <input onChange={(event) => setCtaUrl(event.target.value)} placeholder="https://..." style={input} value={ctaUrl} />
-                </div>
-              </div>
-              <div>
-                <label style={microLabel}>FOOTER</label>
-                <input onChange={(event) => setFooter(event.target.value)} style={input} value={footer} />
-              </div>
-            </div>
-            <button onClick={send} disabled={busy} style={{ ...btnPrimary, width: "100%", padding: 11, fontSize: 13, fontWeight: 600, opacity: busy ? 0.6 : 1 }} type="button">
-              <i className="ti ti-send" /> {busy ? "Mengirim..." : "Kirim Email Blast"}
-            </button>
-          </div>
+          <aside className={s.previewCol} aria-label="Email preview">
+            <div className={s.previewHead}><b>Preview</b><span>{subject || "(no subject)"}</span></div>
+            <iframe className={s.preview} sandbox="" srcDoc={previewHtml} title="Email preview" />
+            <button className={s.send} disabled={busy} onClick={send} type="button"><i className="ti ti-send" aria-hidden="true" /> {busy ? "Sending…" : schedule ? `Schedule email to ${recipients.length}` : `Send email to ${recipients.length}`}</button>
+            {message ? <p className={s.message} role="status">{message}</p> : null}
+          </aside>
         </div>
       ) : null}
 
       {tab === "templates" ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
-          {!templates.length ? <div style={{ ...card, gridColumn: "1/-1", textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>Belum ada template. Simpan dari tab Compose.</div> : templates.map((template, index) => (
-            <div style={card} key={`${template.name}-${index}`}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                <strong style={{ fontSize: 13 }}>{template.name}</strong>
-                <button onClick={() => deleteTemplate(index)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer" }} type="button"><i className="ti ti-trash" /></button>
-              </div>
-              <p style={{ margin: "0 0 8px", fontSize: 11, color: "var(--text-muted)" }}>{template.subject || "(tanpa subject)"}</p>
-              <button onClick={() => { applyTemplate(template); setTab("compose"); }} style={btn} type="button"><i className="ti ti-arrow-right" /> Gunakan</button>
-            </div>
-          ))}
-        </div>
+        templates.length ? (
+          <ul className={s.templates}>
+            {templates.map((template, index) => (
+              <li className={s.card} key={`${template.name}-${index}`}>
+                <div className={s.cardHead}><h3>{template.name}</h3><button aria-label={`Delete template ${template.name}`} className={s.iconDanger} onClick={async () => { if (await confirmAction({ title: `Delete template "${template.name}"?`, message: "Saved on this device only.", confirmLabel: "Delete template", danger: true })) deleteTemplate(index); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button></div>
+                <p className={s.muted}>{template.subject || "(no subject)"}</p>
+                <button className={s.ghost} onClick={() => { applyTemplate(template); setTab("compose"); }} type="button">Use template</button>
+              </li>
+            ))}
+          </ul>
+        ) : <p className={s.empty}>No templates yet. Save one from Compose.</p>
       ) : null}
 
       {tab === "history" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {!logs.length ? <div style={{ ...card, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>Belum ada riwayat blast.</div> : logs.map((log, index) => (
-            <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }} key={`${log.sentAt}-${index}`}>
-              <div style={{ minWidth: 0 }}><strong style={{ fontSize: 12, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.subject || "(tanpa subject)"}</strong><span style={{ fontSize: 11, color: "var(--text-muted)" }}>{new Date(log.sentAt).toLocaleString("id-ID")}</span></div>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>{log.sent}/{log.total} terkirim · {log.failed} gagal</span>
-            </div>
-          ))}
-        </div>
+        logs.length ? (
+          <ul className={s.history}>
+            {logs.map((log, index) => (
+              <li key={`${log.sentAt}-${index}`}>
+                <span className={s.historyMain}><b>{log.subject || "(no subject)"}</b><small>{new Date(log.sentAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</small></span>
+                <span className={log.failed ? s.historyFail : s.historyOk}>{log.sent}/{log.total} sent{log.failed ? ` · ${log.failed} failed` : ""}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className={s.empty}>No email blasts sent yet.</p>
       ) : null}
 
       {tab === "settings" ? (
-        <div style={{ ...card, maxWidth: 460 }}>
-          <div style={sectionTitle}><i className="ti ti-settings" style={{ color: "var(--purple-accent)" }} /> Pengaturan Pengirim</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div><label style={label}>NAMA PENGIRIM</label><input onChange={(event) => setFromName(event.target.value)} style={input} value={fromName} /></div>
-            <div><label style={label}>EMAIL PENGIRIM</label><input onChange={(event) => setFromEmail(event.target.value)} placeholder="blast@domainmu.com" type="email" style={input} value={fromEmail} /><div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3 }}>Harus domain terverifikasi di Resend. Kosongkan untuk pakai default server.</div></div>
-            <button onClick={saveSettings} style={btnPrimary} type="button"><i className="ti ti-device-floppy" /> Simpan Pengaturan</button>
-          </div>
-        </div>
+        <section className={`${s.card} ${s.settings}`} aria-labelledby="blast-sender">
+          <h3 id="blast-sender">Sender</h3>
+          <label className={s.field}><span>Sender name</span><input onChange={(event) => setFromName(event.target.value)} value={fromName} /></label>
+          <label className={s.field}><span>Sender email</span><input onChange={(event) => setFromEmail(event.target.value)} placeholder="blast@yourdomain.com" type="email" value={fromEmail} /><small>Must be a domain verified in Resend. Leave empty to use the server default.</small></label>
+          <button className={s.primary} onClick={saveSettings} type="button">Save sender</button>
+          {message ? <p className={s.message} role="status">{message}</p> : null}
+        </section>
       ) : null}
-
-      {message ? <p style={{ marginTop: 12, fontSize: 12, color: "var(--text-muted)" }} role="status">{message}</p> : null}
     </div>
   );
 }

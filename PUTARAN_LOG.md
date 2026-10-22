@@ -677,3 +677,35 @@ Program (daftar event → kartu + timeline task), CRM, Talent Pool, B2B/Org Part
 
 CRM → Talent Pool → B2B/Org Partnership → Content Planning → Products → Job Vacancy → Competitor → Customer Knowledge → Settings.
 Nice-to-have: tabel Rundown di detail event masih gaya lama (input per sel) — dirapikan saat giliran Event rundown.
+
+## Putaran 15 — Talent Pool (IJIS layout) (22 Okt 2026)
+
+Urutan baru dari user: Talent Pool → CRM → Partnership → Customer Knowledge → Content Planning.
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Tab bergaris Database / Analytics / Email Blast / Manage data; 3 kartu angka; tabel 12 kolom dengan pil status, tier, pipeline per baris | Judul + "N candidates · M buyers · K reachable by email"; saklar **Candidates / Analytics / Email blast / Manage data** |
+| Filter dropdown polos ("Pipeline", "Sumber") | Search pil + saklar **All / Buyers / Not a buyer** (dengan jumlah) + filter pil Status / Source / Tier + "Clear filters" |
+| Tabel | **Direktori kartu** (24 per halaman): avatar inisial, nama, universitas · tier, kota · angkatan lulus · GPA, 1 target MT (+N); chip **Buyer** hanya untuk buyer (satu status per item) |
+| — | Panel **At a glance**: buyer vs bukan (bar), universitas/target MT/kota terbanyak, tombol "Email N candidates" → Email blast, "See full analytics" |
+| Popup detail di tengah | **Drawer profil** dari kanan: kontak (WhatsApp/Email/LinkedIn), Academic, Profile, Management trainee, Feedback |
+| Email Blast: form 2 kolom, Preview buka tab baru, teks campur Indonesia | Form kiri (Recipients, Email, Content) + **preview langsung** di kanan dan tombol "Send email to N"; Subject & Body wajib ditandai merah, kalau kosong field-nya ditandai & difokus; hapus template sekarang minta konfirmasi; semua teks Inggris |
+| Analytics: grid kolom tetap, judul Indonesia | Grid responsif, judul Inggris, tombol "Export data" |
+
+- Aturan "buyer" satu tempat: `lib/talent-pool/view.ts` (`isBuyer`, `filterCandidates`, `poolSummary`) + 3 unit test (angka header = jumlah filter Buyers/Not a buyer).
+- Perbaikan: link WhatsApp sekarang format internasional (0812… → wa.me/62812…); sebelumnya link dengan awalan 0 tidak membuka chat yang benar.
+- Lint: error lama `talent-pool-tools` (setState di effect) beres — pengaturan pengirim/template dibaca saat state dibuat, tulis ke storage dibungkus try/catch.
+- CSS lama `talent-pool.module.css` dihapus (tidak dipakai lagi).
+
+### Check
+
+- Desain: render 1440 & 390. Ditemukan & diperbaiki: di HP panel At a glance menutupi layar pertama → dipindah ke bawah daftar; saklar 4 view terpotong di HP → jumlah disembunyikan di HP (sudah ada di judul).
+- E2E baru Talent Pool **21/21** (24 kartu, angka header = filter Buyers, filter buyer/search/tier, Clear, At a glance, drawer buka/Esc, `?focus`, link WA, Email blast: subject kosong ditandai & fokus, preview langsung, Analytics, Manage data, HP tanpa geser samping).
+- Regresi: unit 105/105, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31, navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Talent Pool ok.
+- tsc bersih; lint: sisa error lama di competitor-tools & content-planning-tools; `npm run build` lolos.
+
+### Antrean
+
+CRM → B2B/Org Partnership → Customer Knowledge → Content Planning, lalu Products, Job Vacancy, Competitor, Settings.
