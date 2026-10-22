@@ -2,240 +2,249 @@
 
 import { bulkUpdateCrmBuyers } from "@/app/actions/crm-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
+import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
+import { crmSummary, CRM_STATUSES, filterCustomers, FUNNEL, funnelStage, groupCustomers, inTalentPool, rupiah, statusLabel, type CrmFilter, type Customer } from "@/lib/crm/view";
+import { initials, shortDate } from "@/lib/dashboard/summary";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
-import { AnalyticsCard, AnalyticsHeader, analyticsGrid, BarBreakdown, DonutBreakdown, downloadJson, freq, freqMulti, type Entry } from "./analytics-cards";
+import { AnalyticsCard, BarBreakdown, DonutBreakdown, downloadJson, freq, freqMulti, type Entry } from "./analytics-cards";
+import { confirmAction } from "./app-dialog";
 import { CrmEmailBlast } from "./crm-email-blast";
 import { CrmTools } from "./crm-tools";
+import s from "./crm-workspace.module.css";
 import { Pagination, usePagination } from "./ui-kit";
-import styles from "./crm.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { DialogBehaviour } from "./use-modal";
-import { confirmAction } from "./app-dialog";
 
-type Transaction = { produk?: string; klasifikasi?: string; harga?: number; tanggal?: string; paymentStatus?: string };
-type Customer = ApiRecord & { ids: string[]; transactions: Transaction[]; spend: number; txCount: number };
-const crmStatuses = ["Belum diblast", "Diblast", "Sedang di-upsell", "Sedang di-downsell", "Sedang di-cross sell", "Sudah convert — Upsell", "Sudah convert — Downsell", "Sudah convert — Cross sell"];
+// CRM in the IJIS layout: a blast funnel you can click, a buyer list (one status per buyer),
+// a floating bar for bulk actions and a customer drawer with the purchase timeline.
 
-const KLAS_PILL: Record<string, string> = { "Bundling Package": "pillPurple", "Elearning": "pillBlue", "Optimasi Screening": "pillTeal", "Psikotes": "pillAmber", "E-book MT": "pillCoral", "Database MT": "pillPink", "Belum Diklasifikasi": "pillGray" };
-const STATUS_PILL: Record<string, string> = { "Belum diblast": "pillGray", "Diblast": "pillBlue", "Sedang di-upsell": "pillPurple", "Sedang di-downsell": "pillAmber", "Sedang di-cross sell": "pillPurple", "Sudah convert — Upsell": "pillGreen", "Sudah convert — Downsell": "pillGreen", "Sudah convert — Cross sell": "pillGreen" };
-const PAYMENT_STYLE: Record<string, { color: string; bg: string; icon: string }> = { SUCCESS: { color: "#1a7a4a", bg: "#d1fae5", icon: "ti-circle-check" }, PENDING: { color: "#b45309", bg: "#fef3c7", icon: "ti-clock" }, FAILED: { color: "#b91c1c", bg: "#fee2e2", icon: "ti-circle-x" } };
-const styleMap = styles as Record<string, string>;
+type View = "buyers" | "blast" | "import" | "analytics";
+const EMPTY: CrmFilter = { query: "", stage: "", classification: "", payment: "", pool: "", repeat: "", industry: "", tahap: "", source: "", status: "" };
 
-function normalizedWa(value: unknown) { let digits = String(value || "").replace(/\D/g, ""); if (digits.startsWith("0")) digits = `62${digits.slice(1)}`; else if (digits.startsWith("8")) digits = `62${digits}`; return digits; }
-// Same double-encoding as ticket links: riwayat written before the sql.json() fix is a
-// JSON string, which silently collapsed a buyer's whole history to one synthetic row.
-function jsonRows(value: unknown): Transaction[] {
-  if (typeof value === "string") { try { return jsonRows(JSON.parse(value)); } catch { return []; } }
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => (typeof item === "string" ? jsonRows(item) : item && typeof item === "object" ? [item as Transaction] : []));
-}
-function history(row: ApiRecord): Transaction[] { const value = jsonRows(row.riwayat); return value.length ? value : [{ produk: String(row.produk || ""), klasifikasi: String(row.klasifikasi || ""), harga: Number(row.harga || 0), tanggal: String(row.tanggal || "") }]; }
-function unique(rows: Customer[], key: string) { return [...new Set(rows.map((row) => String(row[key] || "")).filter(Boolean))].sort(); }
+function text(value: unknown) { return value === null || value === undefined ? "" : String(value).trim(); }
+function unique(rows: Customer[], key: string) { return [...new Set(rows.map((row) => text(row[key])).filter(Boolean))].sort(); }
 function csvCell(value: unknown) { return `"${String(value ?? "").replaceAll('"', '""')}"`; }
-function rupiahK(value: number) { return `Rp${(value / 1000).toFixed(0)}k`; }
-function klasPillClass(value: string) { return styleMap[KLAS_PILL[value] || "pillGray"]; }
-function statusPillClass(value: string) { return styleMap[STATUS_PILL[value] || "pillGray"]; }
-
-function PaymentPill({ status }: { status: string }) {
-  if (!status) return <span className={styles.paymentNone}>—</span>;
-  const style = PAYMENT_STYLE[status] || { color: "#6b7280", bg: "#f3f4f6", icon: "ti-help" };
-  return <span className={styles.paymentPill} style={{ color: style.color, background: style.bg }}><i className={`ti ${style.icon}`} style={{ fontSize: 10 }} />{status}</span>;
-}
+function dateLabel(value: unknown) { const key = text(value).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(key) ? shortDate(key, false) + ` ${key.slice(0, 4)}` : text(value) || "—"; }
+function waLink(value: unknown) { let d = text(value).replace(/\D/g, ""); if (d.startsWith("0")) d = `62${d.slice(1)}`; else if (d.startsWith("8")) d = `62${d}`; return d ? `https://wa.me/${d}` : ""; }
 
 export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { rows: ApiRecord[]; blastHistory?: EmailBlastRecord[]; blastDaily?: DailyBlastCount[] }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"buyers" | "analytics" | "blast" | "import">("buyers");
-  const [query, setQuery] = useState(""); const [classification, setClassification] = useState(""); const [industry, setIndustry] = useState(""); const [stage, setStage] = useState(""); const [status, setStatus] = useState(""); const [talent, setTalent] = useState(""); const [source, setSource] = useState(""); const [payment, setPayment] = useState(""); const [repeat, setRepeat] = useState("");
-  const [selected, setSelected] = useState<string[]>([]); const [detailKey, setDetailKey] = useState(""); const [bulkStatus, setBulkStatus] = useState(""); const [bulkPool, setBulkPool] = useState(""); const [message, setMessage] = useState(""); const [pending, startTransition] = useTransition();
-  const customers = useMemo(() => {
-    const groups = new Map<string, ApiRecord[]>();
-    rows.forEach((row) => { const key = normalizedWa(row.wa) || String(row.email || row.id); groups.set(key, [...(groups.get(key) || []), row]); });
-    return [...groups.entries()].map(([key, group]) => { const sorted = [...group].sort((a, b) => String(b.tanggal || b.created_at || "").localeCompare(String(a.tanggal || a.created_at || ""))); const latest = sorted[0]; const transactions = group.flatMap(history); return { ...latest, _key: key, ids: group.map((row) => String(row.id)), transactions, txCount: transactions.length, spend: transactions.reduce((sum, item) => sum + Number(item.harga || 0), 0) } as Customer; });
-  }, [rows]);
-  const filtered = useMemo(() => customers.filter((row) => {
-    const search = `${row.name} ${row.wa} ${row.email} ${row.produk}`.toLowerCase();
-    return (!query || search.includes(query.toLowerCase())) && (!classification || row.klasifikasi === classification) && (!industry || row.industri === industry) && (!stage || row.tahap === stage) && (!status || row.status === status) && (!talent || (talent === "yes") === Boolean(row.talent_pool || row.talent_pool_match)) && (!source || row.sumber === source) && (!payment || (payment === "none" ? !row.payment_status : row.payment_status === payment)) && (!repeat || (repeat === "repeat" ? row.txCount > 1 : row.txCount === 1));
-  }), [customers, query, classification, industry, stage, status, talent, source, payment, repeat]);
-  const { pageItems, page, setPage, totalPages } = usePagination(filtered, 15);
-  const detail = customers.find((row) => String(row._key) === detailKey);
-  // Search result opened: a buyer row can hold several transactions, so match on any of its ids.
+  const [view, setView] = useState<View>("buyers");
+  const [filter, setFilter] = useState<CrmFilter>(EMPTY);
+  const [moreFilters, setMoreFilters] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [detailKey, setDetailKey] = useState("");
+  const [bulkStatus, setBulkStatus] = useState(""); const [bulkPool, setBulkPool] = useState("");
+  const [message, setMessage] = useState(""); const [pending, startTransition] = useTransition();
+
+  const customers = useMemo(() => groupCustomers(rows), [rows]);
+  const summary = useMemo(() => crmSummary(customers), [customers]);
+  const filtered = useMemo(() => filterCustomers(customers, filter), [customers, filter]);
+  const { pageItems, page, setPage, totalPages } = usePagination(filtered, 20);
+  const detail = customers.find((row) => row._key === detailKey);
+  const set = (patch: CrmFilter) => { setFilter((current) => ({ ...current, ...patch })); setPage(0); };
+  const filtersOn = Object.entries(filter).some(([key, value]) => key !== "stage" && Boolean(value));
+
+  // Search result opened: a buyer can hold several transactions, so match on any of its ids.
   useRecordFocus((id) => {
     const customer = customers.find((row) => row.ids.includes(id));
     if (!customer) return;
-    setTab("buyers"); setQuery(""); setClassification(""); setIndustry(""); setStage(""); setStatus(""); setTalent(""); setSource(""); setPayment(""); setRepeat("");
-    setDetailKey(String(customer._key));
+    setView("buyers"); setFilter(EMPTY); setDetailKey(customer._key);
     return true;
   });
-  const selectedIds = customers.filter((row) => selected.includes(String(row._key))).flatMap((row) => row.ids);
-  const stats = { buyers: customers.length, transactions: customers.reduce((sum, row) => sum + row.txCount, 0), noPool: customers.filter((row) => !(row.talent_pool || row.talent_pool_match)).length, blasting: customers.filter((row) => String(row.status || "").includes("blast")).length, converted: customers.filter((row) => String(row.status || "").includes("convert")).length };
 
-  async function mutate(operation: "status" | "talent" | "delete", value?: string) { if (!selectedIds.length) return; if (operation === "delete" && !(await confirmAction({ title: `Delete ${selectedIds.length} transaction${selectedIds.length === 1 ? "" : "s"}?`, message: "This cannot be undone.", confirmLabel: selectedIds.length === 1 ? "Delete transaction" : "Delete transactions", danger: true }))) return; startTransition(async () => { try { await bulkUpdateCrmBuyers(selectedIds, operation, value); setSelected([]); setMessage("CRM records updated."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Update failed."); } }); }
-  function exportCsv() { const data = selected.length ? filtered.filter((row) => selected.includes(String(row._key))) : filtered; const csv = [["Name","WhatsApp","Email","Product","Classification","Spend","Transactions","Industry","Stage","Source","Status","Payment"], ...data.map((row) => [row.name,row.wa,row.email,row.produk,row.klasifikasi,row.spend,row.txCount,row.industri,row.tahap,row.sumber,row.status,row.payment_status])].map((line) => line.map(csvCell).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "ccc-crm-buyers.csv"; anchor.click(); URL.revokeObjectURL(url); }
+  const selectedIds = customers.filter((row) => selected.includes(row._key)).flatMap((row) => row.ids);
+  const allOnPage = pageItems.length > 0 && pageItems.every((row) => selected.includes(row._key));
+  const toggle = (key: string, on: boolean) => setSelected((current) => on ? [...new Set([...current, key])] : current.filter((item) => item !== key));
+
+  async function mutate(operation: "status" | "talent" | "delete", value?: string) {
+    if (!selectedIds.length) return;
+    if (operation === "delete" && !(await confirmAction({ title: `Delete ${selectedIds.length} transaction${selectedIds.length === 1 ? "" : "s"}?`, message: "This cannot be undone.", confirmLabel: selectedIds.length === 1 ? "Delete transaction" : "Delete transactions", danger: true }))) return;
+    startTransition(async () => {
+      try { await bulkUpdateCrmBuyers(selectedIds, operation, value); setSelected([]); setBulkStatus(""); setBulkPool(""); setMessage("CRM records updated."); router.refresh(); }
+      catch (error) { setMessage(error instanceof Error ? error.message : "Update failed."); }
+    });
+  }
+  function exportCsv() {
+    const data = selected.length ? filtered.filter((row) => selected.includes(row._key)) : filtered;
+    const csv = [["Name", "WhatsApp", "Email", "Product", "Classification", "Spend", "Transactions", "Industry", "Stage", "Source", "Status", "Payment"], ...data.map((row) => [row.name, row.wa, row.email, row.produk, row.klasifikasi, row.spend, row.txCount, row.industri, row.tahap, row.sumber, row.status, row.payment_status])].map((line) => line.map(csvCell).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "ccc-crm-buyers.csv"; anchor.click(); URL.revokeObjectURL(url);
+  }
+
+  const views: Array<[View, string]> = [["buyers", "Buyers"], ["blast", "Email blast"], ["import", "Import"], ["analytics", "Analytics"]];
 
   return (
-    <div>
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}><div className={styles.statLabel}>Total Buyers</div><div className={styles.statVal}>{stats.buyers}</div></div>
-        <div className={styles.statCard}><div className={styles.statLabel}>Total Transaksi</div><div className={styles.statVal}>{stats.transactions}</div></div>
-        <div className={styles.statCard}><div className={styles.statLabel}>Belum Isi Pool</div><div className={styles.statVal} style={{ color: "var(--red)" }}>{stats.noPool}</div></div>
-        <div className={styles.statCard}><div className={styles.statLabel}>Sedang Diblast</div><div className={styles.statVal} style={{ color: "var(--blue)" }}>{stats.blasting}</div></div>
-        <div className={styles.statCard}><div className={styles.statLabel}>Sudah Convert</div><div className={styles.statVal} style={{ color: "var(--green)" }}>{stats.converted}</div></div>
-      </div>
-      <div className={styles.card}>
-        <nav className={styles.tabRow}>
-          <button className={tab === "buyers" ? `${styles.tab} ${styles.tabActive}` : styles.tab} onClick={() => setTab("buyers")} type="button">Data Buyers</button>
-          <Link className={styles.tab} href="/crm/deals"><i className="ti ti-layout-kanban" style={{ fontSize: 12 }} /> Pipeline</Link>
-          <button className={tab === "blast" ? `${styles.tab} ${styles.tabActive}` : styles.tab} onClick={() => setTab("blast")} type="button"><i className="ti ti-send" style={{ fontSize: 12 }} /> Email Blast</button>
-          <button className={tab === "import" ? `${styles.tab} ${styles.tabActive}` : styles.tab} onClick={() => setTab("import")} type="button">Import</button>
-          <button className={tab === "analytics" ? `${styles.tab} ${styles.tabActive}` : styles.tab} onClick={() => setTab("analytics")} type="button"><i className="ti ti-chart-bar" style={{ fontSize: 12 }} /> Analytics</button>
-        </nav>
-        {message ? <p className={styles.rowCount}>{message}</p> : null}
-        {tab === "buyers" ? (
-          <>
-            <div className={styles.filterBar}>
-              <input placeholder="Cari nama, WA, email..." value={query} onChange={(event) => setQuery(event.target.value)} />
-              <select value={classification} onChange={(event) => setClassification(event.target.value)}><option value="">Klasifikasi</option>{unique(customers, "klasifikasi").map((value) => <option key={value}>{value}</option>)}</select>
-              <select value={industry} onChange={(event) => setIndustry(event.target.value)}><option value="">Industri</option>{unique(customers, "industri").map((value) => <option key={value}>{value}</option>)}</select>
-              <select value={stage} onChange={(event) => setStage(event.target.value)}><option value="">Tahap</option>{unique(customers, "tahap").map((value) => <option key={value}>{value}</option>)}</select>
-              <select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Status blast</option>{crmStatuses.map((value) => <option key={value}>{value}</option>)}</select>
-              <select value={talent} onChange={(event) => setTalent(event.target.value)}><option value="">Talent pool</option><option value="yes">Sudah isi pool</option><option value="no">Belum isi pool</option></select>
-              <select value={source} onChange={(event) => setSource(event.target.value)}><option value="">Sumber</option>{unique(customers, "sumber").map((value) => <option key={value}>{value}</option>)}</select>
-              <select value={payment} onChange={(event) => setPayment(event.target.value)}><option value="">Payment</option><option>SUCCESS</option><option>PENDING</option><option>FAILED</option><option value="none">Belum ada status</option></select>
-              <select value={repeat} onChange={(event) => setRepeat(event.target.value)}><option value="">Riwayat</option><option value="repeat">{"> 1x"}</option><option value="single">Single transaction</option></select>
-              <button className={styles.filterBarBtn} onClick={() => { setQuery(""); setClassification(""); setIndustry(""); setStage(""); setStatus(""); setTalent(""); setSource(""); setPayment(""); setRepeat(""); }} type="button"><i className="ti ti-refresh" style={{ fontSize: 13 }} /></button>
-            </div>
-            {selected.length ? (
-              <div className={styles.actionBar}>
-                <strong>{selected.length} dipilih</strong>
-                <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value)}><option value="">Tandai sebagai...</option>{crmStatuses.map((value) => <option key={value}>{value}</option>)}</select>
-                <button className={styles.btn} disabled={!bulkStatus || pending} onClick={() => mutate("status", bulkStatus)} type="button"><i className="ti ti-tag" /> Apply status</button>
-                <select value={bulkPool} onChange={(event) => setBulkPool(event.target.value)}><option value="">Talent pool...</option><option value="yes">Tandai sudah isi</option><option value="no">Tandai belum isi</option></select>
-                <button className={styles.btn} disabled={!bulkPool || pending} onClick={() => mutate("talent", bulkPool)} type="button"><i className="ti ti-users" /> Apply talent pool</button>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={exportCsv} type="button"><i className="ti ti-download" /> Download CSV blast</button>
-                <button className={`${styles.btn} ${styles.btnDanger}`} disabled={pending} onClick={() => mutate("delete")} type="button"><i className="ti ti-trash" /> Delete selected ({selected.length})</button>
-              </div>
-            ) : null}
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={`${styles.th} ${styles.checkboxCol}`}><input checked={filtered.length > 0 && filtered.every((row) => selected.includes(String(row._key)))} onChange={(event) => setSelected(event.target.checked ? filtered.map((row) => String(row._key)) : [])} type="checkbox" /></th>
-                    <th className={styles.th}>Nama</th>
-                    <th className={styles.th}>WA</th>
-                    <th className={styles.th}>Email</th>
-                    <th className={styles.th}>Klasifikasi</th>
-                    <th className={styles.th}>Produk terakhir</th>
-                    <th className={styles.th}>Harga</th>
-                    <th className={styles.th}>Industri</th>
-                    <th className={styles.th}>Tahap</th>
-                    <th className={styles.th}>Sumber</th>
-                    <th className={styles.th}>Blast status</th>
-                    <th className={styles.th}>Payment</th>
-                    <th className={styles.th}>Pool</th>
-                    <th className={styles.th}>Riwayat</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageItems.map((row) => (
-                    <tr data-record-ids={row.ids.join(" ")} key={String(row._key)}>
-                      <td className={styles.td}><input checked={selected.includes(String(row._key))} onChange={(event) => setSelected((current) => event.target.checked ? [...current, String(row._key)] : current.filter((key) => key !== String(row._key)))} type="checkbox" /></td>
-                      <td className={styles.td}><button className={styles.nameLink} onClick={() => setDetailKey(String(row._key))} type="button">{String(row.name || "-")}</button></td>
-                      <td className={styles.td} style={{ fontSize: 11, color: "var(--text-muted)" }}>{String(row.wa || "-")}</td>
-                      <td className={styles.td} style={{ fontSize: 11, color: "var(--text-muted)" }}>{String(row.email || "—")}</td>
-                      <td className={styles.td}><span className={`${styles.pill} ${klasPillClass(String(row.klasifikasi || ""))}`}>{String(row.klasifikasi || "Belum Diklasifikasi")}</span></td>
-                      <td className={styles.td} title={String(row.produk || "")} style={{ fontSize: 11, color: "var(--text-muted)" }}>{String(row.produk || "-")}</td>
-                      <td className={styles.td} style={{ fontSize: 11 }}>{rupiahK(row.spend)}</td>
-                      <td className={styles.td} style={{ fontSize: 11 }}>{String(row.industri || "-").split(",")[0].trim() || "-"}</td>
-                      <td className={styles.td} style={{ fontSize: 11 }}>{String(row.tahap || "—")}</td>
-                      <td className={styles.td} style={{ fontSize: 11 }}>{String(row.sumber || "—")}</td>
-                      <td className={styles.td}><span className={`${styles.pill} ${statusPillClass(String(row.status || ""))}`}>{String(row.status || "Belum diblast")}</span></td>
-                      <td className={styles.td}><PaymentPill status={String(row.payment_status || "")} /></td>
-                      <td className={styles.td}><span className={`${styles.talentFlag} ${row.talent_pool || row.talent_pool_match ? styles.flagYes : styles.flagNo}`}><i className={`ti ${row.talent_pool || row.talent_pool_match ? "ti-check" : "ti-x"}`} style={{ fontSize: 10 }} /> {row.talent_pool || row.talent_pool_match ? "Sudah" : "Belum"}</span></td>
-                      <td className={styles.td}><button className={styles.txCount} style={{ color: row.txCount > 1 ? "var(--purple-accent)" : "var(--text-muted)" }} onClick={() => setDetailKey(String(row._key))} type="button">{row.txCount}x</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className={styles.rowCount}>{filtered.length} dari {customers.length} orang</div>
-            <Pagination onChange={setPage} page={page} totalPages={totalPages} />
-          </>
-        ) : null}
-        {tab === "analytics" ? <CrmAnalytics customers={customers} /> : null}
-        {tab === "blast" ? <CrmEmailBlast daily={blastDaily} history={blastHistory} rows={customers} /> : null}
-        {tab === "import" ? <CrmTools rows={rows} /> : null}
-      </div>
-      {detail ? (
-        <div className={styles.detailOverlay} role="dialog" aria-modal="true" aria-label="Customer detail">
-          <DialogBehaviour onClose={() => setDetailKey("")} />
-          <section className={styles.detailPanel}>
-            <header className={styles.detailHeader}>
-              <div><span>Customer detail</span><h2>{String(detail.name || "Unknown")}</h2><p>{String(detail.wa || "-")} · {String(detail.email || "-")}</p></div>
-              <button aria-label="Close customer detail" onClick={() => setDetailKey("")} type="button"><i className="ti ti-x" /></button>
-            </header>
-            <div className={styles.statsGrid} style={{ gridTemplateColumns: "repeat(3, 1fr)", margin: "12px 0" }}>
-              <div className={styles.statCard}><div className={styles.statLabel}>Transaksi</div><div className={styles.statVal}>{detail.txCount}</div></div>
-              <div className={styles.statCard}><div className={styles.statLabel}>Total Spend</div><div className={styles.statVal}>{rupiahK(detail.spend)}</div></div>
-              <div className={styles.statCard}><div className={styles.statLabel}>Status</div><div className={styles.statVal} style={{ fontSize: 13 }}>{String(detail.status || "-")}</div></div>
-            </div>
-            <h3>Riwayat transaksi</h3>
-            <div className={styles.timelineList}>
-              {detail.transactions.map((transaction, index) => (
-                <div key={`${transaction.produk}-${index}`}>
-                  <strong>{String(transaction.tanggal || "-")}</strong>
-                  <span>{String(transaction.produk || "-")} · {String(transaction.klasifikasi || "-")}</span>
-                  <span>{rupiahK(Number(transaction.harga || 0))}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+    <div className={s.page}>
+      <header className={s.head}>
+        <div>
+          <span className={s.eyebrow}>Operations</span>
+          <h1>CRM</h1>
+          <p>{summary.buyers} buyers · {summary.transactions} transactions · {rupiah(summary.spend)} total spend</p>
         </div>
+        <Link className={s.ghostButton} href="/crm/deals"><i className="ti ti-layout-kanban" aria-hidden="true" /> Deals pipeline</Link>
+      </header>
+
+      <div className={s.segmented} role="tablist" aria-label="CRM view">
+        {views.map(([id, label]) => <button aria-selected={view === id} className={view === id ? s.segmentActive : s.segment} key={id} onClick={() => setView(id)} role="tab" type="button">{label}{id === "buyers" ? <span>{summary.buyers}</span> : null}</button>)}
+      </div>
+
+      {message ? <p className={s.message} role="status">{message}</p> : null}
+
+      {view === "buyers" ? (
+        <>
+          <nav aria-label="Blast funnel" className={s.funnel}>
+            {FUNNEL.map(([id, label], index) => {
+              const count = summary.funnel[id]; const on = filter.stage === id;
+              return (
+                <button aria-pressed={on} className={on ? s.stageOn : s.stage} key={id} onClick={() => set({ stage: on ? "" : id })} type="button">
+                  <span className={s.stageStep}>{index + 1}</span>
+                  <span className={s.stageText}><b>{count}</b><small>{label}</small></span>
+                  <span className={s.stagePct}>{summary.buyers ? Math.round((count / summary.buyers) * 100) : 0}%</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className={s.toolbar}>
+            <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search buyers" onChange={(e) => set({ query: e.target.value })} placeholder="Search name, WA, email, product…" value={filter.query} /></label>
+            <label className={s.filterPill}><span>Product</span><select aria-label="Filter classification" onChange={(e) => set({ classification: e.target.value })} value={filter.classification}><option value="">All</option>{unique(customers, "klasifikasi").map((v) => <option key={v}>{v}</option>)}</select></label>
+            <label className={s.filterPill}><span>Payment</span><select aria-label="Filter payment" onChange={(e) => set({ payment: e.target.value })} value={filter.payment}><option value="">All</option><option value="SUCCESS">Success</option><option value="PENDING">Pending</option><option value="FAILED">Failed</option><option value="none">No status</option></select></label>
+            <label className={s.filterPill}><span>Talent Pool</span><select aria-label="Filter talent pool" onChange={(e) => set({ pool: e.target.value as CrmFilter["pool"] })} value={filter.pool}><option value="">All</option><option value="yes">In pool</option><option value="no">Not in pool ({summary.notInPool})</option></select></label>
+            <button aria-expanded={moreFilters} className={s.morePill} onClick={() => setMoreFilters((v) => !v)} type="button"><i className="ti ti-adjustments-horizontal" aria-hidden="true" /> More filters</button>
+            {filtersOn ? <button className={s.clear} onClick={() => set({ ...EMPTY, stage: filter.stage })} type="button">Clear filters</button> : null}
+          </div>
+          {moreFilters ? (
+            <div className={s.toolbar}>
+              <label className={s.filterPill}><span>Status</span><select aria-label="Filter blast status" onChange={(e) => set({ status: e.target.value })} value={filter.status}><option value="">All</option>{CRM_STATUSES.map((v) => <option key={v} value={v}>{statusLabel(v)}</option>)}</select></label>
+              <label className={s.filterPill}><span>Industry</span><select aria-label="Filter industry" onChange={(e) => set({ industry: e.target.value })} value={filter.industry}><option value="">All</option>{unique(customers, "industri").map((v) => <option key={v}>{v}</option>)}</select></label>
+              <label className={s.filterPill}><span>Stage</span><select aria-label="Filter stage" onChange={(e) => set({ tahap: e.target.value })} value={filter.tahap}><option value="">All</option>{unique(customers, "tahap").map((v) => <option key={v}>{v}</option>)}</select></label>
+              <label className={s.filterPill}><span>Source</span><select aria-label="Filter source" onChange={(e) => set({ source: e.target.value })} value={filter.source}><option value="">All</option>{unique(customers, "sumber").map((v) => <option key={v}>{v}</option>)}</select></label>
+              <label className={s.filterPill}><span>Orders</span><select aria-label="Filter order history" onChange={(e) => set({ repeat: e.target.value as CrmFilter["repeat"] })} value={filter.repeat}><option value="">All</option><option value="repeat">Repeat ({summary.repeat})</option><option value="single">One order</option></select></label>
+            </div>
+          ) : null}
+
+          <section aria-label="Buyers" className={s.listCard}>
+            <div className={s.listHead}>
+              <label className={s.checkAll}><input aria-label="Select all buyers on this page" checked={allOnPage} onChange={(e) => pageItems.forEach((row) => toggle(row._key, e.target.checked))} type="checkbox" /> <span>{filtered.length === customers.length ? `${customers.length} buyers` : `${filtered.length} of ${customers.length} buyers`}</span></label>
+              <button className={s.linkButton} onClick={exportCsv} type="button"><i className="ti ti-download" aria-hidden="true" /> Download CSV</button>
+            </div>
+            {filtered.length ? (
+              <ul className={s.rows}>
+                {pageItems.map((row) => {
+                  const name = text(row.name) || "Unknown"; const stage = funnelStage(row.status); const pay = text(row.payment_status);
+                  return (
+                    <li className={selected.includes(row._key) ? s.rowSelected : s.row} data-record-ids={row.ids.join(" ")} key={row._key}>
+                      <input aria-label={`Select ${name}`} checked={selected.includes(row._key)} className={s.rowCheck} onChange={(e) => toggle(row._key, e.target.checked)} type="checkbox" />
+                      <button className={s.rowMain} data-record-open onClick={() => setDetailKey(row._key)} type="button">
+                        <span className={s.avatar} aria-hidden="true">{initials(name)}</span>
+                        <span className={s.who}><b>{name}</b><small>{[text(row.wa), text(row.email)].filter(Boolean).join(" · ") || "—"}</small></span>
+                        <span className={s.product}><b>{text(row.produk) || "—"}</b><small>{[text(row.klasifikasi) || "Unclassified", !inTalentPool(row) ? "not in Talent Pool" : ""].filter(Boolean).join(" · ")}</small></span>
+                        <span className={s.spend}><b>{rupiah(row.spend)}</b><small>{row.txCount > 1 ? `${row.txCount} orders` : "1 order"}{pay === "FAILED" ? " · " : ""}{pay === "FAILED" ? <em className={s.failed}>payment failed</em> : pay === "PENDING" ? " · pending" : ""}</small></span>
+                        <span className={stage === "converted" ? s.chipDone : stage === "new" ? s.chipNew : s.chip}>{statusLabel(row.status)}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : <p className={s.empty}>{customers.length ? "No buyers match these filters." : "No buyers yet. Import transactions first."}</p>}
+            <Pagination onChange={setPage} page={page} totalPages={totalPages} />
+          </section>
+
+          {selected.length ? (
+            <div aria-label="Bulk actions" className={s.bulk} role="region">
+              <strong>{selected.length} selected</strong>
+              <label className={s.bulkField}><span className="sr-only">New status</span><select aria-label="New status" onChange={(e) => setBulkStatus(e.target.value)} value={bulkStatus}><option value="">Set status…</option>{CRM_STATUSES.map((v) => <option key={v} value={v}>{statusLabel(v)}</option>)}</select></label>
+              <button className={s.bulkButton} disabled={!bulkStatus || pending} onClick={() => mutate("status", bulkStatus)} type="button">Apply status</button>
+              <label className={s.bulkField}><span className="sr-only">Talent Pool</span><select aria-label="Talent Pool" onChange={(e) => setBulkPool(e.target.value)} value={bulkPool}><option value="">Talent Pool…</option><option value="yes">Mark in pool</option><option value="no">Mark not in pool</option></select></label>
+              <button className={s.bulkButton} disabled={!bulkPool || pending} onClick={() => mutate("talent", bulkPool)} type="button">Apply talent pool</button>
+              <button className={s.bulkButton} onClick={exportCsv} type="button"><i className="ti ti-download" aria-hidden="true" /> Download CSV blast</button>
+              <button className={s.bulkDanger} disabled={pending} onClick={() => mutate("delete")} type="button"><i className="ti ti-trash" aria-hidden="true" /> Delete selected ({selected.length})</button>
+              <button aria-label="Clear selection" className={s.bulkClose} onClick={() => setSelected([])} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
+            </div>
+          ) : null}
+        </>
       ) : null}
+
+      {view === "analytics" ? <CrmAnalytics customers={customers} /> : null}
+      {view === "blast" ? <CrmEmailBlast daily={blastDaily} history={blastHistory} rows={customers} /> : null}
+      {view === "import" ? <CrmTools rows={rows} /> : null}
+
+      {detail ? <CustomerDrawer customer={detail} onClose={() => setDetailKey("")} /> : null}
     </div>
   );
 }
 
-/* ══════════════ ANALYTICS (ported from legacy renderCRMAnalytics) ══════════════ */
+function CustomerDrawer({ customer: c, onClose }: { customer: Customer; onClose: () => void }) {
+  const name = text(c.name) || "Unknown"; const wa = waLink(c.wa);
+  const timeline = [...c.transactions].sort((a, b) => text(b.tanggal).localeCompare(text(a.tanggal)));
+  const field = (label: string, value: unknown) => (text(value) ? <div><dt>{label}</dt><dd>{text(value)}</dd></div> : null);
+  return (
+    <div className={s.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-label="Customer detail">
+      <DialogBehaviour onClose={onClose} />
+      <section className={s.drawer}>
+        <header className={s.drawerHead}>
+          <span className={s.avatarLg} aria-hidden="true">{initials(name)}</span>
+          <div className={s.drawerTitle}><span>Customer detail</span><h2>{name}</h2><p>{[text(c.wa), text(c.email)].filter(Boolean).join(" · ") || "—"}</p></div>
+          <button aria-label="Close customer detail" className={s.close} onClick={onClose} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
+        </header>
+        <div className={s.contact}>
+          {wa ? <a href={wa} rel="noopener" target="_blank"><i className="ti ti-brand-whatsapp" aria-hidden="true" /> WhatsApp</a> : null}
+          {text(c.email) ? <a href={`mailto:${text(c.email)}`}><i className="ti ti-mail" aria-hidden="true" /> Email</a> : null}
+        </div>
+        <div className={s.numbers}>
+          <div><b>{c.txCount}</b><span>Orders</span></div>
+          <div><b>{rupiah(c.spend)}</b><span>Total spend</span></div>
+          <div><b className={s.numberText}>{statusLabel(c.status)}</b><span>Status</span></div>
+        </div>
+        <h3>Details</h3>
+        <dl className={s.fields}>
+          {field("Classification", c.klasifikasi)}{field("Industry", c.industri)}{field("Stage", c.tahap)}{field("Source", c.sumber)}{field("Payment", c.payment_status)}
+          <div><dt>Talent Pool</dt><dd>{inTalentPool(c) ? "In pool" : "Not in pool"}</dd></div>
+        </dl>
+        <h3>Purchase history</h3>
+        <ol className={s.timeline}>
+          {timeline.map((tx, index) => (
+            <li key={`${tx.produk}-${index}`}>
+              <span className={s.dot} aria-hidden="true" />
+              <div><b>{text(tx.produk) || "—"}</b><small>{dateLabel(tx.tanggal)} · {text(tx.klasifikasi) || "Unclassified"}{tx.paymentStatus ? ` · ${tx.paymentStatus}` : ""}</small></div>
+              <span className={s.txAmount}>{rupiah(Number(tx.harga || 0))}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  );
+}
+
 function CrmAnalytics({ customers }: { customers: Customer[] }) {
   const total = customers.length;
-
-  // Legacy buckets repeat orders by exact transaction count, labelling the first
-  // "1x (new)", and orders the axis numerically rather than by frequency.
-  const repeatData: Entry[] = useMemo(() => {
+  const data = useMemo(() => {
+    // Repeat orders by exact count, first bucket "1x (new)", axis ordered numerically.
     const counts = new Map<string, number>();
     customers.forEach((row) => { const key = row.txCount === 1 ? "1x (new)" : `${row.txCount}x`; counts.set(key, (counts.get(key) || 0) + 1); });
-    return [...counts.entries()].sort((a, b) => parseInt(a[0], 10) - parseInt(b[0], 10));
-  }, [customers]);
-
-  const poolFilled = customers.filter((row) => row.talent_pool || row.talent_pool_match).length;
-  const poolData: Entry[] = [["Sudah isi pool", poolFilled], ["Belum isi pool", total - poolFilled]];
-
-  const klasData = useMemo(() => freq(customers.map((row) => row.klasifikasi)), [customers]);
-  const tahapData = useMemo(() => freq(customers.map((row) => row.tahap)), [customers]);
-  const sumberData = useMemo(() => freq(customers.map((row) => row.sumber)), [customers]);
-  // One buyer can list several industries ("FMCG, Finance"); legacy also uppercases.
-  const industriData = useMemo(() => freqMulti(customers.map((row) => row.industri), true), [customers]);
-
-  // Payment is counted per transaction, not per buyer, so it has its own total.
-  const paymentRaw = useMemo(() => customers.flatMap((row) => row.transactions.map((tx) => tx.paymentStatus).filter(Boolean)), [customers]);
-  const paymentData = useMemo(() => freq(paymentRaw), [paymentRaw]);
-
+    const pool = customers.filter(inTalentPool).length;
+    // Payment is counted per transaction, not per buyer, so it has its own total.
+    const payments = customers.flatMap((row) => row.transactions.map((tx) => tx.paymentStatus).filter(Boolean));
+    return {
+      repeat: [...counts.entries()].sort((a, b) => parseInt(a[0], 10) - parseInt(b[0], 10)) as Entry[],
+      pool: [["In pool", pool], ["Not in pool", total - pool]] as Entry[],
+      klas: freq(customers.map((row) => row.klasifikasi)), tahap: freq(customers.map((row) => row.tahap)), source: freq(customers.map((row) => row.sumber)),
+      industry: freqMulti(customers.map((row) => row.industri), true), payment: freq(payments), paymentTotal: payments.length,
+    };
+  }, [customers, total]);
   return (
-    <div>
-      <AnalyticsHeader count={`${total} buyers`} onExport={() => downloadJson(customers, `crm-analytics-${new Date().toISOString().slice(0, 10)}.json`)} title="Analytics CRM" />
-      <div style={analyticsGrid(3)}>
-        <AnalyticsCard icon="ti-repeat" title="Repeat Order" total={total}><BarBreakdown entries={repeatData} total={total} /></AnalyticsCard>
-        <AnalyticsCard icon="ti-tag" title="Klasifikasi Produk" total={total}><DonutBreakdown entries={klasData} total={total} /></AnalyticsCard>
-        <AnalyticsCard icon="ti-user-check" title="Talent Pool Status" total={total}><DonutBreakdown entries={poolData} total={total} /></AnalyticsCard>
-        <AnalyticsCard icon="ti-stairs" title="Tahapan" total={total}><BarBreakdown entries={tahapData} total={total} /></AnalyticsCard>
-        <AnalyticsCard icon="ti-building-factory" title="Industri Diminati" total={total}><BarBreakdown entries={industriData} total={total} /></AnalyticsCard>
-        <AnalyticsCard icon="ti-source-code" title="Sumber" total={total}><DonutBreakdown entries={sumberData} total={total} /></AnalyticsCard>
-      </div>
-      <div style={{ ...analyticsGrid(1), marginTop: 12 }}>
-        <AnalyticsCard icon="ti-credit-card" title="Status Payment" total={paymentRaw.length}><DonutBreakdown entries={paymentData} total={paymentRaw.length} /></AnalyticsCard>
+    <div className={s.analytics}>
+      <div className={s.analyticsHead}><p>Breakdown of all {total} buyers</p><button className={s.ghostButton} onClick={() => downloadJson(customers, `crm-analytics-${new Date().toISOString().slice(0, 10)}.json`)} type="button"><i className="ti ti-download" aria-hidden="true" /> Export data</button></div>
+      <div className={s.analyticsGrid}>
+        <AnalyticsCard icon="ti-repeat" title="Repeat orders" total={total}><BarBreakdown entries={data.repeat} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-tag" title="Product classification" total={total}><DonutBreakdown entries={data.klas} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-user-check" title="Talent Pool" total={total}><DonutBreakdown entries={data.pool} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-stairs" title="Stage" total={total}><BarBreakdown entries={data.tahap} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-building-factory" title="Industries of interest" total={total}><BarBreakdown entries={data.industry} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-source-code" title="Source" total={total}><DonutBreakdown entries={data.source} total={total} /></AnalyticsCard>
+        <AnalyticsCard icon="ti-credit-card" title="Payment status" total={data.paymentTotal}><DonutBreakdown entries={data.payment} total={data.paymentTotal} /></AnalyticsCard>
       </div>
     </div>
   );

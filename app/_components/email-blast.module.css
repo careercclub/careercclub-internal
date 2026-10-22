@@ -1,4 +1,4 @@
-/* Talent Pool — Email blast: form on the left, live preview + send on the right. */
+/* Email blast (Talent Pool and CRM): form on the left, live preview + send on the right. */
 .wrap { display: flex; flex-direction: column; gap: 14px; }
 .subTabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .subTab, .subTabActive { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -64,3 +64,15 @@
   .card { padding: 16px 14px; }
   .send { position: sticky; bottom: 72px; }
 }
+.big { font-size: 20px; font-weight: 800; }
+.errorText { color: var(--red) !important; }
+/* CRM import view */
+.importGrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
+.card h3 i { color: var(--purple-mid); }
+.health { display: grid; gap: 0; margin: 0; }
+.health div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; font-size: 13px; }
+.health div + div { border-top: 1px solid var(--border); }
+.health dt { color: var(--text-muted); }
+.health dd { margin: 0; font-weight: 800; }
+.field input[type="file"] { min-height: auto; padding: 10px 12px; }
+@media (max-width: 900px) { .importGrid { grid-template-columns: minmax(0, 1fr); } }

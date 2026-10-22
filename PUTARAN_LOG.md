@@ -709,3 +709,34 @@ Urutan baru dari user: Talent Pool → CRM → Partnership → Customer Knowledg
 ### Antrean
 
 CRM → B2B/Org Partnership → Customer Knowledge → Content Planning, lalu Products, Job Vacancy, Competitor, Settings.
+
+## Putaran 16 — CRM (IJIS layout) (22 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| 5 kartu angka ("TOTAL BUYERS", "BELUM ISI POOL", "SEDANG DIBLAST"…) + tab bergaris | Judul + "N buyers · M transactions · Rp total spend", tombol **Deals pipeline**; saklar **Buyers / Email blast / Import / Analytics** |
+| — | **Funnel blast** 4 tahap yang bisa diklik: Not blasted → Blasted → Following up → Converted (jumlah + %); klik = filter |
+| 9 dropdown filter berjejer | Search + filter pil Product / Payment / Talent Pool; sisanya (Status, Industry, Stage, Source, Orders) di **More filters**; "Clear filters" |
+| Tabel 14 kolom dengan 4 pil warna per baris | **Baris pembeli**: centang, avatar, nama + WA · email, produk terakhir + klasifikasi (+ "not in Talent Pool"), total belanja + jumlah order (merah hanya "payment failed"), **satu** chip status |
+| Bar aksi massal di atas tabel | **Bar mengambang** di bawah: "N selected", Set status + Apply status, Talent Pool + Apply talent pool, Download CSV blast, Delete selected (konfirmasi tetap), tutup |
+| Popup detail dengan 3 kartu angka + daftar riwayat | **Drawer** kanan: kontak WhatsApp/Email, Orders · Total spend · Status, Details, **timeline pembelian** (terbaru di atas) |
+| Email Blast teks Indonesia, tanpa preview | Layout sama dengan Talent Pool: form + **preview langsung** + "Send email to N"; Subject & Body wajib (merah, fokus); hapus template minta konfirmasi; History dengan grafik harian; Sender |
+| Import: 5 kartu angka + form | Kartu Import transaksi + kartu **Data health** (pending/failed payment, converted, Talent Pool matches) + Export CRM JSON |
+
+- Nilai status tetap disimpan dalam bahasa Indonesia (data tidak diubah); tampilan memakai label Inggris (`statusLabel`): "Belum diblast" → Not blasted, "Sedang di-upsell" → Upselling, "Sudah convert — Upsell" → Converted · upsell, dst. Aksi massal tetap menyimpan nilai aslinya.
+- Logika dipindah ke `lib/crm/view.ts` (`groupCustomers`, `filterCustomers`, `crmSummary`, `funnelStage`) + 3 unit test.
+- **Bug lama diperbaiki:** kartu "Sedang Diblast" menghitung semua status yang mengandung kata "blast" — termasuk "Belum diblast". Funnel sekarang menaruh tiap pembeli di tepat satu tahap (dites: jumlah tahap = total pembeli = hasil filter tahap).
+- CSS Email blast dipakai bersama Talent Pool & CRM (`email-blast.module.css`); `crm.module.css` lama dihapus.
+
+### Check
+
+- Desain 1440 & 390. Ditemukan & diperbaiki: teks "payment failed" terpotong → kolom belanja dilebarkan; status di drawer terpotong → boleh 2 baris; bar aksi massal di HP menutup setengah layar → jadi satu baris yang bisa digeser.
+- E2E baru CRM **24/24** (funnel = total, 20 baris, satu chip per baris, klik tahap memfilter, filter payment, More filters berbahasa Inggris, bar massal + Apply status menyimpan "Diblast", drawer, blast: subject kosong ditandai & preview, Import, Analytics, link Deals, `?focus` + timeline + total belanja, HP).
+- Regresi: unit 108/108, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31 (selector CRM diperbarui ke baris baru), navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup CRM & Talent Pool ok.
+- tsc bersih; lint: sisa error lama di competitor-tools & content-planning-tools; `npm run build` lolos.
+
+### Antrean
+
+B2B/Org Partnership → Customer Knowledge → Content Planning, lalu Products, Job Vacancy, Competitor, Settings.

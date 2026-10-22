@@ -3,7 +3,7 @@
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useRef, useState } from "react";
 import { askText, confirmAction } from "./app-dialog";
-import s from "./talent-pool-tools.module.css";
+import s from "./email-blast.module.css";
 
 type Template = { name: string; subject: string; headerTitle: string; headerSub: string; headerColor: string; body: string; ctaText: string; ctaUrl: string; footer: string };
 type Log = { subject: string; total: number; sent: number; failed: number; sentAt: string };
