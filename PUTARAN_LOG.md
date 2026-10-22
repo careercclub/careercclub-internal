@@ -858,3 +858,34 @@ Urutan dari user selesai (Talent Pool → CRM → Partnership → Customer Knowl
 ### Antrean
 
 Job Vacancy MT → Competitor Intel → Settings → Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.
+
+## Putaran 21 — Job Vacancy MT (IJIS layout) (22 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Tab Dashboard / Semua Loker / Newsletter / Master Data / Company Intel; 4 kartu angka ("Total Loker", "Minggu Ini"…) | Judul + "N vacancies · M open in October · K added this week", tombol **Add vacancy**; saklar **Overview / Vacancies / Newsletter / Companies / Industries** (dengan jumlah) |
+| Grafik garis per bulan + donat industri 12 warna + daftar kategori | **Opening calendar**: 12 batang bulan (bulan ini disorot), klik bulan = daftar lowongan bulan itu; **Industries**: peringkat perusahaan per industri + "N open" bulan ini, klik = filter; **Open in October**: perusahaan yang buka bulan ini + deadline |
+| Tabel 7 kolom dengan pil role/bulan warna-warni | **Baris lowongan**: logo inisial, perusahaan + program, industri + role pertama (+N), **strip 12 bulan** (bulan buka terisi, bulan ini diberi garis), tahun · deadline, tanggal input · Week N, link karier, hapus |
+| Panel import "Import dari Google Sheets" | Kartu **Import from Google Sheets** yang bisa dibuka, preview hasil (New/Update), teks Inggris; tombol simpan "Save N vacancies" (dulu "…ke Supabase", padahal datanya di server sendiri) |
+| Form lowongan satu kolom panjang, validasi lewat pesan toast | Form bagian per bagian (Company, When it opens, Requirements, Links & notes); pemilih bulan 6×2; **semua field wajib yang kosong ditandai merah sekaligus**, kursor pindah ke yang pertama, footer menyebut jumlahnya |
+| Newsletter: deretan dropdown, dropdown industri melayang | **Dua panel**: kiri pilih bulan/tahun, **Week 1–4** sebagai tombol, industri sebagai pil + jumlah lowongan yang masuk; kanan pesan WhatsApp/Email + **Copy message** |
+| Company Intel: kartu dengan pil status warna | Kartu perusahaan: program, riwayat per tahun dengan strip bulan, chip "Opening months changed" |
+| Master Data industri: hapus langsung tanpa tanya | **Industries**: tambah (nama kosong ditandai), jumlah lowongan per industri, hapus **minta konfirmasi** dan menjelaskan lowongan lama tetap memakai nama itu |
+
+- Isi pesan newsletter tetap **bahasa Indonesia** (untuk pelanggan); hanya tampilan aplikasi yang Inggris.
+- **Bug lama diperbaiki:** tombol Copy di newsletter membuat halaman error kalau dibuka lewat http (Clipboard API hanya ada di https) — sekarang ada cadangan.
+- Logika di `lib/job-vacancy/view.ts` (`monthsOf`, `weekOfMonth`, `vacancySummary`, `openingsByMonth`, `industryRanking`, `filterVacancies`, `newsletterRows`, `companyHistory`) + 4 unit test (angka batang bulan = hasil filter bulan; industri kosong = "Lainnya" dan bisa difilter).
+- CSS lama `job-vacancy-mt.module.css` diganti `job-vacancy.module.css`.
+
+### Check
+
+- Desain 1440 & 390. Ditemukan & diperbaiki: di HP baris lowongan menampilkan industri, bukan nama perusahaan (urutan kolom) → kolom diberi nama tetap.
+- E2E baru Job Vacancy **20/20** (klik bulan = daftar terfilter dan jumlahnya cocok, "Lainnya", strip bulan, buka form edit, form kosong: 5 field ditandai & fokus ke pertama, hapus pakai konfirmasi, newsletter minggu ini + tahapan seleksi, pesan tetap Indonesia, Copy, riwayat perusahaan, industri kosong ditandai, hapus industri pakai konfirmasi, HP).
+- Regresi: unit 125/125, Products 17/17, Content Planning 26/26, Customer Knowledge 20/20, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31 (tab "Semua Loker" → "Vacancies"), navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Job Vacancy bersih.
+- tsc bersih; lint: sisa 1 error lama (competitor-tools); `npm run build` lolos.
+
+### Antrean
+
+Competitor Intel → Settings → Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.

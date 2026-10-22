@@ -3,7 +3,7 @@
 import { importVacanciesFromSheetAction } from "@/app/actions/job-vacancy-mt-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useState, useTransition } from "react";
-import styles from "./job-vacancy-mt.module.css";
+import styles from "./job-vacancy.module.css";
 import { notify } from "./app-dialog";
 
 type SheetRow = Record<string, unknown> & { company: string; industry: string; program: string; months: number[]; year: string; open_date: string | null; deadline: string | null };
@@ -103,21 +103,21 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
   async function fetchAndPreview() {
     const csvUrl = deriveCsvUrl(url);
     if (!csvUrl) { notify(url.trim() ? "That is not a valid Google Sheets link." : "Paste a Google Sheets link first.", "error"); return; }
-    setStatus({ text: "Mengambil data...", tone: "info" });
+    setStatus({ text: "Fetching the sheet…", tone: "info" });
     setPreview(null);
     try {
       const response = await fetch(csvUrl);
       if (!response.ok) throw new Error("fetch failed");
       const csvText = await response.text();
       const grid = parseCsv(csvText);
-      if (grid.length < 2) { setStatus({ text: "Sheet kosong atau format salah.", tone: "error" }); return; }
+      if (grid.length < 2) { setStatus({ text: "The sheet is empty or not in the expected format.", tone: "error" }); return; }
       const headerRowIndex = detectHeaderRow(grid);
       const { valid, invalid } = mapColumns(grid, headerRowIndex);
       setPreview(classify(valid, existingRows));
       setInvalidCount(invalid);
-      setStatus({ text: `${valid.length} baris ditemukan — cek preview sebelum simpan.`, tone: "success" });
+      setStatus({ text: `${valid.length} rows found. Check the preview before saving.`, tone: "success" });
     } catch {
-      setStatus({ text: "Gagal mengambil data. Pastikan sheet sudah di-publish ke web (File > Share > Publish to web > CSV).", tone: "error" });
+      setStatus({ text: "Could not fetch the sheet. Make sure it is published to the web (File > Share > Publish to web > CSV).", tone: "error" });
     }
   }
 
@@ -126,7 +126,7 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
     start(async () => {
       const rows = preview.map(({ classification: _classification, ...row }) => row);
       const result = await importVacanciesFromSheetAction(rows);
-      setStatus({ text: `${result.inserted} loker baru ditambahkan${result.updated ? ` · ${result.updated} loker diupdate` : ""}!`, tone: "success" });
+      setStatus({ text: `${result.inserted} new vacancies added${result.updated ? ` · ${result.updated} updated` : ""}.`, tone: "success" });
       setPreview(null);
       setUrl("");
       setTimeout(() => setOpen(false), 1500);
@@ -137,24 +137,26 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
   const updateCount = preview?.filter((row) => row.classification === "update").length || 0;
 
   return (
-    <div className={styles.importPanel}>
-      <div className={styles.importTitle} onClick={() => setOpen((value) => !value)} style={{ cursor: "pointer" }}>
-        <i className="ti ti-brand-google-drive" /> Import dari Google Sheets <i className={`ti ti-chevron-${open ? "up" : "down"}`} style={{ marginLeft: "auto", fontSize: 12 }} />
-      </div>
+    <section aria-label="Import from Google Sheets" className={styles.importCard}>
+      <button aria-expanded={open} className={styles.importHead} onClick={() => setOpen((value) => !value)} type="button">
+        <span className={styles.importIcon} aria-hidden="true"><i className="ti ti-brand-google-drive" /></span>
+        <span><b>Import from Google Sheets</b><small>New rows are added, matching ones (same company, program and year) are updated</small></span>
+        <i className={`ti ti-chevron-${open ? "up" : "down"}`} aria-hidden="true" />
+      </button>
       {open ? (
-        <>
-          <div className={styles.importHint}>Pastikan sheet sudah di-publish: <strong>File → Share → Publish to web → pilih sheet → CSV → Publish</strong></div>
-          <div className={styles.importRow}>
-            <input className={styles.importUrlInput} onChange={(event) => setUrl(event.target.value)} placeholder="Paste URL Google Sheets di sini..." value={url} />
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={fetchAndPreview} type="button"><i className="ti ti-download" /> Fetch &amp; Preview</button>
+        <div className={styles.importBody}>
+          <p className={styles.hint}>Publish the sheet first: <b>File → Share → Publish to web → pick the sheet → CSV → Publish</b>.</p>
+          <div className={styles.inlineForm}>
+            <label className={styles.grow}><span className="sr-only">Google Sheets link</span><input className={styles.input} onChange={(event) => setUrl(event.target.value)} placeholder="Paste the Google Sheets link…" value={url} /></label>
+            <button className={styles.primarySm} onClick={fetchAndPreview} type="button"><i className="ti ti-download" aria-hidden="true" /> Fetch &amp; preview</button>
           </div>
-          {status ? <div className={styles.importStatus} style={{ color: status.tone === "error" ? "var(--red)" : status.tone === "success" ? "#1d9e75" : "#0f52ba" }}>{status.text}</div> : null}
+          {status ? <p className={status.tone === "error" ? styles.statusError : styles.status} role="status">{status.text}</p> : null}
           {preview ? (
-            <div style={{ marginTop: 12 }}>
-              <div className={styles.previewSummary}>{newCount} baru{updateCount ? ` · ${updateCount} diupdate` : ""}{invalidCount ? ` · ${invalidCount} dilewati` : ""}</div>
-              <div className={styles.tableScroll}>
+            <>
+              <p className={styles.hint}>{newCount} new{updateCount ? ` · ${updateCount} updated` : ""}{invalidCount ? ` · ${invalidCount} skipped` : ""}</p>
+              <div className={styles.tableWrap}>
                 <table className={styles.table}>
-                  <thead><tr><th>Perusahaan</th><th>Industri</th><th>Program</th><th>Open Date</th><th>Deadline</th><th>Bulan Buka</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Company</th><th>Industry</th><th>Program</th><th>Open date</th><th>Deadline</th><th>Opening months</th><th>Result</th></tr></thead>
                   <tbody>
                     {preview.map((row, index) => (
                       <tr key={index}>
@@ -163,21 +165,21 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
                         <td>{row.program || "—"}</td>
                         <td>{row.open_date || "—"}</td>
                         <td>{row.deadline || "—"}</td>
-                        <td>{row.months.map((m) => <span className={`${styles.pill} ${styles.pillBlue}`} key={m}>{m}</span>)}</td>
-                        <td><span className={`${styles.pill} ${row.classification === "new" ? styles.pillGreen : styles.pillBlue}`}>{row.classification === "new" ? "Baru" : "Update"}</span></td>
+                        <td>{row.months.join(", ") || "—"}</td>
+                        <td><span className={row.classification === "new" ? styles.chipStrong : styles.chip}>{row.classification === "new" ? "New" : "Update"}</span></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className={styles.previewFooter}>
-                <button className={`${styles.btn} ${styles.btnSm}`} onClick={() => setPreview(null)} type="button">Cancel import</button>
-                <button className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`} disabled={pending} onClick={confirm} type="button">{pending ? "Menyimpan..." : `Simpan ${preview.length} Loker ke Supabase`}</button>
+              <div className={styles.formActions}>
+                <button className={styles.ghostSm} onClick={() => setPreview(null)} type="button">Cancel import</button>
+                <button className={styles.primarySm} disabled={pending} onClick={confirm} type="button">{pending ? "Saving…" : `Save ${preview.length} vacanc${preview.length === 1 ? "y" : "ies"}`}</button>
               </div>
-            </div>
+            </>
           ) : null}
-        </>
+        </div>
       ) : null}
-    </div>
+    </section>
   );
 }
