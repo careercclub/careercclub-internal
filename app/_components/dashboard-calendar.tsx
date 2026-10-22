@@ -164,27 +164,6 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
   );
 }
 
-export function DashboardUpcoming({ tasks, tickets }: { tasks: ApiRecord[]; tickets: ApiRecord[] }) {
-  const items = useMemo(() => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const horizon = new Date(today); horizon.setDate(horizon.getDate() + 7);
-    const startKey = localIso(today); const endKey = localIso(horizon);
-    const collect = (rows: ApiRecord[], kind: string, href: string) => rows.filter((row) => text(row.status) !== "Done").map((row) => ({ id: String(row.id), title: text(row.title) || "Untitled", kind, date: dateKey(row.due_date), href })).filter((item) => item.date >= startKey && item.date <= endKey);
-    return [...collect(tasks, "Task", "/program/tasks"), ...collect(tickets.filter((ticket) => !ticket.related_task_id), "Ticket", "/tickets")].sort((a, b) => a.date.localeCompare(b.date));
-  }, [tasks, tickets]);
-  return (
-    <aside style={panelCard}>
-      <header style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, fontSize: 13, fontWeight: 600 }}><i className="ti ti-clock" /> Upcoming Tasks</header>
-      {items.length ? items.map((item, index) => (
-        <Link href={item.href} key={`${item.kind}-${item.id}-${index}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: "0.5px solid var(--border)", color: "var(--text)" }}>
-          <strong style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</strong>
-          <span style={{ flexShrink: 0, color: "var(--text-muted)", fontSize: 11 }}>{item.kind} · {item.date}</span>
-        </Link>
-      )) : <div style={{ display: "grid", justifyItems: "center", gap: 8, padding: "28px 8px", color: "var(--text-muted)", fontSize: 12, textAlign: "center" }}><i className="ti ti-checks" style={{ fontSize: 22 }} /><span>No tasks in the next 7 days</span></div>}
-    </aside>
-  );
-}
-
 export function DashboardCalendar({ tickets, tasks, events, people = [], divisions = [], referenceDate }: { tickets: ApiRecord[]; tasks: ApiRecord[]; events: ApiRecord[]; people?: ApiRecord[]; divisions?: ApiRecord[]; referenceDate: string }) {
   const router = useRouter();
   const [taskRows, setTaskRows] = useState(tasks);

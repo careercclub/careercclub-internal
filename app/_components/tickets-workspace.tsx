@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
+import { type CSSProperties, type ReactNode, useMemo, useState, useEffect } from "react";
 import { AssigneeField, personName } from "./assignee-field";
 import { GoogleCalendarScript } from "./google-calendar-tool";
 import { TicketGoogleCalendarModal } from "./ticket-google-calendar-modal";
@@ -160,6 +160,15 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   const [fPrio, setFPrio] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  // "Create ticket" on the Dashboard opens this same form (one way to create a ticket).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("create") !== "ticket") return;
+    url.searchParams.delete("create");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    const timer = window.setTimeout(() => setCreateOpen(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   const [calendarId, setCalendarId] = useState<string | null>(null);
 
   const personMap = useMemo(() => new Map(people.map((person) => [String(person.id), person])), [people]);

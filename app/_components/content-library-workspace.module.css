@@ -1,6 +1,8 @@
 .workspace {
   display: grid;
-  gap: 10px;
+  gap: 20px;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
 .header {
@@ -721,4 +723,58 @@
   .form { padding: 14px 16px 18px; }
   .dialogFooter { bottom: -18px; margin: 4px -16px -18px; padding: 12px 16px; }
   .dialogHeader { padding: 16px 16px 13px; }
+}
+
+/* ── Page layout (IJIS, Oct 2026): header + count, segmented type switch, pill filters, 4:5 tiles ── */
+.pageHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.pageHead h1 { margin: 2px 0 0; font-size: clamp(24px, 3vw, 30px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.pageHead p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
+.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.pageHead .addButton { min-height: 42px; padding: 0 18px; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
+.segment, .segmentActive { min-height: 34px; padding: 0 16px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.segment { color: var(--text-muted); background: transparent; }
+.segment:hover { color: var(--text); }
+.segmentActive { color: var(--white); background: var(--text); }
+.filterPills { display: flex; flex-wrap: wrap; gap: 8px; }
+.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill select { max-width: 160px; min-height: 34px; padding: 0 6px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+.filterPill:focus-within { border-color: var(--purple-mid); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+.tile { position: relative; min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); transition: transform 150ms ease, box-shadow 150ms ease; }
+.tile:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(20, 33, 44, 0.05), 0 14px 32px rgba(20, 33, 44, 0.1); }
+.tileOpen { width: 100%; display: flex; flex-direction: column; padding: 0; border: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.tileMedia { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--purple-light); }
+.tileImage { width: 100%; height: 100%; min-height: 0 !important; }
+.tileText { position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 18px; color: var(--purple-dark); font-size: 17px; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; padding-top: 48px; }
+.tilePlatform, .tileCount { position: absolute; top: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+.tilePlatform { left: 12px; color: var(--text); background: rgb(255 255 255 / 92%); }
+.tileCount { right: 12px; color: #fff; background: rgb(10 16 22 / 60%); }
+.tileBody { display: grid; gap: 8px; padding: 12px 14px 14px; }
+.tileBody > b { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13.5px; font-weight: 700; line-height: 1.35; min-height: 2.7em; }
+.tileMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.tileLabel, .tileKind { overflow: hidden; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.tileLabel { color: var(--purple-dark); background: var(--purple-light); }
+.tileKind { color: var(--text-muted); background: var(--surface-2); }
+.tileMetric { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+/* Source link sits on the image corner; shown on hover/focus (always on touch screens). */
+.tileLink { position: absolute; right: 12px; bottom: 86px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--text); background: rgb(255 255 255 / 92%); box-shadow: 0 2px 8px rgba(10, 16, 22, 0.18); opacity: 0; transition: opacity 120ms ease; }
+.tile:hover .tileLink, .tileLink:focus-visible { opacity: 1; }
+@media (hover: none) { .tileLink { opacity: 1; } }
+
+@media (max-width: 640px) {
+  .toolbar { gap: 10px; }
+  .segmented { width: 100%; }
+  .segment, .segmentActive { flex: 1; }
+  .filterPills { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filterPill { min-width: 0; }
+  .filterPill select { min-width: 0; flex: 1; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tileBody { padding: 10px 11px 12px; }
+  .tileText { font-size: 14px; padding: 40px 12px 12px; }
+  .tileLink { bottom: 80px; }
+  .pageHead .addButton { min-height: 40px; }
 }

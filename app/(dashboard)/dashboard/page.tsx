@@ -1,25 +1,33 @@
 import { DashboardAiCommand } from "@/app/_components/dashboard-ai-command";
-import { DashboardCalendar, DashboardUpcoming } from "@/app/_components/dashboard-calendar";
+import { DashboardCalendar } from "@/app/_components/dashboard-calendar";
+import { DashboardHome } from "@/app/_components/dashboard-home";
 import { listProgramEvents, listProgramTasks } from "@/lib/api/program";
 import { getVisibleTicketWorkspace } from "@/lib/api/tickets";
+import { summarizeDashboard } from "@/lib/dashboard/summary";
 import { auth } from "@/auth";
-import styles from "../dashboard.module.css";
 
-export const metadata = { title: "Dashboard", description: "Program tasks and tickets on one operational calendar." };
+export const metadata = { title: "Dashboard", description: "Today's numbers, upcoming programs, what is due next and the operational calendar." };
+
+/** Today's date and hour in Jakarta; the server may run in UTC. */
+function jakartaNow() {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+  return { today: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
+}
 
 export default async function DashboardPage() {
   const session = await auth();
-  // Same role rule as the Tickets page: the calendar only shows tickets this person may see.
+  // Same role rule as the Tickets page: the dashboard only shows tickets this person may see.
   const [workspace, tasks, events] = await Promise.all([getVisibleTicketWorkspace({ role: session?.user?.role, userId: session?.user?.id, email: session?.user?.email }), listProgramTasks(), listProgramEvents()]);
+  const now = jakartaNow();
+  const summary = summarizeDashboard({ tickets: workspace.tickets, tasks, events, people: workspace.people }, now.today);
+  const firstName = (session?.user?.name || session?.user?.email || "there").split(/[\s@]/)[0];
   return (
-    <>
-      <DashboardAiCommand />
-      <div className={styles.dashboardMain}>
-        <section className={styles.card}>
-          <DashboardCalendar tickets={workspace.tickets} tasks={tasks} events={events} people={workspace.people} divisions={workspace.divisions} referenceDate={new Date().toISOString()} />
-        </section>
-        <DashboardUpcoming tasks={tasks} tickets={workspace.tickets} />
-      </div>
-    </>
+    <DashboardHome
+      aiCommand={<DashboardAiCommand />}
+      calendar={<DashboardCalendar tickets={workspace.tickets} tasks={tasks} events={events} people={workspace.people} divisions={workspace.divisions} referenceDate={new Date().toISOString()} />}
+      firstName={firstName}
+      hour={now.hour}
+      summary={summary}
+    />
   );
 }

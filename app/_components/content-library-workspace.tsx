@@ -46,7 +46,7 @@ function number(value: unknown) {
 }
 
 function formatNumber(value: unknown) {
-  return new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(number(value));
+  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(number(value));
 }
 
 function rowLabels(value: unknown) {
@@ -323,52 +323,56 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
 
   return (
     <section className={styles.workspace}>
-      <header className={styles.header}>
-        <h1>Content Library</h1>
+      <header className={styles.pageHead}>
+        <div>
+          <span className={styles.eyebrow}>Marketing</span>
+          <h1>Content Library</h1>
+          <p>{visibleRows.length} {visibleRows.length === 1 ? "idea" : "ideas"}{label || platform || contentType ? " match the filters" : ` in ${activeType === "ads" ? "Ad Ideas" : "Organic Ideas"}`}</p>
+        </div>
+        <Button className={styles.addButton} onClick={openAdd} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add content</Button>
       </header>
 
-      <div className={styles.tabs} role="tablist" aria-label="Content library type">
-        <button aria-selected={activeType === "organic"} className={activeType === "organic" ? styles.activeTab : ""} onClick={() => changeType("organic")} role="tab" type="button"><i className="ti ti-leaf" /> Organic Ideas</button>
-        <button aria-selected={activeType === "ads"} className={activeType === "ads" ? styles.activeTab : ""} onClick={() => changeType("ads")} role="tab" type="button"><i className="ti ti-ad-2" /> Ad Ideas</button>
-      </div>
-
-      <div className={styles.filterBar}>
-        <select aria-label="Filter platform" onChange={(event) => setPlatform(event.target.value)} value={platform}><option value="">Platform</option>{PLATFORMS.map((value) => <option key={value}>{value}</option>)}</select>
-        <select aria-label="Filter format" onChange={(event) => { const value = event.target.value; setContentType(value); if (!sort && value) setSort(value === "Reels/Video" ? "views" : "likes"); }} value={contentType}><option value="">Format</option>{CONTENT_TYPES.map((value) => <option key={value}>{value}</option>)}</select>
-        <select aria-label="Filter label" onChange={(event) => setLabel(event.target.value)} value={label}><option value="">Label</option>{labelOptions.map((value) => <option key={value}>{value}</option>)}</select>
-        <select aria-label="Sort content" onChange={(event) => setSort(event.target.value as SortKey)} value={sort}><option value="">Sort by</option><option value="views">Views</option><option value="likes">Likes</option><option value="comments">Comments</option><option value="shares">Shares</option></select>
-        <span className={styles.filterSpacer} />
+      <div className={styles.toolbar}>
+        <div className={styles.segmented} role="tablist" aria-label="Content library type">
+          <button aria-selected={activeType === "organic"} className={activeType === "organic" ? styles.segmentActive : styles.segment} onClick={() => changeType("organic")} role="tab" type="button">Organic Ideas</button>
+          <button aria-selected={activeType === "ads"} className={activeType === "ads" ? styles.segmentActive : styles.segment} onClick={() => changeType("ads")} role="tab" type="button">Ad Ideas</button>
+        </div>
+        <div className={styles.filterPills}>
+          <label className={styles.filterPill}><span>Platform</span><select aria-label="Filter platform" onChange={(event) => setPlatform(event.target.value)} value={platform}><option value="">All</option>{PLATFORMS.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label className={styles.filterPill}><span>Format</span><select aria-label="Filter format" onChange={(event) => { const value = event.target.value; setContentType(value); if (!sort && value) setSort(value === "Reels/Video" ? "views" : "likes"); }} value={contentType}><option value="">All</option>{CONTENT_TYPES.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label className={styles.filterPill}><span>Label</span><select aria-label="Filter label" onChange={(event) => setLabel(event.target.value)} value={label}><option value="">All</option>{labelOptions.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label className={styles.filterPill}><span>Sort</span><select aria-label="Sort content" onChange={(event) => setSort(event.target.value as SortKey)} value={sort}><option value="">Newest</option><option value="views">Most views</option><option value="likes">Most likes</option><option value="comments">Most comments</option><option value="shares">Most shares</option></select></label>
+        </div>
         {notice ? <span className={styles.notice} role="status">{notice}</span> : null}
-        <Button className={styles.addButton} onClick={openAdd} size="sm" type="button"><i className="ti ti-plus" /> Add content</Button>
       </div>
 
       {visibleRows.length ? (
-        <div className={styles.gallery}>
+        <div className={styles.grid}>
           {visibleRows.map((row) => {
             const images = rowImages(row.storage_paths);
             const copy = text(row.copywriting);
+            const labels = rowLabels(row.labels);
             const icon = PLATFORM_ICONS[text(row.platform)] || "ti-world";
+            // The card shows the number the list is sorted by (likes by default).
+            const metric = sort && sort !== "likes" ? sort : "likes";
+            const metricIcon = { views: "ti-eye", likes: "ti-heart", comments: "ti-message", shares: "ti-share" }[metric];
             return (
-              <article className={styles.card} data-record-id={text(row.id)} key={text(row.id)}>
-                <div className={styles.imageFrame}>
-                  <button className={styles.imageButton} onClick={() => { setSelected(row); setSelectedImage(0); }} type="button" aria-label={`Open ${text(row.platform)} ${text(row.jenis)}`}>
-                    {images[0] ? <StorageImage area="design-assets" label={`${text(row.platform)} ${text(row.jenis)}`} objectKey={images[0]} /> : <span className={styles.imageEmpty}><i className="ti ti-file-text" /><small>{text(row.jenis)}</small></span>}
-                    <span className={styles.platformBadge}><i className={`ti ${icon}`} /> {text(row.platform) || "Platform"}</span>
-                    {images.length > 1 ? <span className={styles.imageCount}><i className="ti ti-photo" /> {images.length}</span> : null}
-                  </button>
-                  {row.link ? <a aria-label="Open content link" className={styles.sourceOverlay} href={text(row.link)} rel="noreferrer" target="_blank"><i className="ti ti-external-link" /></a> : null}
-                </div>
-                <div className={styles.cardBody}>
-                  <strong className={styles.contentKind}>{text(row.jenis) || "Content"}</strong>
-                  {rowLabels(row.labels).length ? <div className={styles.labelRow}>{rowLabels(row.labels).map((value) => <span key={value}>{value}</span>)}</div> : null}
-                  {copy ? <p>{copy.length > 80 ? `${copy.slice(0, 80)}...` : copy}</p> : null}
-                  <div className={styles.metrics}>
-                    {number(row.views) ? <span><i className="ti ti-eye" /> {formatNumber(row.views)}</span> : null}
-                    {number(row.likes) ? <span><i className="ti ti-heart" /> {formatNumber(row.likes)}</span> : null}
-                    {number(row.comments) ? <span><i className="ti ti-message" /> {formatNumber(row.comments)}</span> : null}
-                    {number(row.shares) ? <span><i className="ti ti-share" /> {formatNumber(row.shares)}</span> : null}
-                  </div>
-                </div>
+              <article className={styles.tile} data-record-id={text(row.id)} key={text(row.id)}>
+                <button className={styles.tileOpen} onClick={() => { setSelected(row); setSelectedImage(0); }} type="button" aria-label={`Open ${text(row.platform)} ${text(row.jenis)}`}>
+                  <span className={styles.tileMedia}>
+                    {images[0] ? <StorageImage area="design-assets" className={styles.tileImage} label={`${text(row.platform)} ${text(row.jenis)}`} objectKey={images[0]} /> : <span className={styles.tileText}>{copy || text(row.jenis) || "Content"}</span>}
+                    <span className={styles.tilePlatform}><i className={`ti ${icon}`} aria-hidden="true" /> {text(row.platform) || "Platform"}</span>
+                    {images.length > 1 ? <span className={styles.tileCount}><i className="ti ti-photo" aria-hidden="true" /> {images.length}</span> : null}
+                  </span>
+                  <span className={styles.tileBody}>
+                    <b>{copy || text(row.jenis) || "Untitled content"}</b>
+                    <span className={styles.tileMeta}>
+                      {labels[0] ? <span className={styles.tileLabel}>{labels[0]}{labels.length > 1 ? ` +${labels.length - 1}` : ""}</span> : <span className={styles.tileKind}>{text(row.jenis)}</span>}
+                      <span className={styles.tileMetric}><i className={`ti ${metricIcon}`} aria-hidden="true" /> {formatNumber(row[metric])}</span>
+                    </span>
+                  </span>
+                </button>
+                {row.link ? <a aria-label="Open content link" className={styles.tileLink} href={text(row.link)} rel="noreferrer" target="_blank"><i className="ti ti-external-link" aria-hidden="true" /></a> : null}
               </article>
             );
           })}
