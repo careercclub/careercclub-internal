@@ -18,6 +18,9 @@ import { Pagination, usePagination } from "./ui-kit";
 import styles from "../record-manager.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { confirmAction } from "./app-dialog";
+import ps from "./program-workspace.module.css";
+import { dueChip } from "@/lib/tickets/groups";
+import { isOverdue, localIso } from "@/lib/dashboard/summary";
 
 const JENIS = ["CCA", "Webinar", "Workshop", "Bootcamp", "Seminar"];
 const EVENT_STATUS = ["Planning", "On Progress", "Done", "Cancelled"];
@@ -28,7 +31,7 @@ const PRIORITIES = ["High", "Med", "Low"];
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 function dateKey(value: unknown) { if (!value) return ""; if (value instanceof Date) return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`; return String(value).slice(0, 10); }
-const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function fmtDate(value: unknown) { const key = dateKey(value); if (!key) return ""; const [y, m, d] = key.split("-"); return `${Number(d)} ${MONTHS_ID[Number(m) - 1] || m} ${y}`; }
 function fmtShort(value: unknown) { const key = dateKey(value); if (!key) return "—"; const parts = key.split("-"); return `${Number(parts[2])} ${MONTHS_ID[Number(parts[1]) - 1] || parts[1]}`; }
 
@@ -236,16 +239,18 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const router = useRouter();
   const [eventsState, setEventsState] = useState(events);
   const [taskRows, setTaskRows] = useState(tasks);
-  const [tab, setTab] = useState<"overview" | "events" | "history" | "calendar">("overview");
+  const [tab, setTab] = useState<"upcoming" | "finished" | "calendar">("upcoming");
   const [selectedEvent, setSelectedEvent] = useState(String(events.find((event) => event.status !== "Done")?.id || events[0]?.id || ""));
   const [phaseTab, setPhaseTab] = useState<string>("all");
-  useRecordFocus((id) => {
-    if (!events.some((event) => String(event.id) === id)) return;
-    setSelectedEvent(id); setPhaseTab("all"); setTab("events");
-    return true;
-  });
   const [jenisFilter, setJenisFilter] = useState("");
   const [dateFrom, setDateFrom] = useState(""); const [dateTo, setDateTo] = useState("");
+  useRecordFocus((id) => {
+    if (!events.some((event) => String(event.id) === id)) return;
+    const event = events.find((row) => String(row.id) === id);
+    setSelectedEvent(id); setPhaseTab("all"); setJenisFilter(""); setDateFrom(""); setDateTo("");
+    setTab(event && ["Done", "Cancelled"].includes(text(event.status)) ? "finished" : "upcoming");
+    return true;
+  });
   const [eventModal, setEventModal] = useState<{ event: ApiRecord | null } | null>(null);
   const [taskModal, setTaskModal] = useState<{ task: ApiRecord | null } | null>(null);
   const [linkModalEvent, setLinkModalEvent] = useState("");
@@ -296,118 +301,122 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
     } catch (e) { setLinkError(e instanceof Error ? e.message : "Could not delete the link."); }
   }
 
+  const today = localIso(new Date());
+  const upcomingEvents = sortedEvents.filter((event) => !["Done", "Cancelled"].includes(text(event.status))).filter(matchesFilters)
+    // Soonest first for what is coming; undated last.
+    .sort((a, b) => (dateKey(a.tanggal) || "9999").localeCompare(dateKey(b.tanggal) || "9999"));
+  const listEvents = tab === "finished" ? historyEvents : upcomingEvents;
+  const shown = listEvents.find((event) => String(event.id) === selectedEvent) || listEvents[0] || null;
+  const shownId = shown ? String(shown.id) : "";
+  const shownTasks = taskRows.filter((task) => String(task.project_id) === shownId);
+  const shownProgress = shown ? progressOf(shownId) : { done: 0, total: 0, pct: 0 };
+  const lateTasks = taskRows.filter((task) => isOverdue(task, today)).length;
+  const filtersOn = Boolean(jenisFilter || dateFrom || dateTo);
+
   return (
-    <div className={styles.crmWorkspace}>
+    <div className={ps.page}>
       <GoogleCalendarScript />
-      <nav className={styles.workspaceTabs}>{([["overview", "Overview"], ["events", "Events"], ["history", "History"], ["calendar", "Calendar"]] as const).map(([id, label]) => <button className={tab === id ? styles.workspaceTabActive : styles.workspaceTab} key={id} onClick={() => setTab(id)} type="button">{label}</button>)}</nav>
+      <header className={ps.head}>
+        <div>
+          <span className={ps.eyebrow}>Operations</span>
+          <h1>Program</h1>
+          <p>{upcomingEvents.length} upcoming{lateTasks ? <> · <b className={ps.lateText}>{lateTasks} late {lateTasks === 1 ? "task" : "tasks"}</b></> : null}</p>
+        </div>
+        <Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" aria-hidden="true" /> New event</Button>
+      </header>
 
-      {tab === "overview" ? (
-        <div className="grid gap-4">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
-            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Total events</div><div style={{ fontSize: 26, fontWeight: 700 }}>{eventsState.length}</div></div>
-            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>On Progress</div><div style={{ fontSize: 26, fontWeight: 700, color: "var(--blue)" }}>{eventsState.filter((event) => event.status === "On Progress").length}</div></div>
-            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Planning</div><div style={{ fontSize: 26, fontWeight: 700, color: "var(--text-muted)" }}>{eventsState.filter((event) => event.status === "Planning").length}</div></div>
-            <div style={panelCard}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Overdue tasks</div><div style={{ fontSize: 26, fontWeight: 700, color: "var(--red)" }}>{overdue}</div></div>
-          </div>
-          <div style={panelCard}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-              <div><strong style={{ fontSize: 14 }}>Semua Event ({overviewEvents.length})</strong><div style={{ fontSize: 11, color: "var(--text-muted)" }}>Click a card to see its tasks and timeline</div></div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select>
-                <Input aria-label="From date" className="w-[150px]" onChange={(e) => setDateFrom(e.target.value)} type="date" value={dateFrom} />
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>to</span>
-                <Input aria-label="To date" className="w-[150px]" onChange={(e) => setDateTo(e.target.value)} type="date" value={dateTo} />
-                {dateFrom || dateTo || jenisFilter ? <Button type="button" variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); setJenisFilter(""); }}>Reset</Button> : null}
-                <Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" /> New event</Button>
-              </div>
-            </div>
-            <div className="grid gap-3">
-              {overviewEvents.map((event) => { const p = progressOf(String(event.id)); return (
-                <button type="button" key={String(event.id)} onClick={() => { setSelectedEvent(String(event.id)); setPhaseTab("all"); setTab("events"); }} style={{ textAlign: "left", background: "var(--white)", border: "0.5px solid var(--border)", borderLeft: `4px solid ${eventBorder(text(event.status))}`, borderRadius: 10, padding: 14, cursor: "pointer" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}><strong style={{ fontSize: 14 }}>{text(event.nama) || "Untitled"}</strong><span style={pill(text(event.status) || "Planning")}>{text(event.status) || "Planning"}</span>{event.jenis_program ? <span style={jenisPill}>{text(event.jenis_program)}</span> : null}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}><i className="ti ti-calendar" /> {fmtDate(event.tanggal) || "No date"}{event.waktu ? ` · ${text(event.waktu).slice(0, 5)}` : ""}{event.speaker ? ` · ${text(event.speaker)}` : ""}</div>
-                  <div style={{ height: 6, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}><div style={{ height: "100%", width: `${p.pct}%`, background: eventBorder(text(event.status)) }} /></div>
-                  <div style={{ textAlign: "right", fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{p.done}/{p.total} task · {p.pct}%</div>
+      <div className={ps.toolbar}>
+        <div className={ps.segmented} role="tablist" aria-label="Program view">
+          {([["upcoming", "Upcoming", upcomingEvents.length], ["finished", "Finished", historyEvents.length], ["calendar", "Calendar", null]] as const).map(([id, label, count]) => (
+            <button aria-selected={tab === id} className={tab === id ? ps.segmentActive : ps.segment} key={id} onClick={() => setTab(id)} role="tab" type="button">{label}{count !== null ? <span>{count}</span> : null}</button>
+          ))}
+        </div>
+        {tab !== "calendar" ? (
+          <>
+            <label className={ps.filterPill}><span>Type</span><select aria-label="Filter program type" value={jenisFilter} onChange={(e) => setJenisFilter(e.target.value)}><option value="">All</option>{jenisOptions.map((j) => <option key={j} value={j}>{j}</option>)}</select></label>
+            <label className={ps.filterPill}><span>From</span><input aria-label="From date" onChange={(e) => setDateFrom(e.target.value)} type="date" value={dateFrom} /></label>
+            <label className={ps.filterPill}><span>To</span><input aria-label="To date" onChange={(e) => setDateTo(e.target.value)} type="date" value={dateTo} /></label>
+            {filtersOn ? <button className={ps.clear} onClick={() => { setDateFrom(""); setDateTo(""); setJenisFilter(""); }} type="button">Clear filters</button> : null}
+          </>
+        ) : null}
+      </div>
+
+      {tab === "calendar" ? <div className={ps.calendarPanel}><DashboardCalendar tickets={tickets} tasks={taskRows} events={eventsState} people={people} divisions={divisions} referenceDate={referenceDate} /></div> : (
+        <div className={ps.board}>
+          <nav className={ps.eventList} aria-label={tab === "finished" ? "Finished events" : "Upcoming events"}>
+            {listEvents.length ? listEvents.map((event) => {
+              const id = String(event.id); const p = progressOf(id); const active = id === shownId;
+              return (
+                <button aria-current={active ? "true" : undefined} className={active ? ps.eventActive : ps.event} data-record-id={id} key={id} onClick={() => { setSelectedEvent(id); setPhaseTab("all"); }} type="button">
+                  <span className={ps.ring} style={{ ["--pct" as string]: `${p.pct}%` }} aria-hidden="true"><span>{p.total ? `${p.pct}%` : "–"}</span></span>
+                  <span className={ps.eventText}>
+                    <b>{text(event.nama) || "Untitled event"}</b>
+                    <small>{[text(event.jenis_program), fmtDate(event.tanggal) || "No date"].filter(Boolean).join(" · ")}</small>
+                  </span>
+                  <span className={ps.eventCount}>{p.done}/{p.total}</span>
                 </button>
-              ); })}
-              {overviewEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>{jenisFilter || dateFrom || dateTo ? "No events match the filters." : "No events yet."}</p> : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
+              );
+            }) : <p className={ps.empty}>{filtersOn ? "No events match the filters." : tab === "finished" ? "No finished events yet." : "No upcoming events. Click New event to plan one."}</p>}
+          </nav>
 
-      {tab === "events" ? (
-        <div className="grid gap-4">
-          <div style={{ display: "flex", gap: 8 }}>
-            <Select value={selectedEvent || "none"} onValueChange={(v) => { setSelectedEvent(v === "none" ? "" : v); setPhaseTab("all"); }}><SelectTrigger className="flex-1"><SelectValue placeholder="Select event" /></SelectTrigger><SelectContent><SelectItem value="none">Select event</SelectItem>{sortedEvents.map((event) => <SelectItem key={String(event.id)} value={String(event.id)}>{text(event.nama) || "Untitled"}</SelectItem>)}</SelectContent></Select>
-            <Button type="button" disabled={!selectedEvent} onClick={() => setTaskModal({ task: null })}><i className="ti ti-plus" /> Task</Button>
-          </div>
-          {selected ? (
-            <>
-              <div style={panelCard}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <div><div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><strong style={{ fontSize: 16 }}>{text(selected.nama)}</strong><span style={pill(text(selected.status) || "Planning")}>{text(selected.status) || "Planning"}</span>{selected.jenis_program ? <span style={jenisPill}>{text(selected.jenis_program)}</span> : null}</div><div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}><i className="ti ti-calendar" /> {fmtDate(selected.tanggal)}{selected.waktu ? ` · ${text(selected.waktu).slice(0, 5)}` : ""}{selected.speaker ? ` · ${text(selected.speaker)}` : ""}</div></div>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEventModal({ event: selected })}><i className="ti ti-edit" /> Edit</Button>
+          {shown ? (
+            <section className={ps.detail} aria-label={text(shown.nama) || "Event"}>
+              <div className={ps.detailHead}>
+                <div className={ps.detailTitle}>
+                  <span className={ps.eyebrow}>{text(shown.jenis_program) || "Program"}{["Done", "Cancelled"].includes(text(shown.status)) ? ` · ${text(shown.status)}` : ""}</span>
+                  <h2>{text(shown.nama) || "Untitled event"}</h2>
+                  <p>{[fmtDate(shown.tanggal) || "No date", text(shown.waktu).slice(0, 5), text(shown.platform), text(shown.speaker)].filter(Boolean).join(" · ")}</p>
+                </div>
+                <div className={ps.detailActions}>
+                  <Button type="button" variant="outline" onClick={() => setEventModal({ event: shown })}><i className="ti ti-edit" aria-hidden="true" /> Edit event</Button>
+                  <Button type="button" onClick={() => { setSelectedEvent(shownId); setTaskModal({ task: null }); }}><i className="ti ti-plus" aria-hidden="true" /> Add task</Button>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{([["all", `All (${selectedTasks.length})`], ...PHASES.map((phase) => [phase, `${phase} (${selectedTasks.filter((task) => text(task.phase) === phase).length})`])] as [string, string][]).map(([id, label]) => <button key={id} type="button" onClick={() => setPhaseTab(id)} style={{ ...pillBase, padding: "5px 12px", cursor: "pointer", border: `1px solid ${phaseTab === id ? "var(--purple-mid)" : "var(--border-md)"}`, background: phaseTab === id ? "var(--purple-light)" : "var(--white)", color: phaseTab === id ? "var(--purple-mid)" : "var(--text-muted)" }}>{label}</button>)}</div>
-              <EventLinksPanel event={selected} templates={linkTemplates} onAdd={() => { setLinkError(""); setLinkModalEvent(String(selected.id)); }} onDelete={(index) => deleteLink(String(selected.id), index)} error={linkError} />
-              <div style={{ ...panelCard, padding: 0, overflow: "hidden" }}>
-                <div style={{ padding: "10px 12px", borderBottom: "0.5px solid var(--border)", fontSize: 12 }}><span style={pill("Todo")}>{phaseTab === "all" ? "All" : phaseTab}</span> <span style={{ color: "var(--text-muted)" }}>{phaseTasks.length} task · {phaseTasks.filter((task) => task.status === "Done").length} done</span></div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                    <thead><tr style={{ background: "var(--bg)" }}><th style={thStyle} /><th style={thStyle}>Task</th><th style={thStyle}>Assignee</th><th style={thStyle}>Deadline</th><th style={thStyle}>Status</th><th style={thStyle}>Priority</th><th style={{ ...thStyle, textAlign: "center" }}>Actions</th></tr></thead>
-                    <tbody>
-                      {phaseTasks.length === 0 ? <tr><td colSpan={7} style={{ padding: 28, textAlign: "center", color: "var(--text-muted)" }}>No tasks yet. Click &quot;+ Task&quot; to add one.</td></tr> : phaseTaskPage.map((task) => { const isDone = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); return (
-                        <tr key={String(task.id)} onClick={() => setTaskModal({ task })} style={{ borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
-                          <td style={tdStyle} onClick={(e) => { e.stopPropagation(); toggleTask(task); }}><div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isDone ? "#0f52ba" : "var(--border-md)"}`, background: isDone ? "#0f52ba" : "transparent", display: "grid", placeItems: "center" }}>{isDone ? <i className="ti ti-check" style={{ fontSize: 10, color: "#fff" }} /> : null}</div></td>
-                          <td style={{ ...tdStyle, textDecoration: isDone ? "line-through" : "none", color: isDone ? "var(--text-muted)" : "var(--text)" }}>{text(task.title) || "Untitled"}</td>
-                          <td style={tdStyle}><div style={{ fontWeight: 500 }}>{who.name}</div>{who.div ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{who.div}</div> : null}</td>
-                          <td style={{ ...tdStyle, fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{fmtShort(task.due_date)}</td>
-                          <td style={tdStyle}><span style={pill(text(task.status) || "Todo")}>{text(task.status) || "Todo"}</span></td>
-                          <td style={tdStyle}><span style={pill(text(task.priority) || "Med")}>{text(task.priority) || "Med"}</span></td>
-                          <td style={{ ...tdStyle, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                            <Button type="button" size="icon-sm" variant="outline" style={synced ? { background: "var(--green)", borderColor: "var(--green)", color: "#fff" } : undefined} title={synced ? "Sudah di Calendar (klik untuk re-sync)" : "Add to Google Calendar"} onClick={() => setGcalTask(task)}>
-                              <i className={`ti ti-calendar-${synced ? "check" : "plus"}`} />
-                            </Button>
-                          </td>
-                        </tr>
-                      ); })}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination onChange={setTaskPage} page={taskPage} totalPages={taskTotalPages} />
+              <div className={ps.progress} aria-label={`${shownProgress.done} of ${shownProgress.total} tasks done`}>
+                <span><b>{shownProgress.done}/{shownProgress.total}</b> tasks done</span>
+                <span className={ps.bar}><span style={{ width: `${shownProgress.pct}%` }} /></span>
               </div>
-              <EventRundown eventId={String(selected.id)} rows={rundown} startTime={text(selected.waktu).slice(0, 5)} />
-            </>
-          ) : <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>Select an event to see and manage its tasks.</p>}
-        </div>
-      ) : null}
+              <EventLinksPanel event={shown} templates={linkTemplates} onAdd={() => { setLinkError(""); setLinkModalEvent(shownId); }} onDelete={(index) => deleteLink(shownId, index)} error={linkError} />
 
-      {tab === "history" ? (
-        <div className="grid gap-4">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}><span style={{ fontSize: 12, color: "var(--text-muted)" }}>{historyEvents.length} event selesai/dibatalkan</span><Select value={jenisFilter || "all"} onValueChange={(v) => setJenisFilter(v === "all" ? "" : v)}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem>{jenisOptions.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
-          {historyEvents.map((event) => { const related = taskRows.filter((task) => String(task.project_id) === String(event.id)); const done = related.filter((task) => task.status === "Done").length; const pct = related.length ? Math.round((done / related.length) * 100) : 0; return (
-            <details key={String(event.id)} style={panelCard}>
-              <summary style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", listStyle: "none" }}>
-                <div><div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><strong style={{ fontSize: 14 }}>{text(event.nama)}</strong>{event.jenis_program ? <span style={jenisPill}>{text(event.jenis_program)}</span> : null}<span style={pill(text(event.status))}>{text(event.status)}</span></div><div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{fmtDate(event.tanggal)} · {text(event.platform) || "-"}</div></div>
-                <div style={{ textAlign: "right" }}><div style={{ fontSize: 16, fontWeight: 700, color: "var(--green)" }}>{pct}%</div><div style={{ fontSize: 11, color: "var(--text-muted)" }}>{done}/{related.length} task</div></div>
-              </summary>
-              <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                {PHASES.map((phase) => { const pt = related.filter((task) => text(task.phase) === phase); if (!pt.length) return null; return (
-                  <div key={phase}><div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>{phase}</div>{pt.map((task) => <div key={String(task.id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "5px 0", borderBottom: "0.5px solid var(--border)" }}><span style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 15, height: 15, borderRadius: 4, background: task.status === "Done" ? "#0f52ba" : "var(--bg)", display: "grid", placeItems: "center" }}>{task.status === "Done" ? <i className="ti ti-check" style={{ fontSize: 9, color: "#fff" }} /> : null}</span><span style={{ fontSize: 12, textDecoration: task.status === "Done" ? "line-through" : "none", color: "var(--text-muted)" }}>{text(task.title)}</span></span><span style={pill(text(task.status) || "Todo")}>{text(task.status) || "Todo"}</span></div>)}</div>
-                ); })}
+              <div className={ps.phaseTabs} role="tablist" aria-label="Task phase">
+                {([["all", "All", shownTasks.length], ...PHASES.map((phase) => [phase, phase, shownTasks.filter((task) => text(task.phase) === phase).length])] as [string, string, number][]).map(([id, label, count]) => (
+                  <button aria-selected={phaseTab === id} className={phaseTab === id ? ps.phaseActive : ps.phase} key={id} onClick={() => setPhaseTab(id)} role="tab" type="button">{label} <span>{count}</span></button>
+                ))}
               </div>
-            </details>
-          ); })}
-          {historyEvents.length === 0 ? <p style={{ fontSize: 12, color: "var(--text-muted)", padding: 12 }}>No finished events yet.</p> : null}
+              {shownTasks.length === 0 ? <p className={ps.empty}>No tasks yet. Click Add task to plan the work.</p> : (phaseTab === "all" ? PHASES : [phaseTab]).map((phase) => {
+                const list = shownTasks.filter((task) => text(task.phase) === phase).sort((a, b) => (dateKey(a.due_date) || "9999").localeCompare(dateKey(b.due_date) || "9999"));
+                if (!list.length) return null;
+                return (
+                  <div className={ps.phaseGroup} key={phase}>
+                    {phaseTab === "all" ? <h3>{phase} <span>{list.filter((task) => task.status === "Done").length}/{list.length}</span></h3> : null}
+                    <ul className={ps.rows}>
+                      {list.map((task) => {
+                        const isDoneTask = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); const chip = dueChip(task, today); const title = text(task.title) || "Untitled task";
+                        return (
+                          <li className={isDoneTask ? ps.rowDone : ps.row} key={String(task.id)}>
+                            <button aria-label={isDoneTask ? `Reopen task: ${title}` : `Mark task done: ${title}`} aria-pressed={isDoneTask} className={isDoneTask ? ps.checkOn : ps.check} onClick={() => toggleTask(task)} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
+                            <button className={ps.rowMain} onClick={() => { setSelectedEvent(shownId); setTaskModal({ task }); }} type="button">
+                              <b>{title}</b>
+                              <small>{[who.div, text(task.status) === "On Progress" ? "In progress" : "", text(task.priority) === "High" ? "High priority" : ""].filter(Boolean).join(" · ") || "\u00a0"}</small>
+                            </button>
+                            <span className={who.name === "—" ? ps.avatarEmpty : ps.avatar} title={who.name === "—" ? "No assignee" : who.name}>{who.name === "—" ? "?" : who.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
+                            {chip ? <span className={chip.tone === "late" ? ps.chipLate : chip.tone === "soon" ? ps.chipSoon : ps.chip}>{chip.label}</span> : <span className={ps.chipNone}>No date</span>}
+                            <button aria-label={synced ? `Re-sync ${title} to Google Calendar` : `Add ${title} to Google Calendar`} className={synced ? ps.calOn : ps.cal} onClick={() => setGcalTask(task)} title={synced ? "On Google Calendar (click to re-sync)" : "Add to Google Calendar"} type="button"><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} aria-hidden="true" /></button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })}
+              <div className={ps.rundown}><EventRundown eventId={shownId} rows={rundown} startTime={text(shown.waktu).slice(0, 5)} /></div>
+            </section>
+          ) : null}
         </div>
-      ) : null}
-
-      {tab === "calendar" ? <DashboardCalendar tickets={tickets} tasks={taskRows} events={eventsState} people={people} divisions={divisions} referenceDate={referenceDate} /> : null}
+      )}
 
       {eventModal ? <EventFormModal event={eventModal.event} onClose={() => setEventModal(null)} onSaved={(row) => { setEventsState((current) => eventModal.event ? current.map((event) => String(event.id) === String(row.id) ? row : event) : [row, ...current]); if (!eventModal.event) setSelectedEvent(String(row.id)); setEventModal(null); router.refresh(); }} /> : null}
-      {taskModal && selectedEvent ? <TaskFormModal projectId={selectedEvent} task={taskModal.task} people={people} onClose={() => setTaskModal(null)} onSaved={(row) => { setTaskRows((current) => taskModal.task ? current.map((task) => String(task.id) === String(row.id) ? row : task) : [row, ...current]); setTaskModal(null); router.refresh(); }} onDeleted={(id) => { setTaskRows((current) => current.filter((task) => String(task.id) !== id)); setTaskModal(null); router.refresh(); }} /> : null}
+      {taskModal && (selectedEvent || shownId) ? <TaskFormModal projectId={selectedEvent || shownId} task={taskModal.task} people={people} onClose={() => setTaskModal(null)} onSaved={(row) => { setTaskRows((current) => taskModal.task ? current.map((task) => String(task.id) === String(row.id) ? row : task) : [row, ...current]); setTaskModal(null); router.refresh(); }} onDeleted={(id) => { setTaskRows((current) => current.filter((task) => String(task.id) !== id)); setTaskModal(null); router.refresh(); }} /> : null}
       {linkModalEvent ? <AddLinkModal eventId={linkModalEvent} onClose={() => setLinkModalEvent("")} onSaved={(row) => { setEventsState((current) => current.map((event) => String(event.id) === String(row.id) ? row : event)); setLinkModalEvent(""); router.refresh(); }} /> : null}
       {gcalTask ? <TaskCalendarModal task={gcalTask} people={people} onClose={() => setGcalTask(null)} onSynced={(taskId) => setTaskRows((current) => current.map((row) => String(row.id) === taskId ? { ...row, gcal_added: true } : row))} /> : null}
     </div>

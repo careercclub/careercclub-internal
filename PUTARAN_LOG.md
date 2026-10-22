@@ -650,3 +650,30 @@ Masukan user: tahap 1–2 baru mengganti font & warna, susunan halaman masih tem
 ### Antrean (bagian berikutnya)
 
 Program (daftar event → kartu + timeline task), CRM, Talent Pool, B2B/Org Partnership, Content Planning, Products, Job Vacancy, Competitor, Customer Knowledge, Settings — masing-masing: preview singkat bila susunannya berubah besar, lalu bangun + tes.
+
+## Putaran 14 — bagian 3: Program (22 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Tab Events/Calendar, deretan kartu event berwarna + tabel task di bawahnya | Judul + "N upcoming · M late tasks"; saklar **Upcoming / Finished / Calendar** dengan jumlah; filter pil Type / From / To + "Clear" |
+| Pilih event lewat kartu, detail tercampur tabel | **Board**: kiri daftar event (terdekat dulu) dengan cincin % task selesai; kanan detail event: jenis, nama, tanggal · jam, tombol **Edit event** & **Add task**, bar progres, Links, tab fase (All / Pre Event / Hari H / Post Event + jumlah) |
+| Task: tabel dengan pil status, prioritas, fase warna-warni | Task dikelompokkan per fase; per baris centang bulat (sekali klik Done/buka lagi), judul, info singkat, avatar, **satu** chip tanggal (merah hanya telat), tombol Google Calendar |
+| Tanggal "25 Okt" | "25 Oct" (UI Inggris) |
+
+- `?focus=<event>` (dari Dashboard/search) memilih event itu, pindah ke Upcoming/Finished sesuai statusnya dan mengosongkan filter.
+- Aturan telat & chip tanggal memakai `isOverdue` / `dueChip` yang sama dengan Tickets & Dashboard.
+- HP: daftar event jadi strip geser ke samping; baris task 3 kolom (avatar disembunyikan); tombol aksi selebar layar.
+
+### Check
+
+- Desain: render 1440 & 390, tidak ada geser ke samping; hanya task telat yang merah.
+- E2E baru Program **21/21** (urutan event, `?focus`, progres 1/4 = cincin 25%, satu chip merah, avatar, centang simpan status, filter fase & jenis, Add task / Edit event membuka form, ganti event, Calendar, HP).
+- Regresi: unit 102/102, Tickets+Dashboard 19/19, modul 12/12 (cek fokus Program diperbarui ke board), navigasi 32/32, popup 31/31, audit popup Program semua ok (opener jadi "Edit event"/"Add task"), search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49.
+- tsc bersih; lint: error tersisa hanya yang lama di competitor/content-planning/talent-pool tools (setState di effect), bukan kode baru; `npm run build` lolos.
+
+### Antrean
+
+CRM → Talent Pool → B2B/Org Partnership → Content Planning → Products → Job Vacancy → Competitor → Customer Knowledge → Settings.
+Nice-to-have: tabel Rundown di detail event masih gaya lama (input per sel) — dirapikan saat giliran Event rundown.
