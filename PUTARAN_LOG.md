@@ -740,3 +740,34 @@ CRM → B2B/Org Partnership → Customer Knowledge → Content Planning, lalu Pr
 ### Antrean
 
 B2B/Org Partnership → Customer Knowledge → Content Planning, lalu Products, Job Vacancy, Competitor, Settings.
+
+## Putaran 17 — B2B & Organization Partnership (IJIS layout) (22 Okt 2026)
+
+Satu komponen dipakai dua halaman (B2B Partnership, Organization Partnership), jadi keduanya berubah sekaligus.
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Tab bergaris Overview / Master Data / Pipeline / Deals & Scope / Outreach Log; tombol "Tambah" | Judul + "N partners · M in progress · K closed deals", tombol **Add partner** / **Add organization**; saklar **Pipeline / All partners / Deals & scope / Outreach log / Insights** (dengan jumlah) |
+| Overview (5 kartu angka) jadi halaman pertama | **Board pipeline** jadi halaman pertama: 5 kolom bernomor (Approached → Closed Lost) dengan jumlah; kartu: nama, chip **Strategic** hanya untuk tier Strategic, kategori, avatar + nama PIC, "N deals · last contact 8 Oct"; drag antar kolom = ganti stage; "+ Add partner" di tiap kolom langsung mengisi status kolom itu |
+| Master Data: tabel 9 kolom, 2 pil per baris | **Daftar partner**: logo inisial, nama + kategori · tier, PIC + jabatan · telepon, aktivitas (deal & kontak terakhir), **satu** chip status; hapus minta konfirmasi dengan nama partnernya |
+| Deals: tabel input kecil | **Kartu deal** yang bisa diedit di tempat (nama, partner, stage, deadline, nilai, scope, catatan); tersimpan saat keluar dari field |
+| Outreach: tabel input kecil | **Timeline per hari** (terbaru di atas): ikon channel, partner, channel/tanggal/respons sebagai pil, isi & catatan bisa diedit di tempat |
+| — | **Insights**: 5 angka, distribusi stage/kategori/tier, partner yang baru ditambahkan |
+
+- Logika di `lib/partnership/view.ts` (`pipelineColumns`, `partnerActivity`, `partnerSummary`, `outreachByDay`) + 3 unit test (tiap partner tepat sekali di board; status kosong/lama masuk kolom pertama).
+- Alamat lama tetap jalan: `?tab=overview` → Insights, `?tab=master` → All partners, `?tab=deals` / `?tab=outreach` sama.
+- Form partner: Company name wajib — kalau kosong ditandai merah & difokus.
+- Teks Inggris: "Input dengan AI" → "Add with AI"; label entitas "organisasi" → "organization"; deal baru bernama "New deal"; menu samping "Overview" → "Pipeline".
+
+### Check
+
+- Desain 1440 & 390. Ditemukan & diperbaiki: kolom ke-5 board terpotong di 1440 → lebar kolom minimum diturunkan; input tanggal deal tertimpa kolom nilai → grid field menyesuaikan lebar; saklar view di HP terpotong → jumlah disembunyikan di HP.
+- E2E baru Partnership **23/23** (5 kolom urut, semua partner sekali, kartu Strategic+PIC+aktivitas, drag menyimpan, Add di kolom mengisi status, nama kosong ditandai & fokus, daftar satu chip, filter, hapus pakai konfirmasi, edit deal tersimpan, Add deal, outreach per hari terbaru dulu, Log outreach, Insights, `?tab=overview`, HP).
+- Regresi: unit 111/111 (tes konsistensi menemukan label konfirmasi dinamis → dibuat label tetap "Delete partner"/"Delete organization"), CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31, navigasi 32/32 (selector deal/outreach diperbarui), search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Partnership ok.
+- tsc bersih; lint: sisa error lama di competitor-tools & content-planning-tools; `npm run build` lolos.
+
+### Antrean
+
+Customer Knowledge → Content Planning, lalu Products, Job Vacancy, Competitor, Settings.

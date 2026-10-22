@@ -56,13 +56,13 @@ export const ticketLinks: NavLink[] = [{ href: "/tickets", label: "Tickets" }];
 
 // Deals and outreach are managed in the partnership page's own tabs.
 export const partnershipLinks: NavLink[] = [
-  { href: "/b2b-partnership", label: "Overview" },
+  { href: "/b2b-partnership", label: "Pipeline" },
   { href: "/b2b-partnership?tab=deals", label: "Deals & scope" },
   { href: "/b2b-partnership?tab=outreach", label: "Outreach log" },
 ];
 
 export const orgPartnershipLinks: NavLink[] = [
-  { href: "/org-partnership", label: "Overview" },
+  { href: "/org-partnership", label: "Pipeline" },
   { href: "/org-partnership?tab=deals", label: "Deals & scope" },
   { href: "/org-partnership?tab=outreach", label: "Outreach log" },
 ];

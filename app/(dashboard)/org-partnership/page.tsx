@@ -14,14 +14,14 @@ export default async function OrgPartnershipPage({ searchParams }: { searchParam
     <AiTextRecordParser
       definitionKey="org_partners"
       kind="partnership"
-      title="Input dengan AI"
+      title="Add with AI"
       fields={[{ name: "name", label: "Organization", required: true }, { name: "category", label: "Category" }, { name: "tier", label: "Tier", type: "select", options: ["Strategic", "Standard"] }, { name: "status", label: "Status", type: "select", options: [...statuses] }, { name: "contact_name", label: "PIC" }, { name: "contact_email", label: "PIC email" }, { name: "contact_phone", label: "PIC WhatsApp" }, { name: "scope", label: "Scope", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }, { name: "input_date", label: "Input date", type: "date" }]}
     />
   );
   return (
     <PartnershipWorkspace
       title="Organization Partnership"
-      entityLabel="organisasi"
+      entityLabel="organization"
       rows={rows}
       deals={deals}
       outreach={outreach}

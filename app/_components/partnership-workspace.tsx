@@ -2,26 +2,27 @@
 
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
-import { useMemo, useState, useTransition, type CSSProperties, type ReactNode } from "react";
-import { FilterBar, Pagination, Pill, StatCard, StatsGrid, filterFieldClass, usePagination } from "./ui-kit";
-import { useRecordFocus } from "./use-record-focus";
+import { initials, shortDate } from "@/lib/dashboard/summary";
+import { outreachByDay, partnerActivity, partnerSummary, pipelineColumns, PARTNER_STATUSES } from "@/lib/partnership/view";
+import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { confirmAction, notify, notifyError } from "./app-dialog";
+import s from "./partnership-workspace.module.css";
+import { Pagination, usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
 
-type Tab = "overview" | "master" | "pipeline" | "deals" | "outreach";
-type PillTone = "green" | "amber" | "red" | "blue" | "purple" | "gray";
+// Partnership (B2B and Organization) in the IJIS layout: the pipeline board first,
+// then the partner list, deals, an outreach timeline and insights — same data and actions.
 
-const STATUSES = ["Approached", "Sales Meet", "Negotiation", "Closed Deal", "Closed Lost"];
+type View = "pipeline" | "partners" | "deals" | "outreach" | "insights";
+
+const STATUSES = PARTNER_STATUSES;
 const TIERS = ["Strategic", "Standard"];
 const DEAL_STAGES = ["Active", "Negotiation", "Done", "Cancelled"];
 const CHANNELS = ["WhatsApp", "Email", "LinkedIn", "Meeting"];
 const RESPONSES = ["Replied", "No Reply", "Meeting Scheduled", "Declined"];
-const STATUS_TONE: Record<string, PillTone> = { Approached: "blue", "Sales Meet": "purple", Negotiation: "amber", "Closed Deal": "green", "Closed Lost": "red" };
-const STATUS_DOT: Record<string, string> = { Approached: "#0f52ba", "Sales Meet": "#f59e0b", Negotiation: "#854f0b", "Closed Deal": "#3b6d11", "Closed Lost": "#e24b4a" };
+const CHANNEL_ICON: Record<string, string> = { WhatsApp: "ti-brand-whatsapp", Email: "ti-mail", LinkedIn: "ti-brand-linkedin", Meeting: "ti-users" };
 const PARTNER_FIELDS = ["name", "type", "category", "tier", "status", "contact_name", "contact_email", "contact_phone", "pos", "li", "scope", "notes", "input_date"];
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
@@ -30,8 +31,7 @@ function cell(value: unknown) { if (value === null || value === undefined) retur
 function dayValue(value: unknown) { return value instanceof Date ? localIso(value) : text(value).slice(0, 10); }
 function distribution(rows: ApiRecord[], key: string) { const map = new Map<string, number>(); rows.forEach((row) => { const value = text(row[key]) || "Unknown"; map.set(value, (map.get(value) || 0) + 1); }); return [...map.entries()].sort((a, b) => b[1] - a[1]); }
 function buildFd(fields: string[], values: Record<string, unknown>) { const fd = new FormData(); for (const key of fields) fd.set(key, cell(values[key])); return fd; }
-
-const inlineInput: CSSProperties = { width: "100%", padding: "5px 7px", border: "0.5px solid transparent", borderRadius: 6, fontSize: 11, background: "transparent", color: "var(--text)", outline: "none" };
+function niceDate(value: unknown) { const key = dayValue(value); return /^\d{4}-\d{2}-\d{2}$/.test(key) ? `${shortDate(key, false)} ${key.slice(0, 4)}` : ""; }
 
 type Props = {
   title: string;
@@ -49,100 +49,113 @@ type Props = {
   initialTab?: string;
 };
 
-const TABS: readonly Tab[] = ["overview", "master", "pipeline", "deals", "outreach"];
+// Old tab names from links and bookmarks keep working.
+const TAB_ALIASES: Record<string, View> = { pipeline: "pipeline", master: "partners", partners: "partners", deals: "deals", outreach: "outreach", overview: "insights", insights: "insights" };
 
-export function PartnershipWorkspace({ entityLabel, rows, deals, outreach, tableKey, dealsKey, outreachKey, partnerField, categories, aiPanel, initialTab }: Props) {
-  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? initialTab as Tab : "overview");
-  const [editing, setEditing] = useState<{ record: ApiRecord | null } | null>(null);
+export function PartnershipWorkspace({ title, entityLabel, rows, deals, outreach, tableKey, dealsKey, outreachKey, partnerField, categories, aiPanel, initialTab }: Props) {
+  const [view, setView] = useState<View>(TAB_ALIASES[initialTab || ""] || "pipeline");
+  const [editing, setEditing] = useState<{ record: ApiRecord | null; status?: string } | null>(null);
+  const summary = useMemo(() => partnerSummary(rows), [rows]);
+  const activity = useMemo(() => partnerActivity(deals, outreach, partnerField), [deals, outreach, partnerField]);
   useRecordFocus((id) => {
-    // Deals and outreach logs live in their own tabs; a partner opens its edit form.
-    if (deals.some((deal) => String(deal.id) === id)) { setTab("deals"); return; }
-    if (outreach.some((log) => String(log.id) === id)) { setTab("outreach"); return; }
+    // Deals and outreach logs live in their own views; a partner opens its edit form.
+    if (deals.some((deal) => String(deal.id) === id)) { setView("deals"); return; }
+    if (outreach.some((log) => String(log.id) === id)) { setView("outreach"); return; }
     const record = rows.find((row) => String(row.id) === id);
     if (!record) return;
     setEditing({ record });
     return true;
   });
+  const plural = `${entityLabel}s`;
+  const views: Array<[View, string, number | null]> = [["pipeline", "Pipeline", null], ["partners", `All ${plural}`, rows.length], ["deals", "Deals & scope", deals.length], ["outreach", "Outreach log", outreach.length], ["insights", "Insights", null]];
 
   return (
-    <div className="grid gap-3.5">
-      <div className="flex items-center justify-between gap-3">
-        <Tabs onValueChange={(value) => setTab(value as Tab)} value={tab}>
-          <TabsList variant="line">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="master"><i className="ti ti-database" /> Master Data</TabsTrigger>
-            <TabsTrigger value="pipeline"><i className="ti ti-layout-kanban" /> Pipeline</TabsTrigger>
-            <TabsTrigger value="deals">Deals &amp; Scope</TabsTrigger>
-            <TabsTrigger value="outreach"><i className="ti ti-send" /> Outreach Log</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <Button onClick={() => setEditing({ record: null })} size="sm"><i className="ti ti-plus" /> Tambah</Button>
+    <div className={s.page}>
+      <header className={s.head}>
+        <div>
+          <span className={s.eyebrow}>Internal</span>
+          <h1>{title}</h1>
+          <p>{summary.total} {plural} · {summary.open} in progress · {summary.closed} closed deal{summary.closed === 1 ? "" : "s"}</p>
+        </div>
+        <Button onClick={() => setEditing({ record: null })}><i className="ti ti-plus" aria-hidden="true" /> Add {entityLabel}</Button>
+      </header>
+
+      <div className={s.segmented} role="tablist" aria-label={`${title} view`}>
+        {views.map(([id, label, count]) => <button aria-selected={view === id} className={view === id ? s.segmentActive : s.segment} key={id} onClick={() => setView(id)} role="tab" type="button">{label}{count !== null ? <span>{count}</span> : null}</button>)}
       </div>
 
-      {tab === "overview" ? <OverviewTab rows={rows} entityLabel={entityLabel} onEdit={(record) => setEditing({ record })} /> : null}
-      {tab === "master" ? <MasterTab aiPanel={aiPanel} rows={rows} tableKey={tableKey} onAdd={() => setEditing({ record: null })} onEdit={(record) => setEditing({ record })} /> : null}
-      {tab === "pipeline" ? <PipelineTab rows={rows} tableKey={tableKey} onAdd={() => setEditing({ record: null })} onEdit={(record) => setEditing({ record })} /> : null}
-      {tab === "deals" ? <DealsTab rows={rows} deals={deals} dealsKey={dealsKey} partnerField={partnerField} /> : null}
-      {tab === "outreach" ? <OutreachTab rows={rows} outreach={outreach} outreachKey={outreachKey} partnerField={partnerField} /> : null}
+      {view === "pipeline" ? <PipelineView activity={activity} entityLabel={entityLabel} rows={rows} tableKey={tableKey} onAdd={(status) => setEditing({ record: null, status })} onEdit={(record) => setEditing({ record })} /> : null}
+      {view === "partners" ? <PartnersView activity={activity} aiPanel={aiPanel} entityLabel={entityLabel} rows={rows} tableKey={tableKey} onEdit={(record) => setEditing({ record })} /> : null}
+      {view === "deals" ? <DealsView rows={rows} deals={deals} dealsKey={dealsKey} entityLabel={entityLabel} partnerField={partnerField} /> : null}
+      {view === "outreach" ? <OutreachView rows={rows} outreach={outreach} outreachKey={outreachKey} entityLabel={entityLabel} partnerField={partnerField} /> : null}
+      {view === "insights" ? <InsightsView activity={activity} entityLabel={entityLabel} rows={rows} summary={summary} onEdit={(record) => setEditing({ record })} /> : null}
 
-      {editing ? <PartnerModal profile={editing.record} tableKey={tableKey} categories={categories} onClose={() => setEditing(null)} /> : null}
+      {editing ? <PartnerModal defaultStatus={editing.status} profile={editing.record} tableKey={tableKey} categories={categories} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }
 
-/* ── Overview ── */
-function OverviewTab({ rows, entityLabel, onEdit }: { rows: ApiRecord[]; entityLabel: string; onEdit: (record: ApiRecord) => void }) {
-  const count = (status: string) => rows.filter((row) => text(row.status) === status).length;
+type Activity = ReturnType<typeof partnerActivity>;
+
+function PartnerMeta({ row, activity }: { row: ApiRecord; activity: Activity }) {
+  const a = activity.get(String(row.id));
+  const bits = [a?.deals ? `${a.deals} deal${a.deals === 1 ? "" : "s"}` : "", a?.lastContact ? `last contact ${shortDate(a.lastContact, false)}` : "no outreach yet"].filter(Boolean);
+  return <small className={s.meta}>{bits.join(" · ")}</small>;
+}
+
+/* ── Pipeline board ── */
+function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: { rows: ApiRecord[]; tableKey: string; activity: Activity; entityLabel: string; onAdd: (status: string) => void; onEdit: (record: ApiRecord) => void }) {
+  const [pending, start] = useTransition();
+  const [dragId, setDragId] = useState("");
+  const [over, setOver] = useState("");
+  const columns = useMemo(() => pipelineColumns(rows), [rows]);
+
+  function moveTo(status: string) {
+    const row = rows.find((item) => String(item.id) === dragId);
+    setDragId(""); setOver("");
+    if (!row || text(row.status) === status) return;
+    start(async () => { await updateManagedRecord(tableKey, String(row.id), buildFd(PARTNER_FIELDS, { ...row, type: text(row.type) || "Corporate", status })); });
+  }
+
   return (
-    <>
-      <StatsGrid className="mb-0 grid-cols-2 md:grid-cols-5">
-        <StatCard label={`Total ${entityLabel}`} value={rows.length} />
-        <StatCard label="Approached" tone="var(--blue)" value={count("Approached")} />
-        <StatCard label="Negotiation" tone="var(--amber)" value={count("Negotiation")} />
-        <StatCard label="Closed Deal" tone="var(--green)" value={count("Closed Deal")} />
-        <StatCard label="Tier Strategic" value={rows.filter((row) => text(row.tier) === "Strategic").length} />
-      </StatsGrid>
-      <div className="grid gap-3 md:grid-cols-3">
-        <Distribution rows={distribution(rows, "status")} title="Pipeline stage" />
-        <Distribution rows={distribution(rows, "category")} title="Category" />
-        <Distribution rows={distribution(rows, "tier")} title="Tier" />
-      </div>
-      <Card className="gap-0 p-4">
-        <h3 className="mb-3 text-[13px] font-bold">Partner Terbaru &amp; Aktif</h3>
-        {!rows.length ? <p className="py-6 text-center text-[12px] text-muted-foreground">Belum ada partner.</p> : rows.slice(0, 8).map((row) => (
-          <button className="flex items-center gap-2.5 border-t border-border py-2.5 text-left first:border-0" key={String(row.id)} onClick={() => onEdit(row)} type="button">
-            <div className="min-w-0 flex-1"><strong className="block truncate text-[12px] text-[var(--purple-mid)]">{text(row.name)}</strong><span className="text-[10px] text-muted-foreground">{text(row.category) || "—"} · {text(row.contact_name) || "tanpa PIC"}</span></div>
-            <Pill tone="purple">{text(row.tier) || "—"}</Pill>
-            <Pill tone={STATUS_TONE[text(row.status)] || "gray"}>{text(row.status) || "—"}</Pill>
-          </button>
+    <section aria-label="Pipeline" className={s.boardWrap}>
+      <p className={s.hint}>Drag a card to another column to change its stage{pending ? " · saving…" : ""}. On a phone, open the card and change Status.</p>
+      <div className={s.board}>
+        {columns.map(({ status, rows: items }, index) => (
+          <div aria-label={`${status}, ${items.length}`} className={over === status ? s.columnOver : s.column} key={status} onDragLeave={() => setOver("")} onDragOver={(event) => { event.preventDefault(); setOver(status); }} onDrop={() => moveTo(status)} role="group">
+            <div className={s.columnHead}><span className={s.step}>{index + 1}</span><b>{status}</b><span className={s.count}>{items.length}</span></div>
+            <ul className={s.cards}>
+              {items.map((row) => (
+                <li key={String(row.id)}>
+                  <button className={s.card} data-record-id={String(row.id)} draggable onClick={() => onEdit(row)} onDragStart={() => setDragId(String(row.id))} type="button">
+                    <span className={s.cardTop}><b>{text(row.name) || "Untitled"}</b>{text(row.tier) === "Strategic" ? <span className={s.strategic}>Strategic</span> : null}</span>
+                    {text(row.category) ? <small className={s.meta}>{text(row.category)}</small> : null}
+                    <span className={s.cardFoot}>
+                      {text(row.contact_name) ? <span className={s.pic}><span className={s.avatar} aria-hidden="true">{initials(row.contact_name)}</span>{text(row.contact_name)}</span> : <span className={s.noPic}>No PIC yet</span>}
+                    </span>
+                    <PartnerMeta activity={activity} row={row} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button className={s.addCard} onClick={() => onAdd(status)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add {entityLabel}</button>
+          </div>
         ))}
-      </Card>
-    </>
+      </div>
+    </section>
   );
 }
 
-function Distribution({ title, rows }: { title: string; rows: [string, number][] }) {
-  const maximum = Math.max(1, ...rows.map(([, value]) => value));
-  return (
-    <Card className="gap-2 p-4">
-      <h3 className="text-xs font-bold">{title}</h3>
-      {rows.map(([label, value]) => <div className="grid grid-cols-[90px_minmax(0,1fr)_28px] items-center gap-2 text-[10px]" key={label}><span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground">{label}</span><i className="block h-2 min-w-[2px] rounded bg-[var(--purple-mid)]" style={{ width: `${(value / maximum) * 100}%` }} /><strong className="text-right">{value}</strong></div>)}
-    </Card>
-  );
-}
-
-/* ── Master Data ── */
-function MasterTab({ rows, tableKey, aiPanel, onAdd, onEdit }: { rows: ApiRecord[]; tableKey: string; aiPanel?: ReactNode; onAdd: () => void; onEdit: (record: ApiRecord) => void }) {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
-  const [tier, setTier] = useState("");
+/* ── All partners ── */
+function PartnersView({ rows, tableKey, aiPanel, activity, entityLabel, onEdit }: { rows: ApiRecord[]; tableKey: string; aiPanel?: ReactNode; activity: Activity; entityLabel: string; onEdit: (record: ApiRecord) => void }) {
+  const [query, setQuery] = useState(""); const [status, setStatus] = useState(""); const [tier, setTier] = useState("");
   const [pending, start] = useTransition();
   const filtered = useMemo(() => rows.filter((row) => (!query || `${text(row.name)} ${text(row.contact_name)}`.toLowerCase().includes(query.toLowerCase())) && (!status || text(row.status) === status) && (!tier || text(row.tier) === tier)), [rows, query, status, tier]);
-  const { pageItems, page, setPage, totalPages } = usePagination(filtered, 15);
+  const { pageItems, page, setPage, totalPages } = usePagination(filtered, 20);
 
-  async function remove(id: string) {
-    if (!(await confirmAction({ title: "Delete this partner?", message: "Its deals are deleted too. This cannot be undone.", confirmLabel: "Delete partner", danger: true }))) return;
-    start(async () => { await deleteManagedRecord(tableKey, id); });
+  async function remove(row: ApiRecord) {
+    if (!(await confirmAction({ title: `Delete ${text(row.name) || `this ${entityLabel}`}?`, message: "Its deals are deleted too. This cannot be undone.", confirmLabel: entityLabel === "partner" ? "Delete partner" : "Delete organization", danger: true }))) return;
+    start(async () => { await deleteManagedRecord(tableKey, String(row.id)); });
   }
   function exportCsv() {
     const headers = ["name", "category", "tier", "status", "contact_name", "contact_email", "contact_phone", "pos", "li", "scope", "notes", "input_date"];
@@ -154,182 +167,182 @@ function MasterTab({ rows, tableKey, aiPanel, onAdd, onEdit }: { rows: ApiRecord
   return (
     <>
       {aiPanel ? <div>{aiPanel}</div> : null}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <FilterBar>
-          <input className={filterFieldClass} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or PIC…" value={query} />
-          <select className={filterFieldClass} onChange={(event) => setStatus(event.target.value)} value={status}><option value="">Semua status</option>{STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}</select>
-          <select className={filterFieldClass} onChange={(event) => setTier(event.target.value)} value={tier}><option value="">Semua tier</option>{TIERS.map((value) => <option key={value} value={value}>{value}</option>)}</select>
-        </FilterBar>
-        <div className="flex gap-2">
-          <Button onClick={exportCsv} size="sm" variant="outline"><i className="ti ti-download" /> Export CSV</Button>
-          <Button onClick={onAdd} size="sm"><i className="ti ti-plus" /> Tambah</Button>
-        </div>
+      <div className={s.toolbar}>
+        <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label={`Search ${entityLabel}s`} onChange={(e) => { setQuery(e.target.value); setPage(0); }} placeholder="Search name or PIC…" value={query} /></label>
+        <label className={s.filterPill}><span>Status</span><select aria-label="Filter status" onChange={(e) => { setStatus(e.target.value); setPage(0); }} value={status}><option value="">All</option>{STATUSES.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
+        <label className={s.filterPill}><span>Tier</span><select aria-label="Filter tier" onChange={(e) => { setTier(e.target.value); setPage(0); }} value={tier}><option value="">All</option>{TIERS.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
+        <span className={s.spacer} />
+        <button className={s.ghostButton} onClick={exportCsv} type="button"><i className="ti ti-download" aria-hidden="true" /> Export CSV</button>
       </div>
-      <Card className="gap-0 p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow><TableHead>Nama Company</TableHead><TableHead>Category</TableHead><TableHead>Tier</TableHead><TableHead>PIC</TableHead><TableHead>Phone</TableHead><TableHead>Status</TableHead><TableHead>Scope</TableHead><TableHead>Input</TableHead><TableHead /></TableRow></TableHeader>
-            <TableBody>
-              {!pageItems.length ? <TableRow><TableCell className="py-8 text-center text-muted-foreground" colSpan={9}>Tidak ada data</TableCell></TableRow> : pageItems.map((row) => (
-                <TableRow key={String(row.id)}>
-                  <TableCell className="cursor-pointer font-medium text-[var(--purple-mid)]" onClick={() => onEdit(row)}>{text(row.name)}</TableCell>
-                  <TableCell>{text(row.category) || "-"}</TableCell>
-                  <TableCell><Pill tone="purple">{text(row.tier) || "-"}</Pill></TableCell>
-                  <TableCell>{text(row.contact_name) || "-"}</TableCell>
-                  <TableCell>{text(row.contact_phone) || "-"}</TableCell>
-                  <TableCell><Pill tone={STATUS_TONE[text(row.status)] || "gray"}>{text(row.status) || "-"}</Pill></TableCell>
-                  <TableCell className="max-w-[160px] truncate" title={text(row.scope)}>{text(row.scope) || "-"}</TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{dayValue(row.input_date) || "-"}</TableCell>
-                  <TableCell><button className="p-1 text-muted-foreground hover:text-[var(--red)]" disabled={pending} onClick={() => remove(String(row.id))} type="button"><i className="ti ti-trash" /></button></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        <Pagination className="p-3" onChange={setPage} page={page} totalPages={totalPages} />
-      </Card>
-      <p className="text-[11px] text-muted-foreground">{filtered.length} dari {rows.length} data</p>
+      <section aria-label={`All ${entityLabel}s`} className={s.listCard}>
+        <p className={s.listCount}>{filtered.length === rows.length ? `${rows.length} ${entityLabel}s` : `${filtered.length} of ${rows.length} ${entityLabel}s`}</p>
+        {pageItems.length ? (
+          <ul className={s.rows}>
+            {pageItems.map((row) => (
+              <li className={s.row} data-record-id={String(row.id)} key={String(row.id)}>
+                <button className={s.rowMain} onClick={() => onEdit(row)} type="button">
+                  <span className={s.logo} aria-hidden="true">{initials(row.name)}</span>
+                  <span className={s.rowText}><b>{text(row.name) || "Untitled"}</b><small>{[text(row.category), text(row.tier)].filter(Boolean).join(" · ") || "—"}</small></span>
+                  <span className={s.rowText}><b className={s.rowPic}>{text(row.contact_name) || "No PIC yet"}</b><small>{[text(row.pos), text(row.contact_phone)].filter(Boolean).join(" · ") || "—"}</small></span>
+                  <span className={s.rowText}><PartnerMeta activity={activity} row={row} /><small>{niceDate(row.input_date) ? `Added ${niceDate(row.input_date)}` : ""}</small></span>
+                  <span className={text(row.status) === "Closed Deal" ? s.chipDone : s.chip}>{text(row.status) || "Approached"}</span>
+                </button>
+                <button aria-label={`Delete ${text(row.name)}`} className={s.iconButton} disabled={pending} onClick={() => remove(row)} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+              </li>
+            ))}
+          </ul>
+        ) : <p className={s.empty}>{rows.length ? `No ${entityLabel}s match these filters.` : `No ${entityLabel}s yet.`}</p>}
+        <Pagination onChange={setPage} page={page} totalPages={totalPages} />
+      </section>
     </>
   );
 }
 
-/* ── Pipeline (kanban) ── */
-function PipelineTab({ rows, tableKey, onAdd, onEdit }: { rows: ApiRecord[]; tableKey: string; onAdd: () => void; onEdit: (record: ApiRecord) => void }) {
-  const [pending, start] = useTransition();
-  const [dragId, setDragId] = useState("");
-
-  function moveTo(status: string) {
-    const row = rows.find((item) => String(item.id) === dragId);
-    setDragId("");
-    if (!row || text(row.status) === status) return;
-    start(async () => { await updateManagedRecord(tableKey, String(row.id), buildFd(PARTNER_FIELDS, { ...row, type: text(row.type) || "Corporate", status })); });
-  }
-
-  return (
-    <>
-      <div className="text-[12px] text-muted-foreground">{rows.length} partner · drag kartu untuk pindah stage {pending ? "· menyimpan..." : ""}</div>
-      <div className="flex gap-2.5 overflow-x-auto pb-2">
-        {STATUSES.map((status) => {
-          const items = rows.filter((row) => text(row.status) === status);
-          return (
-            <div className="flex min-w-[220px] flex-1 flex-col rounded-xl bg-[var(--bg)] p-2" key={status} onDragOver={(event) => event.preventDefault()} onDrop={() => moveTo(status)}>
-              <div className="mb-2 flex items-center justify-between px-1">
-                <span className="flex items-center gap-1.5 text-[11px] font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{ background: STATUS_DOT[status] }} />{status}</span>
-                <span className="rounded-full bg-[var(--white)] px-1.5 text-[10px] text-muted-foreground">{items.length}</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {!items.length ? <div className="py-5 text-center text-[11px] text-[var(--text-hint)]">Kosong</div> : items.map((row) => (
-                  <div className="cursor-pointer rounded-lg border border-border bg-[var(--white)] p-2.5" draggable key={String(row.id)} onClick={() => onEdit(row)} onDragStart={() => setDragId(String(row.id))}>
-                    <div className="text-[12px] font-semibold">{text(row.name)}</div>
-                    <div className="text-[10px] text-muted-foreground">{text(row.category) || "—"}</div>
-                    <div className="mt-1 flex items-center gap-1.5"><Pill tone="purple">{text(row.tier) || "—"}</Pill>{text(row.contact_name) ? <span className="text-[10px] text-muted-foreground">{text(row.contact_name)}</span> : null}</div>
-                  </div>
-                ))}
-                <button className="py-1 text-center text-[10px] text-[var(--purple-accent)]" onClick={onAdd} type="button">+ Tambah</button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-/* ── Deals & Scope (inline table) ── */
-function DealsTab({ rows, deals, dealsKey, partnerField }: { rows: ApiRecord[]; deals: ApiRecord[]; dealsKey: string; partnerField: string }) {
+/* ── Deals & scope (edit in place) ── */
+function DealsView({ rows, deals, dealsKey, partnerField, entityLabel }: { rows: ApiRecord[]; deals: ApiRecord[]; dealsKey: string; partnerField: string; entityLabel: string }) {
   const fields = [partnerField, "title", "stage", "scope", "deadline", "value", "notes"];
   const [selectedPartner, setSelectedPartner] = useState("");
   const [pending, start] = useTransition();
-  const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || "-";
+  const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || `No ${entityLabel}`;
   const saveField = (deal: ApiRecord, patch: Record<string, unknown>) => start(async () => { await updateManagedRecord(dealsKey, String(deal.id), buildFd(fields, { ...deal, ...patch })); });
-  const add = () => start(async () => { await createManagedRecord(dealsKey, buildFd(fields, { [partnerField]: selectedPartner || null, title: "Deal baru", stage: "Negotiation" })); });
-  const remove = async (id: string) => { if (await confirmAction({ title: "Delete this deal?", confirmLabel: "Delete deal", danger: true })) start(async () => { await deleteManagedRecord(dealsKey, id); }); };
+  const add = () => start(async () => { await createManagedRecord(dealsKey, buildFd(fields, { [partnerField]: selectedPartner || null, title: "New deal", stage: "Negotiation" })); });
+  const remove = async (deal: ApiRecord) => { if (await confirmAction({ title: `Delete deal "${text(deal.title) || "Untitled"}"?`, confirmLabel: "Delete deal", danger: true })) start(async () => { await deleteManagedRecord(dealsKey, String(deal.id)); }); };
+  const blur = (deal: ApiRecord, key: string) => (event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => { if (event.target.value !== text(deal[key])) saveField(deal, { [key]: event.target.value }); };
 
   return (
-    <Card className="gap-3 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><div className="text-[13px] font-semibold">Deals &amp; Scope Kolaborasi</div><div className="text-[11px] text-muted-foreground">Edit langsung di tabel. Satu partner bisa punya beberapa deal.</div></div>
-        <div className="flex items-center gap-2">
-          <select className={filterFieldClass} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Pilih partner...</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select>
-          <Button disabled={pending} onClick={add} size="sm"><i className="ti ti-plus" /> Tambah Deal</Button>
-        </div>
+    <section aria-label="Deals & scope" className={s.stack}>
+      <div className={s.addBar}>
+        <p>Edit right in place — changes save when you leave a field. One {entityLabel} can have several deals.</p>
+        <label className={s.filterPill}><span>{entityLabel[0].toUpperCase() + entityLabel.slice(1)}</span><select aria-label={`Deal ${entityLabel}`} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Choose…</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select></label>
+        <Button disabled={pending} onClick={add}><i className="ti ti-plus" aria-hidden="true" /> Add deal</Button>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader><TableRow><TableHead>Nama Deal</TableHead><TableHead>Partner</TableHead><TableHead>Status</TableHead><TableHead>Scope</TableHead><TableHead>Deadline</TableHead><TableHead>Nilai</TableHead><TableHead>Catatan</TableHead><TableHead /></TableRow></TableHeader>
-          <TableBody>
-            {!deals.length ? <TableRow><TableCell className="py-8 text-center text-muted-foreground" colSpan={8}>Belum ada deal</TableCell></TableRow> : deals.map((deal) => (
-              <TableRow data-record-id={String(deal.id)} key={String(deal.id)}>
-                <TableCell><input defaultValue={text(deal.title)} onBlur={(event) => { if (event.target.value !== text(deal.title)) saveField(deal, { title: event.target.value }); }} style={inlineInput} /></TableCell>
-                <TableCell className="text-muted-foreground">{partnerName(deal[partnerField])}</TableCell>
-                <TableCell><select defaultValue={text(deal.stage) || "Negotiation"} onChange={(event) => saveField(deal, { stage: event.target.value })} style={inlineInput}>{DEAL_STAGES.map((value) => <option key={value} value={value}>{value}</option>)}</select></TableCell>
-                <TableCell><input defaultValue={text(deal.scope)} onBlur={(event) => { if (event.target.value !== text(deal.scope)) saveField(deal, { scope: event.target.value }); }} style={inlineInput} /></TableCell>
-                <TableCell><input defaultValue={dayValue(deal.deadline)} onChange={(event) => saveField(deal, { deadline: event.target.value })} style={{ ...inlineInput, minWidth: 120 }} type="date" /></TableCell>
-                <TableCell><input defaultValue={text(deal.value)} onBlur={(event) => { if (event.target.value !== text(deal.value)) saveField(deal, { value: event.target.value }); }} style={inlineInput} /></TableCell>
-                <TableCell><input defaultValue={text(deal.notes)} onBlur={(event) => { if (event.target.value !== text(deal.notes)) saveField(deal, { notes: event.target.value }); }} style={inlineInput} /></TableCell>
-                <TableCell><button className="p-1 text-muted-foreground hover:text-[var(--red)]" onClick={() => remove(String(deal.id))} type="button"><i className="ti ti-trash" /></button></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </Card>
+      {deals.length ? (
+        <ul className={s.dealGrid}>
+          {deals.map((deal) => (
+            <li className={s.deal} data-record-id={String(deal.id)} key={String(deal.id)}>
+              <div className={s.dealHead}>
+                <input aria-label="Deal name" className={s.dealTitle} defaultValue={text(deal.title)} onBlur={blur(deal, "title")} />
+                <button aria-label={`Delete deal ${text(deal.title)}`} className={s.iconButton} onClick={() => remove(deal)} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+              </div>
+              <span className={s.dealPartner}><i className="ti ti-building" aria-hidden="true" /> {partnerName(deal[partnerField])}</span>
+              <div className={s.dealGridFields}>
+                <label><span>Stage</span><select defaultValue={text(deal.stage) || "Negotiation"} onChange={(event) => saveField(deal, { stage: event.target.value })}>{DEAL_STAGES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+                <label><span>Deadline</span><input defaultValue={dayValue(deal.deadline)} onChange={(event) => saveField(deal, { deadline: event.target.value })} type="date" /></label>
+                <label><span>Value</span><input defaultValue={text(deal.value)} onBlur={blur(deal, "value")} placeholder="e.g. Rp25jt" /></label>
+              </div>
+              <label className={s.dealField}><span>Scope</span><textarea defaultValue={text(deal.scope)} onBlur={blur(deal, "scope")} placeholder="What the collaboration covers" rows={2} /></label>
+              <label className={s.dealField}><span>Notes</span><textarea defaultValue={text(deal.notes)} onBlur={blur(deal, "notes")} rows={2} /></label>
+            </li>
+          ))}
+        </ul>
+      ) : <p className={s.empty}>No deals yet. Choose a {entityLabel} and add one.</p>}
+    </section>
   );
 }
 
-/* ── Outreach Log (inline table) ── */
-function OutreachTab({ rows, outreach, outreachKey, partnerField }: { rows: ApiRecord[]; outreach: ApiRecord[]; outreachKey: string; partnerField: string }) {
+/* ── Outreach log (timeline by day) ── */
+function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }: { rows: ApiRecord[]; outreach: ApiRecord[]; outreachKey: string; partnerField: string; entityLabel: string }) {
   const fields = [partnerField, "channel", "tanggal", "isi", "respons", "catatan"];
   const [selectedPartner, setSelectedPartner] = useState("");
   const [pending, start] = useTransition();
-  const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || "-";
+  const days = useMemo(() => outreachByDay(outreach), [outreach]);
+  const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || `No ${entityLabel}`;
   const saveField = (log: ApiRecord, patch: Record<string, unknown>) => start(async () => { await updateManagedRecord(outreachKey, String(log.id), buildFd(fields, { ...log, ...patch })); });
   const add = () => start(async () => { await createManagedRecord(outreachKey, buildFd(fields, { [partnerField]: selectedPartner || null, channel: "WhatsApp", tanggal: localIso(new Date()), respons: "No Reply" })); });
-  const remove = async (id: string) => { if (await confirmAction({ title: "Delete this outreach log?", confirmLabel: "Delete outreach log", danger: true })) start(async () => { await deleteManagedRecord(outreachKey, id); }); };
+  const remove = async (log: ApiRecord) => { if (await confirmAction({ title: `Delete this outreach to ${partnerName(log[partnerField])}?`, confirmLabel: "Delete outreach log", danger: true })) start(async () => { await deleteManagedRecord(outreachKey, String(log.id)); }); };
+  const blur = (log: ApiRecord, key: string) => (event: React.FocusEvent<HTMLInputElement>) => { if (event.target.value !== text(log[key])) saveField(log, { [key]: event.target.value }); };
 
   return (
-    <Card className="gap-3 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><div className="text-[13px] font-semibold">Outreach Log</div><div className="text-[11px] text-muted-foreground">Catat semua aktivitas outreach per partner. Edit langsung.</div></div>
-        <div className="flex items-center gap-2">
-          <select className={filterFieldClass} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Pilih partner...</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select>
-          <Button disabled={pending} onClick={add} size="sm"><i className="ti ti-plus" /> Catat Outreach</Button>
-        </div>
+    <section aria-label="Outreach log" className={s.stack}>
+      <div className={s.addBar}>
+        <p>Every message, call or meeting with a {entityLabel}, newest first. Edit right in place.</p>
+        <label className={s.filterPill}><span>{entityLabel[0].toUpperCase() + entityLabel.slice(1)}</span><select aria-label={`Outreach ${entityLabel}`} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Choose…</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select></label>
+        <Button disabled={pending} onClick={add}><i className="ti ti-plus" aria-hidden="true" /> Log outreach</Button>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader><TableRow><TableHead>Partner</TableHead><TableHead>Channel</TableHead><TableHead>Tanggal</TableHead><TableHead>Isi Outreach</TableHead><TableHead>Respons</TableHead><TableHead>Catatan</TableHead><TableHead /></TableRow></TableHeader>
-          <TableBody>
-            {!outreach.length ? <TableRow><TableCell className="py-8 text-center text-muted-foreground" colSpan={7}>Belum ada log outreach</TableCell></TableRow> : outreach.map((log) => (
-              <TableRow data-record-id={String(log.id)} key={String(log.id)}>
-                <TableCell className="font-medium">{partnerName(log[partnerField])}</TableCell>
-                <TableCell><select defaultValue={text(log.channel) || "WhatsApp"} onChange={(event) => saveField(log, { channel: event.target.value })} style={inlineInput}>{CHANNELS.map((value) => <option key={value} value={value}>{value}</option>)}</select></TableCell>
-                <TableCell><input defaultValue={dayValue(log.tanggal)} onChange={(event) => saveField(log, { tanggal: event.target.value })} style={{ ...inlineInput, minWidth: 120 }} type="date" /></TableCell>
-                <TableCell><input defaultValue={text(log.isi)} onBlur={(event) => { if (event.target.value !== text(log.isi)) saveField(log, { isi: event.target.value }); }} style={inlineInput} /></TableCell>
-                <TableCell><select defaultValue={text(log.respons) || "No Reply"} onChange={(event) => saveField(log, { respons: event.target.value })} style={inlineInput}>{RESPONSES.map((value) => <option key={value} value={value}>{value}</option>)}</select></TableCell>
-                <TableCell><input defaultValue={text(log.catatan)} onBlur={(event) => { if (event.target.value !== text(log.catatan)) saveField(log, { catatan: event.target.value }); }} style={inlineInput} /></TableCell>
-                <TableCell><button className="p-1 text-muted-foreground hover:text-[var(--red)]" onClick={() => remove(String(log.id))} type="button"><i className="ti ti-trash" /></button></TableCell>
-              </TableRow>
+      {days.length ? days.map(({ date, logs }) => (
+        <div className={s.dayGroup} key={date || "none"}>
+          <h3>{date ? shortDate(date) : "No date"}</h3>
+          <ul className={s.timeline}>
+            {logs.map((log) => (
+              <li className={s.log} data-record-id={String(log.id)} key={String(log.id)}>
+                <span className={s.channel} aria-hidden="true"><i className={`ti ${CHANNEL_ICON[text(log.channel)] || "ti-message"}`} /></span>
+                <div className={s.logBody}>
+                  <div className={s.logHead}>
+                    <b>{partnerName(log[partnerField])}</b>
+                    <select aria-label="Channel" className={s.inlineSelect} defaultValue={text(log.channel) || "WhatsApp"} onChange={(event) => saveField(log, { channel: event.target.value })}>{CHANNELS.map((value) => <option key={value} value={value}>{value}</option>)}</select>
+                    <input aria-label="Date" className={s.inlineDate} defaultValue={dayValue(log.tanggal)} onChange={(event) => saveField(log, { tanggal: event.target.value })} type="date" />
+                    <select aria-label="Response" className={text(log.respons) === "Declined" ? s.responseOff : text(log.respons) === "No Reply" || !text(log.respons) ? s.responseWait : s.responseOn} defaultValue={text(log.respons) || "No Reply"} onChange={(event) => saveField(log, { respons: event.target.value })}>{RESPONSES.map((value) => <option key={value} value={value}>{value}</option>)}</select>
+                    <button aria-label="Delete outreach log" className={s.iconButton} onClick={() => remove(log)} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+                  </div>
+                  <input aria-label="What was sent" className={s.inlineText} defaultValue={text(log.isi)} onBlur={blur(log, "isi")} placeholder="What was sent or discussed" />
+                  <input aria-label="Notes" className={s.inlineNote} defaultValue={text(log.catatan)} onBlur={blur(log, "catatan")} placeholder="Notes" />
+                </div>
+              </li>
             ))}
-          </TableBody>
-        </Table>
+          </ul>
+        </div>
+      )) : <p className={s.empty}>No outreach logged yet.</p>}
+    </section>
+  );
+}
+
+/* ── Insights ── */
+function InsightsView({ rows, summary, activity, entityLabel, onEdit }: { rows: ApiRecord[]; summary: ReturnType<typeof partnerSummary>; activity: Activity; entityLabel: string; onEdit: (record: ApiRecord) => void }) {
+  const stats: Array<[string, number]> = [[`Total ${entityLabel}s`, summary.total], ["In progress", summary.open], ["Negotiation", summary.negotiation], ["Closed deal", summary.closed], ["Strategic tier", summary.strategic]];
+  const recent = [...rows].sort((a, b) => dayValue(b.input_date || b.created_at).localeCompare(dayValue(a.input_date || a.created_at))).slice(0, 8);
+  return (
+    <>
+      <div className={s.stats}>{stats.map(([label, value]) => <div className={s.stat} key={label}><span>{label}</span><b>{value}</b></div>)}</div>
+      <div className={s.insightGrid}>
+        <Distribution rows={distribution(rows, "status")} title="Pipeline stage" />
+        <Distribution rows={distribution(rows, "category")} title="Category" />
+        <Distribution rows={distribution(rows, "tier")} title="Tier" />
       </div>
-    </Card>
+      <section aria-labelledby="partner-recent" className={s.listCard}>
+        <h3 className={s.panelTitle} id="partner-recent">Recently added</h3>
+        {recent.length ? (
+          <ul className={s.rows}>
+            {recent.map((row) => (
+              <li className={s.row} key={String(row.id)}>
+                <button className={s.rowMainCompact} onClick={() => onEdit(row)} type="button">
+                  <span className={s.logo} aria-hidden="true">{initials(row.name)}</span>
+                  <span className={s.rowText}><b>{text(row.name)}</b><small>{text(row.category) || "—"} · {text(row.contact_name) || "No PIC yet"}</small></span>
+                  <PartnerMeta activity={activity} row={row} />
+                  <span className={text(row.status) === "Closed Deal" ? s.chipDone : s.chip}>{text(row.status) || "Approached"}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : <p className={s.empty}>No {entityLabel}s yet.</p>}
+      </section>
+    </>
+  );
+}
+
+function Distribution({ title, rows }: { title: string; rows: [string, number][] }) {
+  const maximum = Math.max(1, ...rows.map(([, value]) => value));
+  return (
+    <section className={s.panel} aria-label={title}>
+      <h3 className={s.panelTitle}>{title}</h3>
+      {rows.length ? rows.map(([label, value]) => <div className={s.distRow} key={label}><span>{label}</span><i style={{ width: `${(value / maximum) * 100}%` }} /><b>{value}</b></div>) : <p className={s.emptySmall}>No data yet.</p>}
+    </section>
   );
 }
 
 /* ── Add / Edit partner modal ── */
-function PartnerModal({ profile, tableKey, categories, onClose }: { profile: ApiRecord | null; tableKey: string; categories: string[]; onClose: () => void }) {
+function PartnerModal({ profile, tableKey, categories, defaultStatus, onClose }: { profile: ApiRecord | null; tableKey: string; categories: string[]; defaultStatus?: string; onClose: () => void }) {
   const [form, setForm] = useState({
-    name: text(profile?.name), category: text(profile?.category), tier: text(profile?.tier) || "Standard", status: text(profile?.status) || "Approached",
+    name: text(profile?.name), category: text(profile?.category), tier: text(profile?.tier) || "Standard", status: text(profile?.status) || defaultStatus || "Approached",
     contact_name: text(profile?.contact_name), pos: text(profile?.pos), contact_phone: text(profile?.contact_phone), contact_email: text(profile?.contact_email),
     li: text(profile?.li), scope: text(profile?.scope), notes: text(profile?.notes), input_date: dayValue(profile?.input_date),
   });
   const [pending, start] = useTransition();
   const set = (patch: Partial<typeof form>) => setForm((current) => ({ ...current, ...patch }));
+  const [nameInvalid, setNameInvalid] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   function save() {
-    if (!form.name.trim()) { notify("Name is required.", "error"); return; }
+    if (!form.name.trim()) { setNameInvalid(true); nameRef.current?.focus(); notify("Company name is required.", "error"); return; }
     const fd = buildFd(PARTNER_FIELDS, { ...form, type: "Corporate" });
     start(async () => {
       try {
@@ -351,7 +364,7 @@ function PartnerModal({ profile, tableKey, categories, onClose }: { profile: Api
           <button aria-label="Close" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground" onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
         </div>
         <div className="flex flex-col gap-3 overflow-y-auto p-5">
-          <label className="block"><span className={labelClass}>Company name <span aria-hidden="true" className="text-[var(--red)]">*</span></span><input required className={inputClass} onChange={(event) => set({ name: event.target.value })} placeholder="Company or organization" value={form.name} /></label>
+          <label className="block"><span className={labelClass}>Company name <span aria-hidden="true" className="text-[var(--red)]">*</span></span><input aria-invalid={nameInvalid || undefined} required className={nameInvalid ? `${inputClass} border-[var(--red)] ring-2 ring-[var(--red-bg)]` : inputClass} onChange={(event) => { set({ name: event.target.value }); if (nameInvalid) setNameInvalid(false); }} placeholder="Company or organization" ref={nameRef} value={form.name} /></label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className={labelClass}>Category</span><select className={inputClass} onChange={(event) => set({ category: event.target.value })} value={form.category}><option value="">Select category</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}{form.category && !categories.includes(form.category) ? <option value={form.category}>{form.category}</option> : null}</select></label>
             <label className="block"><span className={labelClass}>Tier</span><select className={inputClass} onChange={(event) => set({ tier: event.target.value })} value={form.tier}>{TIERS.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>

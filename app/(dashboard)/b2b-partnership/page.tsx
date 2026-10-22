@@ -14,7 +14,7 @@ export default async function B2bPartnershipPage({ searchParams }: { searchParam
     <AiTextRecordParser
       definitionKey="partners"
       kind="partnership"
-      title="Input dengan AI"
+      title="Add with AI"
       fields={[{ name: "name", label: "Company", required: true }, { name: "category", label: "Category" }, { name: "tier", label: "Tier", type: "select", options: ["Strategic", "Standard"] }, { name: "status", label: "Status", type: "select", options: [...statuses] }, { name: "contact_name", label: "PIC" }, { name: "contact_email", label: "PIC email" }, { name: "contact_phone", label: "PIC WhatsApp" }, { name: "scope", label: "Scope", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }, { name: "input_date", label: "Input date", type: "date" }]}
     />
   );
