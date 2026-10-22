@@ -1,0 +1,123 @@
+/* Competitor Intel — IJIS layout: threat landscape columns, directory cards, price board. */
+.page { display: flex; flex-direction: column; gap: 16px; max-width: 1360px; margin: 0 auto; }
+.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.head h1 { margin: 2px 0 0; font-size: clamp(24px, 3vw, 30px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.head p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
+.head > button { min-height: 42px; padding: 0 18px; }
+.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.danger { color: var(--red); }
+.muted { color: var(--text-muted); }
+.spacer { flex: 1; }
+.hint { color: var(--text-muted); font-size: 12px; }
+.empty { margin: 0; padding: 36px 16px; border: 1px dashed var(--border-md); border-radius: var(--radius-lg); background: var(--white); color: var(--text-muted); font-size: 13px; text-align: center; }
+.emptySmall { margin: 0; padding: 12px 4px; color: var(--text-hint); font-size: 13px; text-align: center; }
+
+.segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
+.segment, .segmentActive { min-height: 34px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.segment span, .segmentActive span { font-size: 12px; font-weight: 700; opacity: 0.7; }
+.segment { color: var(--text-muted); background: transparent; }
+.segment:hover { color: var(--text); }
+.segmentActive { color: var(--white); background: var(--text); }
+
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill, .pillOn { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pill span, .pillOn span { font-size: 12px; opacity: 0.7; }
+.pill { color: var(--text); background: var(--white); }
+.pillOn { border-color: var(--text); color: #fff; background: var(--text); }
+
+.chip, .chipMuted, .chipDanger { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.chip { color: var(--purple-dark); background: var(--purple-light); }
+.chipMuted { color: var(--text-muted); background: var(--surface-2); }
+.chipDanger { color: var(--red); background: var(--red-bg); }
+
+.logo { flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background-color: var(--purple-light); background-position: center; background-size: cover; color: var(--purple-dark); font-weight: 800; }
+
+/* Landscape */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: start; }
+.column, .columnHigh { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--radius-xl); background: var(--surface-2); }
+.columnHigh { background: var(--red-bg); }
+.columnHead { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; }
+.columnHead b { font-size: 14px; font-weight: 800; }
+.columnHigh .columnHead b { color: var(--red); }
+.count { min-width: 26px; padding: 2px 8px; border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 12px; font-weight: 700; text-align: center; }
+.cards { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.card { width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 16px; background: var(--white); box-shadow: var(--shadow); color: var(--text); text-align: left; cursor: pointer; }
+.card:hover { border-color: var(--purple-mid); }
+.cardTop { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.cardName { min-width: 0; display: grid; }
+.cardName b { overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.cardName small, .cardName a { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.cardName a { color: var(--purple-dark); font-weight: 600; }
+.cardFoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; }
+.flag { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-size: 12px; }
+
+/* Directory */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.search { min-height: 42px; flex: 1 1 220px; max-width: 320px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); }
+.search input { min-width: 0; flex: 1; min-height: 38px; border: 0; background: transparent; color: var(--text); font-size: 13px; outline: none; }
+.search:focus-within, .filterPill:focus-within { border-color: var(--purple-mid); }
+.filterPill { min-height: 42px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill select { max-width: 170px; min-height: 36px; padding: 0 4px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
+.clear { min-height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
+.ghostButton { min-height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; text-decoration: none; }
+.ghostButton:hover { border-color: var(--purple-mid); color: var(--purple-dark); }
+.directory { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.profile { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
+.profileHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.facts { display: grid; gap: 6px; margin: 0; }
+.facts div { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; font-size: 13px; }
+.facts dt { color: var(--text-muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; font-weight: 600; }
+.followers { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
+.followers span { display: grid; gap: 1px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); }
+.followers small { color: var(--text-muted); font-size: 12px; }
+.followers b { font-size: 16px; font-weight: 800; }
+.note { display: -webkit-box; margin: 0; overflow: hidden; color: var(--text-muted); font-size: 13px; line-height: 1.5; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.actions { display: flex; justify-content: flex-end; gap: 4px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border); }
+.iconButton, .iconDanger { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--text-muted); cursor: pointer; }
+.iconButton:hover { border-color: var(--border); color: var(--text); }
+.iconDanger:hover { border-color: var(--red); color: var(--red); }
+
+/* Pricing */
+.priceGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; align-items: start; }
+.priceCard { display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
+.priceHead { display: grid; gap: 2px; }
+.priceHead b { font-size: 15px; font-weight: 800; }
+.priceHead span { color: var(--text-muted); font-size: 12px; }
+.priceList { margin: 0; padding: 0; list-style: none; }
+.priceList li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 0; }
+.priceList li + li { border-top: 1px solid var(--border); }
+.priceValue { font-size: 14px; font-weight: 800; white-space: nowrap; }
+.priceBar { grid-column: 2 / -1; height: 4px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
+.priceBar i { display: block; height: 100%; border-radius: 999px; background: var(--purple-mid); }
+
+/* Form */
+.form { display: flex; flex-direction: column; gap: 14px; }
+.field { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.field > span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.subField { display: grid; gap: 3px; }
+.subField small { color: var(--text-muted); font-size: 12px; }
+.req { color: var(--red); }
+.input, .inputInvalid { width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--text); font: inherit; font-size: 13px; outline: none; }
+textarea.input { resize: vertical; line-height: 1.5; }
+.input:focus { border-color: var(--purple-mid); box-shadow: 0 0 0 3px var(--purple-light); }
+.inputInvalid { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.segmentedSmall { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface-2); }
+.option, .optionOn, .optionDanger { min-height: 34px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.option { color: var(--text-muted); background: transparent; }
+.optionOn { color: var(--text); background: var(--white); box-shadow: 0 1px 3px rgb(20 33 44 / 0.12); }
+.optionDanger { color: #fff; background: var(--red); }
+
+@media (max-width: 640px) {
+  .head > button { width: 100%; justify-content: center; }
+  .segmented { align-self: stretch; }
+  .segmented > * { padding: 0 10px; }
+  .segmented > * > span { display: none; }
+  .search { max-width: none; flex-basis: 100%; }
+  .filterPill { flex: 1 1 calc(50% - 5px); min-width: 0; }
+  .filterPill select { min-width: 0; flex: 1; max-width: none; }
+  .directory, .priceGrid { grid-template-columns: minmax(0, 1fr); }
+  .row2 { grid-template-columns: minmax(0, 1fr); }
+}

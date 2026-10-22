@@ -889,3 +889,32 @@ Job Vacancy MT → Competitor Intel → Settings → Content Evaluation / Meta A
 ### Antrean
 
 Competitor Intel → Settings → Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.
+
+## Putaran 22 — Competitor Intel (IJIS layout) (22 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Tab Overview / Kompetitor / Produk & Pricing; tombol "Tambah"; 5 kartu angka (Direct merah, Indirect kuning, Substitusi biru) | Judul + "N competitors · **X high threat** (merah) · Y flags logged", tombol **Add competitor**; saklar **Threat landscape / Competitors / Products & pricing** |
+| Overview: dua daftar (semua kompetitor dengan 3 pil warna, daftar threat) | **Threat landscape**: kolom **High / Medium / Low / Not rated** (kolom High satu-satunya yang merah — itu memang bahaya); kartu: logo, nama, kategori · niche, follower terbesar, jumlah flag; pil kategori (All/Direct/Indirect/Substitute + jumlah) memfilter papan |
+| Kartu kompetitor dengan pil kategori merah/kuning/biru, sort & filter tercampur dalam satu dropdown ("Threat: High" ada di "Urutkan") | **Direktori**: logo, nama, domain, **satu** chip threat (merah hanya High), Category/Niche/Audience, kotak follower per platform, catatan; filter terpisah Search / Category / Threat / Audience dan **Sort** sendiri; edit & hapus berlabel |
+| Produk & pricing: kartu kecil per kategori | **Papan harga**: per kategori, termurah dulu, rentang harga, bar posisi harga tiap produk, logo kompetitor; link "Manage products & prices" tetap |
+| Form: threat lewat radio kecil, nama kosong → toast | Threat sebagai pilihan 3 tombol (High merah), platform sebagai pil, nama kosong ditandai merah & difokus |
+
+- Threat diambil dari **snapshot terbaru** bila ada (sama seperti sebelumnya di Overview) — sekarang konsisten juga di direktori dan filter (dulu direktori memakai threat profil saja).
+- Logika di `lib/competitor/view.ts` (`threatOf`, `filterCompetitors`, `competitorSummary`, `priceBoard`) + 3 unit test.
+- **Lint bersih:** error terakhir di repo (setState di effect pada logo kompetitor) beres — `npm run lint` tinggal 1 peringatan `<img>` lama.
+- Teks Inggris: "Kompetitor", "Produk & Pricing", "Tambah", "Urutkan…", "Semua Kategori", "Substitusi" → Competitors, Products & pricing, Add competitor, Sort, All, Substitute (nilai tersimpan tetap "substitusi").
+
+### Check
+
+- Desain 1440 & 390. Ditemukan & diperbaiki: rentang harga "Rp99K–Rp99K" untuk satu produk → satu harga saja; kategori tampil dua kali di kartu tanpa URL → sekali.
+- E2E baru Competitor Intel **19/19**.
+- Audit popup menemukan form Add/Edit competitor lebih tinggi dari layar (tombol bawah tak terjangkau di laptop & HP) → popup kini bisa digulir, footer menempel.
+- Regresi: unit 128/128, Job Vacancy 20/20, Products 17/17, Content Planning 26/26, Customer Knowledge 20/20, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31, navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Competitor/Products/Job Vacancy bersih.
+- tsc bersih; lint **0 error** (1 peringatan lama); `npm run build` lolos.
+
+### Antrean
+
+Settings → Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.
