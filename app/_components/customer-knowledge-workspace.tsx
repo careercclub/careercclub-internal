@@ -2,210 +2,192 @@
 
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
+import { distribution, filterPainPoints, labelsOf as labels, MONTH_OPTIONS, MONTH_VALUES, monthCounts, monthLabel, topKeywords, type PainFilter } from "@/lib/customer-knowledge/view";
+import { settingsHref } from "@/lib/records/links";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { DistributionPie, MonthlyOpenChart } from "./charts";
-import { FilterBar, Pagination, Pill, StatCard, StatsGrid, filterFieldClass, usePagination } from "./ui-kit";
-import { useRecordFocus } from "./use-record-focus";
-import { settingsHref } from "@/lib/records/links";
 import { confirmAction, notify, notifyError } from "./app-dialog";
+import { DistributionPie, MonthlyOpenChart } from "./charts";
+import s from "./customer-knowledge-workspace.module.css";
+import { Pagination, usePagination } from "./ui-kit";
+import { useRecordFocus } from "./use-record-focus";
 
-type Tab = "dashboard" | "database" | "freeclass";
-type PillTone = "red" | "amber" | "green" | "blue" | "purple" | "gray" | "coral" | "pink" | "teal";
+// Customer Knowledge in the IJIS layout: a feed of what customers say, with the
+// "what stands out" panel beside it (categories, keywords, platforms, months), and the
+// Free Class survey results as their own view. Same data and actions as before.
 
-const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-const stopwords = new Set(["yang", "dan", "di", "ke", "dari", "itu", "ini", "gak", "ga", "gue", "aku", "kak", "dong", "sih", "ya", "aja", "bgt", "banget", "kali", "udah", "mau", "bisa", "ada", "untuk", "dengan", "juga", "lebih", "tapi", "kalau", "karena", "gimana", "setelah", "pas", "waktu", "deh", "loh", "nih"]);
-const whitelist = new Set(["mt", "hr", "hrd", "cv", "fgd", "oa", "ip"]);
-const PLATFORM_ICONS: Record<string, string> = { tiktok: "ti-brand-tiktok", instagram: "ti-brand-instagram", youtube: "ti-brand-youtube", twitter: "ti-brand-x", x: "ti-brand-x", facebook: "ti-brand-facebook", threads: "ti-brand-threads" };
-const LABEL_COLORS = [
-  { bg: "#e8f0fc", color: "#0a3d8f" }, { bg: "#dcfce7", color: "#166534" },
-  { bg: "#fef3c7", color: "#92400e" }, { bg: "#fee2e2", color: "#991b1b" },
-  { bg: "#e0f2fe", color: "#075985" }, { bg: "#fce7f3", color: "#9d174d" },
-  { bg: "#f3e8ff", color: "#6b21a8" }, { bg: "#ecfccb", color: "#365314" },
-];
-const VALID_TONES = new Set(["purple", "blue", "teal", "amber", "coral", "pink", "green", "red"]);
+type View = "pain" | "freeclass";
+
+const MONTHS_SHORT = MONTH_VALUES;
+const PLATFORM_ICONS: Record<string, string> = { tiktok: "ti-brand-tiktok", instagram: "ti-brand-instagram", youtube: "ti-brand-youtube", twitter: "ti-brand-x", x: "ti-brand-x", facebook: "ti-brand-facebook", threads: "ti-brand-threads", linkedin: "ti-brand-linkedin" };
 const RATING_FIELDS = [
-  ["materi_judul", "Materi sesuai judul/tema webinar"],
-  ["materi_kebutuhan", "Materi sesuai kebutuhan saya"],
-  ["materi_mudah", "Materi mudah dipahami"],
-  ["materi_jawab", "Materi menjawab pertanyaan saya"],
-  ["nara_kuasai", "Narasumber menguasai materi"],
-  ["nara_jelas", "Narasumber menyampaikan materi dg jelas"],
-  ["kualitas_teknis", "Kualitas teknis (audio, video, koneksi)"],
-  ["waktu", "Waktu pelaksanaan sesuai & efisien"],
-  ["moderator", "Moderator membawakan sesi dg baik"],
-  ["info_webinar", "Informasi webinar mudah didapatkan"],
-  ["kepuasan", "Puas dengan pelaksanaan webinar"],
-  ["minat", "Berminat ikut kegiatan CCC lagi"],
-  ["rekomendasi", "Akan merekomendasikan ke rekan"],
+  ["materi_judul", "Content matches the webinar title/theme"],
+  ["materi_kebutuhan", "Content matches my needs"],
+  ["materi_mudah", "Content is easy to understand"],
+  ["materi_jawab", "Content answers my questions"],
+  ["nara_kuasai", "Speaker knows the material"],
+  ["nara_jelas", "Speaker explains clearly"],
+  ["kualitas_teknis", "Technical quality (audio, video, connection)"],
+  ["waktu", "Timing is right and efficient"],
+  ["moderator", "Moderator ran the session well"],
+  ["info_webinar", "Webinar information is easy to find"],
+  ["kepuasan", "Satisfied with the webinar"],
+  ["minat", "Interested in joining CCC again"],
+  ["rekomendasi", "Would recommend to friends"],
 ] as const;
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
-function labels(row: ApiRecord): string[] { if (Array.isArray(row.labels)) return row.labels.map(String); if (typeof row.labels === "string") { try { const value = JSON.parse(row.labels); return Array.isArray(value) ? value.map(String) : []; } catch { return row.labels.split(",").map((item) => item.trim()).filter(Boolean); } } return []; }
-function distribution(rows: ApiRecord[], key: string) { const map = new Map<string, number>(); rows.forEach((row) => { const value = String(row[key] || "Unknown").trim() || "Unknown"; map.set(value, (map.get(value) || 0) + 1); }); return [...map.entries()].sort((a, b) => b[1] - a[1]); }
-function labelColor(label: string) { let hash = 0; for (let index = 0; index < label.length; index += 1) hash = (hash * 31 + label.charCodeAt(index)) >>> 0; return LABEL_COLORS[hash % LABEL_COLORS.length]; }
-function categoryTone(categories: ApiRecord[], name: string): PillTone { const found = categories.find((row) => text(row.nama) === name); const color = text(found?.color); return (VALID_TONES.has(color) ? color : "purple") as PillTone; }
 function meaningfulAnswer(value: unknown) { const trimmed = String(value || "").trim(); return trimmed.length >= 4 && !/^(sudah\s*(baik|oke)|tidak\s*ada|belum\s*ada|ga(k)?\s*ada|good|oke?|baik|cukup|bagus|mantap|keren|great|-)$/i.test(trimmed); }
-function computeKeywords(rows: ApiRecord[]) {
-  const frequencies = new Map<string, number>();
-  rows.forEach((row) => {
-    const words = String(row.komentar || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((word) => word && (whitelist.has(word) || (word.length > 2 && !stopwords.has(word))));
-    const seen = new Set(words);
-    for (let index = 0; index < words.length - 1; index += 1) seen.add(`${words[index]} ${words[index + 1]}`);
-    seen.forEach((word) => {
-      if (word.includes(" ") && ![...rows].some((other) => other !== row && String(other.komentar || "").toLowerCase().includes(word))) return;
-      frequencies.set(word, (frequencies.get(word) || 0) + 1);
-    });
-  });
-  return [...frequencies.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
-}
+function platformIcon(name: string) { return PLATFORM_ICONS[name.toLowerCase()] || "ti-hash"; }
+const EMPTY: PainFilter = { query: "", platform: "", month: "", category: "", label: "" };
 
 export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeClassRows }: { rows: ApiRecord[]; platforms: ApiRecord[]; categories: ApiRecord[]; freeClassRows: ApiRecord[] }) {
-  const [tab, setTab] = useState<Tab>("dashboard");
+  const [view, setView] = useState<View>("pain");
   const [modal, setModal] = useState<{ record: ApiRecord | null } | null>(null);
+  const [filter, setFilter] = useState<PainFilter>(EMPTY);
   useRecordFocus((id) => {
     const record = rows.find((row) => String(row.id) === id);
     if (!record) return;
-    setModal({ record });
+    setView("pain"); setFilter(EMPTY); setModal({ record });
     return true;
   });
   const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(), [rows]);
-  const keywords = useMemo(() => computeKeywords(rows), [rows]);
+  const averageRating = useMemo(() => {
+    const values = freeClassRows.flatMap((row) => RATING_FIELDS.map(([key]) => Number(row[key])).filter((value) => value >= 1 && value <= 5));
+    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+  }, [freeClassRows]);
 
   return (
-    <div className="grid gap-3.5">
-      <div className="flex items-center justify-between gap-3">
-        <Tabs onValueChange={(value) => setTab(value as Tab)} value={tab}>
-          <TabsList variant="line">
-            <TabsTrigger value="dashboard"><i className="ti ti-chart-bar" /> Dashboard</TabsTrigger>
-            <TabsTrigger value="database"><i className="ti ti-database" /> Database</TabsTrigger>
-            <TabsTrigger value="freeclass"><i className="ti ti-chart-dots" /> Analytics Free Class</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <nav className="flex gap-3 text-xs font-medium text-[var(--purple-mid)]">
-          <Link href={settingsHref("customer-knowledge")}>Platforms</Link>
-          <Link href={settingsHref("customer-knowledge")}>Categories</Link>
-        </nav>
+    <div className={s.page}>
+      <header className={s.head}>
+        <div>
+          <span className={s.eyebrow}>Intelligence</span>
+          <h1>Customer Knowledge</h1>
+          <p>{rows.length} pain points · {freeClassRows.length} Free Class responses{averageRating ? ` · ${averageRating.toFixed(2)}/5 average` : ""}</p>
+        </div>
+        <div className={s.headActions}>
+          <Link className={s.ghostButton} href={settingsHref("customer-knowledge")}><i className="ti ti-settings" aria-hidden="true" /> Platforms &amp; categories</Link>
+          <Button onClick={() => setModal({ record: null })}><i className="ti ti-plus" aria-hidden="true" /> Add pain point</Button>
+        </div>
+      </header>
+
+      <div className={s.segmented} role="tablist" aria-label="Customer Knowledge view">
+        <button aria-selected={view === "pain"} className={view === "pain" ? s.segmentActive : s.segment} onClick={() => setView("pain")} role="tab" type="button">Pain points <span>{rows.length}</span></button>
+        <button aria-selected={view === "freeclass"} className={view === "freeclass" ? s.segmentActive : s.segment} onClick={() => setView("freeclass")} role="tab" type="button">Free Class feedback <span>{freeClassRows.length}</span></button>
       </div>
 
-      {tab === "dashboard" ? <DashboardTab keywords={keywords} rows={rows} /> : null}
-      {tab === "database" ? <DatabaseTab categories={categories} onAdd={() => setModal({ record: null })} onEdit={(record) => setModal({ record })} platforms={platforms} rows={rows} /> : null}
-      {tab === "freeclass" ? <FreeClassTab rows={freeClassRows} /> : null}
+      {view === "pain" ? <PainPointsView filter={filter} onEdit={(record) => setModal({ record })} rows={rows} setFilter={setFilter} /> : null}
+      {view === "freeclass" ? <FreeClassTab rows={freeClassRows} /> : null}
 
       {modal ? <PainPointModal allLabels={allLabels} categories={categories} onClose={() => setModal(null)} platforms={platforms} record={modal.record} /> : null}
     </div>
   );
 }
 
-/* ══════════════ DASHBOARD ══════════════ */
-function DashboardTab({ rows, keywords }: { rows: ApiRecord[]; keywords: Array<[string, number]> }) {
-  const byCategory = distribution(rows, "kategori");
-  const top3 = byCategory.slice(0, 3);
-  const maxTop = top3[0]?.[1] || 1;
-  const medals = ["🥇", "🥈", "🥉"];
-  const byPlatform = distribution(rows, "platform");
-  const monthCounts = useMemo(() => { const counts = Array<number>(12).fill(0); rows.forEach((row) => { const index = MONTHS_SHORT.indexOf(text(row.bulan)); if (index > -1) counts[index] += 1; }); return counts; }, [rows]);
-
-  return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <Card className="gap-2 p-4">
-        <h3 className="text-xs font-bold">Top Kategori</h3>
-        {!top3.length ? <p className="py-5 text-center text-[12px] text-muted-foreground">Belum ada data</p> : top3.map(([name, count], index) => (
-          <div className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2 border-t border-border py-2 text-[11px] first:border-0" key={name}>
-            <span>{medals[index]}</span>
-            <div className="min-w-0">
-              <div className="flex items-center justify-between gap-2"><span className="truncate font-semibold">{name}</span><span className="shrink-0 text-muted-foreground">{count} entri &middot; {Math.round((count / rows.length) * 100)}%</span></div>
-              <div className="mt-1 h-1.5 rounded bg-[var(--bg)]"><i className="block h-full rounded bg-[var(--purple-mid)]" style={{ width: `${(count / maxTop) * 100}%` }} /></div>
-            </div>
-          </div>
-        ))}
-      </Card>
-      <Card className="gap-2 p-4">
-        <h3 className="text-xs font-bold">Top Keywords</h3>
-        {!keywords.length ? <p className="py-5 text-center text-[12px] text-muted-foreground">Belum ada data</p> : (
-          <div className="flex flex-wrap items-center gap-2">
-            {keywords.map(([word, count], index) => (
-              <span className="rounded-full bg-[var(--purple-light)] px-2.5 py-1 font-semibold text-[var(--purple-mid)]" key={word} style={{ fontSize: `${10 + Math.round(((keywords.length - index) / Math.max(1, keywords.length)) * 9)}px`, opacity: 0.55 + ((keywords.length - index) / Math.max(1, keywords.length)) * 0.45 }} title={`${count}x`}>{word}</span>
-            ))}
-          </div>
-        )}
-      </Card>
-      <Card className="gap-2 p-4">
-        <h3 className="text-xs font-bold">Entri per Platform</h3>
-        {byPlatform.length ? <DistributionPie rows={byPlatform} /> : <p className="py-5 text-center text-[12px] text-muted-foreground">Belum ada data</p>}
-      </Card>
-      <Card className="gap-2 p-4">
-        <h3 className="text-xs font-bold">Entri per Bulan</h3>
-        <div style={{ height: 200 }}><MonthlyOpenChart counts={monthCounts} labels={MONTHS_SHORT} /></div>
-      </Card>
-    </div>
-  );
-}
-
-/* ══════════════ DATABASE ══════════════ */
-function DatabaseTab({ rows, platforms, categories, onAdd, onEdit }: { rows: ApiRecord[]; platforms: ApiRecord[]; categories: ApiRecord[]; onAdd: () => void; onEdit: (record: ApiRecord) => void }) {
-  const [query, setQuery] = useState(""); const [platform, setPlatform] = useState(""); const [month, setMonth] = useState(""); const [category, setCategory] = useState(""); const [label, setLabel] = useState("");
+/* ══════════════ PAIN POINTS: feed + "what stands out" ══════════════ */
+function PainPointsView({ rows, filter, setFilter, onEdit }: { rows: ApiRecord[]; filter: PainFilter; setFilter: (next: PainFilter) => void; onEdit: (record: ApiRecord) => void }) {
   const [pending, start] = useTransition();
-
-  const platformOptions = useMemo(() => distribution(rows, "platform").map(([value]) => value), [rows]);
-  const categoryOptions = useMemo(() => distribution(rows, "kategori").map(([value]) => value), [rows]);
+  const filtered = useMemo(() => filterPainPoints(rows, filter), [rows, filter]);
+  const { pageItems, page, setPage, totalPages } = usePagination(filtered, 20);
+  const set = (patch: PainFilter) => { setFilter({ ...filter, ...patch }); setPage(0); };
+  const byCategory = useMemo(() => distribution(rows, "kategori"), [rows]);
+  const byPlatform = useMemo(() => distribution(rows, "platform"), [rows]);
+  const keywords = useMemo(() => topKeywords(rows), [rows]);
+  const months = useMemo(() => monthCounts(rows), [rows]);
   const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(), [rows]);
+  const filtersOn = Object.values(filter).some(Boolean);
+  const maxCategory = byCategory[0]?.[1] || 1;
 
-  const filtered = useMemo(() => rows.filter((row) => (!platform || row.platform === platform) && (!month || row.bulan === month) && (!category || row.kategori === category) && (!label || labels(row).includes(label)) && (!query || `${row.komentar || ""} ${row.username || ""}`.toLowerCase().includes(query.toLowerCase()))), [rows, platform, month, category, label, query]);
-
-  async function remove(id: string) {
+  async function remove(row: ApiRecord) {
     if (!(await confirmAction({ title: "Delete this pain point?", message: "This cannot be undone.", confirmLabel: "Delete pain point", danger: true }))) return;
-    start(async () => { await deleteManagedRecord("pain_points", id); });
+    start(async () => { await deleteManagedRecord("pain_points", String(row.id)); });
   }
 
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <FilterBar>
-          <input className={filterFieldClass} onChange={(event) => setQuery(event.target.value)} placeholder="Search comments or usernames" value={query} />
-          <select className={filterFieldClass} onChange={(event) => setPlatform(event.target.value)} value={platform}><option value="">Semua Platform</option>{platformOptions.map((value) => <option key={value}>{value}</option>)}</select>
-          <select className={filterFieldClass} onChange={(event) => setMonth(event.target.value)} value={month}><option value="">Semua Bulan</option>{MONTHS_SHORT.map((value) => <option key={value}>{value}</option>)}</select>
-          <select className={filterFieldClass} onChange={(event) => setCategory(event.target.value)} value={category}><option value="">Semua Kategori</option>{categoryOptions.map((value) => <option key={value}>{value}</option>)}</select>
-          <select className={filterFieldClass} onChange={(event) => setLabel(event.target.value)} value={label}><option value="">Semua Label</option>{allLabels.map((value) => <option key={value}>{value}</option>)}</select>
-        </FilterBar>
-        <Button onClick={onAdd} size="sm"><i className="ti ti-plus" /> Tambah Data</Button>
-      </div>
+    <div className={s.board}>
+      <section aria-label="Pain points" className={s.feed}>
+        <div className={s.toolbar}>
+          <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search pain points" onChange={(e) => set({ query: e.target.value })} placeholder="Search comments or usernames…" value={filter.query} /></label>
+          <label className={s.filterPill}><span>Platform</span><select aria-label="Filter platform" onChange={(e) => set({ platform: e.target.value })} value={filter.platform}><option value="">All</option>{byPlatform.map(([v]) => <option key={v} value={v}>{v}</option>)}</select></label>
+          <label className={s.filterPill}><span>Month</span><select aria-label="Filter month" onChange={(e) => set({ month: e.target.value })} value={filter.month}><option value="">All</option>{MONTH_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></label>
+          <label className={s.filterPill}><span>Category</span><select aria-label="Filter category" onChange={(e) => set({ category: e.target.value })} value={filter.category}><option value="">All</option>{byCategory.map(([v]) => <option key={v} value={v}>{v}</option>)}</select></label>
+          {allLabels.length ? <label className={s.filterPill}><span>Label</span><select aria-label="Filter label" onChange={(e) => set({ label: e.target.value })} value={filter.label}><option value="">All</option>{allLabels.map((v) => <option key={v} value={v}>{v}</option>)}</select></label> : null}
+          {filtersOn ? <button className={s.clear} onClick={() => set(EMPTY)} type="button">Clear filters</button> : null}
+        </div>
+        <p className={s.count}>{filtered.length === rows.length ? `${rows.length} pain points` : `${filtered.length} of ${rows.length} pain points`}</p>
+        {pageItems.length ? (
+          <ul className={s.quotes}>
+            {pageItems.map((row) => {
+              const platform = text(row.platform) || "Unknown"; const tags = labels(row);
+              return (
+                <li className={s.quote} data-record-id={String(row.id)} key={String(row.id)}>
+                  <button className={s.quoteMain} data-record-open onClick={() => onEdit(row)} type="button">
+                    <i className={`ti ti-quote ${s.quoteMark}`} aria-hidden="true" />
+                    <span className={s.quoteText}>{text(row.komentar) || "No comment"}</span>
+                  </button>
+                  <div className={s.quoteFoot}>
+                    <span className={s.source}><i className={`ti ${platformIcon(platform)}`} aria-hidden="true" /> {platform}{text(row.username) ? ` · @${text(row.username).replace(/^@/, "")}` : ""} · {monthLabel(row.bulan) || "—"}</span>
+                    <button className={filter.category === (text(row.kategori) || "Unknown") ? s.categoryOn : s.category} onClick={() => set({ category: filter.category === (text(row.kategori) || "Unknown") ? "" : text(row.kategori) || "Unknown" })} type="button">{text(row.kategori) || "Unknown"}</button>
+                    {tags.length ? <span className={s.tags}>{tags.map((tag) => <span key={tag}>#{tag}</span>)}</span> : null}
+                    <span className={s.quoteActions}>
+                      <button aria-label="Edit pain point" className={s.iconButton} onClick={() => onEdit(row)} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
+                      <button aria-label="Delete pain point" className={s.iconDanger} disabled={pending} onClick={() => remove(row)} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : <p className={s.empty}>{rows.length ? "No pain points match these filters." : "No pain points yet. Add the first one from a comment or a screenshot."}</p>}
+        <Pagination onChange={setPage} page={page} totalPages={totalPages} />
+      </section>
 
-      <div className="grid gap-2.5">
-        {!filtered.length ? (
-          <Card className="grid place-items-center gap-2 p-10 text-center text-muted-foreground"><i className="ti ti-database-off text-2xl opacity-40" /><span className="text-[12px]">Belum ada data</span></Card>
-        ) : filtered.map((row) => {
-          const platformName = text(row.platform);
-          const categoryName = text(row.kategori) || "Unknown";
-          return (
-            <Card className="gap-2.5 p-3.5" key={String(row.id)}>
-              <details>
-                <summary className="flex cursor-pointer items-start justify-between gap-2">
-                  <div className="min-w-0"><strong className="line-clamp-2 text-[12px] font-semibold">{text(row.komentar) || "Tanpa komentar"}</strong><span className="mt-0.5 block text-[11px] text-muted-foreground">{text(row.bulan) || "-"}</span></div>
-                  <i className="ti ti-chevron-down shrink-0" />
-                </summary>
-                <p className="mt-2 text-[12px] text-muted-foreground">{text(row.komentar)}</p>
-              </details>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Pill tone="blue"><i className={`ti ${PLATFORM_ICONS[platformName.toLowerCase()] || "ti-hash"}`} /> {platformName || "Unknown"}</Pill>
-                <Pill tone={categoryTone(categories, categoryName)}>{categoryName}</Pill>
-                {labels(row).map((value) => { const color = labelColor(value); return <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" key={value} style={{ background: color.bg, color: color.color }}>{value}</span>; })}
-                <span className="ml-auto flex shrink-0 gap-1">
-                  <button className="p-1 text-muted-foreground" onClick={() => onEdit(row)} type="button"><i className="ti ti-pencil" /></button>
-                  <button className="p-1 text-[var(--red)]" disabled={pending} onClick={() => remove(String(row.id))} type="button"><i className="ti ti-trash" /></button>
-                </span>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-      <p className="text-[11px] text-muted-foreground">{filtered.length} dari {rows.length} entri</p>
-    </>
+      <aside aria-label="What stands out" className={s.side}>
+        <section className={s.panel} aria-labelledby="ck-top-categories">
+          <h2 id="ck-top-categories">Top categories</h2>
+          {byCategory.length ? (
+            <ol className={s.ranking}>
+              {byCategory.slice(0, 5).map(([name, count], index) => (
+                <li key={name}>
+                  <button aria-pressed={filter.category === name} className={filter.category === name ? s.rankOn : s.rank} onClick={() => set({ category: filter.category === name ? "" : name })} type="button">
+                    <span className={s.rankNo}>{index + 1}</span>
+                    <span className={s.rankText}><b>{name}</b><span className={s.rankBar}><i style={{ width: `${(count / maxCategory) * 100}%` }} /></span></span>
+                    <span className={s.rankCount}>{count}<small>{rows.length ? ` · ${Math.round((count / rows.length) * 100)}%` : ""}</small></span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : <p className={s.emptySmall}>No data yet.</p>}
+        </section>
+        <section className={s.panel} aria-labelledby="ck-keywords">
+          <h2 id="ck-keywords">Words people repeat</h2>
+          {keywords.length ? (
+            <div className={s.cloud}>
+              {keywords.map(([word, count], index) => (
+                <button className={filter.query === word ? s.wordOn : s.word} key={word} onClick={() => set({ query: filter.query === word ? "" : word })} style={{ fontSize: `${12 + Math.round(((keywords.length - index) / keywords.length) * 6)}px` }} title={`${count} comments`} type="button">{word}</button>
+              ))}
+            </div>
+          ) : <p className={s.emptySmall}>No data yet.</p>}
+        </section>
+        <section className={s.panel} aria-labelledby="ck-platforms">
+          <h2 id="ck-platforms">By platform</h2>
+          {byPlatform.length ? (
+            <ul className={s.platforms}>
+              {byPlatform.map(([name, count]) => (
+                <li key={name}><button aria-pressed={filter.platform === name} className={filter.platform === name ? s.platformOn : s.platform} onClick={() => set({ platform: filter.platform === name ? "" : name })} type="button"><i className={`ti ${platformIcon(name)}`} aria-hidden="true" /> <span>{name}</span><b>{count}</b></button></li>
+              ))}
+            </ul>
+          ) : <p className={s.emptySmall}>No data yet.</p>}
+        </section>
+        <section className={s.panel} aria-labelledby="ck-months">
+          <h2 id="ck-months">By month</h2>
+          <div style={{ height: 160 }}><MonthlyOpenChart counts={months} labels={MONTH_OPTIONS.map((m) => m.label)} /></div>
+        </section>
+      </aside>
+    </div>
   );
 }
 
@@ -236,25 +218,25 @@ function LabelPicker({ selected, allLabels, onChange }: { selected: string[]; al
   return (
     <div className="relative">
       <div className="flex flex-wrap items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-md)] bg-[var(--bg)] p-2">
-        {selected.map((value) => { const color = labelColor(value); return (
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" key={value} style={{ background: color.bg, color: color.color }}>
+        {selected.map((value) => { return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--purple-light)] px-2 py-0.5 text-[11px] font-medium text-[var(--purple-dark)]" key={value}>
             {value}
-            <button onClick={() => onChange(selected.filter((item) => item !== value))} type="button"><i className="ti ti-x" style={{ fontSize: 9 }} /></button>
+            <button aria-label={`Remove label ${value}`} onClick={() => onChange(selected.filter((item) => item !== value))} type="button"><i className="ti ti-x" style={{ fontSize: 9 }} /></button>
           </span>
         ); })}
-        <button className="text-[11px] text-muted-foreground" onClick={() => setOpen((value) => !value)} type="button">Label... <i className="ti ti-chevron-down" style={{ fontSize: 10 }} /></button>
+        <button aria-expanded={open} className="text-[12px] text-muted-foreground" onClick={() => setOpen((value) => !value)} type="button">Add label <i className="ti ti-chevron-down" style={{ fontSize: 10 }} /></button>
       </div>
       {open ? (
         <div className="absolute z-20 mt-1 max-h-[180px] w-full min-w-[200px] overflow-y-auto rounded-lg border border-border bg-white p-2 shadow-md">
           {available.map((value) => <button className="block w-full rounded px-2 py-1 text-left text-[11px] hover:bg-[var(--bg)]" key={value} onClick={() => { add(value); setOpen(false); }} type="button">{value}</button>)}
-          {!available.length && !creating ? <p className="px-2 py-1 text-[10px] text-muted-foreground">Tidak ada label lain</p> : null}
+          {!available.length && !creating ? <p className="px-2 py-1 text-[11px] text-muted-foreground">No other labels</p> : null}
           {creating ? (
             <div className="flex gap-1 p-1">
               <input autoFocus className="h-7 flex-1 rounded border border-border px-2 text-[11px]" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commitDraft(); }} placeholder="New label name…" value={draft} />
               <button className="rounded bg-[var(--purple-mid)] px-2 text-[10px] text-white" onClick={commitDraft} type="button">Add label</button>
             </div>
           ) : (
-            <button className="mt-1 block w-full rounded px-2 py-1 text-left text-[11px] text-[var(--purple-mid)] hover:bg-[var(--bg)]" onClick={() => setCreating(true)} type="button">+ Buat label baru</button>
+            <button className="mt-1 block w-full rounded px-2 py-1 text-left text-[11px] text-[var(--purple-mid)] hover:bg-[var(--bg)]" onClick={() => setCreating(true)} type="button">+ New label</button>
           )}
         </div>
       ) : null}
@@ -271,7 +253,9 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
   const [kategori, setKategori] = useState(text(record?.kategori) || categoryNames[0] || "");
   const [selectedLabels, setSelectedLabels] = useState<string[]>(record ? labels(record) : []);
   const [pending, start] = useTransition();
-  const [aiStatus, setAiStatus] = useState("Drop, paste, atau upload screenshot.");
+  const [aiStatus, setAiStatus] = useState("Drop, paste or upload a screenshot and AI fills the form.");
+  const [commentInvalid, setCommentInvalid] = useState(false);
+  const commentRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -281,21 +265,21 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
   }, [onClose]);
 
   async function parseScreenshot(file: File) {
-    if (!file.type.startsWith("image/")) { setAiStatus("Hanya file gambar yang didukung."); return; }
-    setAiStatus("Membaca screenshot...");
+    if (!file.type.startsWith("image/")) { setAiStatus("Only image files are supported."); return; }
+    setAiStatus("Reading the screenshot…");
     try {
       const response = await fetch("/api/ai/parse-screenshot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: await fileToBase64(file), mediaType: file.type, categories: categoryNames }) });
       const payload = await response.json() as { komentar?: string; platform?: string; kategori?: string; error?: string };
-      if (!response.ok) throw new Error(payload.error || "Gagal parse screenshot.");
+      if (!response.ok) throw new Error(payload.error || "Could not read the screenshot.");
       if (payload.komentar) setKomentar(payload.komentar);
       if (payload.platform) { const match = platformNames.find((value) => value.toLowerCase() === payload.platform!.toLowerCase()); if (match) setPlatform(match); }
       if (payload.kategori) { const match = categoryNames.find((value) => value.toLowerCase() === payload.kategori!.toLowerCase()); if (match) setKategori(match); }
-      setAiStatus("Berhasil diparsing! Cek & lengkapi field di bawah.");
-    } catch (error) { setAiStatus(error instanceof Error ? error.message : "Gagal parse screenshot."); }
+      setAiStatus("Done. Check and complete the fields below.");
+    } catch (error) { setAiStatus(error instanceof Error ? error.message : "Could not read the screenshot."); }
   }
 
   function save() {
-    if (!komentar.trim()) { notify("Comment is required.", "error"); return; }
+    if (!komentar.trim()) { setCommentInvalid(true); commentRef.current?.focus(); notify("Comment is required.", "error"); return; }
     const formData = new FormData();
     formData.set("komentar", komentar.trim());
     formData.set("platform", platform);
@@ -332,10 +316,10 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
               <p className="mt-1 text-xs text-muted-foreground">{aiStatus}</p>
             </div>
           ) : null}
-          <label className="block"><span className={labelClass}>Comment or discussion <span aria-hidden="true" className="text-[var(--red)]">*</span></span><textarea required className={inputClass} onChange={(event) => setKomentar(event.target.value)} placeholder="Paste a comment from TikTok, IG, X…" rows={3} value={komentar} /></label>
+          <label className="block"><span className={labelClass}>Comment or discussion <span aria-hidden="true" className="text-[var(--red)]">*</span></span><textarea aria-invalid={commentInvalid || undefined} required className={commentInvalid ? `${inputClass} border-[var(--red)] ring-2 ring-[var(--red-bg)]` : inputClass} onChange={(event) => { setKomentar(event.target.value); if (commentInvalid) setCommentInvalid(false); }} placeholder="Paste a comment from TikTok, IG, X…" ref={commentRef} rows={3} value={komentar} /></label>
           <div className="grid grid-cols-3 gap-2.5">
             <label className="block"><span className={labelClass}>Platform <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setPlatform(event.target.value)} value={platform}>{platformNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-            <label className="block"><span className={labelClass}>Month <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setBulan(event.target.value)} value={bulan}>{MONTHS_SHORT.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className="block"><span className={labelClass}>Month <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setBulan(event.target.value)} value={bulan}>{MONTH_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></label>
             <label className="block"><span className={labelClass}>Category <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setKategori(event.target.value)} value={kategori}>{categoryNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           </div>
           <div><span className={labelClass}>Labels</span><LabelPicker allLabels={allLabels} onChange={setSelectedLabels} selected={selectedLabels} /></div>
@@ -349,11 +333,12 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
   );
 }
 
-/* ══════════════ ANALYTICS FREE CLASS ══════════════ */
+/* ══════════════ FREE CLASS FEEDBACK ══════════════ */
 function FreeClassTab({ rows }: { rows: ApiRecord[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [answers, setAnswers] = useState<"ditingkatkan" | "hal_baik" | "topik_keinginan">("ditingkatkan");
   const { pageItems, page, setPage, totalPages } = usePagination(rows, 15);
 
   const analytics = useMemo(() => {
@@ -371,10 +356,10 @@ function FreeClassTab({ rows }: { rows: ApiRecord[] }) {
     try {
       const response = await fetch("/api/free-class/import", { method: "POST", body: formData });
       const result = await response.json() as { imported?: number; error?: string };
-      if (!response.ok) throw new Error(result.error || "Import gagal.");
-      setMessage(`${result.imported || 0} data berhasil disimpan ✓`);
+      if (!response.ok) throw new Error(result.error || "Import failed.");
+      setMessage(`${result.imported || 0} responses saved.`);
       router.refresh();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Import gagal."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); }
     finally { setBusy(false); }
   }
 
@@ -390,94 +375,97 @@ function FreeClassTab({ rows }: { rows: ApiRecord[] }) {
 
   if (!rows.length) {
     return (
-      <Card className="grid place-items-center gap-3 p-12 text-center">
-        <i className="ti ti-chart-dots text-3xl text-muted-foreground opacity-40" />
-        <div><strong className="block text-[13px]">Belum ada data</strong><span className="text-[11px] text-muted-foreground">Upload file CSV dari Google Sheets</span></div>
+      <section className={s.emptyCard} aria-label="Free Class feedback">
+        <i className="ti ti-chart-dots" aria-hidden="true" />
+        <div><b>No responses yet</b><span>Upload the CSV exported from Google Sheets, or import its published link.</span></div>
         <ImportPanel busy={busy} message={message} onImport={importRows} />
-      </Card>
+      </section>
     );
   }
 
+  const openSets: Array<[typeof answers, string]> = [["ditingkatkan", "To improve"], ["hal_baik", "What went well"], ["topik_keinginan", "Topics wanted"]];
+  const shown = rows.filter((row) => meaningfulAnswer(row[answers]));
+
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <section aria-label="Free Class feedback" className={s.freeClass}>
+      <div className={s.toolbar}>
         <ImportPanel busy={busy} message={message} onImport={importRows} />
-        <Button onClick={exportJson} size="sm" variant="outline"><i className="ti ti-download" /> Export JSON</Button>
+        <span className={s.spacer} />
+        <button className={s.ghostButton} onClick={exportJson} type="button"><i className="ti ti-download" aria-hidden="true" /> Export JSON</button>
       </div>
-      <StatsGrid className="mb-0 grid-cols-3">
-        <StatCard label="Total Responden" value={rows.length} />
-        <StatCard label="Avg Keseluruhan" tone="var(--purple-mid)" value={`${analytics.overall.toFixed(2)} / 5.0`} />
-        <StatCard label="Free Class Series" value={analytics.series.length} />
-      </StatsGrid>
-      <Card className="gap-2.5 p-4">
-        <h3 className="text-xs font-bold">Rating per Aspek <span className="font-normal text-muted-foreground">&mdash; urut terendah ke tertinggi</span></h3>
-        {analytics.ratings.map((item) => (
-          <div className="grid gap-1 border-t border-border py-2 text-[11px] first:border-0" key={item.key}>
-            <div className="flex items-center justify-between gap-2"><span>{item.label}{item.count < rows.length ? <small className="text-muted-foreground"> n={item.count}</small> : null}</span><strong>{item.average.toFixed(2)}</strong></div>
-            <progress className="h-1.5 w-full" max={5} value={item.average} />
-            <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">{item.dist.map((count, index) => <span key={index}>{index + 1}&#9733; {count}</span>)}</div>
+      <div className={s.fcGrid}>
+        <div className={s.scoreCard}>
+          <span>Overall score</span>
+          <b>{analytics.overall.toFixed(2)}<small> / 5</small></b>
+          <div className={s.scoreBar}><i style={{ width: `${(analytics.overall / 5) * 100}%` }} /></div>
+          <p>{rows.length} responses · {analytics.series.length} series</p>
+        </div>
+        <section className={s.panel} aria-labelledby="fc-ratings">
+          <h2 id="fc-ratings">Rating per aspect <small>lowest first</small></h2>
+          <ul className={s.ratings}>
+            {analytics.ratings.map((item) => (
+              <li key={item.key}>
+                <span className={s.ratingLabel}>{item.label}{item.count < rows.length ? <small> n={item.count}</small> : null}</span>
+                <span className={s.ratingBar} title={item.dist.map((count, index) => `${index + 1}★ ${count}`).join(" · ")}><i style={{ width: `${(item.average / 5) * 100}%` }} /></span>
+                <b>{item.average.toFixed(2)}</b>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+      <div className={s.distGrid}>
+        <Distribution rows={analytics.series} title="Responses per series" />
+        <Distribution rows={analytics.universities} title="Top universities" />
+        <Distribution rows={analytics.cohorts} title="Class year" />
+      </div>
+      <section className={s.panel} aria-labelledby="fc-answers">
+        <div className={s.panelHead}>
+          <h2 id="fc-answers">In their words</h2>
+          <div className={s.subTabs} role="tablist" aria-label="Open answers">
+            {openSets.map(([id, label]) => <button aria-selected={answers === id} className={answers === id ? s.subTabOn : s.subTab} key={id} onClick={() => setAnswers(id)} role="tab" type="button">{label} <span>{rows.filter((row) => meaningfulAnswer(row[id])).length}</span></button>)}
           </div>
-        ))}
-      </Card>
-      <div className="grid gap-3 md:grid-cols-3">
-        <Distribution rows={analytics.series} title="Responden per Series" />
-        <Distribution rows={analytics.universities} title="Top Universitas" />
-        <Distribution rows={analytics.cohorts} title="Persebaran Angkatan" />
-      </div>
-      <OpenAnswers field="hal_baik" rows={rows} title="Hal yang Sudah Baik" />
-      <OpenAnswers field="ditingkatkan" rows={rows} title="Yang Perlu Ditingkatkan" />
-      <OpenAnswers field="topik_keinginan" rows={rows} title="Topik yang Ingin Dipelajari" />
-      <details className="rounded-lg border border-border bg-white">
-        <summary className="cursor-pointer px-4 py-3 text-xs font-bold"><i className="ti ti-users" /> Daftar Responden ({rows.length})</summary>
-        <div className="overflow-x-auto px-4 pb-2">
-          <table className="w-full text-[11px]">
-            <thead><tr className="text-left text-muted-foreground"><th className="py-1.5">Email</th><th>Nama</th><th>Universitas</th><th>Angkatan</th><th>Series</th></tr></thead>
-            <tbody>{pageItems.map((row) => <tr className="border-t border-border" key={String(row.id)}><td className="py-1.5">{text(row.email) || "-"}</td><td>{text(row.nama) || "-"}</td><td>{text(row.universitas) || "-"}</td><td>{text(row.angkatan) || "-"}</td><td>{text(row.seri) || "-"}</td></tr>)}</tbody>
+        </div>
+        {shown.length ? (
+          <ul className={s.answerGrid}>
+            {shown.map((row) => (
+              <li key={String(row.id)}><p>{text(row[answers])}</p><small>{text(row.nama) || text(row.email) || "Anonymous"}{text(row.seri) ? ` · ${text(row.seri)}` : ""}</small></li>
+            ))}
+          </ul>
+        ) : <p className={s.emptySmall}>No answers for this question yet.</p>}
+      </section>
+      <details className={s.respondents}>
+        <summary><i className="ti ti-users" aria-hidden="true" /> Respondents ({rows.length})</summary>
+        <div className={s.tableWrap}>
+          <table>
+            <thead><tr><th>Email</th><th>Name</th><th>University</th><th>Class year</th><th>Series</th></tr></thead>
+            <tbody>{pageItems.map((row) => <tr key={String(row.id)}><td>{text(row.email) || "—"}</td><td>{text(row.nama) || "—"}</td><td>{text(row.universitas) || "—"}</td><td>{text(row.angkatan) || "—"}</td><td>{text(row.seri) || "—"}</td></tr>)}</tbody>
           </table>
         </div>
-        <Pagination className="pb-3" onChange={setPage} page={page} totalPages={totalPages} />
+        <Pagination onChange={setPage} page={page} totalPages={totalPages} />
       </details>
-    </>
+    </section>
   );
 }
 
 function ImportPanel({ busy, message, onImport }: { busy: boolean; message: string; onImport: (formData: FormData) => void }) {
   const [showUrl, setShowUrl] = useState(false);
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={s.importRow}>
       <form action={onImport}>
-        <label className={`${filterFieldClass} inline-flex cursor-pointer items-center gap-1.5`}><i className="ti ti-upload" /> Upload CSV<input accept=".csv,.xlsx" className="hidden" name="file" onChange={(event) => event.currentTarget.form?.requestSubmit()} type="file" /></label>
+        <label className={s.ghostButton}><i className="ti ti-upload" aria-hidden="true" /> Upload CSV<input accept=".csv,.xlsx" className="sr-only" name="file" onChange={(event) => event.currentTarget.form?.requestSubmit()} type="file" /></label>
       </form>
-      <Button onClick={() => setShowUrl((value) => !value)} size="sm" variant="outline"><i className="ti ti-link" /> Import URL</Button>
+      <button aria-expanded={showUrl} className={s.ghostButton} onClick={() => setShowUrl((value) => !value)} type="button"><i className="ti ti-link" aria-hidden="true" /> Import from link</button>
       {showUrl ? (
-        <form action={onImport} className="flex items-center gap-2">
-          <input className={filterFieldClass} name="url" placeholder="https://docs.google.com/.../pub?output=csv" style={{ minWidth: 260 }} type="url" />
-          <Button disabled={busy} size="sm" type="submit"><i className="ti ti-download" /> Ambil Data</Button>
+        <form action={onImport} className={s.importRow}>
+          <label className={s.search}><span className="sr-only">Published sheet link</span><input name="url" placeholder="https://docs.google.com/.../pub?output=csv" required type="url" /></label>
+          <Button disabled={busy} type="submit"><i className="ti ti-download" aria-hidden="true" /> Import responses</Button>
         </form>
       ) : null}
-      {message ? <span className="text-[11px] text-muted-foreground">{message}</span> : null}
+      {message ? <span className={s.message} role="status">{message}</span> : null}
     </div>
   );
 }
 
 function Distribution({ title, rows }: { title: string; rows: [string, number][] }) {
-  return <Card className="gap-2 p-4"><h3 className="text-xs font-bold">{title}</h3>{rows.length ? <DistributionPie rows={rows} /> : <p className="text-[11px] text-muted-foreground">Belum ada data</p>}</Card>;
-}
-
-function OpenAnswers({ title, field, rows }: { title: string; field: string; rows: ApiRecord[] }) {
-  const answers = rows.filter((row) => meaningfulAnswer(row[field]));
-  if (!answers.length) return null;
-  return (
-    <Card className="gap-2.5 p-4">
-      <h3 className="text-xs font-bold">{title} <span className="font-normal text-muted-foreground">({answers.length} jawaban)</span></h3>
-      <div className="grid gap-2">
-        {answers.map((row) => (
-          <blockquote className="border-l-[3px] border-border bg-[var(--bg)] py-1.5 pl-3 text-[11px] leading-relaxed" key={String(row.id)}>
-            <p className="m-0">{text(row[field])}</p>
-            <footer className="mt-1 text-[10px] text-muted-foreground">{text(row.nama) || text(row.email) || "Anonymous"} &middot; {text(row.seri)}</footer>
-          </blockquote>
-        ))}
-      </div>
-    </Card>
-  );
+  return <section className={s.panel} aria-label={title}><h2>{title}</h2>{rows.length ? <DistributionPie rows={rows} /> : <p className={s.emptySmall}>No data yet.</p>}</section>;
 }

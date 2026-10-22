@@ -771,3 +771,34 @@ Satu komponen dipakai dua halaman (B2B Partnership, Organization Partnership), j
 ### Antrean
 
 Customer Knowledge → Content Planning, lalu Products, Job Vacancy, Competitor, Settings.
+
+## Putaran 18 — Customer Knowledge (IJIS layout) (22 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Tab Dashboard / Database / Analytics Free Class; dua link "Platforms" & "Categories" ke tempat yang sama; tombol "Tambah Data" | Judul + "N pain points · M Free Class responses · X/5 average"; tombol **Platforms & categories** (satu link) dan **Add pain point**; saklar **Pain points / Free Class feedback** |
+| Dashboard (grafik) dan Database (daftar) terpisah | Satu halaman: **feed kutipan** (komentar, platform · username · bulan, kategori, #label, edit/hapus) + panel **What stands out** di samping: Top categories, Words people repeat, By platform, By month — semuanya bisa diklik untuk memfilter feed |
+| Label & kategori warna-warni (8 warna) | Satu palet: kategori biru muda, label sebagai teks "#label" |
+| Free Class: 3 kartu angka, progress bar polos, 3 daftar jawaban panjang | Kartu **Overall score** besar, rating per aspek (terendah dulu) sebagai bar, distribusi series/universitas/angkatan, **In their words** dengan saklar To improve / What went well / Topics wanted, daftar responden dilipat |
+| Bulan "Mei/Agu/Okt/Des", label rating & pesan bahasa Indonesia | Tampilan Inggris (May/Aug/Oct/Dec, label rating Inggris); **nilai yang disimpan tetap** ("Okt" dll) |
+
+- Logika di `lib/customer-knowledge/view.ts` (`monthLabel`, `labelsOf`, `distribution`, `monthCounts`, `topKeywords`, `filterPainPoints`) + 4 unit test.
+- **Bug lama diperbaiki:** filter kategori "Unknown" (komentar tanpa kategori) dulu tidak pernah cocok dengan apa pun; sekarang cocok dan jumlahnya sama dengan panel Top categories (dites).
+- Form: komentar wajib — kalau kosong ditandai merah & difokus; teks AI screenshot & pemilih label Inggris.
+
+### Check
+
+- Desain 1440 & 390; di HP dua tombol header ditumpuk supaya tidak terpotong.
+- E2E baru Customer Knowledge **20/20** (feed lengkap, bulan Inggris, klik kategori & kata memfilter, filter bulan menyimpan nilai asli, form edit, bulan di form Inggris, komentar kosong ditandai & fokus, hapus pakai konfirmasi, satu link Settings, skor & rating terurut, jawaban kosong ("-", "oke") tidak dihitung, ganti pertanyaan, `?focus`, HP).
+- Regresi: unit 115/115, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31, navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Customer Knowledge ok.
+- tsc bersih; lint: sisa error lama di competitor-tools & content-planning-tools; `npm run build` lolos.
+
+### Nice-to-have
+
+- Grafik pie (dipakai bersama modul lain) masih multiwarna; disamakan ke satu palet saat merapikan komponen grafik.
+
+### Antrean
+
+Content Planning, lalu Products, Job Vacancy, Competitor, Settings.
