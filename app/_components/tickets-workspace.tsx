@@ -1,5 +1,7 @@
 "use client";
 
+import { revertWith } from "./safe-action";
+
 import { addTicketLinkAction, changeTicketStatusAction, createTicketAction, deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -44,7 +46,7 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!form.title.trim()) { setError("Ticket title is required."); return; }
+    if (!form.title.trim()) { setError("Ticket title is required."); document.getElementById("create-ticket-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
       const row = await createTicketAction({ title: form.title, description: form.description, status: "Todo", priority: form.priority, divisionId: form.divisionId || null, typeId: form.typeId || null, dueDate: form.dueDate || null, assignedToIds: assignees, links: linkUrl.trim() ? [{ label: "Link", url: linkUrl.trim() }] : [] });
@@ -56,7 +58,7 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Create ticket</DialogTitle><DialogDescription>Send a request to a division or a specific person.</DialogDescription></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Ticket title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. CCA flyer design" /></div>
+          <div className="grid gap-1.5"><Label htmlFor="create-ticket-title">Ticket title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="create-ticket-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. CCA flyer design" /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Division</Label><Select value={form.divisionId || "none"} onValueChange={(v) => setForm({ ...form, divisionId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select division" /></SelectTrigger><SelectContent><SelectItem value="none">Select division</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
@@ -86,6 +88,7 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
   const links = arr(ticket.links);
   const synced = calendarAdded(ticket);
   async function save() {
+    if (!form.title.trim()) { setError("Ticket title is required."); document.getElementById("edit-ticket-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
       const updated = await updateTicketDetailsAction(String(ticket.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assignedToIds: assignees, divisionId: divisionId || null, typeId: ticket.type_id ?? null, cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc) });
@@ -104,7 +107,7 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Ticket details</DialogTitle>{ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}</DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Ticket title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label htmlFor="edit-ticket-title">Ticket title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="edit-ticket-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "In Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
@@ -190,7 +193,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
     const next = row.status === "Done" ? "Todo" : "Done";
     const before = items;
     setItems((current) => current.map((item) => String(item.id) === String(row.id) ? { ...item, status: next } : item));
-    try { await changeTicketStatusAction(String(row.id), next); } catch { setItems(before); }
+    await changeTicketStatusAction(String(row.id), next).catch(revertWith(() => setItems(before), "Could not change the ticket status."));
   }
 
   return (

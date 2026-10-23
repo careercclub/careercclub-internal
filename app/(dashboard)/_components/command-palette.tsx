@@ -76,7 +76,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
   const terms = useMemo(() => searchTerms(query), [query]);
 
   // One way to open the palette (button, Ctrl+K, Radix): always starts from an empty box
-  // with the latest "Terakhir dibuka", whichever way it was opened.
+  // with the latest "Recently opened", whichever way it was opened.
   function openPalette() {
     setQuery("");
     setActive(0);
@@ -161,9 +161,9 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
   }
 
   const dataStatus = !searchingData ? null
-    : data.status === "loading" && !records.length ? "Mencari data…"
-    : data.status === "error" ? "Pencarian data gagal. Coba lagi."
-    : data.status === "done" && !records.length ? "Tidak ada data yang cocok."
+    : data.status === "loading" && !records.length ? "Searching records…"
+    : data.status === "error" ? "The record search failed. Try again."
+    : data.status === "done" && !records.length ? "No matching records."
     : null;
 
   return (
@@ -181,6 +181,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
 
       <Dialog open={open} onOpenChange={(next) => { if (next) openPalette(); else setOpen(false); }}>
         <DialogContent
+          guardUnsaved={false}
           showCloseButton={false}
           className="top-[12%] max-w-xl translate-y-0 gap-0 overflow-hidden p-0"
           aria-describedby={undefined}
@@ -207,12 +208,12 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto p-1" ref={listRef}>
-            <div aria-label="Hasil pencarian" id="palette-listbox" role="listbox">
+            <div aria-label="Search results" id="palette-listbox" role="listbox">
               {recents.length ? (
                 <div aria-labelledby="palette-group-recent" role="group">
                   <div className="flex items-center justify-between px-3 pt-2 pb-1">
-                    <p className={GROUP_LABEL} id="palette-group-recent">Terakhir dibuka</p>
-                    <button className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => { writeRecent([]); setRecent([]); setActive(0); }} type="button"><span className="text-[10px]">Hapus riwayat</span></button>
+                    <p className={GROUP_LABEL} id="palette-group-recent">Recently opened</p>
+                    <button className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => { writeRecent([]); setRecent([]); setActive(0); }} type="button"><span className="text-[10px]">Clear history</span></button>
                   </div>
                   {recents.map((item, index) => renderItem(item, index))}
                 </div>
@@ -233,10 +234,10 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
             {searchingData && !records.length ? <p className={`${GROUP_LABEL} px-3 pt-2 pb-1`}>Data</p> : null}
             {dataStatus ? <p className="px-3 py-3 text-xs text-muted-foreground" role="status">{dataStatus}</p> : null}
             {!pages.length && !searchingData ? (
-              <p className="px-3 py-8 text-center text-sm text-muted-foreground">Tidak ada halaman yang cocok.</p>
+              <p className="px-3 py-8 text-center text-sm text-muted-foreground">No matching pages.</p>
             ) : null}
             {!searchingData && trimmed ? (
-              <p className="px-3 pb-2 text-[11px] text-muted-foreground">Ketik minimal {MIN_SEARCH_LENGTH} huruf untuk mencari data.</p>
+              <p className="px-3 pb-2 text-[12px] text-muted-foreground">Type at least {MIN_SEARCH_LENGTH} letters to search records.</p>
             ) : null}
           </div>
 

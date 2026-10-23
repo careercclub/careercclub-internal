@@ -11,6 +11,7 @@ import { R2UploadField } from "./r2-upload-field";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { notify, notifyError } from "./app-dialog";
+import { guard } from "./safe-action";
 import s from "./page-kit.module.css";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import styles from "../record-manager.module.css";
@@ -214,7 +215,7 @@ function DeleteRecord({ definitionKey, id, noun }: { definitionKey: RecordDefini
     return <div className={styles.formActions}><button className={styles.dangerButton} onClick={() => setConfirming(true)} type="button">Delete {noun}</button></div>;
   }
   return (
-    <form action={deleteManagedRecord.bind(null, definitionKey, id)} className={styles.confirmDelete} role="alertdialog" aria-label={`Confirm delete ${noun}`}>
+    <form className={styles.confirmDelete} onSubmit={(event) => { event.preventDefault(); void guard(() => deleteManagedRecord(definitionKey, id), `Could not delete the ${noun}.`); }} role="alertdialog" aria-label={`Confirm delete ${noun}`}>
       <span>Delete this {noun}? This cannot be undone.</span>
       <button className={styles.secondaryButton} onClick={() => setConfirming(false)} ref={cancel} type="button"><span>Cancel</span></button>
       <button className={styles.dangerButton} type="submit">Yes, delete {noun}</button>

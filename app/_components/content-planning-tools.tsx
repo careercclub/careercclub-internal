@@ -32,6 +32,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { byDay, dayKey, fmtFollowers, groupByWeek, iso, monthCells, MONTHS, shortDay, weekdayDay, weekStart, WEEKDAYS } from "@/lib/content-planning/view";
 import { useEffect, useId, useMemo, useState, useTransition, type ReactNode } from "react";
 import { askText, confirmAction } from "./app-dialog";
+import { guard } from "./safe-action";
 import s from "./content-planning.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { useModal } from "./use-modal";
@@ -93,13 +94,13 @@ export function ContentPlanningTools(props: ContentPlanningProps) {
 
 /* ── Shared UI ── */
 function Modal({ size, title, onClose, children, footer }: { size?: "sm" | "md"; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
-  const { dialogProps, titleId } = useModal(onClose);
+  const { dialogProps, titleId, dismiss } = useModal(onClose);
   return (
-    <div className={s.overlay} onClick={onClose}>
+    <div className={s.overlay} onClick={() => void dismiss()}>
       <div className={size === "sm" ? s.modalSm : size === "md" ? s.modalMd : s.modal} onClick={(event) => event.stopPropagation()} {...dialogProps}>
         <div className={s.modalHeader}>
           <div className={s.modalTitle} id={titleId}>{title}</div>
-          <button aria-label="Close" className={s.iconButton} onClick={onClose} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
+          <button aria-label="Close" className={s.iconButton} onClick={() => void dismiss()} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
         <div className={s.modalBody}>{children}</div>
         {footer ? <div className={s.modalFooter}>{footer}</div> : null}
@@ -243,7 +244,7 @@ function LinksBar({ kind, links }: { kind: "cp" | "sp"; links: ApiRecord[] }) {
   function save() {
     if (!label.trim()) { req.check(""); return; }
     if (!url.trim()) return;
-    start(async () => { await addContentLinkAction(kind, label, url); setLabel(""); setUrl(""); setAdding(false); });
+    start(() => guard(async () => { await addContentLinkAction(kind, label, url); setLabel(""); setUrl(""); setAdding(false); }, "Could not add the link."));
   }
   return (
     <div className={s.links} aria-label="Links" role="group">
@@ -330,7 +331,7 @@ function CarouselView({ carousels, ctas, links, people, adding, onAdded }: { car
                   const title = text(plan.judul) || "Untitled";
                   return (
                     <li className={done ? s.rowDone : s.row} key={text(plan.id)}>
-                      <button aria-label={done ? `Mark as draft: ${title}` : `Mark done: ${title}`} aria-pressed={done} className={done ? s.checkOn : s.check} disabled={pending} onClick={() => start(() => { void setCarouselStatusAction(text(plan.id), done ? "Draft" : "Done"); })} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
+                      <button aria-label={done ? `Mark as draft: ${title}` : `Mark done: ${title}`} aria-pressed={done} className={done ? s.checkOn : s.check} disabled={pending} onClick={() => start(() => guard(async () => { await setCarouselStatusAction(text(plan.id), done ? "Draft" : "Done"); }, "Could not save the carousel status."))} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
                       <div className={s.rowMain}>
                         <button className={s.rowTitle} onClick={() => setModal({ plan, preset: {} })} type="button">{title}</button>
                         <span className={s.rowMeta}>
@@ -353,7 +354,7 @@ function CarouselView({ carousels, ctas, links, people, adding, onAdded }: { car
       {shownModal ? <CarouselModal ctas={ctas} onClose={close} people={people} planned={planned} state={shownModal} /> : null}
       {dateModal ? (
         <Modal onClose={() => setDateModal(null)} size="sm" title="Change posting date">
-          <DatePicker onPick={(key) => start(() => { void setCarouselDateAction(text(dateModal.id), key); setDateModal(null); })} planned={planned} selected={dayKey(dateModal.tanggal_posting) || todayKey()} />
+          <DatePicker onPick={(key) => start(() => guard(async () => { await setCarouselDateAction(text(dateModal.id), key); setDateModal(null); }, "Could not save the carousel date."))} planned={planned} selected={dayKey(dateModal.tanggal_posting) || todayKey()} />
         </Modal>
       ) : null}
     </>
@@ -372,7 +373,7 @@ function CarouselLinkCell({ plan, kind }: { plan: ApiRecord; kind: keyof typeof 
   const [editing, setEditing] = useState(false);
   const [url, setUrl] = useState(current);
   const [pending, start] = useTransition();
-  const commit = () => start(() => { void save(text(plan.id), url || null); setEditing(false); });
+  const commit = () => { if (!url.trim() && !current) { setEditing(false); return; } start(() => guard(async () => { await save(text(plan.id), url.trim() || null); setEditing(false); }, `Could not save the ${label.toLowerCase()} link.`)); };
   const edit = () => { setUrl(current); setEditing(true); };
 
   if (editing) {
@@ -411,16 +412,16 @@ function CarouselModal({ state, ctas, people, planned, onClose }: { state: Carou
   function save() {
     if (!req.check(judul)) return;
     const input: CarouselPlanInput = { judul, tanggal_posting: tanggal, funnel, cta: cta || null, assignee_id: assignee || null, status, link_brief: linkBrief || null, link_referensi: linkReferensi || null };
-    start(async () => { if (plan) await updateCarouselPlanAction(text(plan.id), input); else await createCarouselPlanAction(input); onClose(); });
+    start(() => guard(async () => { if (plan) await updateCarouselPlanAction(text(plan.id), input); else await createCarouselPlanAction(input); onClose(); }, "Could not save the carousel plan."));
   }
   async function remove() {
     if (!plan || !(await confirmAction({ title: "Delete this carousel plan?", message: "This cannot be undone.", confirmLabel: "Delete carousel plan", danger: true }))) return;
-    start(async () => { await deleteCarouselPlanAction(text(plan.id)); onClose(); });
+    start(() => guard(async () => { await deleteCarouselPlanAction(text(plan.id)); onClose(); }, "Could not delete the carousel plan."));
   }
   async function addCta() {
     const label = await askText({ title: "Add CTA", label: "CTA text", submitLabel: "Add CTA", placeholder: "e.g. Register now" });
     if (!label) return;
-    start(async () => { const row = await createCtaAction(label); setCta(row.label); });
+    start(() => guard(async () => { const row = await createCtaAction(label); setCta(row.label); }, "Could not add the CTA."));
   }
 
   return (
@@ -507,14 +508,14 @@ function StoryDateCard({ date, items, pending, start }: { date: ApiRecord; items
   return (
     <article className={done ? s.storyDone : s.story} data-record-id={text(date.id)}>
       <header className={s.storyHead}>
-        <button aria-label={done ? `Mark as draft: ${label}` : `Mark posted: ${label}`} aria-pressed={done} className={done ? s.checkOn : s.check} disabled={pending} onClick={() => start(() => { void setStoryPlanStatusAction(text(date.id), done ? "Draft" : "Done"); })} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
+        <button aria-label={done ? `Mark as draft: ${label}` : `Mark posted: ${label}`} aria-pressed={done} className={done ? s.checkOn : s.check} disabled={pending} onClick={() => start(() => guard(async () => { await setStoryPlanStatusAction(text(date.id), done ? "Draft" : "Done"); }, "Could not save the story status."))} type="button"><i className="ti ti-check" aria-hidden="true" /></button>
         <div className={s.storyTitle}><b>{label}</b><small>{items.length} stor{items.length === 1 ? "y" : "ies"}{done ? " · posted" : ""}</small></div>
-        <button aria-label="Delete story date" className={s.iconButton} onClick={async () => { if (await confirmAction({ title: "Delete this story date?", message: "All story slides on this date are deleted too. This cannot be undone.", confirmLabel: "Delete story date", danger: true })) start(() => { void deleteStoryDateAction(text(date.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+        <button aria-label="Delete story date" className={s.iconButton} onClick={async () => { if (await confirmAction({ title: "Delete this story date?", message: "All story slides on this date are deleted too. This cannot be undone.", confirmLabel: "Delete story date", danger: true })) start(() => guard(async () => { await deleteStoryDateAction(text(date.id)); }, "Could not delete the story date.")); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
       </header>
       <ol className={s.slides}>
         {items.map((item, index) => <StoryItemRow index={index} item={item} key={`${text(item.id)}:${text(item.isi)}`} start={start} />)}
       </ol>
-      <button className={s.addSlide} onClick={() => start(() => { void addStoryItemAction(text(date.id)); })} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add story</button>
+      <button className={s.addSlide} onClick={() => start(() => guard(async () => { await addStoryItemAction(text(date.id)); }, "Could not add the story slide."))} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add story</button>
     </article>
   );
 }
@@ -523,8 +524,8 @@ function StoryItemRow({ item, index, start }: { item: ApiRecord; index: number; 
   return (
     <li className={s.slide}>
       <span className={s.slideNo}>{index + 1}</span>
-      <input aria-label={`Story ${index + 1}`} className={s.slideInput} defaultValue={text(item.isi)} onBlur={(event) => { if (event.target.value !== text(item.isi)) { const value = event.target.value; start(() => { void updateStoryItemAction(text(item.id), value); }); } }} onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }} placeholder="What this story says…" />
-      <button aria-label="Delete story slide" className={s.iconButton} onClick={async () => { if (await confirmAction({ title: "Delete this story slide?", confirmLabel: "Delete story slide", danger: true })) start(() => { void deleteStoryItemAction(text(item.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+      <input aria-label={`Story ${index + 1}`} className={s.slideInput} defaultValue={text(item.isi)} onBlur={(event) => { if (event.target.value !== text(item.isi)) { const value = event.target.value; start(() => guard(async () => { await updateStoryItemAction(text(item.id), value); }, "Could not save the story slide.")); } }} onKeyDown={(event) => { if (event.key === "Enter") (event.target as HTMLInputElement).blur(); }} placeholder="What this story says…" />
+      <button aria-label="Delete story slide" className={s.iconButton} onClick={async () => { if (await confirmAction({ title: "Delete this story slide?", confirmLabel: "Delete story slide", danger: true })) start(() => guard(async () => { await deleteStoryItemAction(text(item.id)); }, "Could not delete the story slide.")); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
     </li>
   );
 }
@@ -537,7 +538,7 @@ function StoryDateModal({ preDate, presetItems, planned, onClose }: { preDate?: 
   function save() {
     const filled = stories.map((v) => v.trim()).filter(Boolean);
     if (!filled.length) { req.check(""); return; }
-    start(async () => { await createStoryDateAction({ tanggal, items: filled }); onClose(); });
+    start(() => guard(async () => { await createStoryDateAction({ tanggal, items: filled }); onClose(); }, "Could not add the story date."));
   }
   return (
     <Modal onClose={onClose} size="md" title="Add story date"
@@ -620,7 +621,7 @@ function KolView({ kols, adding, onAdded }: { kols: ApiRecord[]; adding: boolean
                   {k.rate_card_file_url ? <a className={s.ghostSm} href={text(k.rate_card_file_url)} rel="noopener noreferrer" target="_blank"><i className="ti ti-file" aria-hidden="true" /> Rate card</a> : null}
                   <span className={s.spacer} />
                   <button aria-label={`Edit ${name}`} className={s.iconButton} onClick={() => setModal({ kol: k })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
-                  <button aria-label="Delete KOL" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Delete ${name}?`, confirmLabel: "Delete KOL", danger: true })) start(() => { void deleteKolAction(text(k.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+                  <button aria-label="Delete KOL" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Delete ${name}?`, confirmLabel: "Delete KOL", danger: true })) start(() => guard(async () => { await deleteKolAction(text(k.id)); }, "Could not delete the KOL.")); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
                 </div>
               </li>
             );
@@ -646,7 +647,7 @@ function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void
   const set = (patch: Partial<KolInput>) => setForm((f) => ({ ...f, ...patch }));
   function save() {
     if (!req.check(text(form.nama))) return;
-    start(async () => { if (kol) await updateKolAction(text(kol.id), form); else await createKolAction(form); onClose(); });
+    start(() => guard(async () => { if (kol) await updateKolAction(text(kol.id), form); else await createKolAction(form); onClose(); }, "Could not save the KOL."));
   }
   return (
     <Modal onClose={onClose} title={`${kol ? "Edit" : "Add"} KOL`}
@@ -715,9 +716,9 @@ function MtView({ stories, adding, onAdded }: { stories: ApiRecord[]; adding: bo
                 <div className={s.cardActions}>
                   {wa ? <a aria-label={`WhatsApp ${name}`} className={s.iconButton} href={`https://wa.me/${wa}`} rel="noopener noreferrer" target="_blank"><i className="ti ti-brand-whatsapp" aria-hidden="true" /></a> : null}
                   <button aria-label={`Edit ${name}`} className={s.iconButton} onClick={() => setModal({ story: st })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
-                  <button aria-label="Delete MT story" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Delete the MT story of ${name}?`, confirmLabel: "Delete MT story", danger: true })) start(() => { void deleteMtStoryAction(text(st.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+                  <button aria-label="Delete MT story" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Delete the MT story of ${name}?`, confirmLabel: "Delete MT story", danger: true })) start(() => guard(async () => { await deleteMtStoryAction(text(st.id)); }, "Could not delete the MT story.")); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
                   <span className={s.spacer} />
-                  {!posted ? <button className={s.primarySm} disabled={pending} onClick={() => start(() => { void setMtPostedAction(text(st.id), true); })} type="button">Mark as posted</button> : null}
+                  {!posted ? <button className={s.primarySm} disabled={pending} onClick={() => start(() => guard(async () => { await setMtPostedAction(text(st.id), true); }, "Could not save the MT story."))} type="button">Mark as posted</button> : null}
                 </div>
               </li>
             );
@@ -739,7 +740,7 @@ function MtModal({ story, onClose }: { story: ApiRecord | null; onClose: () => v
   const set = (patch: Partial<MtStoryInput>) => setForm((f) => ({ ...f, ...patch }));
   function save() {
     if (!req.check(text(form.nama))) return;
-    start(async () => { if (story) await updateMtStoryAction(text(story.id), form); else await createMtStoryAction(form); onClose(); });
+    start(() => guard(async () => { if (story) await updateMtStoryAction(text(story.id), form); else await createMtStoryAction(form); onClose(); }, "Could not save the MT story."));
   }
   return (
     <Modal onClose={onClose} title={`${story ? "Edit" : "Add"} MT story`}

@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import { useId, useMemo, useState } from "react";
 import { confirmAction, notifyError } from "./app-dialog";
+import { guard } from "./safe-action";
 import c from "./content-evaluation.module.css";
 import s from "./page-kit.module.css";
 import { usePagination } from "./ui-kit";
@@ -80,10 +81,13 @@ export function ContentEvaluationTools({ evaluations, buyers, buyerTotal }: { ev
   }
   async function removeEvaluation() {
     if (!editing?.id || !(await confirmAction({ title: "Delete this evaluation?", message: "This cannot be undone.", confirmLabel: "Delete evaluation", danger: true }))) return;
-    await deleteManagedRecord("content_evaluations", String(editing.id));
-    setEditing(undefined);
-    setSelected(null);
-    router.refresh();
+    const id = String(editing.id);
+    await guard(async () => {
+      await deleteManagedRecord("content_evaluations", id);
+      setEditing(undefined);
+      setSelected(null);
+      router.refresh();
+    }, "Could not delete the evaluation.");
   }
 
   return (
@@ -404,7 +408,7 @@ function ImportDialog({ close, done }: { close: () => void; done: (message: stri
           </label>
           {error ? <p className={s.danger} role="alert">{error}</p> : null}
         </form>
-        <DialogFooter sticky><Button onClick={close} type="button" variant="ghost">Cancel</Button><Button disabled={busy || !file} form="ce-import" type="submit">{busy ? "Importing…" : "Import file"}</Button></DialogFooter>
+        <DialogFooter sticky><Button onClick={close} type="button" variant="ghost">Cancel</Button><Button disabled={busy || !file} form="ce-import" type="submit">{busy ? "Importing…" : "Import Meta CSV"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );

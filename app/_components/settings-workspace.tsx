@@ -11,6 +11,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import type { AuthUserRecord } from "@/lib/api/auth-users";
 import { useState, useTransition } from "react";
 import { confirmAction, notifyError } from "./app-dialog";
+import { guard, submitTo } from "./safe-action";
 import s from "./settings-workspace.module.css";
 
 type Page = { slug: string; title: string; section: string; path: string; icon: string };
@@ -40,7 +41,7 @@ function CustomerKnowledgeMasterPanel({ platforms, categories }: { platforms: Ap
   async function remove(kind: "pain_point_platforms" | "pain_point_categories", row: ApiRecord) {
     const what = kind === "pain_point_platforms" ? "platform" : "category";
     if (!(await confirmAction({ title: `Delete ${what} "${String(row.nama)}"?`, message: "Pain points that use it keep the name; it just won't be offered when adding new ones.", confirmLabel: kind === "pain_point_platforms" ? "Delete platform" : "Delete category", danger: true }))) return;
-    start(async () => { await deleteManagedRecord(kind, String(row.id)); });
+    start(() => guard(async () => { await deleteManagedRecord(kind, String(row.id)); }, "Could not delete it from the list."));
   }
   return (
     <div className={s.twoCols}>
@@ -178,7 +179,7 @@ function CompetitorIntelLists({ categories, targetAudience }: { categories: stri
   const [audiences, setAudiences] = useState(targetAudience);
   const dirty = cats.join("|") !== categories.join("|") || audiences.join("|") !== targetAudience.join("|");
   return (
-    <form action={saveCompetitorIntelListsAction} className={s.stack}>
+    <form className={s.stack} onSubmit={submitTo(saveCompetitorIntelListsAction, { success: "Competitor lists saved.", failure: "Could not save the competitor lists." })}>
       <div className={s.twoCols}>
         <TagList addLabel="Add category" name="category" onChange={setCats} placeholder="New product category…" title="Competitor product categories" values={cats} />
         <TagList addLabel="Add audience" name="target_audience" onChange={setAudiences} placeholder="New target audience…" title="Competitor target audiences" values={audiences} />
@@ -299,7 +300,7 @@ export function SettingsWorkspace({
 
           {tab === "menu" ? (
             <div className={s.stack}>
-              <form action={saveMenuVisibilityAction} className={s.card}>
+              <form className={s.card} onSubmit={submitTo(saveMenuVisibilityAction, { success: "Menu visibility saved.", failure: "Could not save the menu visibility." })}>
                 <div className={s.cardHead}><h3>Sidebar modules</h3></div>
                 <p className={s.hint}>Hidden modules stay reachable by their address; this only changes what the sidebar shows.</p>
                 {sectionNames.map((section) => (
@@ -318,7 +319,7 @@ export function SettingsWorkspace({
                 ))}
                 <div className={s.saveRow}><Button type="submit">Save menu visibility</Button></div>
               </form>
-              <form action={saveMenuLabelsAction} className={s.card}>
+              <form className={s.card} onSubmit={submitTo(saveMenuLabelsAction, { success: "Menu labels saved.", failure: "Could not save the menu labels." })}>
                 <div className={s.cardHead}><h3>Sidebar labels</h3></div>
                 <p className={s.hint}>Rename section headings and menu items shown in the sidebar.</p>
                 {sectionNames.map((section) => (

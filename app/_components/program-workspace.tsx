@@ -1,5 +1,7 @@
 "use client";
 
+import { revertWith } from "./safe-action";
+
 import { addEventLinkAction, createEventAction, createTaskAction, deleteEventLinkAction, deleteTaskAction, updateEventAction, updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/actions/program-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -47,8 +49,8 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!form.nama.trim()) { setError("Event name is required."); return; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.tanggal)) { setError("Date is required."); return; }
+    if (!form.nama.trim()) { setError("Event name is required."); document.getElementById("event-name")?.focus(); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.tanggal)) { setError("Date is required."); document.getElementById("event-date")?.focus(); return; }
     setBusy(true); setError("");
     try {
       const payload = { nama: form.nama, jenisProgram: form.jenisProgram || null, tanggal: form.tanggal, waktu: form.waktu || null, platform: form.platform, status: form.status, speaker: form.speaker || null, target: form.target || null };
@@ -61,10 +63,10 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-calendar-event" /> {editing ? "Edit event" : "New event"}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Event name <span className="text-[var(--red)]">*</span></Label><Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} placeholder="e.g. Free Class: insider tips to pass MT selection" /></div>
+          <div className="grid gap-1.5"><Label htmlFor="event-name">Event name <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.nama.trim()} id="event-name" required value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} placeholder="e.g. Free Class: insider tips to pass MT selection" /></div>
           <div className="grid gap-1.5"><Label>Program type</Label><Select value={form.jenisProgram || "none"} onValueChange={(v) => setForm({ ...form, jenisProgram: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select program type" /></SelectTrigger><SelectContent><SelectItem value="none">Select program type</SelectItem>{JENIS.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Date <span className="text-[var(--red)]">*</span></Label><Input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label htmlFor="event-date">Date <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.tanggal} id="event-date" required type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
             <div className="grid gap-1.5"><Label>Time</Label><Input type="time" value={form.waktu} onChange={(e) => setForm({ ...form, waktu: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -88,7 +90,7 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!form.title.trim()) { setError("Task title is required."); return; }
+    if (!form.title.trim()) { setError("Task title is required."); document.getElementById("task-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
       if (editing && task) { await updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees }); onSaved({ ...task, ...form, due_date: form.dueDate, assignee_ids: assignees }); }
@@ -101,7 +103,7 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> {editing ? "Edit task" : "New task"}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Task title <span className="text-[var(--red)]">*</span></Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Promo flyer & poster design" /></div>
+          <div className="grid gap-1.5"><Label htmlFor="task-title">Task title <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="task-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Promo flyer & poster design" /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detail brief, requirement, dll…" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase} onValueChange={(v) => setForm({ ...form, phase: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PHASES.map((p) => <SelectItem key={p} value={p}>{phaseLabel(p)}</SelectItem>)}</SelectContent></Select></div>
@@ -129,7 +131,7 @@ function AddLinkModal({ eventId, onClose, onSaved }: { eventId: string; onClose:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
-    if (!label.trim() || !url.trim()) { setError("Label and URL are required."); return; }
+    if (!label.trim() || !url.trim()) { setError("Label and URL are required."); if (!label.trim()) document.getElementById("event-link-label")?.focus(); else document.getElementById("event-link-url")?.focus(); return; }
     setBusy(true); setError("");
     try { const row = await addEventLinkAction(eventId, { label: label.trim(), url: url.trim() }); onSaved(row); }
     catch (e) { setError(e instanceof Error ? e.message : "Could not add the link."); setBusy(false); }
@@ -139,8 +141,8 @@ function AddLinkModal({ eventId, onClose, onSaved }: { eventId: string; onClose:
       <DialogContent className="sm:max-w-sm">
         <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-link" /> Add link</DialogTitle></DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Label</Label><Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Slido link" /></div>
-          <div className="grid gap-1.5"><Label>URL</Label><Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
+          <div className="grid gap-1.5"><Label htmlFor="event-link-label">Label <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !label.trim()} id="event-link-label" required value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Slido link" /></div>
+          <div className="grid gap-1.5"><Label htmlFor="event-link-url">URL <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !url.trim()} id="event-link-url" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
         <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Add link"}</Button></DialogFooter>
@@ -277,7 +279,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
 
   function progressOf(eventId: string) { const related = taskRows.filter((task) => String(task.project_id) === eventId); const done = related.filter((task) => task.status === "Done").length; return { done, total: related.length, pct: related.length ? Math.round((done / related.length) * 100) : 0 }; }
   function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; const person = ids.length ? personMap.get(ids[0]) : null; if (!person) return { name: "—", div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
-  function toggleTask(task: ApiRecord) { const next = task.status === "Done" ? "Todo" : "Done"; const before = taskRows; setTaskRows((current) => current.map((row) => String(row.id) === String(task.id) ? { ...row, status: next } : row)); void updateProgramTaskWorkflowAction(String(task.id), { status: next }).catch(() => setTaskRows(before)); }
+  function toggleTask(task: ApiRecord) { const next = task.status === "Done" ? "Todo" : "Done"; const before = taskRows; setTaskRows((current) => current.map((row) => String(row.id) === String(task.id) ? { ...row, status: next } : row)); void updateProgramTaskWorkflowAction(String(task.id), { status: next }).catch(revertWith(() => setTaskRows(before), "Could not change the task status.")); }
   async function deleteLink(eventId: string, index: number) {
     if (!(await confirmAction({ title: "Delete this link?", confirmLabel: "Delete link", danger: true }))) return;
     setLinkError("");

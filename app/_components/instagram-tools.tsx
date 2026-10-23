@@ -1,5 +1,7 @@
 "use client";
 
+import { submitTo } from "./safe-action";
+
 import { saveInstagramBaselineAction } from "@/app/actions/instagram-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { compact, day, followersSeries, num } from "@/lib/marketing/view";
@@ -108,7 +110,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
           <h1>Instagram</h1>
           <p>{fmt(currentFollowers)} followers · {history.length} weekly snapshot{history.length === 1 ? "" : "s"}{latestWeek ? ` · latest week ${latestWeek}` : ""}</p>
         </div>
-        <button className={s.ghost} onClick={() => setView("import")} type="button"><i className="ti ti-upload" aria-hidden="true" /> Import Meta CSV</button>
+        {view === "import" ? null : <button className={s.ghost} onClick={() => setView("import")} type="button"><i className="ti ti-upload" aria-hidden="true" /> Import Meta CSV</button>}
       </header>
 
       <div aria-label="Instagram views" className={s.segmented} role="tablist">
@@ -200,7 +202,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
               <span>{picked ? <span className={s.files}>{picked} file{picked === 1 ? "" : "s"} selected</span> : "You can select several files at once"}</span>
               <input accept=".csv,.xlsx" aria-label="Meta Insights files" multiple name="files" onChange={(e) => setPicked(e.target.files?.length || 0)} required style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} type="file" />
             </label>
-            <button className={s.primary} disabled={busy || !picked} type="submit">{busy ? "Importing…" : "Import snapshots"}</button>
+            <button className={s.primary} disabled={busy || !picked} type="submit">{busy ? "Importing…" : "Import Meta CSV"}</button>
           </form>
           {message ? <p className={s.message} role="status">{message}</p> : null}
         </section>
@@ -211,7 +213,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
           <section aria-label="Baseline followers" className={s.card} style={{ maxWidth: 760 }}>
             <div><h2>Baseline followers</h2><p className={s.cardSub}>The one number checked against the account. Every week is rebuilt forward and back from it using weekly follows.</p></div>
             {stale ? <p className={s.danger}><i className="ti ti-alert-triangle" aria-hidden="true" /> Last set {updatedAt}, {staleDays} days before the latest snapshot.</p> : null}
-            <form action={saveInstagramBaselineAction} className={s.form2}>
+            <form className={s.form2} onSubmit={submitTo(saveInstagramBaselineAction, { success: "Baseline saved.", failure: "Could not save the baseline." })}>
               <label className={s.field}><span>Total followers <b className={s.req}>*</b></span><input className={s.input} defaultValue={currentFollowers || ""} min="1" name="followers_total" required type="number" /></label>
               <label className={s.field}><span>As of date <b className={s.req}>*</b></span><input className={s.input} defaultValue={day(baseline?.baseline_date) || referenceDate.slice(0, 10)} name="baseline_date" required type="date" /></label>
               <div><button className={s.primary} type="submit">Save baseline</button></div>

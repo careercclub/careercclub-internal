@@ -270,7 +270,7 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
               </div>
               <DialogFooter className="border-t border-border px-6 py-3">
                 <Button disabled={pending} onClick={() => setTransferId("")} type="button" variant="outline">Cancel</Button>
-                <Button disabled={pending} type="submit">{pending ? "Adding…" : "Add to content library"}</Button>
+                <Button disabled={pending} type="submit">{pending ? "Adding…" : "Add to library"}</Button>
               </DialogFooter>
             </form>
           </DialogContent>

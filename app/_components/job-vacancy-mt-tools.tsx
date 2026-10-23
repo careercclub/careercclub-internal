@@ -12,6 +12,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { companyHistory, filterVacancies, fmtShort, industryOf, industryRanking, list, monthsOf, MONTHS_FULL, MONTHS_SHORT, newsletterRows, openingsByMonth, toDate, vacancySummary, weekOfMonth, WEEK_RANGES, type VacancyFilter } from "@/lib/job-vacancy/view";
 import { useId, useMemo, useState, useTransition, type ReactNode } from "react";
 import { confirmAction, notifyError } from "./app-dialog";
+import { guard } from "./safe-action";
 import { SheetImportPanel } from "./job-vacancy-mt-sheet-import";
 import s from "./job-vacancy.module.css";
 import { Pagination, usePagination } from "./ui-kit";
@@ -79,11 +80,11 @@ export function JobVacancyMtTools({ rows, industries, referenceDate }: { rows: A
 
 /* ── Shared UI ── */
 function Modal({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
-  const { dialogProps, titleId } = useModal(onClose);
+  const { dialogProps, titleId, dismiss } = useModal(onClose);
   return (
-    <div className={s.overlay} onClick={onClose}>
+    <div className={s.overlay} onClick={() => void dismiss()}>
       <div className={s.modal} onClick={(event) => event.stopPropagation()} {...dialogProps}>
-        <div className={s.modalHeader}><div className={s.modalTitle} id={titleId}>{title}</div><button aria-label="Close" className={s.iconButton} onClick={onClose} type="button"><i className="ti ti-x" aria-hidden="true" /></button></div>
+        <div className={s.modalHeader}><div className={s.modalTitle} id={titleId}>{title}</div><button aria-label="Close" className={s.iconButton} onClick={() => void dismiss()} type="button"><i className="ti ti-x" aria-hidden="true" /></button></div>
         <div className={s.modalBody}>{children}</div>
         {footer ? <div className={s.modalFooter}>{footer}</div> : null}
       </div>
@@ -222,7 +223,7 @@ function VacancyList({ rows, industryNames, filter, setFilter, now, onEdit }: { 
                   </button>
                   <span className={s.rowActions}>
                     {links[0] ? <a aria-label={`Open career page of ${name}`} className={s.iconButton} href={links[0]} rel="noreferrer" target="_blank" title={links.length > 1 ? `${links.length} career links` : links[0]}><i className="ti ti-external-link" aria-hidden="true" /></a> : null}
-                    <button aria-label="Delete vacancy" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: "Delete this vacancy?", message: "This cannot be undone.", confirmLabel: "Delete vacancy", danger: true })) start(async () => { await deleteVacancyAction(text(row.id)); }); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+                    <button aria-label="Delete vacancy" className={s.iconDanger} disabled={pending} onClick={async () => { if (await confirmAction({ title: "Delete this vacancy?", message: "This cannot be undone.", confirmLabel: "Delete vacancy", danger: true })) start(() => guard(async () => { await deleteVacancyAction(text(row.id)); }, "Could not delete the vacancy.")); }} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
                   </span>
                 </li>
               );

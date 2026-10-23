@@ -1,5 +1,7 @@
 "use client";
 
+import { guard, submitTo } from "./safe-action";
+
 import { setMetaAdsDecisionAction, syncMetaAdsAction } from "@/app/actions/meta-ads-actions";
 import { scoreAdsCandidate } from "@/lib/analytics/content";
 import type { ApiRecord } from "@/lib/api/_crud";
@@ -24,7 +26,7 @@ export function MetaAdsTools({ rows }: { rows: ApiRecord[] }) {
   const funnelOf = (item: (typeof scored)[number]) => String(item.row.funnel || item.derived.funnel);
   const shown = scored.filter((item) => (!funnel || funnelOf(item) === funnel) && (!signal || item.derived.boostSignal === signal)).sort((a, b) => b.derived.score - a.derived.score);
   const count = (d: Decision) => rows.filter((row) => decisionOf(row) === d).length;
-  const choose = (id: string, value: Decision) => startTransition(async () => { await setMetaAdsDecisionAction(id, value); });
+  const choose = (id: string, value: Decision) => startTransition(() => guard(async () => { await setMetaAdsDecisionAction(id, value); }, "Could not save the decision."));
 
   return (
     <div className={s.page}>
@@ -34,7 +36,7 @@ export function MetaAdsTools({ rows }: { rows: ApiRecord[] }) {
           <h1>Meta Ads</h1>
           <p>{rows.length} candidates from Content Evaluation · {count("Boost")} to boost · {count("Pending")} still to decide</p>
         </div>
-        <form action={syncMetaAdsAction}><button className={s.ghost} disabled={pending} type="submit"><i className="ti ti-refresh" aria-hidden="true" /> Sync evaluations</button></form>
+        <form onSubmit={submitTo(syncMetaAdsAction, { success: "Candidates synced from Content Evaluation.", failure: "Could not sync the evaluations." })}><button className={s.ghost} disabled={pending} type="submit"><i className="ti ti-refresh" aria-hidden="true" /> Sync evaluations</button></form>
       </header>
 
       <div className={s.toolbar}>

@@ -19,9 +19,9 @@ export function Pagination({ page, totalPages, onChange, className }: { page: nu
   if (totalPages <= 1) return null;
   return (
     <div className={cn("flex items-center justify-center gap-2 pt-3", className)}>
-      <Button disabled={page <= 0} onClick={() => onChange(Math.max(0, page - 1))} size="icon-sm" type="button" variant="outline"><i className="ti ti-chevron-left" /></Button>
+      <Button aria-label="Previous page" disabled={page <= 0} onClick={() => onChange(Math.max(0, page - 1))} size="icon-sm" type="button" variant="outline"><i className="ti ti-chevron-left" /></Button>
       <span className="text-[11px] text-muted-foreground">Page {page + 1} / {totalPages}</span>
-      <Button disabled={page >= totalPages - 1} onClick={() => onChange(Math.min(totalPages - 1, page + 1))} size="icon-sm" type="button" variant="outline"><i className="ti ti-chevron-right" /></Button>
+      <Button aria-label="Next page" disabled={page >= totalPages - 1} onClick={() => onChange(Math.min(totalPages - 1, page + 1))} size="icon-sm" type="button" variant="outline"><i className="ti ti-chevron-right" /></Button>
     </div>
   );
 }

@@ -33,7 +33,7 @@ export function DashboardAiCommand() {
         setModule(target); setParsed(result.data.data as Record<string, unknown>);
       } else setParsed(result.data);
       setMessage("Cek field hasil ekstraksi sebelum menyimpan.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Gagal memproses dengan AI."); } finally { setBusy(false); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "The AI could not read that. Try rephrasing it."); } finally { setBusy(false); }
   }
   async function save(formData: FormData) {
     if (module === "auto") return;

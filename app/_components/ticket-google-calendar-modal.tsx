@@ -128,7 +128,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
               <i className="ti ti-brand-google text-lg" aria-hidden="true" />
             </span>
             <div>
-              <DialogTitle>Tambah ke Google Calendar</DialogTitle>
+              <DialogTitle>Add to Google Calendar</DialogTitle>
               <DialogDescription>{specificTime ? "Event dengan waktu spesifik" : "All-day event"}</DialogDescription>
             </div>
           </div>

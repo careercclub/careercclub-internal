@@ -8,6 +8,7 @@ import { CATEGORY_LABEL, competitorSummary, filterCompetitors, fmtN, list, parse
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { confirmAction, notifyError } from "./app-dialog";
+import { guard } from "./safe-action";
 import s from "./competitor-tools.module.css";
 import { useRecordFocus } from "./use-record-focus";
 
@@ -142,7 +143,7 @@ function Directory({ workspace, onEdit }: { workspace: Workspace; onEdit: (recor
   const filtersOn = Boolean(filter.query || filter.category || filter.threat || filter.audience);
   async function remove(row: ApiRecord) {
     if (!(await confirmAction({ title: `Delete ${text(row.name) || "this competitor"}?`, message: "Its products, prices and snapshots stay, but lose their competitor. This cannot be undone.", confirmLabel: "Delete competitor", danger: true }))) return;
-    start(async () => { await deleteManagedRecord("competitor_profiles", String(row.id)); });
+    start(() => guard(async () => { await deleteManagedRecord("competitor_profiles", String(row.id)); }, "Could not delete the competitor."));
   }
   return (
     <>

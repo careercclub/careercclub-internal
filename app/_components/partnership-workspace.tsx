@@ -8,6 +8,7 @@ import { initials, shortDate } from "@/lib/dashboard/summary";
 import { outreachByDay, partnerActivity, partnerSummary, pipelineColumns, PARTNER_STATUSES } from "@/lib/partnership/view";
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { confirmAction, notify, notifyError } from "./app-dialog";
+import { guard } from "./safe-action";
 import s from "./partnership-workspace.module.css";
 import { Pagination, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
@@ -114,7 +115,7 @@ function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: 
     const row = rows.find((item) => String(item.id) === dragId);
     setDragId(""); setOver("");
     if (!row || text(row.status) === status) return;
-    start(async () => { await updateManagedRecord(tableKey, String(row.id), buildFd(PARTNER_FIELDS, { ...row, type: text(row.type) || "Corporate", status })); });
+    start(() => guard(async () => { await updateManagedRecord(tableKey, String(row.id), buildFd(PARTNER_FIELDS, { ...row, type: text(row.type) || "Corporate", status })); }, "Could not save the changes."));
   }
 
   return (
@@ -155,7 +156,7 @@ function PartnersView({ rows, tableKey, aiPanel, activity, entityLabel, onEdit }
 
   async function remove(row: ApiRecord) {
     if (!(await confirmAction({ title: `Delete ${text(row.name) || `this ${entityLabel}`}?`, message: "Its deals are deleted too. This cannot be undone.", confirmLabel: entityLabel === "partner" ? "Delete partner" : "Delete organization", danger: true }))) return;
-    start(async () => { await deleteManagedRecord(tableKey, String(row.id)); });
+    start(() => guard(async () => { await deleteManagedRecord(tableKey, String(row.id)); }, "Could not delete the partner."));
   }
   function exportCsv() {
     const headers = ["name", "category", "tier", "status", "contact_name", "contact_email", "contact_phone", "pos", "li", "scope", "notes", "input_date"];
@@ -204,9 +205,9 @@ function DealsView({ rows, deals, dealsKey, partnerField, entityLabel }: { rows:
   const [selectedPartner, setSelectedPartner] = useState("");
   const [pending, start] = useTransition();
   const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || `No ${entityLabel}`;
-  const saveField = (deal: ApiRecord, patch: Record<string, unknown>) => start(async () => { await updateManagedRecord(dealsKey, String(deal.id), buildFd(fields, { ...deal, ...patch })); });
-  const add = () => start(async () => { await createManagedRecord(dealsKey, buildFd(fields, { [partnerField]: selectedPartner || null, title: "New deal", stage: "Negotiation" })); });
-  const remove = async (deal: ApiRecord) => { if (await confirmAction({ title: `Delete deal "${text(deal.title) || "Untitled"}"?`, confirmLabel: "Delete deal", danger: true })) start(async () => { await deleteManagedRecord(dealsKey, String(deal.id)); }); };
+  const saveField = (deal: ApiRecord, patch: Record<string, unknown>) => start(() => guard(async () => { await updateManagedRecord(dealsKey, String(deal.id), buildFd(fields, { ...deal, ...patch })); }, "Could not save the changes."));
+  const add = () => start(() => guard(async () => { await createManagedRecord(dealsKey, buildFd(fields, { [partnerField]: selectedPartner || null, title: "New deal", stage: "Negotiation" })); }, "Could not add the deal."));
+  const remove = async (deal: ApiRecord) => { if (await confirmAction({ title: `Delete deal "${text(deal.title) || "Untitled"}"?`, confirmLabel: "Delete deal", danger: true })) start(() => guard(async () => { await deleteManagedRecord(dealsKey, String(deal.id)); }, "Could not delete the deal.")); };
   const blur = (deal: ApiRecord, key: string) => (event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => { if (event.target.value !== text(deal[key])) saveField(deal, { [key]: event.target.value }); };
 
   return (
@@ -247,9 +248,9 @@ function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }
   const [pending, start] = useTransition();
   const days = useMemo(() => outreachByDay(outreach), [outreach]);
   const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || `No ${entityLabel}`;
-  const saveField = (log: ApiRecord, patch: Record<string, unknown>) => start(async () => { await updateManagedRecord(outreachKey, String(log.id), buildFd(fields, { ...log, ...patch })); });
-  const add = () => start(async () => { await createManagedRecord(outreachKey, buildFd(fields, { [partnerField]: selectedPartner || null, channel: "WhatsApp", tanggal: localIso(new Date()), respons: "No Reply" })); });
-  const remove = async (log: ApiRecord) => { if (await confirmAction({ title: `Delete this outreach to ${partnerName(log[partnerField])}?`, confirmLabel: "Delete outreach log", danger: true })) start(async () => { await deleteManagedRecord(outreachKey, String(log.id)); }); };
+  const saveField = (log: ApiRecord, patch: Record<string, unknown>) => start(() => guard(async () => { await updateManagedRecord(outreachKey, String(log.id), buildFd(fields, { ...log, ...patch })); }, "Could not save the changes."));
+  const add = () => start(() => guard(async () => { await createManagedRecord(outreachKey, buildFd(fields, { [partnerField]: selectedPartner || null, channel: "WhatsApp", tanggal: localIso(new Date()), respons: "No Reply" })); }, "Could not add the outreach log."));
+  const remove = async (log: ApiRecord) => { if (await confirmAction({ title: `Delete this outreach to ${partnerName(log[partnerField])}?`, confirmLabel: "Delete outreach log", danger: true })) start(() => guard(async () => { await deleteManagedRecord(outreachKey, String(log.id)); }, "Could not delete the outreach log.")); };
   const blur = (log: ApiRecord, key: string) => (event: React.FocusEvent<HTMLInputElement>) => { if (event.target.value !== text(log[key])) saveField(log, { [key]: event.target.value }); };
 
   return (

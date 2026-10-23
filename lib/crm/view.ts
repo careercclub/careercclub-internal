@@ -12,7 +12,8 @@ function text(value: unknown) { return value === null || value === undefined ? "
 export const CRM_STATUSES = ["Belum diblast", "Diblast", "Sedang di-upsell", "Sedang di-downsell", "Sedang di-cross sell", "Sudah convert — Upsell", "Sudah convert — Downsell", "Sudah convert — Cross sell"];
 const STATUS_LABELS: Record<string, string> = {
   "Belum diblast": "Not blasted", Diblast: "Blasted",
-  "Sedang di-upsell": "Upselling", "Sedang di-downsell": "Downselling", "Sedang di-cross sell": "Cross-selling",
+  // Same shape as the funnel stage it belongs to ("Following up"), like "Converted · upsell".
+  "Sedang di-upsell": "Following up · upsell", "Sedang di-downsell": "Following up · downsell", "Sedang di-cross sell": "Following up · cross-sell",
   "Sudah convert — Upsell": "Converted · upsell", "Sudah convert — Downsell": "Converted · downsell", "Sudah convert — Cross sell": "Converted · cross-sell",
 };
 export function statusLabel(value: unknown) { const v = text(value); return STATUS_LABELS[v] || v || "Not blasted"; }

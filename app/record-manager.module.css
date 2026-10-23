@@ -486,10 +486,10 @@
 .aiCommand > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .aiCommand > header > div { display: flex; align-items: center; gap: 8px; }
 .aiCommand > header > div > i { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 7px; color: var(--purple-mid); background: var(--purple-light); }
-.aiCommand > header > div > div { display: grid; gap: 2px; } .aiCommand > header strong { font-size: 11px; } .aiCommand > header span { color: var(--text-muted); font-size: 8px; }
+.aiCommand > header > div > div { display: grid; gap: 2px; } .aiCommand > header strong { font-size: 14px; } .aiCommand > header span { color: var(--text-muted); font-size: 12px; }
 .aiCommand > header select { min-height: 34px; padding: 6px 8px; border: 1px solid var(--border-md); border-radius: 7px; }
 .aiCommandInput { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-.aiCommandInput textarea { min-height: 62px; padding: 9px; border: 1px solid var(--border); border-radius: 7px; font: inherit; font-size: 10px; resize: vertical; }
+.aiCommandInput textarea { min-height: 62px; padding: 9px; border: 1px solid var(--border); border-radius: 7px; font: inherit; font-size: 13px; resize: vertical; }
 .aiPreview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
 .aiPreview label { min-width: 0; display: grid; gap: 4px; }
 .aiPreview label span { color: var(--text-muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }

@@ -1,5 +1,7 @@
 "use client";
 
+import { revertWith } from "./safe-action";
+
 import { rescheduleTicketAction } from "@/app/actions/dashboard-actions";
 import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/actions/program-actions";
 import { deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
@@ -206,11 +208,11 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
     if (kind === "ticket") {
       const before = ticketRows;
       setTicketRows((rows) => rows.map((row) => (String(row.id) === id ? { ...row, due_date: date } : row)));
-      startTransition(async () => { try { await rescheduleTicketAction(id, date); } catch { setTicketRows(before); } });
+      startTransition(async () => { await rescheduleTicketAction(id, date).catch(revertWith(() => setTicketRows(before), "Could not move the ticket.")); });
     } else if (kind === "task") {
       const before = taskRows;
       setTaskRows((rows) => rows.map((row) => (String(row.id) === id ? { ...row, due_date: date } : row)));
-      startTransition(async () => { try { await updateProgramTaskWorkflowAction(id, { dueDate: date }); } catch { setTaskRows(before); } });
+      startTransition(async () => { await updateProgramTaskWorkflowAction(id, { dueDate: date }).catch(revertWith(() => setTaskRows(before), "Could not move the task.")); });
     }
   }
 

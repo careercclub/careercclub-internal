@@ -1146,3 +1146,44 @@ Kesimpulan awal: jaringan & database dasar sehat. Penyebab yang pasti dari kode:
 ### Check
 
 - Build lolos; lint 0; Marketing 47/47.
+
+## Putaran 29 — Evaluasi fungsional & UX semua modul (23 Okt 2026)
+
+Laporan lengkap per modul: dokumen "Evaluasi Fungsional & UX per Modul — CCC Internal" (https://claude.ai/artifact/VrFQ6KQkpsKEGBxCBepdQB).
+
+### Cara evaluasi
+
+- Sapuan tombol: 459 tombol/tab di 21 modul diklik satu per satu (halaman baru tiap klik); tombol yang memanggil server diklik ulang dengan server dibuat gagal.
+- Sapuan form: setiap pembuka Add/New/Create/Upload/Import — label simpan, simpan kosong, fokus isian wajib, ketik lalu Esc.
+- Pindai statis: tombol tanpa nama, isian tanpa label, teks < 11 px, teks `undefined`/`NaN`.
+
+### Temuan → perbaikan
+
+| Temuan | Sebelum | Sesudah |
+|---|---|---|
+| Aksi crash saat server gagal (Meta Ads 7, Content Planning 3, Settings 2) | 12 | 0 |
+| Aksi gagal diam-diam (Tickets 5, Program 1) | 6 | 0 |
+| Perubahan langsung balik tanpa pesan (status tiket, centang task, geser kalender) | 3 | 0 — "The change was undone." |
+| Popup menghapus ketikan saat Esc/klik luar/X | 14 | 0 — tanya "Discard your changes?" |
+| Cancel konfirmasi ikut menutup form di bawahnya | ada | diperbaiki |
+| Isian wajib tanpa tanda merah & fokus (Tickets, Program) | 2 modul | 0 |
+| Label pembuka ≠ label simpan | 5 | 0 |
+
+### Do
+
+- `app/_components/safe-action.ts`: `guard`, `revertWith`, `submitTo` — satu cara menangani gagal simpan di semua modul (49 titik panggilan).
+- `components/ui/dialog.tsx` + `use-modal.tsx`: penjaga ketikan belum disimpan; popup bertumpuk tidak saling menutup.
+- Form React action → onSubmit (isian tidak hilang saat gagal): Products, RecordManager delete, Settings, Instagram baseline, Meta Ads sync.
+- `app/(dashboard)/error.tsx`: error boundary per modul ("Try again", "Reload page").
+- Link carousel kosong tidak lagi disimpan; Edit ticket menolak judul kosong.
+- Teks 8 px → minimal 12 px; sisa teks Indonesia di palet perintah, record-focus, AI command, Google Calendar → Inggris; status CRM "Sedang di-…" tampil "Following up · …".
+
+### Check
+
+- Suite baru `ux.mjs` 22/22, ikut regresi penuh (`reg.sh`).
+- Regresi penuh lolos: 18 suite modul (polish 39, lib 44, mkt 47, set 12, ci 19, jv 20, prod 17, cp 26, ck 20, partner 23, crm 24, talent 21, program 21, tickets 19, run 12, popup 31, navigasi 32), search 46, RecordManager 946, Design Assets 49, audit popup, unit 145, lint 0, build lolos.
+
+### Sisa
+
+- Prioritas: cek SQL baris Content Evaluation rusak oleh bug Post ID lama; ukur halaman setelah login.
+- Nice-to-have: filter "Assigned to me" di Tickets; petunjuk drag Partnership ke "?"; avatar "?" di Content Planning; 3 tombol utama di panel detail Program jadi 1; warna header email blast.

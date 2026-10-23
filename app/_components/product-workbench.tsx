@@ -10,6 +10,7 @@ import { bundleMath, catalogSummary, filterProducts, isBundle, knowledgeFor, rup
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { confirmAction, notifyError } from "./app-dialog";
+import { guard } from "./safe-action";
 import s from "./product-workbench.module.css";
 import { useRecordFocus } from "./use-record-focus";
 
@@ -166,13 +167,13 @@ function BundleCard({ bundleRows, math, productId, products }: { bundleRows: Api
           return (
             <li key={String(row.id)}>
               <span>{text(item?.nama) || "Unknown product"}</span><b>{rupiah(item?.harga)}</b>
-              <button aria-label={`Remove ${text(item?.nama) || "product"} from bundle`} className={s.iconButton} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Remove ${text(item?.nama) || "this product"} from the bundle?`, confirmLabel: "Remove from bundle", danger: true })) start(async () => { await deleteProductKnowledgeAction("bundle", String(row.id)); }); }} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
+              <button aria-label={`Remove ${text(item?.nama) || "product"} from bundle`} className={s.iconButton} disabled={pending} onClick={async () => { if (await confirmAction({ title: `Remove ${text(item?.nama) || "this product"} from the bundle?`, confirmLabel: "Remove from bundle", danger: true })) start(() => guard(async () => { await deleteProductKnowledgeAction("bundle", String(row.id)); }, "Could not delete the item.")); }} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
             </li>
           );
         })}
       </ul>
       {options.length ? (
-        <form action={createProductKnowledgeAction.bind(null, "bundle", productId)} className={s.inlineForm}>
+        <form className={s.inlineForm} onSubmit={(event) => { event.preventDefault(); const fd = new FormData(event.currentTarget); void guard(() => createProductKnowledgeAction("bundle", productId, fd), "Could not add the product to the bundle."); }}>
           <label className={s.grow}><span className="sr-only">Product to add</span><select className={s.input} name="parent_id" required>{options.map((p) => <option key={String(p.id)} value={String(p.id)}>{text(p.nama)} · {rupiah(p.harga)}</option>)}</select></label>
           <Button size="sm" type="submit"><i className="ti ti-plus" aria-hidden="true" /> Add to bundle</Button>
         </form>
@@ -188,7 +189,7 @@ function KnowledgeCard({ kind, title, one, icon, rows, productId, workspace }: {
   const ownParents = kind === "feature" ? workspace.features.filter((row) => String(row.product_id) === productId) : kind === "subProduct" ? workspace.subProducts.filter((row) => String(row.product_id) === productId) : [];
   async function remove(row: ApiRecord) {
     if (!(await confirmAction({ title: `Delete this ${one}?`, message: "It is removed from the product knowledge base. This cannot be undone.", confirmLabel: "Delete item", danger: true }))) return;
-    start(async () => { await deleteProductKnowledgeAction(kind, String(row.id)); });
+    start(() => guard(async () => { await deleteProductKnowledgeAction(kind, String(row.id)); }, "Could not delete the item."));
   }
   const linksOf = (row: ApiRecord) => kind === "feature" ? workspace.featureLinks.filter((l) => String(l.feature_id) === String(row.id)) : kind === "subProduct" ? workspace.subProductLinks.filter((l) => String(l.sub_product_id) === String(row.id)) : [];
 
@@ -215,7 +216,7 @@ function KnowledgeCard({ kind, title, one, icon, rows, productId, workspace }: {
             </li>
           ))}
         </ul>
-      ) : !adding ? <button className={s.kbEmpty} onClick={() => setAdding(true)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add the first {one}</button> : null}
+      ) : !adding ? <button className={s.kbEmpty} onClick={() => setAdding(true)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add {one}</button> : null}
       {ownParents.length ? (linking ? <LinkForm kind={kind === "feature" ? "featureLink" : "subLink"} onDone={() => setLinking(false)} parents={ownParents} productId={productId} /> : <button className={s.linkButton} onClick={() => setLinking(true)} type="button"><i className="ti ti-link" aria-hidden="true" /> Add {kind === "feature" ? "feature" : "sub-product"} link</button>) : null}
     </section>
   );
@@ -264,7 +265,7 @@ function LinkForm({ kind, productId, parents, onDone }: { kind: "featureLink" | 
   const [pending, start] = useTransition();
   const action = createProductKnowledgeAction.bind(null, kind, productId);
   return (
-    <form action={(fd) => start(async () => { await action(fd); onDone(); })} className={s.kbForm}>
+    <form className={s.kbForm} onSubmit={(event) => { event.preventDefault(); const fd = new FormData(event.currentTarget); start(() => guard(async () => { await action(fd); onDone(); }, "Could not add the link.")); }}>
       <label className={s.field}><span>{kind === "featureLink" ? "Feature" : "Sub-product"}</span><select className={s.input} name="parent_id">{parents.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name || row.nama)}</option>)}</select></label>
       <div className={s.row2}>
         <label className={s.field}><span>Label</span><input className={s.input} name="nama" /></label>
@@ -281,7 +282,7 @@ function DuplicateProduct({ productId }: { productId: string }) {
   const [invalid, setInvalid] = useState(false);
   if (!open) return <button className={s.ghostButton} onClick={() => setOpen(true)} type="button"><i className="ti ti-copy" aria-hidden="true" /> Duplicate</button>;
   return (
-    <form className={s.inlineForm} noValidate onSubmit={(event) => { event.preventDefault(); const fd = new FormData(event.currentTarget); if (!text(fd.get("name")).trim()) { setInvalid(true); (event.currentTarget.elements.namedItem("name") as HTMLElement | null)?.focus(); return; } start(async () => { await duplicateProductAction(fd); setOpen(false); }); }}>
+    <form className={s.inlineForm} noValidate onSubmit={(event) => { event.preventDefault(); const fd = new FormData(event.currentTarget); if (!text(fd.get("name")).trim()) { setInvalid(true); (event.currentTarget.elements.namedItem("name") as HTMLElement | null)?.focus(); return; } start(() => guard(async () => { await duplicateProductAction(fd); setOpen(false); }, "Could not duplicate the product.")); }}>
       <input name="product_id" type="hidden" value={productId} />
       <label className={s.grow}><span className="sr-only">New product name</span><input aria-invalid={invalid || undefined} autoFocus className={invalid ? s.inputInvalid : s.input} name="name" onInput={() => setInvalid(false)} placeholder="New product name *" /></label>
       <Button disabled={pending} size="sm" type="submit">Duplicate product and KB</Button>

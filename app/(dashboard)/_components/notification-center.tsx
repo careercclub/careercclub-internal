@@ -59,8 +59,10 @@ export function NotificationCenter() {
       const response = await fetch("/api/notifications", { cache: "no-store" });
       if (!response.ok) throw new Error("Notifications could not be loaded.");
       const payload = (await response.json()) as NotificationResponse;
-      setNotifications(payload.notifications);
-      setUnreadCount(payload.unreadCount);
+      // Guard the shape: a proxy or an expired session can answer 200 with something else,
+      // and a crash here takes the whole top bar down.
+      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : []);
+      setUnreadCount(Number(payload?.unreadCount) || 0);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Notifications could not be loaded.");

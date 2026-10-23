@@ -78,7 +78,7 @@ export function AppDialogHost() {
     <>
       <Dialog open={Boolean(request)} onOpenChange={(open) => { if (!open) close(false); }}>
         {request ? (
-          <DialogContent className="max-w-md" showCloseButton={false}>
+          <DialogContent className="max-w-md" guardUnsaved={false} showCloseButton={false}>
             <form className="grid gap-4" onSubmit={(event) => { event.preventDefault(); close(true); }}>
               <DialogHeader>
                 <DialogTitle>{request.title}</DialogTitle>

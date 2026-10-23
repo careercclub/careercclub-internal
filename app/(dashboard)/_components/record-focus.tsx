@@ -68,7 +68,7 @@ export function RecordFocus() {
         return;
       }
       if (Date.now() - started > GIVE_UP_AFTER_MS) {
-        setMessage("Data tidak tampil di halaman ini. Mungkin sudah dihapus.");
+        setMessage("That record is not on this page. It may have been deleted.");
         clearParam();
         return;
       }

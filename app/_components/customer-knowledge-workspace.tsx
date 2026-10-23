@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { confirmAction, notify, notifyError } from "./app-dialog";
+import { guard } from "./safe-action";
 import { DistributionPie, MonthlyOpenChart } from "./charts";
 import s from "./customer-knowledge-workspace.module.css";
 import { Pagination, usePagination } from "./ui-kit";
@@ -103,7 +104,7 @@ function PainPointsView({ rows, filter, setFilter, onEdit }: { rows: ApiRecord[]
 
   async function remove(row: ApiRecord) {
     if (!(await confirmAction({ title: "Delete this pain point?", message: "This cannot be undone.", confirmLabel: "Delete pain point", danger: true }))) return;
-    start(async () => { await deleteManagedRecord("pain_points", String(row.id)); });
+    start(() => guard(async () => { await deleteManagedRecord("pain_points", String(row.id)); }, "Could not delete the pain point."));
   }
 
   return (
