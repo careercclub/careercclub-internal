@@ -5,107 +5,90 @@ import { saveCompetitorIntelListsAction, saveMenuLabelsAction, saveMenuVisibilit
 import { RecordManager } from "@/app/_components/record-manager";
 import { UserManagement } from "@/app/_components/user-management";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SETTINGS_SECTIONS, TICKET_SETUP_SECTIONS, isSettingsSection, type SettingsSectionId, type TicketSetupSectionId } from "@/lib/records/links";
 import { useRecordFocus } from "./use-record-focus";
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { AuthUserRecord } from "@/lib/api/auth-users";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { confirmAction, notifyError } from "./app-dialog";
+import s from "./settings-workspace.module.css";
 
 type Page = { slug: string; title: string; section: string; path: string; icon: string };
 type SafeUser = Pick<AuthUserRecord, "id" | "email" | "name" | "role" | "is_active" | "created_at">;
 
-const CATEGORY_TONES = ["purple", "blue", "teal", "amber", "coral", "pink", "green", "red"] as const;
-const TONE_BG: Record<string, string> = { purple: "bg-[var(--purple-light)]", blue: "bg-[var(--blue-bg)]", teal: "bg-[var(--teal-bg)]", amber: "bg-[var(--amber-bg)]", coral: "bg-[var(--coral-bg)]", pink: "bg-[var(--pink-bg)]", green: "bg-[var(--green-bg)]", red: "bg-[var(--red-bg)]" };
-const TONE_TEXT: Record<string, string> = { purple: "text-[var(--purple-mid)]", blue: "text-[var(--blue)]", teal: "text-[var(--teal)]", amber: "text-[var(--amber)]", coral: "text-[var(--coral)]", pink: "text-[var(--pink)]", green: "text-[var(--green)]", red: "text-[var(--red)]" };
-const TONE_DOT: Record<string, string> = { purple: "bg-[var(--purple-mid)]", blue: "bg-[var(--blue)]", teal: "bg-[var(--teal)]", amber: "bg-[var(--amber)]", coral: "bg-[var(--coral)]", pink: "bg-[var(--pink)]", green: "bg-[var(--green)]", red: "bg-[var(--red)]" };
+const WORKSPACE = new Set<SettingsSectionId>(["menu", "users"]);
+const SECTION_META: Record<SettingsSectionId, { icon: string; description: string }> = {
+  menu: { icon: "ti-layout-sidebar", description: "Choose which modules the sidebar shows and what they are called." },
+  users: { icon: "ti-users", description: "Who can sign in, and what each person is allowed to change." },
+  tickets: { icon: "ti-ticket", description: "Divisions, people and request types used by Tickets, and who receives ticket emails." },
+  "customer-knowledge": { icon: "ti-message-circle", description: "Platforms and categories offered when logging a pain point." },
+  "product-classes": { icon: "ti-tag", description: "Classifications used to group products and CRM buyers." },
+  "product-mapping": { icon: "ti-arrows-exchange", description: "Turns product names imported from Lynkid into the internal classifications." },
+  "carousel-ctas": { icon: "ti-click", description: "Call-to-action options offered in carousel plans." },
+  "link-templates": { icon: "ti-link", description: "Saved link templates for Program events." },
+  "competitor-lists": { icon: "ti-list-details", description: "Product categories and target audiences offered in Competitor Intel." },
+};
 const PLATFORM_ICONS: Record<string, string> = { tiktok: "ti-brand-tiktok", instagram: "ti-brand-instagram", youtube: "ti-brand-youtube", twitter: "ti-brand-x", x: "ti-brand-x", facebook: "ti-brand-facebook", threads: "ti-brand-threads" };
 
 function platformIcon(name: string) {
   return PLATFORM_ICONS[name.trim().toLowerCase()] ?? "ti-tag";
 }
 
-function categoryTone(color: unknown) {
-  return typeof color === "string" && (CATEGORY_TONES as readonly string[]).includes(color) ? color : "purple";
-}
 
 function CustomerKnowledgeMasterPanel({ platforms, categories }: { platforms: ApiRecord[]; categories: ApiRecord[] }) {
+  const [pending, start] = useTransition();
+  async function remove(kind: "pain_point_platforms" | "pain_point_categories", row: ApiRecord) {
+    const what = kind === "pain_point_platforms" ? "platform" : "category";
+    if (!(await confirmAction({ title: `Delete ${what} "${String(row.nama)}"?`, message: "Pain points that use it keep the name; it just won't be offered when adding new ones.", confirmLabel: kind === "pain_point_platforms" ? "Delete platform" : "Delete category", danger: true }))) return;
+    start(async () => { await deleteManagedRecord(kind, String(row.id)); });
+  }
   return (
-    <div className="grid gap-3.5 lg:grid-cols-2">
-      <Card className="gap-4 p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2"><i className="ti ti-device-mobile text-[var(--purple-mid)]" /><h2 className="text-sm font-bold">Platform</h2></div>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase">{platforms.length} sumber</span>
-        </div>
-        <p className="-mt-2 text-[11px] text-muted-foreground">Sumber komentar/diskusi yang tersedia saat mencatat pain point.</p>
-        <div className="flex flex-wrap gap-1.5">
+    <div className={s.twoCols}>
+      <section aria-labelledby="set-platforms" className={s.card}>
+        <div className={s.cardHead}><h3 id="set-platforms"><i className="ti ti-device-mobile" aria-hidden="true" /> Platforms</h3><span className={s.count}>{platforms.length}</span></div>
+        <p className={s.hint}>Where comments and discussions come from when someone logs a pain point.</p>
+        <ul className={s.chips}>
           {platforms.map((platform) => (
-            <form action={deleteManagedRecord.bind(null, "pain_point_platforms", String(platform.id))} className="flex items-center gap-1.5 rounded-full border border-border bg-white py-1 pr-1 pl-2.5 text-[11px]" data-record-id={String(platform.id)} key={String(platform.id)}>
-              <i className={`ti ${platformIcon(String(platform.nama))} text-muted-foreground`} />
-              <span className="font-medium">{String(platform.nama)}</span>
-              <button aria-label={`Hapus ${String(platform.nama)}`} className="grid size-5 place-items-center rounded-full text-muted-foreground opacity-60 hover:bg-[var(--red-bg)] hover:text-[var(--red)] hover:opacity-100" type="submit"><i className="ti ti-x text-[11px]" /></button>
-            </form>
+            <li className={s.chipItem} data-record-id={String(platform.id)} key={String(platform.id)}>
+              <i className={`ti ${platformIcon(String(platform.nama))}`} aria-hidden="true" /><span>{String(platform.nama)}</span>
+              <button aria-label={`Delete ${String(platform.nama)}`} disabled={pending} onClick={() => remove("pain_point_platforms", platform)} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
+            </li>
           ))}
-          {!platforms.length ? <span className="text-[11px] text-muted-foreground">Belum ada platform.</span> : null}
-        </div>
-        <form action={createManagedRecord.bind(null, "pain_point_platforms")} className="flex gap-1.5 border-t border-border pt-3.5">
-          <input className="h-8 flex-1 rounded-md border border-input px-2.5 text-xs" name="nama" placeholder="Nama platform baru (mis. Instagram)..." required />
-          <Button size="sm" type="submit">Tambah</Button>
-        </form>
-      </Card>
-
-      <Card className="gap-4 p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2"><i className="ti ti-tags text-[var(--purple-mid)]" /><h2 className="text-sm font-bold">Kategori</h2></div>
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase">{categories.length} kategori</span>
-        </div>
-        <p className="-mt-2 text-[11px] text-muted-foreground">Warna kategori dipakai konsisten di seluruh dashboard Customer Knowledge — klik titik warna untuk mengubahnya.</p>
-        <div className="grid gap-1.5">
-          {categories.map((category) => {
-            const tone = categoryTone(category.color);
-            return (
-              <div className={`flex items-center gap-2 rounded-lg border border-border p-1.5 pl-2.5 ${TONE_BG[tone]}`} data-record-id={String(category.id)} key={String(category.id)}>
-                <span className={`flex-1 truncate text-[11px] font-semibold ${TONE_TEXT[tone]}`}>{String(category.nama)}</span>
-                <form action={updateManagedRecord.bind(null, "pain_point_categories", String(category.id))} className="flex items-center gap-1">
-                  <input name="nama" type="hidden" value={String(category.nama)} />
-                  {CATEGORY_TONES.map((toneOption) => (
-                    <button
-                      aria-label={`Set warna ${toneOption}`}
-                      aria-pressed={tone === toneOption}
-                      className={`size-3.5 rounded-full ${TONE_DOT[toneOption]} ${tone === toneOption ? "ring-2 ring-offset-1 ring-[var(--text)]" : "opacity-40 hover:opacity-80"}`}
-                      key={toneOption}
-                      name="color"
-                      type="submit"
-                      value={toneOption}
-                    />
-                  ))}
-                </form>
-                <form action={deleteManagedRecord.bind(null, "pain_point_categories", String(category.id))}>
-                  <button aria-label={`Hapus ${String(category.nama)}`} className="grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-[var(--red-bg)] hover:text-[var(--red)]" type="submit"><i className="ti ti-x text-[11px]" /></button>
-                </form>
-              </div>
-            );
-          })}
-          {!categories.length ? <span className="text-[11px] text-muted-foreground">Belum ada kategori.</span> : null}
-        </div>
-        <form action={createManagedRecord.bind(null, "pain_point_categories")} className="grid gap-2 border-t border-border pt-3.5">
-          <input className="h-8 rounded-md border border-input px-2.5 text-xs" name="nama" placeholder="Nama kategori baru..." required />
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase">Warna</span>
-            <div className="flex gap-1.5">
-              {CATEGORY_TONES.map((toneOption) => (
-                <label className="cursor-pointer" key={toneOption}>
-                  <input className="peer sr-only" defaultChecked={toneOption === "purple"} name="color" type="radio" value={toneOption} />
-                  <span className={`block size-4 rounded-full ${TONE_DOT[toneOption]} opacity-40 peer-checked:opacity-100 peer-checked:ring-2 peer-checked:ring-offset-1 peer-checked:ring-[var(--text)]`} />
-                </label>
-              ))}
-            </div>
-            <Button className="ml-auto" size="sm" type="submit">Tambah</Button>
-          </div>
-        </form>
-      </Card>
+          {!platforms.length ? <li className={s.hint}>No platforms yet.</li> : null}
+        </ul>
+        <AddForm action={createManagedRecord.bind(null, "pain_point_platforms")} label="Platform name" placeholder="e.g. Instagram" submit="Add platform" />
+      </section>
+      <section aria-labelledby="set-categories" className={s.card}>
+        <div className={s.cardHead}><h3 id="set-categories"><i className="ti ti-tags" aria-hidden="true" /> Categories</h3><span className={s.count}>{categories.length}</span></div>
+        <p className={s.hint}>The categories offered when logging a pain point.</p>
+        <ul className={s.rows}>
+          {categories.map((category) => (
+            <li data-record-id={String(category.id)} key={String(category.id)}>
+              <span>{String(category.nama)}</span>
+              <button aria-label={`Delete ${String(category.nama)}`} className={s.iconDanger} disabled={pending} onClick={() => remove("pain_point_categories", category)} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
+            </li>
+          ))}
+          {!categories.length ? <li className={s.hint}>No categories yet.</li> : null}
+        </ul>
+        <AddForm action={createManagedRecord.bind(null, "pain_point_categories")} label="Category name" placeholder="e.g. CV" submit="Add category" />
+      </section>
     </div>
+  );
+}
+
+/** One-field add form: empty submit marks the field red and keeps focus there. */
+function AddForm({ action, label, placeholder, submit }: { action: (fd: FormData) => Promise<unknown>; label: string; placeholder: string; submit: string }) {
+  const [invalid, setInvalid] = useState(false);
+  const [pending, start] = useTransition();
+  return (
+    <form className={s.addForm} noValidate onSubmit={(event) => {
+      event.preventDefault(); const form = event.currentTarget; const fd = new FormData(form);
+      if (!String(fd.get("nama") || "").trim()) { setInvalid(true); (form.elements.namedItem("nama") as HTMLElement | null)?.focus(); return; }
+      start(async () => { try { await action(fd); form.reset(); } catch (error) { notifyError(error, "Could not save."); } });
+    }}>
+      <label className={s.grow}><span className="sr-only">{label}</span><input aria-invalid={invalid || undefined} className={invalid ? s.inputInvalid : s.input} name="nama" onInput={() => setInvalid(false)} placeholder={`${label} *, ${placeholder}`} /></label>
+      <Button disabled={pending} size="sm" type="submit">{submit}</Button>
+    </form>
   );
 }
 
@@ -142,82 +125,65 @@ function stringListValue(rows: ApiRecord[], key: string) {
 
 function TicketStatusEmailPanel({ divisions, people }: { divisions: ApiRecord[]; people: ApiRecord[] }) {
   return (
-    <div className="grid gap-3.5">
-      <Card className="gap-3 p-5">
-        <h2 className="text-sm font-bold">Alur Status Ticket</h2>
-        <div className="flex flex-wrap items-center gap-2 text-[12px]">
-          <span className="rounded-full bg-[var(--amber-bg)] px-3 py-1 font-medium text-[var(--amber)]">Todo</span>
-          <i className="ti ti-arrow-right text-muted-foreground" />
-          <span className="rounded-full bg-[var(--blue-bg)] px-3 py-1 font-medium text-[var(--blue)]">In Progress</span>
-          <i className="ti ti-arrow-right text-muted-foreground" />
-          <span className="rounded-full bg-[var(--green-bg)] px-3 py-1 font-medium text-[var(--green)]">Done</span>
-        </div>
-      </Card>
-      <Card className="gap-3 p-5">
-        <div><h2 className="text-sm font-bold">Aturan Pengiriman Email</h2><p className="mt-1 text-[11px] text-muted-foreground">Notifikasi ticket dikirim ke Lead dan Staff pada divisi terkait.</p></div>
-        <div className="grid gap-3 sm:grid-cols-2">
+    <div className={s.stack}>
+      <section aria-labelledby="set-flow" className={s.card}>
+        <h3 id="set-flow">Ticket status flow</h3>
+        <ol className={s.flow}>{["Todo", "In Progress", "Done"].map((step, index) => <li key={step}><span>{index + 1}</span>{step}</li>)}</ol>
+      </section>
+      <section aria-labelledby="set-email" className={s.card}>
+        <h3 id="set-email">Who gets ticket emails</h3>
+        <p className={s.hint}>Ticket notifications go to the Lead and Staff of the division involved.</p>
+        <div className={s.divisionGrid}>
           {divisions.map((division) => {
             const divisionId = String(division.id);
             const members = people.filter((person) => String(person.divisi_id) === divisionId);
             const leads = members.filter((person) => person.level === "lead");
             const staff = members.filter((person) => person.level !== "lead" && person.level !== "admin");
             return (
-              <div className="rounded-lg border border-border p-3" key={divisionId}>
-                <strong className="text-[12px] font-semibold">{String(division.nama)}</strong>
-                {leads.length ? <div className="mt-2"><span className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">Lead</span><ul className="mt-1 grid gap-0.5 text-[11px]">{leads.map((person) => <li key={String(person.id)}>{String(person.nama)} · {String(person.email)}</li>)}</ul></div> : null}
-                {staff.length ? <div className="mt-2"><span className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">Staff</span><ul className="mt-1 grid gap-0.5 text-[11px]">{staff.map((person) => <li key={String(person.id)}>{String(person.nama)} · {String(person.email)}</li>)}</ul></div> : null}
-                {!members.length ? <p className="mt-2 text-[11px] text-muted-foreground">Belum ada anggota.</p> : null}
+              <div className={s.division} key={divisionId}>
+                <b>{String(division.nama)}</b>
+                {[["Lead", leads], ["Staff", staff]].map(([label, list]) => (list as ApiRecord[]).length ? (
+                  <div key={label as string}><small>{label as string}</small><ul>{(list as ApiRecord[]).map((person) => <li key={String(person.id)}><span className={s.avatar} aria-hidden="true">{String(person.nama || "?").slice(0, 1).toUpperCase()}</span><span>{String(person.nama)}<em>{String(person.email)}</em></span></li>)}</ul></div>
+                ) : null)}
+                {!members.length ? <p className={s.hint}>No members yet.</p> : null}
               </div>
             );
           })}
         </div>
-      </Card>
+      </section>
     </div>
+  );
+}
+
+function TagList({ title, name, values, onChange, placeholder, addLabel }: { title: string; name: string; values: string[]; onChange: (next: string[]) => void; placeholder: string; addLabel: string }) {
+  const [draft, setDraft] = useState("");
+  const add = () => { const v = draft.trim(); if (v && !values.includes(v)) onChange([...values, v]); setDraft(""); };
+  return (
+    <section aria-label={title} className={s.card}>
+      <div className={s.cardHead}><h3>{title}</h3><span className={s.count}>{values.length}</span></div>
+      <ul className={s.chips}>
+        {values.map((value) => <li className={s.chipItem} key={value}><input name={name} type="hidden" value={value} /><span>{value}</span><button aria-label={`Remove ${value}`} onClick={() => onChange(values.filter((item) => item !== value))} type="button"><i className="ti ti-x" aria-hidden="true" /></button></li>)}
+        {!values.length ? <li className={s.hint}>Nothing yet.</li> : null}
+      </ul>
+      <div className={s.addForm}>
+        <label className={s.grow}><span className="sr-only">{placeholder}</span><input className={s.input} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); add(); } }} placeholder={placeholder} value={draft} /></label>
+        <Button onClick={add} size="sm" type="button" variant="outline">{addLabel}</Button>
+      </div>
+    </section>
   );
 }
 
 function CompetitorIntelLists({ categories, targetAudience }: { categories: string[]; targetAudience: string[] }) {
   const [cats, setCats] = useState(categories);
   const [audiences, setAudiences] = useState(targetAudience);
-  const [catInput, setCatInput] = useState("");
-  const [audienceInput, setAudienceInput] = useState("");
+  const dirty = cats.join("|") !== categories.join("|") || audiences.join("|") !== targetAudience.join("|");
   return (
-    <form action={saveCompetitorIntelListsAction} className="grid gap-3.5 sm:grid-cols-2">
-      <Card className="gap-3 p-5">
-        <h2 className="text-sm font-bold">Kategori Produk Kompetitor</h2>
-        <div className="flex flex-wrap gap-1.5">
-          {cats.map((cat) => (
-            <span className="flex items-center gap-1 rounded-full bg-[var(--purple-light)] px-2.5 py-1 text-[11px] text-[var(--purple-mid)]" key={cat}>
-              <input name="category" type="hidden" value={cat} />
-              {cat}
-              <button aria-label={`Remove ${cat}`} className="ml-1" onClick={() => setCats(cats.filter((item) => item !== cat))} type="button"><i className="ti ti-x" /></button>
-            </span>
-          ))}
-          {!cats.length ? <span className="text-[11px] text-muted-foreground">Belum ada kategori.</span> : null}
-        </div>
-        <div className="flex gap-1.5">
-          <input className="h-8 flex-1 rounded-md border border-input px-2.5 text-xs" onChange={(event) => setCatInput(event.target.value)} placeholder="Nama kategori baru..." value={catInput} />
-          <Button onClick={() => { if (catInput.trim()) { setCats([...cats, catInput.trim()]); setCatInput(""); } }} size="sm" type="button">Tambah</Button>
-        </div>
-      </Card>
-      <Card className="gap-3 p-5">
-        <h2 className="text-sm font-bold">Target Audience Kompetitor</h2>
-        <div className="flex flex-wrap gap-1.5">
-          {audiences.map((audience) => (
-            <span className="flex items-center gap-1 rounded-full bg-[var(--blue-bg)] px-2.5 py-1 text-[11px] text-[var(--blue)]" key={audience}>
-              <input name="target_audience" type="hidden" value={audience} />
-              {audience}
-              <button aria-label={`Remove ${audience}`} className="ml-1" onClick={() => setAudiences(audiences.filter((item) => item !== audience))} type="button"><i className="ti ti-x" /></button>
-            </span>
-          ))}
-          {!audiences.length ? <span className="text-[11px] text-muted-foreground">Belum ada target audience.</span> : null}
-        </div>
-        <div className="flex gap-1.5">
-          <input className="h-8 flex-1 rounded-md border border-input px-2.5 text-xs" onChange={(event) => setAudienceInput(event.target.value)} placeholder="Target audience baru..." value={audienceInput} />
-          <Button onClick={() => { if (audienceInput.trim()) { setAudiences([...audiences, audienceInput.trim()]); setAudienceInput(""); } }} size="sm" type="button">Tambah</Button>
-        </div>
-      </Card>
-      <Button className="w-max sm:col-span-2" type="submit">Simpan perubahan</Button>
+    <form action={saveCompetitorIntelListsAction} className={s.stack}>
+      <div className={s.twoCols}>
+        <TagList addLabel="Add category" name="category" onChange={setCats} placeholder="New product category…" title="Competitor product categories" values={cats} />
+        <TagList addLabel="Add audience" name="target_audience" onChange={setAudiences} placeholder="New target audience…" title="Competitor target audiences" values={audiences} />
+      </div>
+      <div className={s.saveBar}><span className={s.hint}>{dirty ? "You have unsaved changes." : "All changes saved."}</span><Button disabled={!dirty} type="submit">Save competitor lists</Button></div>
     </form>
   );
 }
@@ -286,92 +252,102 @@ export function SettingsWorkspace({
   const ciCategories = stringListValue(settings, "ci_product_categories");
   const ciTargetAudience = stringListValue(settings, "ci_target_audience");
 
+  const current = sections.find((section) => section.id === tab) || sections[0];
+  const groups: Array<[string, typeof sections]> = [["Workspace", sections.filter((section) => WORKSPACE.has(section.id))], ["Module lists", sections.filter((section) => !WORKSPACE.has(section.id))]];
+
   return (
-    <div className="grid gap-3.5">
-      <nav aria-label="Settings sections" className="-mx-1 flex gap-1 overflow-x-auto border-b border-border px-1 pb-0">
-        {sections.map((section) => (
-          <button aria-current={tab === section.id ? "page" : undefined} className={`shrink-0 border-b-2 px-[7px] py-2.5 whitespace-nowrap ${tab === section.id ? "border-[var(--purple-mid)] text-[var(--purple-dark)]" : "border-transparent text-muted-foreground hover:text-foreground"}`} key={section.id} onClick={() => setTab(section.id)} type="button">
-            <span className="text-[12px] font-semibold">{section.label}</span>
-          </button>
-        ))}
-      </nav>
-
-      {tab === "product-mapping" ? <RecordManager definitionKey="master_produk" rows={masterProduk} /> : null}
-
-      {tab === "tickets" ? (
-        <div className="grid gap-3">
-          <Tabs onValueChange={(value) => setTab("tickets", value as TicketSetupSectionId)} value={ticketTab}>
-            <TabsList variant="line">
-              {TICKET_SETUP_SECTIONS.map((section) => <TabsTrigger key={section.id} value={section.id}>{section.label}</TabsTrigger>)}
-            </TabsList>
-          </Tabs>
-          {ticketTab === "divisions" ? <RecordManager definitionKey="tkt_divisi" rows={divisions} /> : null}
-          {ticketTab === "people" ? <RecordManager definitionKey="tkt_people" rows={people} /> : null}
-          {ticketTab === "types" ? <RecordManager definitionKey="tkt_types" rows={types} /> : null}
-          {ticketTab === "flow" ? <TicketStatusEmailPanel divisions={divisions} people={people} /> : null}
-        </div>
-      ) : null}
-
-      {tab === "customer-knowledge" ? <CustomerKnowledgeMasterPanel categories={categories} platforms={platforms} /> : null}
-
-      {tab === "menu" ? (
-        <div className="grid gap-3.5">
-          <Card className="gap-3 p-5">
-            <div><h2 className="text-sm font-bold">Sidebar modules</h2><p className="mt-1 text-[11px] text-muted-foreground">Hidden modules remain routable by direct URL. This setting controls navigation visibility only.</p></div>
-            <form action={saveMenuVisibilityAction} className="grid gap-3.5">
-              {sectionNames.map((section) => (
-                <fieldset className="rounded-lg border border-border p-3" key={section}>
-                  <legend className="px-1.5 text-[10px] font-bold tracking-wide text-muted-foreground uppercase">{section}</legend>
-                  <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                    {pages.filter((page) => page.section === section).map((page) => (
-                      <label className="flex items-center gap-1.5 text-[12px]" key={page.slug}>
-                        <input name="all_slug" type="hidden" value={page.slug} />
-                        <input defaultChecked={!hidden.has(page.slug)} name="visible_slug" type="checkbox" value={page.slug} />
-                        <i className={`ti ${page.icon}`} /><span>{page.title}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
+    <div className={s.page}>
+      <header className={s.head}>
+        <span className={s.eyebrow}>Settings</span>
+        <h1>Settings</h1>
+        <p>Menus, people and the lists other modules use.</p>
+      </header>
+      <div className={s.layout}>
+        <nav aria-label="Settings sections" className={s.nav}>
+          {groups.map(([label, items]) => (
+            <div className={s.navGroup} key={label}>
+              <span className={s.navLabel}>{label}</span>
+              {items.map((section) => (
+                <button aria-current={tab === section.id ? "page" : undefined} className={tab === section.id ? s.navItemOn : s.navItem} key={section.id} onClick={() => setTab(section.id)} type="button">
+                  <i className={`ti ${SECTION_META[section.id].icon}`} aria-hidden="true" /><span>{section.label}</span>
+                </button>
               ))}
-              <Button className="w-max" type="submit">Save menu visibility</Button>
-            </form>
-          </Card>
-          <Card className="gap-3 p-5">
-            <div><h2 className="text-sm font-bold">Sidebar labels</h2><p className="mt-1 text-[11px] text-muted-foreground">Rename section headings and menu item labels shown in the sidebar.</p></div>
-            <form action={saveMenuLabelsAction} className="grid gap-3.5">
-              {sectionNames.map((section) => (
-                <fieldset className="rounded-lg border border-border p-3" key={section}>
-                  <input name="all_section" type="hidden" value={section} />
-                  <label className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
-                    Section:
-                    <input className="h-7 rounded-md border border-input px-2 text-[12px] font-normal normal-case" defaultValue={labels.sections.get(section) ?? section} name={`section_label__${section}`} />
-                  </label>
-                  <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                    {pages.filter((page) => page.section === section).map((page) => (
-                      <label className="flex items-center gap-1.5 text-[12px]" key={page.slug}>
-                        <input name="all_slug" type="hidden" value={page.slug} />
-                        <i className={`ti ${page.icon}`} />
-                        <input className="h-7 flex-1 rounded-md border border-input px-2 text-[12px]" defaultValue={labels.items.get(page.slug) ?? page.title} name={`item_label__${page.slug}`} />
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              ))}
-              <Button className="w-max" type="submit">Save sidebar labels</Button>
-            </form>
-          </Card>
-        </div>
-      ) : null}
+            </div>
+          ))}
+        </nav>
+        <section aria-labelledby="settings-title" className={s.content}>
+          <div className={s.contentHead}>
+            <span className={s.contentIcon} aria-hidden="true"><i className={`ti ${SECTION_META[current.id].icon}`} /></span>
+            <div><h2 id="settings-title">{current.label}</h2><p>{SECTION_META[current.id].description}</p></div>
+          </div>
 
-      {tab === "link-templates" ? <RecordManager definitionKey="event_link_templates" rows={linkTemplates} /> : null}
+          {tab === "product-mapping" ? <RecordManager definitionKey="master_produk" rows={masterProduk} /> : null}
 
-      {tab === "competitor-lists" ? <CompetitorIntelLists categories={ciCategories} targetAudience={ciTargetAudience} /> : null}
+          {tab === "tickets" ? (
+            <div className={s.stack}>
+              <div className={s.subTabs} role="tablist" aria-label="Ticket setup">
+                {TICKET_SETUP_SECTIONS.map((section) => <button aria-selected={ticketTab === section.id} className={ticketTab === section.id ? s.subTabOn : s.subTab} key={section.id} onClick={() => setTab("tickets", section.id)} role="tab" type="button">{section.label}</button>)}
+              </div>
+              {ticketTab === "divisions" ? <RecordManager definitionKey="tkt_divisi" rows={divisions} /> : null}
+              {ticketTab === "people" ? <RecordManager definitionKey="tkt_people" rows={people} /> : null}
+              {ticketTab === "types" ? <RecordManager definitionKey="tkt_types" rows={types} /> : null}
+              {ticketTab === "flow" ? <TicketStatusEmailPanel divisions={divisions} people={people} /> : null}
+            </div>
+          ) : null}
 
-      {tab === "product-classes" ? <RecordManager definitionKey="product_klasifikasi" rows={klasifikasi} /> : null}
+          {tab === "customer-knowledge" ? <CustomerKnowledgeMasterPanel categories={categories} platforms={platforms} /> : null}
 
-      {tab === "carousel-ctas" ? <RecordManager definitionKey="carousel_cta_options" rows={ctaOptions} /> : null}
+          {tab === "menu" ? (
+            <div className={s.stack}>
+              <form action={saveMenuVisibilityAction} className={s.card}>
+                <div className={s.cardHead}><h3>Sidebar modules</h3></div>
+                <p className={s.hint}>Hidden modules stay reachable by their address; this only changes what the sidebar shows.</p>
+                {sectionNames.map((section) => (
+                  <fieldset className={s.fieldset} key={section}>
+                    <legend>{section}</legend>
+                    <div className={s.toggleGrid}>
+                      {pages.filter((page) => page.section === section).map((page) => (
+                        <label className={s.toggle} key={page.slug}>
+                          <input name="all_slug" type="hidden" value={page.slug} />
+                          <i className={`ti ${page.icon}`} aria-hidden="true" /><span>{page.title}</span>
+                          <input className={s.switch} defaultChecked={!hidden.has(page.slug)} name="visible_slug" role="switch" type="checkbox" value={page.slug} />
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                ))}
+                <div className={s.saveRow}><Button type="submit">Save menu visibility</Button></div>
+              </form>
+              <form action={saveMenuLabelsAction} className={s.card}>
+                <div className={s.cardHead}><h3>Sidebar labels</h3></div>
+                <p className={s.hint}>Rename section headings and menu items shown in the sidebar.</p>
+                {sectionNames.map((section) => (
+                  <fieldset className={s.fieldset} key={section}>
+                    <input name="all_section" type="hidden" value={section} />
+                    <label className={s.sectionLabel}><span>Section</span><input className={s.input} defaultValue={labels.sections.get(section) ?? section} name={`section_label__${section}`} /></label>
+                    <div className={s.labelGrid}>
+                      {pages.filter((page) => page.section === section).map((page) => (
+                        <label className={s.labelField} key={page.slug}>
+                          <input name="all_slug" type="hidden" value={page.slug} />
+                          <i className={`ti ${page.icon}`} aria-hidden="true" />
+                          <input aria-label={`Label for ${page.title}`} className={s.input} defaultValue={labels.items.get(page.slug) ?? page.title} name={`item_label__${page.slug}`} />
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                ))}
+                <div className={s.saveRow}><Button type="submit">Save sidebar labels</Button></div>
+              </form>
+            </div>
+          ) : null}
 
-      {tab === "users" && isAdmin ? <UserManagement users={users} /> : null}
+          {tab === "link-templates" ? <RecordManager definitionKey="event_link_templates" rows={linkTemplates} /> : null}
+          {tab === "competitor-lists" ? <CompetitorIntelLists categories={ciCategories} targetAudience={ciTargetAudience} /> : null}
+          {tab === "product-classes" ? <RecordManager definitionKey="product_klasifikasi" rows={klasifikasi} /> : null}
+          {tab === "carousel-ctas" ? <RecordManager definitionKey="carousel_cta_options" rows={ctaOptions} /> : null}
+          {tab === "users" && isAdmin ? <UserManagement users={users} /> : null}
+        </section>
+      </div>
     </div>
   );
 }

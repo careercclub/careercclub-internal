@@ -918,3 +918,31 @@ Competitor Intel → Settings → Content Evaluation / Meta Ads / Instagram → 
 ### Antrean
 
 Settings → Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.
+
+## Putaran 23 — Settings (IJIS layout) (23 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| Satu baris tab bergaris 9 bagian (dipadatkan supaya muat 1280px) | Judul halaman + **daftar bagian vertikal di kiri**, dikelompokkan **Workspace** (Menu, Users & roles) dan **Module lists** (Ticket setup … Competitor lists), masing-masing dengan ikon; di HP jadi strip pil yang bisa digeser |
+| Isi bagian langsung tanpa penjelasan | Kepala bagian: ikon, judul, **satu kalimat apa gunanya bagian ini** |
+| Menu: checkbox kecil | **Switch** per modul, dikelompokkan per bagian menu; label sidebar per bagian |
+| Pain point lists: chip platform & daftar kategori warna-warni, **hapus langsung tanpa tanya**, teks Indonesia | Kartu Platforms & Categories satu palet; **hapus minta konfirmasi** (dan menjelaskan pain point lama tetap memakai nama itu); tambah kosong ditandai merah & difokus; teks Inggris |
+| Ticket setup › Status & email: pil Todo/In Progress/Done warna-warni | Alur status bernomor 1→2→3; penerima email per divisi dengan avatar (Lead / Staff) |
+| Competitor lists: tombol "Simpan perubahan" selalu aktif | Dua kartu tag + bar simpan menempel: "You have unsaved changes" / "All changes saved", tombol **Save competitor lists** aktif hanya kalau ada perubahan |
+
+- Pemilih warna kategori pain point dihapus dari Settings: sejak Putaran 18 warna kategori tidak ditampilkan lagi (satu palet). Nilai warna yang tersimpan tidak diubah.
+- Label & urutan bagian, alamat `?tab=…&section=…`, dan "search membuka bagian yang benar" tidak berubah.
+
+### Check
+
+- Desain 1440 & 390.
+- E2E baru Settings **12/12** (kelompok bagian, kepala bagian + deskripsi, switch menu, platform kosong ditandai & fokus, hapus platform minta konfirmasi & Esc = batal, alur ticket + penerima email, simpan competitor lists menunggu perubahan, HP).
+- Tes navigasi diperbarui: dulu memeriksa "semua bagian dalam satu baris", sekarang "daftar vertikal rapi" — 32/32.
+- Regresi: unit 128/128, Competitor 19/19, Job Vacancy 20/20, Products 17/17, Content Planning 26/26, Customer Knowledge 20/20, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Settings bersih.
+- tsc bersih; lint 0 error; `npm run build` lolos.
+
+### Antrean
+
+Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.
