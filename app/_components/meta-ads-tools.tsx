@@ -5,7 +5,7 @@ import { scoreAdsCandidate } from "@/lib/analytics/content";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { compact, decisionOf, DECISIONS, type Decision } from "@/lib/marketing/view";
 import { useMemo, useState, useTransition } from "react";
-import s from "./marketing.module.css";
+import s from "./page-kit.module.css";
 import { useRecordFocus } from "./use-record-focus";
 
 // Meta Ads in the IJIS layout: ad candidates from Content Evaluation on a decision board

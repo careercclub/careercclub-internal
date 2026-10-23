@@ -2,109 +2,189 @@
 
 import { saveCollaboratorDetailsAction, updateCollaboratorPhotoAction } from "@/app/actions/collaborator-actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
+import { filterPeople, initials, kindOf, listOf, peopleSummary, plural, services } from "@/lib/library/view";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
-import { useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useId, useState } from "react";
+import { notify, notifyError } from "./app-dialog";
+import g from "./library.module.css";
+import s from "./page-kit.module.css";
 import { StorageImage } from "./storage-image";
-import { Pill } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 
-function array(value: unknown) { if (Array.isArray(value)) return value; if (typeof value === "string") { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; } } return []; }
-function initials(value: unknown) { return String(value || "?").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
-const fieldLabel = "grid gap-1 text-xs font-medium text-foreground";
-const fieldInput = "h-9 rounded-md border border-input bg-white px-2.5 text-sm font-normal";
-const fieldArea = "min-h-20 rounded-md border border-input bg-white px-2.5 py-2 text-sm font-normal";
-const ADVISOR_STATUS_TONE: Record<string, "blue" | "gray" | "green"> = { Connected: "blue", Pending: "gray", Contacted: "green" };
+// Collaborators & advisors in the IJIS layout: one directory per kind, people as avatars,
+// one status chip each. The profile popup saves the same fields as before.
+
+type Tab = "collaborator" | "advisor" | "manage";
+const ADVISOR_STATUSES = ["Pending", "Contacted", "Connected"];
+
+function Avatar({ row, large = false }: { row: ApiRecord; large?: boolean }) {
+  return (
+    <span className={`${g.avatar} ${large ? g.avatarLarge : ""}`}>
+      {row.foto_url ? <StorageImage area="collaborator-photos" className="h-full !min-h-0 w-full" label={String(row.nama || "")} objectKey={String(row.foto_url)} /> : <span aria-hidden="true">{initials(row.nama)}</span>}
+    </span>
+  );
+}
 
 export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[]; management: ReactNode }) {
-  const router = useRouter(); const [tab, setTab] = useState<"collaborator" | "advisor" | "manage">("collaborator"); const [selectedId, setSelectedId] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false); const visible = rows.filter((row) => tab === "manage" || row.tipe === tab); const selected = rows.find((row) => String(row.id) === selectedId);
+  const [tab, setTab] = useState<Tab>("collaborator");
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const summary = peopleSummary(rows);
+  const selected = rows.find((row) => String(row.id) === selectedId);
+  const kind = tab === "advisor" ? "advisor" : "collaborator";
+  const visible = filterPeople(rows, kind, query, status);
+  const statuses = [...new Set(rows.filter((row) => kindOf(row) === kind).map((row) => String(row.status || "")).filter(Boolean))].sort();
+
   useRecordFocus((id) => {
     const row = rows.find((item) => String(item.id) === id);
     if (!row) return;
-    setTab(row.tipe === "advisor" ? "advisor" : "collaborator");
+    setTab(kindOf(row)); setQuery(""); setStatus("");
     setSelectedId(id);
     return true;
   });
-  async function photo(file: File) { if (!selected) return; setBusy(true); setMessage("Uploading photo..."); try { const response = await fetch("/api/storage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ area: "collaborator-photos", filename: file.name || `photo-${Date.now()}.png`, contentType: file.type }) }); const signed = await response.json() as { key?: string; url?: string; error?: string }; if (!response.ok || !signed.key || !signed.url) throw new Error(signed.error || "Upload could not be prepared."); const uploaded = await fetch(signed.url, { method: "PUT", headers: { "Content-Type": file.type }, body: file }); if (!uploaded.ok) throw new Error("R2 rejected the upload."); await updateCollaboratorPhotoAction(String(selected.id), signed.key); setMessage("Photo updated."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Upload failed."); } finally { setBusy(false); } }
+  const switchTab = (next: Tab) => { setTab(next); setStatus(""); };
 
   return (
-    <div className="grid gap-3.5">
-      <Tabs onValueChange={(value) => setTab(value as typeof tab)} value={tab}>
-        <TabsList variant="line">
-          <TabsTrigger value="collaborator"><i className="ti ti-star" /> Collaborators ({rows.filter((row) => row.tipe === "collaborator").length})</TabsTrigger>
-          <TabsTrigger value="advisor"><i className="ti ti-bulb" /> Advisors ({rows.filter((row) => row.tipe === "advisor").length})</TabsTrigger>
-          <TabsTrigger value="manage">Add &amp; manage</TabsTrigger>
-        </TabsList>
-      </Tabs>
-      {tab !== "manage" ? (
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((row) => (
-            <button className="text-left" data-record-id={String(row.id)} key={String(row.id)} onClick={() => setSelectedId(String(row.id))} type="button">
-              <Card className="gap-2.5 p-3.5">
-                <div className="flex items-start gap-3">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-[var(--bg)] text-[13px] font-medium text-[#0c447c]">
-                    {row.foto_url ? <StorageImage area="collaborator-photos" label={String(row.nama)} objectKey={String(row.foto_url)} /> : <span>{initials(row.nama)}</span>}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-0.5 flex flex-wrap items-center gap-1.5"><strong className="text-[13px] font-medium">{String(row.nama || "Untitled")}</strong>{row.tipe === "collaborator" && row.privy ? <Pill tone="amber"><i className="ti ti-shield-check" /> Privy</Pill> : null}{row.tipe === "advisor" && row.status ? <Pill tone={ADVISOR_STATUS_TONE[String(row.status)] || "gray"}>{String(row.status)}</Pill> : null}</div>
-                    <span className="text-[11px] text-muted-foreground">{row.tipe === "collaborator" ? String(row.rekening || "No bank account") : String(row.background || row.catatan || "No advisor background")}</span>
-                  </div>
-                </div>
-                {row.tipe === "collaborator" ? (
-                  <div className="flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
-                    <span>{array(row.kewajiban).length} obligations</span>&middot;<span>{array(row.services).length} services</span>
-                  </div>
-                ) : null}
-              </Card>
-            </button>
-          ))}
-          {!visible.length ? <div className="col-span-full grid place-items-center py-10 text-center text-muted-foreground"><i className="ti ti-users mb-2 text-2xl" /><span>No collaborators yet.</span></div> : null}
+    <div className={s.page}>
+      <header className={s.head}>
+        <div>
+          <span className={s.eyebrow}>Internal</span>
+          <h1>Collaborators</h1>
+          <p>{plural(summary.collaborators, "collaborator")} · {plural(summary.advisors, "advisor")}{summary.privyMissing ? ` · ${summary.privyMissing} without Privy` : ""}</p>
         </div>
-      ) : management}
-      <Dialog onOpenChange={(open) => { if (!open) setSelectedId(""); }} open={Boolean(selected)}>
-        {selected ? (
-          <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
-            <DialogHeader className="flex-row items-center gap-3 border-b border-border px-5 pt-5 pb-4 pr-12 text-left">
-              <label
-                aria-label={busy ? "Uploading photo" : "Change photo: click, drop or paste an image"}
-                className="group relative grid size-16 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-full border border-border bg-[var(--bg)] text-lg font-bold text-muted-foreground"
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) void photo(file); }}
-                onPaste={(event) => { const file = event.clipboardData.files[0]; if (file) void photo(file); }}
-                tabIndex={0}
-              >
-                {selected.foto_url ? <StorageImage area="collaborator-photos" className="h-full !min-h-0 w-full" label={String(selected.nama)} objectKey={String(selected.foto_url)} /> : <span>{initials(selected.nama)}</span>}
-                <span className="absolute inset-0 grid place-items-center bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"><i aria-hidden="true" className={busy ? "ti ti-loader-2 animate-spin" : "ti ti-camera"} /></span>
-                <input accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void photo(file); }} type="file" />
+        <div className={s.headActions}><button className={s.ghost} onClick={() => switchTab("manage")} type="button"><i className="ti ti-user-plus" aria-hidden="true" /> Add or edit people</button></div>
+      </header>
+
+      <div aria-label="Views" className={s.segmented} role="tablist">
+        <button aria-selected={tab === "collaborator"} className={tab === "collaborator" ? s.segmentActive : s.segment} onClick={() => switchTab("collaborator")} role="tab" type="button"><i className="ti ti-star" aria-hidden="true" /> Collaborators <span>{summary.collaborators}</span></button>
+        <button aria-selected={tab === "advisor"} className={tab === "advisor" ? s.segmentActive : s.segment} onClick={() => switchTab("advisor")} role="tab" type="button"><i className="ti ti-bulb" aria-hidden="true" /> Advisors <span>{summary.advisors}</span></button>
+        <button aria-selected={tab === "manage"} className={tab === "manage" ? s.segmentActive : s.segment} onClick={() => switchTab("manage")} role="tab" type="button"><i className="ti ti-table" aria-hidden="true" /> Manage data</button>
+      </div>
+
+      {tab === "manage" ? management : (
+        <>
+          <div className={s.toolbar}>
+            <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label={`Search ${kind}s`} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${kind}s`} value={query} /></label>
+            {kind === "collaborator" || statuses.length ? (
+              <label className={s.filterPill}><span>Status</span>
+                <select aria-label="Filter status" onChange={(e) => setStatus(e.target.value)} value={status}>
+                  <option value="">All</option>
+                  {kind === "collaborator" ? <option value="privy-missing">Privy not complete</option> : null}
+                  {statuses.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
               </label>
-              <div className="min-w-0">
-                <span className="text-xs text-muted-foreground capitalize">{String(selected.tipe || "collaborator")}</span>
-                <DialogTitle className="truncate text-lg">{String(selected.nama || "Untitled")}</DialogTitle>
-                <DialogDescription className="text-xs">{busy ? "Uploading photo…" : message || "Click the photo to change it."}</DialogDescription>
-              </div>
-            </DialogHeader>
-            <form action={saveCollaboratorDetailsAction.bind(null, String(selected.id))} className="flex min-h-0 flex-1 flex-col">
-              <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto px-5 py-4 sm:grid-cols-2">
-                <label className={fieldLabel}><span>Status</span><input className={fieldInput} defaultValue={String(selected.status || "")} name="status" /></label>
-                <label className={fieldLabel}><span>Bank account</span><input className={fieldInput} defaultValue={String(selected.rekening || "")} name="rekening" /></label>
-                <label className="col-span-full flex items-center gap-2 text-sm font-medium text-foreground"><input defaultChecked={Boolean(selected.privy)} name="privy" type="checkbox" /> Privy complete</label>
-                <label className={`${fieldLabel} col-span-full`}><span>Background</span><textarea className={fieldArea} defaultValue={String(selected.background || "")} name="background" /></label>
-                <label className={`${fieldLabel} col-span-full`}><span>Obligations <span className="font-normal text-muted-foreground">(one per line)</span></span><textarea className={fieldArea} defaultValue={array(selected.kewajiban).map(String).join("\n")} name="kewajiban" /></label>
-                <label className={`${fieldLabel} col-span-full`}><span>Services <span className="font-normal text-muted-foreground">(one per line: label | rate)</span></span><textarea className={fieldArea} defaultValue={array(selected.services).map((item) => typeof item === "object" && item ? `${String((item as Record<string, unknown>).label || "")} | ${String((item as Record<string, unknown>).rate || "")}` : String(item)).join("\n")} name="services" /></label>
-                <label className={`${fieldLabel} col-span-full`}><span>Notes</span><textarea className={fieldArea} defaultValue={String(selected.catatan || "")} name="catatan" /></label>
-              </div>
-              <DialogFooter className="border-t border-border px-5 py-3">
-                <Button onClick={() => setSelectedId("")} type="button" variant="outline">Cancel</Button>
-                <Button type="submit">Save profile</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
-      </Dialog>
+            ) : null}
+          </div>
+          {visible.length ? (
+            <ul aria-label={kind === "advisor" ? "Advisors" : "Collaborators"} className={g.people}>
+              {visible.map((row) => {
+                const obligations = listOf(row.kewajiban).length;
+                const offered = services(row.services);
+                return (
+                  <li key={String(row.id)}>
+                    <button className={g.person} data-record-id={String(row.id)} onClick={() => setSelectedId(String(row.id))} type="button">
+                      <span className={g.personTop}>
+                        <Avatar row={row} />
+                        <span className={g.personName}>
+                          <b>{String(row.nama || "Untitled")}</b>
+                          <small>{kind === "collaborator" ? String(row.rekening || "No bank account yet") : String(row.background || row.catatan || "No background yet")}</small>
+                        </span>
+                      </span>
+                      <span className={g.personFacts}>
+                        {kind === "collaborator" ? (row.privy ? <span className={s.chip}><i className="ti ti-shield-check" aria-hidden="true" /> Privy complete</span> : <span className={s.chipMuted}><i className="ti ti-shield" aria-hidden="true" /> Privy not complete</span>) : null}
+                        {row.status ? <span className={s.chipMuted}>{String(row.status)}</span> : null}
+                      </span>
+                      {kind === "collaborator" ? (
+                        <span className={g.personMeta}><span><b>{obligations}</b> obligation{obligations === 1 ? "" : "s"}</span><span><b>{offered.length}</b> service{offered.length === 1 ? "" : "s"}</span></span>
+                      ) : offered.length ? <span className={g.personMeta}>{offered.slice(0, 2).map((item) => <span key={item.label}>{item.label}{item.rate ? <b> · {item.rate}</b> : null}</span>)}</span> : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className={s.card}>
+              <p className={s.empty}>{filterPeople(rows, kind).length ? `No ${kind}s match.` : `No ${kind}s yet.`}</p>
+              {query || status ? <button className={s.ghost} onClick={() => { setQuery(""); setStatus(""); }} style={{ alignSelf: "center" }} type="button">Clear filters</button> : null}
+            </div>
+          )}
+        </>
+      )}
+      {selected ? <ProfileDialog close={() => setSelectedId("")} row={selected} /> : null}
     </div>
+  );
+}
+
+function ProfileDialog({ row, close }: { row: ApiRecord; close: () => void }) {
+  const router = useRouter();
+  const formId = useId(); const statusList = useId(); const photoInput = useId();
+  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const kind = kindOf(row);
+  const name = String(row.nama || "Untitled");
+
+  async function photo(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/storage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ area: "collaborator-photos", filename: file.name || `photo-${Date.now()}.png`, contentType: file.type }) });
+      const signed = await response.json() as { key?: string; url?: string; error?: string };
+      if (!response.ok || !signed.key || !signed.url) throw new Error(signed.error || "Upload could not be prepared.");
+      const uploaded = await fetch(signed.url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!uploaded.ok) throw new Error("The storage bucket rejected the upload.");
+      await updateCollaboratorPhotoAction(String(row.id), signed.key);
+      notify("Photo updated."); router.refresh();
+    } catch (error) { notifyError(error, "Could not upload the photo."); } finally { setBusy(false); }
+  }
+  // onSubmit rather than a form action: a form action resets the fields, which would lose edits if saving fails.
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setSaving(true);
+    try { await saveCollaboratorDetailsAction(String(row.id), formData); notify("Profile saved."); router.refresh(); close(); }
+    catch (error) { notifyError(error, "Could not save the profile."); } finally { setSaving(false); }
+  }
+
+  return (
+    <Dialog onOpenChange={(open) => { if (!open && !saving) close(); }} open>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[600px]" onPaste={(event) => { const file = event.clipboardData.files[0]; if (file) void photo(file); }}>
+        <DialogHeader className="flex-row items-center gap-4 text-left">
+          <label
+            aria-label={busy ? "Uploading photo" : `Change photo of ${name}: click, drop or paste an image`}
+            className={g.photo}
+            htmlFor={photoInput}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) void photo(file); }}
+            tabIndex={0}
+          >
+            <Avatar large row={row} />
+            <span className={g.photoBadge}><i aria-hidden="true" className={busy ? "ti ti-loader-2 animate-spin" : "ti ti-camera"} /></span>
+          </label>
+          <input accept="image/*" className="hidden" id={photoInput} onChange={(event) => { const file = event.target.files?.[0]; if (file) void photo(file); event.target.value = ""; }} type="file" />
+          <div className="min-w-0">
+            <span className={s.eyebrow}>{kind === "advisor" ? "Advisor" : "Collaborator"}</span>
+            <DialogTitle className="truncate text-lg">{name}</DialogTitle>
+            <DialogDescription>{busy ? "Uploading photo…" : "Click, drop or paste a photo to change it."}</DialogDescription>
+          </div>
+        </DialogHeader>
+        <form className={g.formGrid} id={formId} onSubmit={save}>
+          <label className={s.field}><span>Status</span><input className={s.input} defaultValue={String(row.status || "")} list={statusList} name="status" placeholder={kind === "advisor" ? "Pending, Contacted…" : "Active"} /><datalist id={statusList}>{(kind === "advisor" ? ADVISOR_STATUSES : ["Active", "Inactive"]).map((value) => <option key={value} value={value} />)}</datalist></label>
+          <label className={s.field}><span>Bank account</span><input className={s.input} defaultValue={String(row.rekening || "")} name="rekening" placeholder="Bank · number · name" /></label>
+          <label className={`${g.switchRow} ${g.wide}`}><input defaultChecked={Boolean(row.privy)} name="privy" type="checkbox" /> Privy complete</label>
+          <label className={`${s.field} ${g.wide}`}><span>Background</span><textarea className={s.input} defaultValue={String(row.background || "")} name="background" rows={2} /></label>
+          <label className={`${s.field} ${g.wide}`}><span>Obligations <small className={s.muted}>one per line</small></span><textarea className={s.input} defaultValue={listOf(row.kewajiban).join("\n")} name="kewajiban" rows={3} /></label>
+          <label className={`${s.field} ${g.wide}`}><span>Services <small className={s.muted}>one per line: service | rate</small></span><textarea className={s.input} defaultValue={services(row.services).map((item) => item.rate ? `${item.label} | ${item.rate}` : item.label).join("\n")} name="services" rows={3} /></label>
+          <label className={`${s.field} ${g.wide}`}><span>Notes</span><textarea className={s.input} defaultValue={String(row.catatan || "")} name="catatan" rows={2} /></label>
+        </form>
+        <DialogFooter sticky>
+          <Button disabled={saving} onClick={close} type="button" variant="ghost">Cancel</Button>
+          <Button disabled={saving} form={formId} type="submit">{saving ? "Saving…" : "Save profile"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

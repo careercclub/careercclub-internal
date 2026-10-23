@@ -79,20 +79,43 @@ export function normalizeHeaderKey(value: string) {
 }
 
 // The sheet's own header text for the columns the positional map depends on. If
-// these line up, the remaining positions can be trusted for this row.
+// these line up, the remaining positions can be trusted for this row. The layout may
+// sit a few columns to the right (a "No" or checkbox column inserted before
+// Timestamp), so this returns how far it is shifted, or null when it is not there.
+export function knownLayoutOffset(headerKeys: string[]): number | null {
+  for (let wa = 1; wa < Math.min(headerKeys.length, 12); wa += 1) {
+    const offset = wa - 1;
+    if (headerKeys[wa]?.includes("whatsapp") && headerKeys[wa + 1]?.includes("email") && headerKeys[wa + 2]?.includes("nama") && headerKeys.length - offset >= 30) return offset;
+  }
+  return null;
+}
+
 export function matchesKnownLayout(headerKeys: string[]) {
-  return headerKeys.length >= 30
-    && headerKeys[1]?.includes("whatsapp")
-    && headerKeys[2]?.includes("email")
-    && headerKeys[3]?.includes("nama");
+  return knownLayoutOffset(headerKeys) !== null;
+}
+
+/** lynk.id order export ("Judul Barang", "Buyer Email", …): belongs in CRM → Import. */
+export function isOrderExport(headerKeys: string[]) {
+  return headerKeys.includes("judul_barang") || headerKeys.some((key) => key.startsWith("buyer_"));
+}
+
+const has = (keys: string[], test: (key: string) => boolean) => keys.some((key) => key && test(key));
+const tokens = (key: string) => key.split("_");
+
+/** A header row we can map by name even when it is not the intake layout: it has an
+ * email column plus a name or WhatsApp column. */
+export function looksLikeHeader(headerKeys: string[]) {
+  if (isOrderExport(headerKeys)) return false;
+  return has(headerKeys, (key) => tokens(key).includes("email"))
+    && has(headerKeys, (key) => tokens(key).includes("nama") || tokens(key).includes("name") || tokens(key).includes("whatsapp") || key === "wa");
 }
 
 // Returns the 0-based index of the header row, or -1 when none of the scanned rows
-// looks like this sheet's header.
-export function detectHeaderRow(rowsOfKeys: string[][], maxScan = 5) {
-  for (let index = 0; index < Math.min(maxScan, rowsOfKeys.length); index += 1) {
-    if (matchesKnownLayout(rowsOfKeys[index])) return index;
-  }
+// looks like a header. The intake layout wins over a merely name-mappable row.
+export function detectHeaderRow(rowsOfKeys: string[][], maxScan = 20) {
+  const limit = Math.min(maxScan, rowsOfKeys.length);
+  for (let index = 0; index < limit; index += 1) if (matchesKnownLayout(rowsOfKeys[index])) return index;
+  for (let index = 0; index < limit; index += 1) if (looksLikeHeader(rowsOfKeys[index])) return index;
   return -1;
 }
 
@@ -128,10 +151,11 @@ export function mapTalentPoolRow(headerKeys: string[], at: (index: number) => st
     target[field] = findByAlias(headerKeys, at, names);
   }
 
-  if (matchesKnownLayout(headerKeys)) {
+  const offset = knownLayoutOffset(headerKeys);
+  if (offset !== null) {
     // Known layout: positions are trustworthy, so fill anything the survey-question
     // headers could not resolve by name.
-    const positional = mapTalentPoolRowByPosition(at);
+    const positional = mapTalentPoolRowByPosition((index) => at(index + offset));
     for (const [field, value] of Object.entries(positional)) {
       if (!target[field] && value) target[field] = value;
     }

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { FollowersChart, MetricsChart } from "./charts";
-import s from "./marketing.module.css";
+import s from "./page-kit.module.css";
 
 // Instagram in the IJIS layout: one hero for the follower count and the yearly goal, a stat
 // strip, three charts, then the weekly history. Import and Target/baseline are their own views.

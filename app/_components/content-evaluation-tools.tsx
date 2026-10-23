@@ -7,11 +7,11 @@ import { evaluateContentEvaluation, type ContentEvaluationResult } from "@/lib/a
 import type { ApiRecord } from "@/lib/api/_crud";
 import { ACTION_VALUES, actionLabel, compact, day, inRange, num } from "@/lib/marketing/view";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useId, useMemo, useState } from "react";
-import { confirmAction } from "./app-dialog";
+import { confirmAction, notifyError } from "./app-dialog";
 import c from "./content-evaluation.module.css";
-import s from "./marketing.module.css";
+import s from "./page-kit.module.css";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 
@@ -380,7 +380,9 @@ function ImportDialog({ close, done }: { close: () => void; done: (message: stri
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [file, setFile] = useState("");
-  async function submit(formData: FormData) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     setBusy(true); setError("");
     try {
       const response = await fetch("/api/content-evaluation/import", { method: "POST", body: formData });
@@ -393,7 +395,7 @@ function ImportDialog({ close, done }: { close: () => void; done: (message: stri
     <Dialog onOpenChange={(open) => { if (!open) close(); }} open>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[520px]">
         <DialogHeader><DialogTitle>Import Meta Business Suite</DialogTitle><DialogDescription>Posts are matched by Post ID, so re-importing updates instead of duplicating.</DialogDescription></DialogHeader>
-        <form action={submit} id="ce-import" style={{ display: "grid", gap: 12 }}>
+        <form id="ce-import" onSubmit={submit} style={{ display: "grid", gap: 12 }}>
           <label className={s.drop}>
             <i className="ti ti-file-type-csv" aria-hidden="true" />
             <b>Choose a Meta CSV or XLSX <span className={s.req}>*</span></b>
@@ -414,12 +416,13 @@ function EvaluationEditor({ record, save, remove, close }: { record: ApiRecord |
   const [pending, setPending] = useState(false);
   const value = (name: string) => record?.[name] === null || record?.[name] === undefined ? "" : String(record[name]);
   const numeric = (name: string, label: string) => <Field label={label} key={name}><input className={s.input} defaultValue={value(name)} min="0" name={name} step="any" type="number" /></Field>;
-  async function submit(formData: FormData) { setPending(true); try { await save(formData); } finally { setPending(false); } }
+  // onSubmit rather than a form action, so a failed save keeps what was typed.
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const formData = new FormData(event.currentTarget); setPending(true); try { await save(formData); } catch (error) { notifyError(error, "Could not save the evaluation."); } finally { setPending(false); } }
   return (
     <Dialog onOpenChange={(open) => { if (!open) close(); }} open>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[820px]">
         <DialogHeader><DialogTitle>{record ? "Edit evaluation" : "Add evaluation"}</DialogTitle><DialogDescription>Fields marked * are required. Fill what you have — the score adapts to the metrics given.</DialogDescription></DialogHeader>
-        <form action={submit} className={c.editor} id={formId}>
+        <form className={c.editor} id={formId} onSubmit={submit}>
           <input name="account_id" type="hidden" value={value("account_id")} />
           <input name="account_username" type="hidden" value={value("account_username")} />
           <fieldset><legend>Content</legend>

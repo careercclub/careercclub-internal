@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { importTalentPoolRows } from "@/lib/api/talent-pool";
 import { googleSheetCsvUrl } from "@/lib/imports/free-class";
-import { detectHeaderRow, mapTalentPoolRow, normalizeHeaderKey } from "@/lib/imports/talent-pool-layout";
+import { detectHeaderRow, isOrderExport, mapTalentPoolRow, normalizeHeaderKey } from "@/lib/imports/talent-pool-layout";
 import ExcelJS from "exceljs";
 import { Readable } from "node:stream";
 
@@ -38,15 +38,15 @@ export async function POST(request: Request) {
     const sheet = workbook.worksheets[0];
     if (!sheet) return Response.json({ error: "Workbook is empty." }, { status: 400 });
 
-    // Exports sometimes carry a banner row above the real header, so scan the first
-    // rows for it instead of assuming row 1.
+    // Exports carry banner rows (a record count, a title) above the real header, so scan
+    // the first 20 rows for it instead of assuming row 1.
     const keysAt = (rowNumber: number) => {
       const row = sheet.getRow(rowNumber);
       const keys: string[] = [];
       for (let column = 1; column <= sheet.columnCount; column += 1) keys[column - 1] = normalizeHeaderKey(text(row.getCell(column).value));
       return keys;
     };
-    const scanned = [1, 2, 3, 4, 5].filter((rowNumber) => rowNumber <= sheet.rowCount).map(keysAt);
+    const scanned = Array.from({ length: Math.min(20, sheet.rowCount) }, (_, index) => keysAt(index + 1));
     const detected = detectHeaderRow(scanned);
     const headerRowNumber = detected >= 0 ? detected + 1 : 1;
     const headerKeys = scanned[headerRowNumber - 1] ?? [];
@@ -64,11 +64,16 @@ export async function POST(request: Request) {
     // and the import reports a bare "0 imported" with no reason.
     const hasUsableEmail = rows.some((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(row.email || "").trim().toLowerCase()));
     if (!hasUsableEmail) {
+      // Say what the first rows actually contain, so a wrong tab or layout is obvious.
+      const preview = scanned.slice(0, 3).map((keys, index) => `row ${index + 1}: ${keys.filter(Boolean).slice(0, 4).join(", ") || "(empty)"}`).join("; ");
+      const orderExport = scanned.some(isOrderExport);
       const detectedColumns = headerKeys.filter(Boolean).slice(0, 6).join(", ") || "none";
       return Response.json({
-        error: detected < 0
-          ? `This does not look like a Talent Pool sheet — no recognisable header row was found in the first 5 rows, and no row has an email address. Columns detected: ${detectedColumns}. A lynk.id order export (Judul Barang, Buyer Email, …) belongs in CRM → Import instead.`
-          : `The header row was recognised, but no row has a valid email address, so there is nothing to import. Columns detected: ${detectedColumns}.`,
+        error: orderExport
+          ? "This is a lynk.id order export (Judul Barang, Buyer Email, …). It belongs in CRM → Import, not Talent Pool."
+          : detected < 0
+            ? `No header row with an email column and a name or WhatsApp column was found in the first 20 rows, so nothing was imported. What the sheet starts with — ${preview}. Check that the published tab is the Talent Pool database and that its header row has "Email" and "Nama" or "WhatsApp".`
+            : `The header row (row ${headerRowNumber}) was recognised, but no row under it has a valid email address, so there is nothing to import. Columns: ${detectedColumns}.`,
       }, { status: 400 });
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import type { FormEvent } from "react";
 import { useState } from "react";
 import styles from "../record-manager.module.css";
 
@@ -9,7 +10,10 @@ export function TalentPoolSheetsImport() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function submit(formData: FormData) {
+  // onSubmit rather than a form action, so a failed import keeps the pasted link / chosen file.
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     setBusy(true);
     setMessage("");
     try {
@@ -29,7 +33,7 @@ export function TalentPoolSheetsImport() {
     <details className={styles.createPanel}>
       <summary><i className="ti ti-table-import" /> Import Talent Pool</summary>
 
-      <form action={submit} className={styles.toolForm}>
+      <form className={styles.toolForm} onSubmit={submit}>
         <label>
           <span>Upload CSV / XLSX</span>
           <input accept=".csv,.xlsx" name="file" required type="file" />
@@ -37,7 +41,7 @@ export function TalentPoolSheetsImport() {
         <button className={styles.primaryButton} disabled={busy}>{busy ? "Importing…" : "Import File"}</button>
       </form>
 
-      <form action={submit} className={styles.toolForm}>
+      <form className={styles.toolForm} onSubmit={submit}>
         <label>
           <span>Or import a published Google Sheet</span>
           <input name="url" placeholder="https://docs.google.com/spreadsheets/..." required type="url" />
@@ -45,7 +49,7 @@ export function TalentPoolSheetsImport() {
         <button className={styles.primaryButton} disabled={busy}>{busy ? "Importing…" : "Import Sheet"}</button>
       </form>
 
-      {message ? <p className={styles.formMessage}>{message}</p> : null}
+      {message ? <p className={styles.formMessage} role="status">{message}</p> : null}
     </details>
   );
 }

@@ -978,3 +978,58 @@ Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collab
 ### Antrean
 
 Design Assets / Resources / Collaborators. Nice-to-have: pie chart multiwarna (`charts.tsx` DistributionPie/IndustryDoughnut) ke satu palet.
+
+## Putaran 25 — Design Assets, Resources, Collaborators (IJIS layout) (23 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| **Design Assets**: tab bergaris Gallery / Manage data, filter dropdown, panel "Upload design asset" terlipat di atas galeri | Judul + ringkasan ("9 items in 3 categories · N images"), tombol utama **Upload design asset** membuka popup; segmented Gallery / Manage data; pil kategori dengan jumlah; kartu satu gaya (gambar, nama, tipe, likes/views, Source + Add to library) |
+| Upload: form polos, gambar boleh kosong sampai Save gagal diam-diam | Popup dengan Name* & Category* (saran dari kategori yang ada), dropzone gambar* (pilih, tarik, atau tempel), pratinjau dengan tombol hapus per gambar; gambar kosong ditandai merah + difokus + pesan "Add at least one image." |
+| **Resources**: satu daftar panjang, ikon kuning untuk kredensial, tombol naik/turun & copy tanpa label | Kartu per kategori; baris dengan host link yang bisa diklik (URL tanpa https juga), Username / Email / Password berlabel dengan tombol Copy masing-masing, password tersembunyi + Show/Hide; pil All / Links / Logins + filter kategori; naik/turun hanya di dalam kategori dan dimatikan saat difilter |
+| **Collaborators**: tab bergaris, status warna-warni (biru/abu/hijau), Privy kuning | Segmented Collaborators / Advisors / Manage data; kartu dengan avatar (foto atau inisial), **satu chip status**, chip Privy complete / not complete; filter status + "Privy not complete"; ringkasan "1 without Privy"; popup profil dengan foto yang bisa diganti (klik, tarik, tempel) |
+
+- KOL directory & MT Story (halaman data di Content Planning) memakai galeri yang sama, jadi ikut berganti gaya.
+- Nilai tersimpan tidak berubah: tipe "assets"/"references" hanya diberi label Asset/Reference; status kolaborator tetap teks bebas (dengan saran).
+- CSS bersama `marketing.module.css` diganti nama jadi `page-kit.module.css` karena kini dipakai di luar Marketing.
+- Logika daftar (filter, grup, pindah urutan, ringkasan) di `lib/library/view.ts` + unit test. Fungsi copy dengan cadangan untuk http dipindah ke `copy-text.ts`.
+
+### Bug lama yang ikut diperbaiki
+
+- Form upload aset, profil kolaborator, form evaluasi konten dan import Meta CSV memakai *form action* React, yang **mengosongkan isian** setiap kali dijalankan — kalau upload/simpan gagal, isian yang sudah diketik hilang. Sekarang isian tetap ada kalau gagal.
+- Profil kolaborator: setelah Save, popup tetap terbuka tanpa tanda tersimpan. Sekarang tertutup + notifikasi "Profile saved."; gagal simpan memberi pesan.
+- Resources: Copy memakai Clipboard API saja, yang tidak ada di http (internal.ccclub.id tanpa https akan gagal). Sekarang ada cadangan.
+- Resources: link tanpa `https://` (mis. "figma.com/files") dibuka sebagai alamat relatif di dalam app. Sekarang jadi link luar yang benar.
+- Resources: urutan baru gagal disimpan tanpa kabar. Sekarang ada pesan.
+
+### Check
+
+- Desain 1440 & 390 untuk ketiga halaman. Ditemukan & diperbaiki: tombol copy/naik/turun di Resources bertumpuk vertikal sehingga baris terlalu tinggi → satu baris; teks petunjuk "one per line" di profil kolaborator terlalu kecil (audit) → 12px; judul "Design assets" beda dengan menu "Design Assets" → disamakan.
+- E2E baru **44/44** (kategori & tipe, upload: nama kosong ditandai & difokus, tanpa gambar ditandai + pesan, pratinjau & hapus gambar, satu upload lalu record dibuat, popup tertutup + notifikasi; Resources: host & link tanpa https, password tersembunyi/tampil/copy, naik-turun dalam kategori, simpan urutan, filter Logins, urutan dimatikan saat difilter; Collaborators: ringkasan Privy, filter Privy, advisor + services, tanpa merah, simpan profil, ?focus ke tab Advisors; HP tanpa scroll samping).
+- Regresi: unit 140/140, Marketing 47/47, Settings 12/12, Competitor 19/19, Job Vacancy 20/20, Products 17/17, Content Planning 26/26, Customer Knowledge 20/20, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12, popup 31/31, navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets (lama) 49/49, audit popup Design Assets/Resources/Collaborators bersih.
+- tsc bersih; lint 0 error 0 peringatan; `npm run build` lolos.
+
+### Antrean
+
+Semua modul sudah layout IJIS. Nice-to-have: pie chart multiwarna (`charts.tsx`) ke satu palet; tabel rundown Program; panel Import di Manage data Talent Pool masih gaya lama.
+
+### Sisipan — Import Talent Pool dari Google Sheet gagal (laporan user, 23 Okt)
+
+Gejala: tab **Database Talent Pool** dipublish sebagai CSV, link ditempel ke Talent Pool → Manage data → Import Sheet, hasilnya *"This does not look like a Talent Pool sheet — no recognisable header row was found in the first 5 rows … Columns detected: 742."* Tidak ada yang masuk.
+
+Penyebab: pencari baris judul (header) terlalu kaku.
+- Hanya memeriksa **5 baris pertama**. Baris 1 di sheet ini isinya angka jumlah data (dulu 521, sekarang 742), jadi kalau ada baris tambahan di atas judul, judulnya tidak pernah ketemu.
+- Hanya mengenali judul kalau **posisinya persis**: WhatsApp di kolom B, Email di C, Nama di D. Satu kolom saja disisipkan di depan, semuanya gagal.
+- Pesan gagalnya hanya menyebut "742", jadi tidak kelihatan apa yang sebenarnya terbaca.
+
+Perbaikan:
+- Header dicari di **20 baris pertama**.
+- Susunan form intake tetap dikenali walaupun ada kolom tambahan di depan Timestamp (kolomnya digeser otomatis).
+- Header biasa (mis. Nama / Email / WhatsApp / Universitas) juga diterima dan dipetakan berdasarkan nama kolom.
+- Export order lynk.id tetap ditolak, dengan pesan supaya dimasukkan lewat CRM → Import.
+- Kalau masih gagal, pesannya menampilkan isi 3 baris pertama yang terbaca, supaya langsung jelas kalau tab atau susunannya salah.
+- Link sheet atau file yang sudah dipilih tidak hilang lagi setelah import gagal.
+- Unit test bertambah 5 kasus: header di bawah beberapa baris banner, kolom disisipkan, header biasa, dan export lynk ditolak (dua kasus).
+
+Catatan: isi sheet aslinya tidak bisa gua buka dari sini, jadi penyebab persisnya (judul turun ke bawah baris 5, ada kolom baru, atau susunannya beda) belum gua pastikan. Pesan gagal yang baru akan menunjukkannya kalau masih gagal.

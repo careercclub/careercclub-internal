@@ -2,16 +2,15 @@
 
 import { sendDesignAssetToLibraryAction } from "@/app/actions/asset-actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { recordDefinitions, type RecordDefinitionKey } from "@/lib/records/catalog";
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { notify, notifyError } from "./app-dialog";
 import { normalizeObjectKey, StorageImage } from "./storage-image";
-import { FilterBar, filterFieldClass } from "./ui-kit";
+import g from "./library.module.css";
+import s from "./page-kit.module.css";
 import { useRecordFocus } from "./use-record-focus";
 
 type Props = {
@@ -24,6 +23,8 @@ type Props = {
   canSendToLibrary?: boolean;
   upload?: ReactNode;
   manage: ReactNode;
+  /** Page heading; defaults to the catalog title. */
+  title?: string;
 };
 
 const HIDDEN_FIELDS = new Set(["id", "created_at", "updated_at", "created_by", "updated_by"]);
@@ -42,7 +43,7 @@ export function images(row: ApiRecord, fields: string[]) {
 function labels(value: unknown) { if (Array.isArray(value)) return value.map(String); if (typeof value === "string") { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed.map(String) : []; } catch { return value.split(",").map((item) => item.trim()).filter(Boolean); } } return []; }
 function isEmpty(value: unknown) { return value === null || value === undefined || value === "" || (Array.isArray(value) && !value.length); }
 function humanize(key: string) { const text = key.replaceAll("_", " "); return text.charAt(0).toUpperCase() + text.slice(1); }
-function plural(count: number, noun: string) { return `${count} ${noun}${count === 1 ? "" : "s"}`; }
+function plural(count: number, noun: string, many = `${noun}s`) { return `${count} ${count === 1 ? noun : many}`; }
 
 function DetailValue({ value }: { value: unknown }) {
   if (typeof value === "boolean") return <>{value ? "Yes" : "No"}</>;
@@ -62,28 +63,32 @@ function DetailValue({ value }: { value: unknown }) {
   return <span className="whitespace-pre-line">{text}</span>;
 }
 
-const fieldClass = "h-9 rounded-md border border-input bg-white px-2.5 text-sm text-foreground";
+const fieldClass = s.input;
 function Field({ label, required, wide, children }: { label: string; required?: boolean; wide?: boolean; children: ReactNode }) {
   return (
-    <label className={`grid gap-1 text-xs font-medium text-foreground ${wide ? "sm:col-span-2" : ""}`}>
-      <span>{label}{required ? <span aria-hidden="true" className="text-[var(--red)]"> *</span> : null}</span>
+    <label className={`${s.field} ${wide ? g.wide : ""}`}>
+      <span>{label}{required ? <b aria-hidden="true" className={s.req}> *</b> : null}</span>
       {children}
     </label>
   );
 }
 
-export function AssetGallery({ rows, titleField, categoryField, imageFields, definitionKey, canSendToLibrary = false, upload, manage }: Props) {
+export function AssetGallery({ rows, titleField, categoryField, imageFields, definitionKey, canSendToLibrary = false, upload, manage, title }: Props) {
   const [tab, setTab] = useState<"gallery" | "manage">("gallery");
   const [query, setQuery] = useState(""); const [category, setCategory] = useState(""); const [secondary, setSecondary] = useState(""); const [label, setLabel] = useState(""); const [sort, setSort] = useState("newest");
   const [transferId, setTransferId] = useState(""); const [selectedId, setSelectedId] = useState(""); const [imageIndex, setImageIndex] = useState(0); const [pending, startTransition] = useTransition();
+  const definition = definitionKey ? recordDefinitions[definitionKey] : null;
   const categories = categoryField ? [...new Set(rows.map((row) => String(row[categoryField] || "Uncategorized")))].sort() : [];
   const secondaryField = rows.some((row) => row.jenis) ? "jenis" : rows.some((row) => row.tipe) ? "tipe" : ""; const secondaryOptions = secondaryField ? [...new Set(rows.map((row) => String(row[secondaryField] || "Unknown")))].sort() : []; const labelOptions = [...new Set(rows.flatMap((row) => labels(row.labels)))].sort();
-  const visible = useMemo(() => rows.filter((row) => (!query || `${row[titleField]} ${categoryField ? row[categoryField] : ""} ${row.copywriting || ""}`.toLowerCase().includes(query.toLowerCase())) && (!category || String(categoryField ? row[categoryField] : "") === category) && (!secondary || String(row[secondaryField]) === secondary) && (!label || labels(row.labels).includes(label))).sort((a, b) => sort === "likes" ? Number(b.likes || 0) - Number(a.likes || 0) : sort === "views" ? Number(b.views || 0) - Number(a.views || 0) : String(b.created_at || "").localeCompare(String(a.created_at || ""))), [rows, query, category, secondary, label, sort, titleField, categoryField, secondaryField]);
+  const hasCounts = rows.some((row) => row.likes !== undefined || row.views !== undefined);
+  const visible = useMemo(() => rows.filter((row) => (!query || `${row[titleField]} ${categoryField ? row[categoryField] : ""} ${row.copywriting || ""} ${row.notes || ""}`.toLowerCase().includes(query.toLowerCase())) && (!category || String(categoryField ? row[categoryField] || "Uncategorized" : "") === category) && (!secondary || String(row[secondaryField] || "Unknown") === secondary) && (!label || labels(row.labels).includes(label))).sort((a, b) => sort === "likes" ? Number(b.likes || 0) - Number(a.likes || 0) : sort === "views" ? Number(b.views || 0) - Number(a.views || 0) : sort === "name" ? String(a[titleField] || "").localeCompare(String(b[titleField] || "")) : String(b.created_at || "").localeCompare(String(a.created_at || ""))), [rows, query, category, secondary, label, sort, titleField, categoryField, secondaryField]);
   const fieldLabel = useMemo(() => {
     const fields = definitionKey ? (recordDefinitions[definitionKey].fields as readonly { name: string; label: string }[]) : [];
     const map = new Map(fields.map((field) => [field.name, field.label]));
     return (key: string) => map.get(key) || humanize(key);
   }, [definitionKey]);
+  const typeLabel = (value: string) => ({ assets: "Asset", references: "Reference" } as Record<string, string>)[value] || value;
+  const filtered = Boolean(query || category || secondary || label);
 
   function sendToLibrary(formData: FormData) {
     const id = transferId;
@@ -98,8 +103,8 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
 
   // Search result opened: show the asset's detail popup.
   useRecordFocus((id) => {
-    if (tab !== "gallery" || !rows.some((row) => String(row.id) === id)) return;
-    setQuery(""); setCategory(""); setSecondary(""); setLabel("");
+    if (!rows.some((row) => String(row.id) === id)) return;
+    setTab("gallery"); setQuery(""); setCategory(""); setSecondary(""); setLabel("");
     openDetail(id);
     return true;
   });
@@ -108,64 +113,87 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
     if (!categoryField) return [["All", visible]] as [string, ApiRecord[]][];
     const map = new Map<string, ApiRecord[]>();
     visible.forEach((row) => { const key = String(row[categoryField] || "Uncategorized"); map.set(key, [...(map.get(key) || []), row]); });
-    return [...map.entries()];
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [visible, categoryField]);
 
   const details = selected ? Object.entries(selected).filter(([key, value]) => !HIDDEN_FIELDS.has(key) && key !== titleField && key !== categoryField && !imageFields.includes(key) && !isEmpty(value)) : [];
   const selectedTitle = selected ? String(selected[titleField] || "Untitled") : "";
+  const imageCount = rows.reduce((sum, row) => sum + images(row, imageFields).length, 0);
 
   return (
-    <div className="grid gap-3.5">
-      <Tabs onValueChange={(value) => setTab(value as typeof tab)} value={tab}>
-        <TabsList variant="line"><TabsTrigger value="gallery">Gallery</TabsTrigger><TabsTrigger value="manage">Manage data</TabsTrigger></TabsList>
-        <TabsContent value="gallery">
-          <div className="grid gap-3.5">
-            {upload}
-            <FilterBar>
-              <input aria-label="Search gallery" className={filterFieldClass} onChange={(event) => setQuery(event.target.value)} placeholder="Search gallery" value={query} />
-              {categoryField ? <select aria-label="Category" className={filterFieldClass} onChange={(event) => setCategory(event.target.value)} value={category}><option value="">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select> : null}
-              {secondaryField ? <select aria-label="Type" className={filterFieldClass} onChange={(event) => setSecondary(event.target.value)} value={secondary}><option value="">All types</option>{secondaryOptions.map((value) => <option key={value}>{value}</option>)}</select> : null}
-              {labelOptions.length ? <select aria-label="Label" className={filterFieldClass} onChange={(event) => setLabel(event.target.value)} value={label}><option value="">All labels</option>{labelOptions.map((value) => <option key={value}>{value}</option>)}</select> : null}
-              <select aria-label="Sort" className={filterFieldClass} onChange={(event) => setSort(event.target.value)} value={sort}><option value="newest">Newest</option><option value="likes">Most liked</option><option value="views">Most viewed</option></select>
-            </FilterBar>
-            {visible.length ? groups.map(([groupName, items]) => (
-              <section aria-label={categoryField ? groupName : "Gallery"} key={groupName}>
-                {categoryField ? <h3 className="mb-2 flex items-center gap-2"><i aria-hidden="true" className="ti ti-folder text-[var(--purple-accent)]" /><strong className="text-[13px] font-bold">{groupName}</strong><span className="text-[11px] font-normal text-muted-foreground">{plural(items.length, "item")}</span></h3> : null}
-                <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}>
-                  {items.map((row) => {
-                    const rowImages = images(row, imageFields);
-                    const title = String(row[titleField] || "Untitled");
-                    return (
-                      <Card className="min-w-0 gap-0 overflow-hidden p-0" data-record-id={String(row.id)} key={String(row.id)}>
-                        <button aria-label={`Open ${title}`} className="relative block aspect-square w-full overflow-hidden bg-[var(--bg)]" data-record-open onClick={() => openDetail(String(row.id))} type="button">
-                          {rowImages[0] ? <StorageImage area="design-assets" className="h-full" label={title} objectKey={rowImages[0]} /> : <div className="grid h-full w-full place-items-center"><i aria-hidden="true" className="ti ti-photo-off text-2xl text-muted-foreground" /></div>}
-                          {rowImages.length > 1 ? <span className="absolute top-1.5 right-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white"><i aria-hidden="true" className="ti ti-library-photo" /> {rowImages.length}</span> : null}
-                        </button>
-                        <div className="grid gap-1.5 p-2.5">
-                          <strong className="truncate text-xs font-semibold" title={title}>{title}</strong>
-                          <div className="flex flex-wrap gap-1">
-                            {categoryField ? <span className="rounded bg-[var(--bg)] px-1.5 py-0.5 text-[10px] text-muted-foreground">{String(row[categoryField] || "Uncategorized")}</span> : null}
-                            {secondaryField ? <span className="rounded bg-[var(--bg)] px-1.5 py-0.5 text-[10px] text-muted-foreground">{String(row[secondaryField] || "Unknown")}</span> : null}
-                            {labels(row.labels).slice(0, 3).map((value) => <span className="rounded bg-[var(--bg)] px-1.5 py-0.5 text-[10px] text-muted-foreground" key={value}>{value}</span>)}
-                          </div>
-                          {row.likes !== undefined || row.views !== undefined ? <div className="flex gap-2 text-[10px] text-muted-foreground"><span>{Number(row.likes || 0).toLocaleString("en-US")} likes</span><span>{Number(row.views || 0).toLocaleString("en-US")} views</span></div> : null}
-                          {row.link || canSendToLibrary ? (
-                            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-border pt-1.5 text-[11px] font-medium">
-                              {row.link ? <a className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground" href={String(row.link)} rel="noreferrer" target="_blank"><i aria-hidden="true" className="ti ti-external-link" /> Source</a> : <span />}
-                              {canSendToLibrary ? <button className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--purple-mid)] hover:underline" disabled={pending} onClick={() => setTransferId(String(row.id))} type="button"><i aria-hidden="true" className="ti ti-library-plus" /> Add to library</button> : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </section>
-            )) : <div className="grid place-items-center gap-1 py-10 text-center text-muted-foreground"><i aria-hidden="true" className="ti ti-photo-off text-2xl" /><strong className="text-foreground">No matching assets</strong><span className="text-xs">Try another search or clear the filters.</span></div>}
+    <div className={s.page}>
+      <header className={s.head}>
+        <div>
+          <span className={s.eyebrow}>{definition?.eyebrow || "Library"}</span>
+          <h1>{title || definition?.title || "Gallery"}</h1>
+          <p>{plural(rows.length, "item")}{categoryField ? ` in ${plural(categories.length, "category", "categories")}` : ""} · {plural(imageCount, "image")}</p>
+        </div>
+        {upload ? <div className={s.headActions}>{upload}</div> : null}
+      </header>
+
+      <div aria-label="Views" className={s.segmented} role="tablist">
+        <button aria-selected={tab === "gallery"} className={tab === "gallery" ? s.segmentActive : s.segment} onClick={() => setTab("gallery")} role="tab" type="button"><i className="ti ti-layout-grid" aria-hidden="true" /> Gallery <span>{rows.length}</span></button>
+        <button aria-selected={tab === "manage"} className={tab === "manage" ? s.segmentActive : s.segment} onClick={() => setTab("manage")} role="tab" type="button"><i className="ti ti-table" aria-hidden="true" /> Manage data</button>
+      </div>
+
+      {tab === "manage" ? manage : (
+        <>
+          <div className={s.toolbar}>
+            <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search gallery" onChange={(event) => setQuery(event.target.value)} placeholder="Search gallery" value={query} /></label>
+            {secondaryField ? <label className={s.filterPill}><span>Type</span><select aria-label="Type" onChange={(event) => setSecondary(event.target.value)} value={secondary}><option value="">All</option>{secondaryOptions.map((value) => <option key={value} value={value}>{typeLabel(value)}</option>)}</select></label> : null}
+            {labelOptions.length ? <label className={s.filterPill}><span>Label</span><select aria-label="Label" onChange={(event) => setLabel(event.target.value)} value={label}><option value="">All</option>{labelOptions.map((value) => <option key={value}>{value}</option>)}</select></label> : null}
+            <label className={s.filterPill}><span>Sort</span><select aria-label="Sort" onChange={(event) => setSort(event.target.value)} value={sort}><option value="newest">Newest</option><option value="name">Name A–Z</option>{hasCounts ? <><option value="likes">Most liked</option><option value="views">Most viewed</option></> : null}</select></label>
           </div>
-        </TabsContent>
-        <TabsContent value="manage">{manage}</TabsContent>
-      </Tabs>
+          {categoryField && categories.length > 1 ? (
+            <div className={s.pills} role="group" aria-label="Category">
+              {[["", "All categories", rows.length] as const, ...categories.map((value) => [value, value, rows.filter((row) => String(row[categoryField] || "Uncategorized") === value).length] as const)].map(([value, text, count]) => (
+                <button aria-pressed={category === value} className={category === value ? s.pillOn : s.pill} key={text} onClick={() => setCategory(value)} type="button">{text} <span>{count}</span></button>
+              ))}
+            </div>
+          ) : null}
+
+          {visible.length ? groups.map(([groupName, items]) => (
+            <section aria-label={categoryField ? groupName : "Gallery"} className={g.group} key={groupName}>
+              {categoryField ? <header className={g.groupHead}><i aria-hidden="true" className="ti ti-folder" /><h2>{groupName}</h2><span>{plural(items.length, "item")}</span></header> : null}
+              <ul className={g.assets}>
+                {items.map((row) => {
+                  const rowImages = images(row, imageFields);
+                  const title = String(row[titleField] || "Untitled");
+                  return (
+                    <li className={g.asset} data-record-id={String(row.id)} key={String(row.id)}>
+                      <button aria-label={`Open ${title}`} className={g.thumb} data-record-open onClick={() => openDetail(String(row.id))} type="button">
+                        {rowImages[0] ? <StorageImage area="design-assets" className="h-full" label={title} objectKey={rowImages[0]} /> : <span className={g.noImage}><i aria-hidden="true" className="ti ti-photo-off" /></span>}
+                        {rowImages.length > 1 ? <span className={g.multi}><i aria-hidden="true" className="ti ti-library-photo" /> {rowImages.length}</span> : null}
+                      </button>
+                      <div className={g.assetBody}>
+                        <b title={title}>{title}</b>
+                        {secondaryField || labels(row.labels).length ? (
+                          <div className={g.tags}>
+                            {secondaryField ? <span>{typeLabel(String(row[secondaryField] || "Unknown"))}</span> : null}
+                            {labels(row.labels).slice(0, 3).map((value) => <span key={value}>{value}</span>)}
+                          </div>
+                        ) : null}
+                        {row.likes !== undefined || row.views !== undefined ? <div className={g.counts}><span><b>{Number(row.likes || 0).toLocaleString("en-US")}</b> likes</span><span><b>{Number(row.views || 0).toLocaleString("en-US")}</b> views</span></div> : null}
+                        {row.link || canSendToLibrary ? (
+                          <div className={g.assetActions}>
+                            {row.link ? <a href={String(row.link)} rel="noreferrer" target="_blank"><i aria-hidden="true" className="ti ti-external-link" /> Source</a> : <span />}
+                            {canSendToLibrary ? <button disabled={pending} onClick={() => setTransferId(String(row.id))} type="button"><i aria-hidden="true" className="ti ti-library-plus" /> Add to library</button> : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )) : (
+            <div className={s.card}>
+              <p className={s.empty}>{rows.length ? "No matching items. Try another search or clear the filters." : "Nothing here yet."}</p>
+              {filtered ? <button className={s.ghost} onClick={() => { setQuery(""); setCategory(""); setSecondary(""); setLabel(""); }} style={{ alignSelf: "center" }} type="button">Clear filters</button> : null}
+            </div>
+          )}
+        </>
+      )}
 
       <Dialog onOpenChange={(open) => { if (!open) setSelectedId(""); }} open={Boolean(selected)}>
         {selected ? (
@@ -227,11 +255,11 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
               <DialogDescription>{String(transfer[titleField] || "Untitled")} is copied into the content library with its images. Fields marked <span className="text-[var(--red)]">*</span> are required.</DialogDescription>
             </DialogHeader>
             <form action={sendToLibrary} className="flex min-h-0 flex-1 flex-col">
-              <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto px-6 py-4 sm:grid-cols-2">
+              <div className={`${g.formGrid} min-h-0 flex-1 overflow-y-auto px-6 py-4`}>
               <Field label="Library type" wide><select className={fieldClass} name="tipe"><option value="organic">Organic ideas</option><option value="ads">Ad ideas</option></select></Field>
               <Field label="Platform"><select className={fieldClass} name="platform"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>LinkedIn</option></select></Field>
               <Field label="Content type"><select className={fieldClass} name="jenis"><option>Carousel</option><option>Reels/Video</option><option>Single Image</option><option>Thread/Text</option></select></Field>
-              <Field label="Source URL" required wide><input className={`${fieldClass} invalid:[&:not(:placeholder-shown)]:border-[var(--red)]`} defaultValue={String(transfer.link || "")} name="link" placeholder="https://" required type="url" /></Field>
+              <Field label="Source URL" required wide><input className={fieldClass} defaultValue={String(transfer.link || "")} name="link" placeholder="https://" required type="url" /></Field>
               <Field label="Likes" required><input className={fieldClass} inputMode="numeric" min="0" name="likes" required type="number" /></Field>
               <Field label="Views"><input className={fieldClass} inputMode="numeric" min="0" name="views" type="number" /></Field>
               <Field label="Comments"><input className={fieldClass} inputMode="numeric" min="0" name="comments" type="number" /></Field>

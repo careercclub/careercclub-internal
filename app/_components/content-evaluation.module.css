@@ -1,4 +1,4 @@
-/* Content Evaluation pieces on top of marketing.module.css. One palette: purple shades for
+/* Content Evaluation pieces on top of page-kit.module.css. One palette: purple shades for
    grades, red is not used here (a low score is not an error). */
 .range { min-width: 0; }
 .custom { display: flex; flex-wrap: wrap; gap: 8px; }
