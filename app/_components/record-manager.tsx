@@ -10,7 +10,8 @@ import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@
 import { R2UploadField } from "./r2-upload-field";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
-import { notifyError } from "./app-dialog";
+import { notify, notifyError } from "./app-dialog";
+import s from "./page-kit.module.css";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import styles from "../record-manager.module.css";
 
@@ -20,6 +21,8 @@ type RecordManagerProps = {
   links?: Array<{ href: string; label: string }>;
   tools?: ReactNode;
   fieldOptions?: Record<string, readonly string[]>;
+  /** Rendered inside a module page's "Manage data" view: that page already has the heading. */
+  embedded?: boolean;
 };
 
 type Option = { value: string; label: string };
@@ -180,7 +183,9 @@ function RecordForm({ definitionKey, row, fieldOptions, optionsState, submitLabe
   const filled = (fields: ManagedField[]) => fields.filter((field) => { const value = row?.[field.name]; return value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && !value.length); }).length;
   const render = (field: ManagedField) => <Field definitionKey={definitionKey} field={field} key={field.name} optionsState={optionsState} options={fieldOptions[field.name]} value={row?.[field.name]} />;
   return (
-    <form action={action} className={styles.recordForm}>
+    // onSubmit rather than a form action: a form action clears every field when it runs,
+    // so a failed save would throw away what was typed.
+    <form className={styles.recordForm} onSubmit={(event) => { event.preventDefault(); action(new FormData(event.currentTarget)); }}>
       <div className={styles.formGrid}>{plan.main.map(render)}</div>
       {plan.more.length ? (
         <details className={styles.moreFields}>
@@ -217,13 +222,21 @@ function DeleteRecord({ definitionKey, id, noun }: { definitionKey: RecordDefini
   );
 }
 
-export function RecordManager({ definitionKey, rows, links = [], tools, fieldOptions = {} }: RecordManagerProps) {
+export function RecordManager({ definitionKey, rows, links = [], tools, fieldOptions = {}, embedded = false }: RecordManagerProps) {
   const [editingId, setEditingId] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState("");
   const editingRow = editingId ? rows.find((row) => String(row.id) === editingId) : undefined;
   const definition = recordDefinitions[definitionKey];
   const noun = ITEM_NOUN[definitionKey] || "record";
   const fields = definition.fields as readonly ManagedField[];
-  const { pageItems, page, setPage, totalPages } = usePagination(rows, PAGE_SIZE);
+  const searchable = rows.length > PAGE_SIZE;
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((row) => Object.entries(row).some(([key, value]) => key !== "id" && value !== null && value !== undefined && String(typeof value === "object" ? JSON.stringify(value) : value).toLowerCase().includes(q)));
+  }, [rows, query]);
+  const { pageItems, page, setPage, totalPages } = usePagination(shown, PAGE_SIZE);
   const hasReferences = useMemo(() => fields.some((field) => ["reference", "references"].includes(fieldKind(definitionKey, field))), [definitionKey, fields]);
   const [optionsState, setOptionsState] = useState<OptionsState>({ status: hasReferences ? "idle" : "done", options: {} });
 
@@ -241,7 +254,9 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
   // Search result opened: jump to the page holding the record; RecordFocus opens its editor.
   useRecordFocus((id) => {
     const index = rows.findIndex((row) => String(row.id) === id);
-    if (index >= 0 && Math.floor(index / PAGE_SIZE) !== page) setPage(Math.floor(index / PAGE_SIZE));
+    if (index < 0) return;
+    if (query) setQuery("");
+    if (Math.floor(index / PAGE_SIZE) !== page) setPage(Math.floor(index / PAGE_SIZE));
   });
 
   const labelFor = useMemo(() => {
@@ -257,24 +272,54 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
 
   const columnLabel = (column: string) => {
     const field = fields.find((item) => item.name === column);
-    return field ? displayLabel(field.label) : column.replaceAll("_", " ");
+    if (field) return displayLabel(field.label);
+    const words = column.replaceAll("_", " ");
+    return words.charAt(0).toUpperCase() + words.slice(1);
   };
 
   return (
     <section className={styles.workspace}>
-      <header className={styles.workspaceHeader}>
-        <div><p>{definition.eyebrow}</p><h1>{definition.title}</h1><span>{definition.description}</span></div>
-        <div className={styles.recordCount}><strong>{rows.length}</strong><span>{plural(noun, rows.length)}</span></div>
-      </header>
-      {links.length ? <nav className={styles.sectionNav}>{links.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}</nav> : null}
+      {embedded ? (
+        <div className={s.toolbar}>
+          <b className={styles.embeddedCount}>{rows.length} {plural(noun, rows.length)}</b>
+          <span className={styles.embeddedHint}>{definition.description}</span>
+          <span className={s.spacer} />
+          <button className={s.primary} onClick={() => setAdding(true)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add {noun}</button>
+        </div>
+      ) : (
+        <header className={s.head}>
+          <div>
+            <span className={s.eyebrow}>{definition.eyebrow}</span>
+            <h1>{definition.title}</h1>
+            <p>{rows.length} {plural(noun, rows.length)} · {definition.description}</p>
+          </div>
+          <div className={s.headActions}><button className={s.primary} onClick={() => setAdding(true)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add {noun}</button></div>
+        </header>
+      )}
+      {links.length ? <nav aria-label="Related lists" className={s.pills}>{links.map((link) => <Link className={s.pill} href={link.href} key={link.href}>{link.label}</Link>)}</nav> : null}
       {tools}
-      <details className={styles.createPanel}>
-        <summary><i className="ti ti-plus" aria-hidden="true" /> Add {noun}</summary>
-        <RecordForm action={createManagedRecord.bind(null, definitionKey)} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} submitLabel={`Add ${noun}`} />
-      </details>
+      {searchable ? (
+        <div className={s.toolbar}>
+          <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label={`Search ${plural(noun)}`} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder={`Search ${plural(noun)}`} value={query} /></label>
+          {query ? <span className={s.muted}>{shown.length} of {rows.length}</span> : null}
+        </div>
+      ) : null}
+      <Dialog onOpenChange={(open) => { if (!open) setAdding(false); }} open={adding}>
+        {adding ? (
+          <DialogContent className={styles.editDialog}>
+            <DialogHeader className={styles.editDialogHeader}>
+              <DialogTitle>Add {noun}</DialogTitle>
+              <DialogDescription>{definition.title} · fields marked * are required</DialogDescription>
+            </DialogHeader>
+            <div className={styles.editDialogBody}>
+              <RecordForm action={async (formData: FormData) => { try { await createManagedRecord(definitionKey, formData); setAdding(false); notify(`${noun.charAt(0).toUpperCase()}${noun.slice(1)} added.`); } catch (error) { notifyError(error, `Could not add the ${noun}.`); } }} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} submitLabel={`Add ${noun}`} />
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
       {optionsState.status === "error" ? <p className={styles.hint} role="status">Names could not be loaded. Lists show stored ids; try reloading the page.</p> : null}
       <div className={styles.dataPanel}>
-        {rows.length ? <div className={styles.tableScroll}><table><thead><tr>{definition.columns.map((column) => <th key={column}>{columnLabel(column)}</th>)}<th><span className="sr-only">Actions</span></th></tr></thead><tbody>
+        {shown.length ? <div className={styles.tableScroll}><table><thead><tr>{definition.columns.map((column) => <th key={column}>{columnLabel(column)}</th>)}<th><span className="sr-only">Actions</span></th></tr></thead><tbody>
           {pageItems.map((row) => {
             const id = String(row.id);
             return (
@@ -286,8 +331,8 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
               </tr>
             );
           })}
-        </tbody></table></div> : <div className={styles.emptyState}><i className="ti ti-database-off" /><strong>No {plural(noun)} yet</strong><span>Click <b>Add {noun}</b> above to create the first one.</span></div>}
-        {rows.length && totalPages > 1 ? <div className={styles.pagination}><button aria-label="Previous page" disabled={page <= 0} onClick={() => setPage(Math.max(0, page - 1))} type="button"><i className="ti ti-chevron-left" /></button><span>Page {page + 1} / {totalPages}</span><button aria-label="Next page" disabled={page >= totalPages - 1} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} type="button"><i className="ti ti-chevron-right" /></button></div> : null}
+        </tbody></table></div> : rows.length ? <div className={styles.emptyState}><i className="ti ti-search-off" aria-hidden="true" /><strong>No {plural(noun)} match “{query}”</strong><button className={s.ghost} onClick={() => setQuery("")} type="button">Clear search</button></div> : <div className={styles.emptyState}><i className="ti ti-database-off" aria-hidden="true" /><strong>No {plural(noun)} yet</strong><span>Click <b>Add {noun}</b> above to create the first one.</span></div>}
+        {shown.length && totalPages > 1 ? <div className={styles.pagination}><button aria-label="Previous page" disabled={page <= 0} onClick={() => setPage(Math.max(0, page - 1))} type="button"><i className="ti ti-chevron-left" /></button><span>Page {page + 1} / {totalPages}</span><button aria-label="Next page" disabled={page >= totalPages - 1} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} type="button"><i className="ti ti-chevron-right" /></button></div> : null}
       </div>
       <Dialog onOpenChange={(open) => { if (!open) setEditingId(""); }} open={Boolean(editingRow)}>
         {editingRow ? (

@@ -4,5 +4,5 @@ import { getInstagramBaseline, listInstagramSnapshots, listInstagramTargets } fr
 
 export default async function InstagramPage() {
   const [snapshots, targets, baseline] = await Promise.all([listInstagramSnapshots(), listInstagramTargets(), getInstagramBaseline()]);
-  return <InstagramTools snapshots={snapshots} targets={targets} baseline={baseline} referenceDate={new Date().toISOString()} snapshotManagement={<RecordManager definitionKey="ig_snapshots" rows={snapshots}/>} targetManagement={<RecordManager definitionKey="ig_targets" rows={targets}/>} />;
+  return <InstagramTools snapshots={snapshots} targets={targets} baseline={baseline} referenceDate={new Date().toISOString()} snapshotManagement={<RecordManager embedded definitionKey="ig_snapshots" rows={snapshots}/>} targetManagement={<RecordManager embedded definitionKey="ig_targets" rows={targets}/>} />;
 }

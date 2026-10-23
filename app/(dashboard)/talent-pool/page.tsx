@@ -7,5 +7,5 @@ export const metadata = { title: "Talent Pool" };
 
 export default async function TalentPoolPage() {
   const rows = await listTalentPoolWithBuyerMatches();
-  return <TalentPoolWorkspace rows={rows} sheetsImport={<TalentPoolSheetsImport />} management={<RecordManager definitionKey="talent_pool" rows={rows} />} />;
+  return <TalentPoolWorkspace rows={rows} sheetsImport={<TalentPoolSheetsImport />} management={<RecordManager embedded definitionKey="talent_pool" rows={rows} />} />;
 }

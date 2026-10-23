@@ -1033,3 +1033,41 @@ Perbaikan:
 - Unit test bertambah 5 kasus: header di bawah beberapa baris banner, kolom disisipkan, header biasa, dan export lynk ditolak (dua kasus).
 
 Catatan: isi sheet aslinya tidak bisa gua buka dari sini, jadi penyebab persisnya (judul turun ke bawah baris 5, ada kolom baru, atau susunannya beda) belum gua pastikan. Pesan gagal yang baru akan menunjukkannya kalau masih gagal.
+
+## Putaran 26 — Sisa nice-to-have: halaman data, Import Talent Pool, rundown, satu palet (23 Okt 2026)
+
+Urutan prioritas: (1) yang dipakai harian dan masih kelihatan lama — halaman data (RecordManager, dipakai ±20 halaman + tab Manage data di 8 modul) dan panel Import Talent Pool; (2) rundown Program; (3) warna grafik.
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| **Halaman data** (Features, Benefits, Bundles, Snapshots, Tasks, dst.): judul tipis, angka besar di kanan, "+ Add …" sebagai panel terlipat di atas tabel, teks tabel 11px / judul kolom 9px huruf besar | Kepala halaman IJIS (eyebrow, judul tebal, "5 features · deskripsi"), tombol utama **Add …** membuka popup (sama dengan Edit), pil daftar terkait, kotak cari otomatis bila data >12 baris, tabel 13px |
+| Tab **Manage data** di modul (Talent Pool, Products, Resources, Collaborators, Design Assets, Instagram, KOL, MT Story): judul halaman muncul dua kali (h1 modul + h1 RecordManager) | Mode *embedded*: satu baris "31 candidates · deskripsi" + Add — tanpa judul ganda |
+| **Import Talent Pool**: dua baris form polos ("Upload CSV / XLSXChoose File…"), pesan error kecil abu-abu | Kartu **Import candidates**: dropzone file + kolom link Google Sheet berdampingan, petunjuk cara publish (File → Share → Publish to web → tab → CSV), hasil "Imported 740 candidates · 2 skipped", error tampil sebagai peringatan; link tidak hilang setelah gagal |
+| **Rundown Program**: tabel berisi form yang selalu terbuka (semua baris bisa diketik, simpan per baris pakai ikon disket), header campur Indonesia ("Waktu", "Durasi", "Keterangan", "Naikkan") | **Timeline**: jam mulai → selesai + durasi per item, aktivitas, catatan, blok "MC" untuk cue, link; Edit membuka form di baris itu (Activity* difokus, Save item / Cancel / Esc); item baru langsung terbuka untuk diisi; naik/turun/hapus (hapus minta konfirmasi); kepala halaman + pilih event + Starts/Ends/Duration/Status |
+| **Grafik**: pie Customer Knowledge 8 warna, donut Analytics Talent Pool/CRM 12–15 warna, kalender fase hijau/merah/biru + tiket oranye, garis status event hijau/biru/merah | Satu palet biru: pie & donut jadi **bar berperingkat satu warna** (label, jumlah, % per baris — lebih mudah dibandingkan); kalender: fase = gradasi biru (Event day paling tegas), tiket = chip netral; status event Cancelled abu-abu (bukan merah) |
+| Kalender Dashboard/Program: bulan & hari Indonesia, mulai Minggu, teks 8–10px, "Sempit ▲ / +2 lainnya" | Inggris, **mulai Senin**, teks 11–12px, "Show less / +2 more", "Today"; fase "Hari H" tampil sebagai "Event day" (nilai tersimpan tetap) |
+
+### Bug lama yang ikut diperbaiki
+
+- Form tambah/edit di semua halaman data memakai *form action* yang mengosongkan isian setelah dijalankan — kalau simpan gagal, isian hilang. Sekarang tetap.
+- Tambah data tidak memberi tanda berhasil (panel tetap terbuka, kosong). Sekarang popup tertutup + notifikasi "… added."
+- Rundown: dua item dengan nomor urut sama tidak bisa ditukar (tombol naik/turun tidak berbuat apa-apa). Sekarang jatuh ke posisi.
+- Rundown: link tanpa https dibuka sebagai alamat di dalam app.
+- Kalender: judul task kosong hanya memberi pesan, kolomnya tidak ditandai/difokus. Sekarang ditandai merah + difokus.
+- Judul kolom tanpa label katalog tampil huruf kecil ("buyer match") → "Buyer match".
+- Kode gaya mati di Program (pil status warna-warni yang tidak dipakai lagi) dihapus; komponen donut industri yang tidak dipakai dihapus.
+- Program: tab fase & judul grup tampil "Pre-event / Event day / Post-event" (nilai tersimpan "Pre Event / Hari H / Post Event" tetap) — konsisten dengan kalender.
+
+### Check
+
+- Desain 1440 & 390: halaman data, Manage data Talent Pool + Import, rundown (halaman sendiri & di detail Program), kalender Dashboard, Analytics Talent Pool.
+- E2E baru **39/39** (halaman data: judul + jumlah, tanpa panel terlipat, Add = popup, wajib kosong difokus & tidak tersimpan, simpan sekali + tertutup + notifikasi, pil daftar terkait; embedded: satu h1, Add candidate; Import: tombol file menunggu file, alasan server tampil sebagai peringatan, link tetap setelah gagal, jumlah hasil; rundown: jam dari start event, cue MC & link, perkiraan selesai, Edit fokus ke Activity, kosong ditandai & tidak tersimpan, Save item memanggil aksi yang sama, naik/turun, tambah di akhir, hapus minta konfirmasi & Esc batal; palet: kalender Inggris mulai Senin + "Event day", tanpa chip merah/oranye, tanpa pie multiwarna, Analytics satu palet & label Inggris; HP tanpa scroll samping).
+- Tes form & tabel RecordManager diperbarui (Add sekarang tombol → popup): **946/946** (sebelumnya 893; +53 cek "form tambah = popup" per tabel). Tes Program "phase tab" dan rundown ?focus disesuaikan dengan timeline (li, bukan tr).
+- Regresi: unit 140/140, semua suite modul lolos (Putaran 25 44/44, Marketing 47/47, Settings 12, Competitor 19, Job Vacancy 20, Products 17, Content Planning 26, Customer Knowledge 20, Partnership 23, CRM 24, Talent Pool 21, Program 21, Tickets 19, modul 12, popup 31, navigasi 32), search 46/46, Content Library lolos, Design Assets 49/49; audit popup Talent Pool / Product features / Program / Dashboard / Customer Knowledge / Products bersih.
+- tsc bersih; lint 0 masalah; `npm run build` lolos.
+
+### Antrean
+
+Tidak ada sisa dari daftar redesign. Yang masih bisa dirapikan kapan-kapan: warna header email blast default (#2e2a7a, belum dijawab), dan pemeriksaan rahasia di repo (repo Public).

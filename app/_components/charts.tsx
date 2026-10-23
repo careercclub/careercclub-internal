@@ -1,17 +1,10 @@
 "use client";
 
-import { ArcElement, BarController, BarElement, CategoryScale, Chart as ChartJS, DoughnutController, Legend, LinearScale, LineController, LineElement, PieController, PointElement, Tooltip } from "chart.js";
-import { Bar, Chart, Doughnut, Pie } from "react-chartjs-2";
+import { BarController, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
+import { Bar, Chart } from "react-chartjs-2";
 
-ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, LineController, LineElement, PointElement, ArcElement, DoughnutController, PieController, Legend, Tooltip);
+ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, LineController, LineElement, PointElement, Legend, Tooltip);
 
-// Categorical slots, assigned in fixed order and never cycled. Validated against the
-// light chart surface: worst adjacent CVD ΔE 9.1, worst adjacent normal-vision ΔE
-// 19.6. Three slots fall under 3:1 contrast, which is why every pie ships a legend
-// carrying the label and the value — identity is never colour alone.
-const SERIES_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
-// "Lainnya" is a bucket, not an identity, so it takes a neutral rather than slot 9.
-const OTHER_COLOR = "#888780";
 
 const baseOptions = {
   responsive: true,
@@ -61,7 +54,7 @@ export function MonthlyOpenChart({ labels, counts, stepSize = 1 }: { labels: str
   return (
     <div style={{ height: "100%" }}>
       <Bar
-        data={{ labels, datasets: [{ data: counts, backgroundColor: "#0f52ba", borderRadius: 6, borderSkipped: false }] }}
+        data={{ labels, datasets: [{ data: counts, backgroundColor: "#1554c0", borderRadius: 6, borderSkipped: false }] }}
         options={{
           responsive: true,
           maintainAspectRatio: false,
@@ -76,69 +69,36 @@ export function MonthlyOpenChart({ labels, counts, stepSize = 1 }: { labels: str
   );
 }
 
-/** Reproduces the legacy `chartIndustry` doughnut — legend rendered separately by the caller. */
-export function IndustryDoughnutChart({ segments }: { segments: Array<{ label: string; value: number; color: string }> }) {
-  return (
-    <div style={{ height: "100%" }}>
-      <Doughnut
-        data={{ labels: segments.map((s) => s.label), datasets: [{ data: segments.map((s) => s.value), backgroundColor: segments.map((s) => s.color), borderWidth: 2, borderColor: "#fff" }] }}
-        options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: "60%" }}
-      />
-    </div>
-  );
-}
-
-/** Categorical share of a single dimension, as a pie with a value-carrying legend.
- * Used by the Talent Pool, CRM and Customer Knowledge analytics grids.
+/** Categorical share of a single dimension as ranked bars in one hue, each row carrying
+ * its label, count and share — easier to compare than pie slices, and no colour key to
+ * decode. Used by the Customer Knowledge panels.
  *
  * Pass the FULL distribution, not a pre-truncated one: the tail is folded here into a
- * single "Lainnya" slice so that slice is honest about what it contains. */
+ * single "Other" row so that row is honest about what it contains. */
 export function DistributionPie({ rows, topN = 7 }: { rows: [string, number][]; topN?: number }) {
-  if (!rows.length) return <p className="py-5 text-center text-[11px] text-muted-foreground">Belum ada data</p>;
+  if (!rows.length) return <p className="py-5 text-center text-[12px] text-muted-foreground">No data yet</p>;
 
   const sorted = [...rows].sort((a, b) => b[1] - a[1]);
-  const segments = sorted.slice(0, topN).map(([label, value], index) => ({ label, value, color: SERIES_COLORS[index] }));
+  const segments = sorted.slice(0, topN).map(([label, value]) => ({ label, value, other: false }));
   const tail = sorted.slice(topN);
   const tailTotal = tail.reduce((sum, [, value]) => sum + value, 0);
-  if (tailTotal) segments.push({ label: `Lainnya (${tail.length})`, value: tailTotal, color: OTHER_COLOR });
+  if (tailTotal) segments.push({ label: `Other (${tail.length})`, value: tailTotal, other: true });
   const total = segments.reduce((sum, segment) => sum + segment.value, 0) || 1;
+  const max = Math.max(1, ...segments.map((segment) => segment.value));
   const percent = (value: number) => Math.round((value / total) * 100);
 
   return (
-    <div className="flex items-center gap-3">
-      <div style={{ height: 132, width: 132, flexShrink: 0 }}>
-        <Pie
-          data={{
-            labels: segments.map((segment) => segment.label),
-            datasets: [{
-              data: segments.map((segment) => segment.value),
-              backgroundColor: segments.map((segment) => segment.color),
-              // 2px surface gap so adjacent slices stay separable.
-              borderWidth: 2,
-              borderColor: "#fff",
-            }],
-          }}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: { callbacks: { label: (item) => ` ${item.label}: ${item.parsed} (${percent(Number(item.parsed))}%)` } },
-            },
-          }}
-        />
-      </div>
-      <ul className="grid min-w-0 flex-1 gap-1">
-        {segments.map((segment) => (
-          <li className="flex items-center gap-1.5 text-[11px]" key={segment.label}>
-            <span aria-hidden="true" className="size-2 shrink-0 rounded-[2px]" style={{ background: segment.color }} />
-            <span className="truncate text-muted-foreground">{segment.label}</span>
-            <span className="ml-auto shrink-0 tabular-nums">{segment.value}</span>
-            <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">{percent(segment.value)}%</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="grid min-w-0 gap-2">
+      {segments.map((segment) => (
+        <li className="grid gap-1 text-[12px]" key={segment.label} title={`${segment.label}: ${segment.value} (${percent(segment.value)}%)`}>
+          <span className="flex min-w-0 items-baseline gap-2">
+            <span className="truncate">{segment.label}</span>
+            <span className="ml-auto shrink-0 font-semibold tabular-nums">{segment.value}</span>
+            <span className="w-9 shrink-0 text-right tabular-nums text-muted-foreground">{percent(segment.value)}%</span>
+          </span>
+          <span aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]"><span className="block h-full rounded-full" style={{ width: `${Math.max(2, (segment.value / max) * 100)}%`, background: segment.other ? "var(--border-md)" : "var(--purple-mid)" }} /></span>
+        </li>
+      ))}
+    </ul>
   );
 }
-

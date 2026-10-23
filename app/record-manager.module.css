@@ -177,8 +177,9 @@
 .dangerButton { border: 1px solid rgba(163,45,45,.28); color: var(--red); background: var(--red-bg); }
 .tableScroll { position: relative; overflow-x: auto; } /* contains absolutely positioned sr-only labels */
 .tableScroll table { width: 100%; min-width: 780px; border-collapse: collapse; }
-.tableScroll th, .tableScroll td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 11px; vertical-align: top; }
-.tableScroll th { color: var(--text-muted); background: var(--bg); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+.tableScroll th, .tableScroll td { padding: 11px 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; vertical-align: top; }
+.tableScroll th { color: var(--text-muted); background: var(--surface-2); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.tableScroll tbody tr:hover td { background: var(--surface-2); }
 .tableScroll td { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rowActions { position: relative; }
 .rowActions > summary { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; list-style: none; }
@@ -336,8 +337,11 @@
 .dataPanel > .sectionHeading, .panelHeader { padding: 11px 13px; border-bottom: 1px solid var(--border); }
 .dataPanel > .sectionHeading > span { color: var(--text-muted); font-size: 9px; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; }
-.pagination button { width: 29px; height: 29px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
-.pagination span { color: var(--text-muted); font-size: 9px; }
+.pagination button { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 50%; background: var(--white); }
+.pagination span { color: var(--text-muted); font-size: 13px; }
+.embeddedCount { font-size: 15px; font-weight: 800; }
+.embeddedHint { min-width: 0; color: var(--text-muted); font-size: 13px; }
+@media (max-width: 640px) { .embeddedHint { display: none; } }
 .importPanel { width: min(680px, 100%); display: grid; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .importPanel > div { display: grid; justify-items: start; gap: 5px; }
 .importPanel > div > i { color: var(--purple-mid); font-size: 24px; }

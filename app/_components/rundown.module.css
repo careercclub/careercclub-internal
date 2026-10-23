@@ -1,0 +1,35 @@
+/* Event rundown timeline (Program page and /program/rundown). On top of page-kit.module.css. */
+.rundown { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.head h2 { margin: 0; font-size: 16px; font-weight: 800; }
+.timeline { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.item { position: relative; display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); }
+.item::before { content: ""; position: absolute; top: 20px; left: -5px; width: 9px; height: 9px; border: 2px solid var(--white); border-radius: 50%; background: var(--purple-mid); box-shadow: 0 0 0 1px var(--purple-light); }
+.item[data-record-focused] { border-color: var(--purple-mid); box-shadow: 0 0 0 3px var(--purple-light); }
+.editing { border-color: var(--purple-mid); }
+.time { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.time b { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.time small { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.activity { font-size: 14px; font-weight: 700; line-height: 1.4; white-space: pre-line; }
+.notes { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; white-space: pre-line; }
+.cue { display: flex; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); font-size: 13px; line-height: 1.5; white-space: pre-line; }
+.cue span { flex-shrink: 0; color: var(--purple-dark); font-size: 11px; font-weight: 800; letter-spacing: 0.06em; }
+.link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; color: var(--purple-mid); font-size: 13px; font-weight: 600; text-decoration: none; }
+.link:hover { text-decoration: underline; }
+.actions { display: flex; gap: 2px; }
+.mini { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); font-size: 16px; cursor: pointer; }
+.mini:hover { background: var(--surface-2); color: var(--text); }
+.mini:disabled { opacity: 0.3; cursor: default; background: transparent; }
+.editor { min-width: 0; grid-column: 2 / -1; display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 10px; }
+.wide { grid-column: 1 / -1; }
+.editorActions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+
+@media (max-width: 640px) {
+  .item { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; padding: 12px; }
+  .time { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 8px; }
+  .time b { font-size: 16px; }
+  .body { grid-column: 1; }
+  .actions { grid-column: 2; grid-row: 2; }
+  .editor { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); }
+}

@@ -4,5 +4,5 @@ import { listResources } from "@/lib/api/resources";
 
 export default async function ResourcesPage() {
   const rows = await listResources();
-  return <ResourceTools manage={<RecordManager definitionKey="resources" rows={rows} />} rows={rows} />;
+  return <ResourceTools manage={<RecordManager embedded definitionKey="resources" rows={rows} />} rows={rows} />;
 }

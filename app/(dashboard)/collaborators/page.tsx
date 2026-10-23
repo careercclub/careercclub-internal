@@ -6,5 +6,5 @@ export const metadata = { title: "Collaborators" };
 
 export default async function CollaboratorsPage() {
   const rows = await listCollaborators();
-  return <CollaboratorWorkspace rows={rows} management={<RecordManager definitionKey="collaborators" rows={rows}/>} />;
+  return <CollaboratorWorkspace rows={rows} management={<RecordManager embedded definitionKey="collaborators" rows={rows}/>} />;
 }

@@ -26,6 +26,9 @@ const JENIS = ["CCA", "Webinar", "Workshop", "Bootcamp", "Seminar"];
 const EVENT_STATUS = ["Planning", "On Progress", "Done", "Cancelled"];
 const PLATFORMS = ["Zoom", "Google Meet", "Offline"];
 const PHASES = ["Pre Event", "Hari H", "Post Event"];
+// Stored phase values stay as they are; this is the English display label.
+const PHASE_LABEL: Record<string, string> = { "Pre Event": "Pre-event", "Hari H": "Event day", "Post Event": "Post-event" };
+const phaseLabel = (value: string) => PHASE_LABEL[value] || value;
 const TASK_STATUS = ["Todo", "On Progress", "Done"];
 const PRIORITIES = ["High", "Med", "Low"];
 
@@ -35,23 +38,7 @@ const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"
 function fmtDate(value: unknown) { const key = dateKey(value); if (!key) return ""; const [y, m, d] = key.split("-"); return `${Number(d)} ${MONTHS_ID[Number(m) - 1] || m} ${y}`; }
 function fmtShort(value: unknown) { const key = dateKey(value); if (!key) return "—"; const parts = key.split("-"); return `${Number(parts[2])} ${MONTHS_ID[Number(parts[1]) - 1] || parts[1]}`; }
 
-const PILLS: Record<string, { bg: string; fg: string }> = {
-  "On Progress": { bg: "var(--amber-bg)", fg: "var(--amber)" },
-  Planning: { bg: "var(--bg)", fg: "var(--text-muted)" },
-  Done: { bg: "var(--green-bg)", fg: "var(--green)" },
-  Cancelled: { bg: "var(--red-bg)", fg: "var(--red)" },
-  Todo: { bg: "var(--bg)", fg: "var(--text-muted)" },
-  High: { bg: "var(--red-bg)", fg: "var(--red)" },
-  Med: { bg: "var(--amber-bg)", fg: "var(--amber)" },
-  Low: { bg: "var(--teal-bg)", fg: "var(--teal)" },
-};
-const pillBase: CSSProperties = { display: "inline-block", padding: "2px 9px", borderRadius: 20, fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" };
-function pill(value: string): CSSProperties { const c = PILLS[value] || { bg: "var(--bg)", fg: "var(--text-muted)" }; return { ...pillBase, background: c.bg, color: c.fg }; }
-const jenisPill: CSSProperties = { ...pillBase, background: "var(--blue-bg)", color: "var(--blue)" };
-function eventBorder(status: string) { return status === "On Progress" ? "#2563eb" : status === "Done" ? "#3b6d11" : status === "Cancelled" ? "var(--red)" : "var(--text-hint)"; }
 const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 16 };
-const thStyle: CSSProperties = { padding: "8px 10px", fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase" };
-const tdStyle: CSSProperties = { padding: "10px", verticalAlign: "middle" };
 
 
 function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; onClose: () => void; onSaved: (row: ApiRecord) => void }) {
@@ -117,7 +104,7 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
           <div className="grid gap-1.5"><Label>Task title <span className="text-[var(--red)]">*</span></Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Promo flyer & poster design" /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detail brief, requirement, dll…" /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase} onValueChange={(v) => setForm({ ...form, phase: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PHASES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase} onValueChange={(v) => setForm({ ...form, phase: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PHASES.map((p) => <SelectItem key={p} value={p}>{phaseLabel(p)}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TASK_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -167,7 +154,7 @@ function EventLinksPanel({ event, templates, onAdd, onDelete, error }: { event: 
   const relevant = templates.filter((template) => text(template.jenis_program) === text(event.jenis_program));
   const adhoc = Array.isArray(event.links) ? (event.links as { label: string; url: string }[]) : [];
   const total = relevant.length + adhoc.length;
-  const chip: CSSProperties = { ...pillBase, display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 20, maxWidth: 200 };
+  const chip: CSSProperties = { fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 20, maxWidth: 200 };
   return (
     <div style={panelCard}>
       <button type="button" onClick={() => setOpen((value) => !value)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}>
@@ -379,7 +366,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
               <EventLinksPanel event={shown} templates={linkTemplates} onAdd={() => { setLinkError(""); setLinkModalEvent(shownId); }} onDelete={(index) => deleteLink(shownId, index)} error={linkError} />
 
               <div className={ps.phaseTabs} role="tablist" aria-label="Task phase">
-                {([["all", "All", shownTasks.length], ...PHASES.map((phase) => [phase, phase, shownTasks.filter((task) => text(task.phase) === phase).length])] as [string, string, number][]).map(([id, label, count]) => (
+                {([["all", "All", shownTasks.length], ...PHASES.map((phase) => [phase, phaseLabel(phase), shownTasks.filter((task) => text(task.phase) === phase).length])] as [string, string, number][]).map(([id, label, count]) => (
                   <button aria-selected={phaseTab === id} className={phaseTab === id ? ps.phaseActive : ps.phase} key={id} onClick={() => setPhaseTab(id)} role="tab" type="button">{label} <span>{count}</span></button>
                 ))}
               </div>
@@ -388,7 +375,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                 if (!list.length) return null;
                 return (
                   <div className={ps.phaseGroup} key={phase}>
-                    {phaseTab === "all" ? <h3>{phase} <span>{list.filter((task) => task.status === "Done").length}/{list.length}</span></h3> : null}
+                    {phaseTab === "all" ? <h3>{phaseLabel(phase)} <span>{list.filter((task) => task.status === "Done").length}/{list.length}</span></h3> : null}
                     <ul className={ps.rows}>
                       {list.map((task) => {
                         const isDoneTask = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); const chip = dueChip(task, today); const title = text(task.title) || "Untitled task";

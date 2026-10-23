@@ -17,14 +17,17 @@ import { AssigneeField, personName } from "./assignee-field";
 import styles from "../record-manager.module.css";
 import { confirmAction } from "./app-dialog";
 
-const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-const WEEKDAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// One palette: phases are shades of the brand blue (event day strongest). Red stays for danger.
+// Stored phase values stay Indonesian ("Hari H"); PHASE_LABEL is display only.
 const PHASE_COLORS: Record<string, { bg: string; fg: string }> = {
-  "Pre Event": { bg: "#d1fae5", fg: "#059669" },
-  "Hari H": { bg: "#fee2e2", fg: "#dc2626" },
-  "Post Event": { bg: "#dbeafe", fg: "#2563eb" },
+  "Pre Event": { bg: "var(--purple-light)", fg: "var(--purple-dark)" },
+  "Hari H": { bg: "var(--purple-mid)", fg: "#fff" },
+  "Post Event": { bg: "var(--surface-2)", fg: "var(--text)" },
 };
-const DEFAULT_PHASE = { bg: "var(--amber-bg)", fg: "var(--amber)" };
+const PHASE_LABEL: Record<string, string> = { "Pre Event": "Pre-event", "Hari H": "Event day", "Post Event": "Post-event" };
+const DEFAULT_PHASE = { bg: "var(--surface-2)", fg: "var(--text-muted)" };
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 function localIso(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
@@ -35,11 +38,11 @@ function dateKey(value: unknown) { if (!value) return ""; return value instanceo
 type CalItem = { kind: "event" | "task" | "ticket"; row: ApiRecord };
 
 const navBtn: CSSProperties = { minHeight: 28, padding: "4px 8px", border: "0.5px solid var(--border-md)", borderRadius: 6, background: "var(--white)", fontSize: 12, color: "var(--text)" };
-const chipBase: CSSProperties = { display: "block", width: "100%", textAlign: "left", border: 0, padding: "2px 5px", borderRadius: 3, fontSize: 9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
+const chipBase: CSSProperties = { display: "block", width: "100%", textAlign: "left", border: 0, padding: "2px 6px", borderRadius: 6, fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
 const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 16 };
 
 function Legend({ color, label }: { color: string; label: string }) {
-  return <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: "inline-block" }} />{label}</span>;
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: color, boxShadow: "inset 0 0 0 1px var(--border)", display: "inline-block" }} />{label}</span>;
 }
 
 
@@ -47,10 +50,10 @@ function CalChip({ item, onOpen, onDragStart }: { item: CalItem; onOpen: () => v
   const row = item.row;
   const title = text(row.title) || text(row.nama) || (item.kind === "ticket" ? "Ticket" : item.kind === "event" ? "Program" : "Task");
   if (item.kind === "event") {
-    return <button type="button" onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--purple-accent)", color: "#fff", cursor: "pointer" }}><i className="ti ti-broadcast" style={{ fontSize: 8 }} /> {title}</button>;
+    return <button type="button" onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--text)", color: "#fff", cursor: "pointer" }}><i className="ti ti-broadcast" style={{ fontSize: 10 }} /> {title}</button>;
   }
   if (item.kind === "ticket") {
-    return <button type="button" draggable onDragStart={onDragStart} onClick={onOpen} title={title} style={{ ...chipBase, background: "#ffedd5", color: "#c2410c", fontWeight: 500, cursor: "grab" }}><i className="ti ti-ticket" style={{ fontSize: 8 }} /> {title}</button>;
+    return <button type="button" draggable onDragStart={onDragStart} onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--white)", color: "var(--text)", boxShadow: "inset 0 0 0 1px var(--border-md)", fontWeight: 500, cursor: "grab" }}><i className="ti ti-ticket" style={{ fontSize: 10 }} /> {title}</button>;
   }
   const done = text(row.status) === "Done";
   const progress = text(row.status) === "On Progress";
@@ -127,7 +130,7 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function save() {
-    if (!form.title.trim()) { setError("Task title is required."); return; }
+    if (!form.title.trim()) { setError("Task title is required."); document.getElementById("calendar-task-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
       await updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees });
@@ -141,10 +144,10 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
           <DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> Edit task</DialogTitle>
         </DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5"><Label>Task title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="grid gap-1.5"><Label htmlFor="calendar-task-title">Task title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="calendar-task-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase || "none"} onValueChange={(v) => setForm({ ...form, phase: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{["Pre Event", "Hari H", "Post Event"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase || "none"} onValueChange={(v) => setForm({ ...form, phase: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{["Pre Event", "Hari H", "Post Event"].map((s) => <SelectItem key={s} value={s}>{PHASE_LABEL[s]}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "On Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -178,7 +181,7 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
     const first = new Date(base.getFullYear(), base.getMonth() + monthOffset, 1);
     const y = first.getFullYear();
     const m = first.getMonth();
-    const startWeekday = first.getDay();
+    const startWeekday = (first.getDay() + 6) % 7; // Monday first
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const total = Math.max(35, Math.ceil((startWeekday + daysInMonth) / 7) * 7);
     const cells: { date: Date; inMonth: boolean }[] = [];
@@ -216,17 +219,17 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button type="button" onClick={() => setMonthOffset((v) => v - 1)} style={navBtn} aria-label="Previous month"><i className="ti ti-chevron-left" /></button>
-          <strong style={{ fontSize: 13, minWidth: 110, textAlign: "center" }}>{view.label}</strong>
+          <strong style={{ fontSize: 15, minWidth: 130, textAlign: "center" }}>{view.label}</strong>
           <button type="button" onClick={() => setMonthOffset((v) => v + 1)} style={navBtn} aria-label="Next month"><i className="ti ti-chevron-right" /></button>
-          <button type="button" onClick={() => setMonthOffset(0)} style={{ ...navBtn, fontSize: 11 }}>Today</button>
-          {pending ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Saving…</span> : null}
+          <button type="button" onClick={() => setMonthOffset(0)} style={{ ...navBtn, fontSize: 12 }}>This month</button>
+          {pending ? <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Saving…</span> : null}
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 10, color: "var(--text-muted)" }}>
-          <Legend color="#059669" label="Pre" /><Legend color="#dc2626" label="H" /><Legend color="#2563eb" label="Post" /><Legend color="#c2410c" label="Ticket" />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", fontSize: 12, color: "var(--text-muted)" }}>
+          <Legend color="var(--text)" label="Program" /><Legend color="var(--purple-light)" label="Pre-event" /><Legend color="var(--purple-mid)" label="Event day" /><Legend color="var(--surface-2)" label="Post-event" /><Legend color="var(--border-md)" label="Ticket" />
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", background: "var(--bg)", border: "0.5px solid var(--border)", borderBottom: "none", borderRadius: "6px 6px 0 0" }}>
-        {WEEKDAYS.map((d) => <div key={d} style={{ padding: "5px 2px", textAlign: "center", fontSize: 9, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>{d}</div>)}
+        {WEEKDAYS.map((d) => <div key={d} style={{ padding: "6px 2px", textAlign: "center", fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>{d}</div>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", border: "0.5px solid var(--border)", borderTop: "none", borderRadius: "0 0 6px 6px", overflow: "hidden" }}>
         {view.cells.map((cell, idx) => {
@@ -238,12 +241,12 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
           const visible = open ? items : items.slice(0, 2);
           return (
             <div key={`${key}-${idx}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const [kind, id] = e.dataTransfer.getData("calendar-item").split(":"); if (id) reschedule(kind, id, key); }}
-              style={{ minHeight: 76, padding: "3px 3px 4px", borderRight: idx % 7 !== 6 ? "0.5px solid var(--border)" : "none", borderBottom: idx < view.cells.length - 7 ? "0.5px solid var(--border)" : "none", background: !cell.inMonth ? "#fafaf7" : isToday ? "var(--purple-light)" : isWeekend ? "#fafaf7" : "var(--white)", opacity: cell.inMonth ? 1 : 0.55, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
-              <div style={{ fontSize: 10, fontWeight: isToday ? 700 : 500, color: isToday ? "var(--purple-mid)" : cell.inMonth ? "var(--text)" : "var(--text-hint)" }}>
-                {cell.date.getDate()}{isToday ? <span style={{ fontSize: 8, marginLeft: 3, background: "var(--purple-accent)", color: "#fff", padding: "1px 4px", borderRadius: 6 }}>NOW</span> : null}
+              style={{ minHeight: 76, padding: "3px 3px 4px", borderRight: idx % 7 !== 6 ? "0.5px solid var(--border)" : "none", borderBottom: idx < view.cells.length - 7 ? "0.5px solid var(--border)" : "none", background: !cell.inMonth ? "var(--surface-2)" : isToday ? "var(--purple-light)" : isWeekend ? "var(--surface-2)" : "var(--white)", opacity: cell.inMonth ? 1 : 0.55, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
+              <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 600, color: isToday ? "var(--purple-mid)" : cell.inMonth ? "var(--text)" : "var(--text-hint)" }}>
+                {cell.date.getDate()}{isToday ? <span style={{ fontSize: 11, marginLeft: 4, background: "var(--purple-mid)", color: "#fff", padding: "0 6px", borderRadius: 999 }}>Today</span> : null}
               </div>
               {visible.map((item) => <CalChip key={`${item.kind}-${item.row.id}`} item={item} onOpen={() => (item.kind === "event" ? router.push("/program") : setModal(item))} onDragStart={(e) => { if (item.kind !== "event") e.dataTransfer.setData("calendar-item", `${item.kind}:${item.row.id}`); }} />)}
-              {items.length > 2 ? <button type="button" onClick={() => setExpanded((s) => ({ ...s, [key]: !open }))} style={{ fontSize: 8, color: "var(--purple-accent)", fontWeight: 600, textAlign: "left", background: "transparent", border: 0, padding: "1px 2px", cursor: "pointer" }}>{open ? "Sempit ▲" : `+${items.length - 2} lainnya ▼`}</button> : null}
+              {items.length > 2 ? <button type="button" onClick={() => setExpanded((s) => ({ ...s, [key]: !open }))} style={{ fontSize: 11, color: "var(--purple-mid)", fontWeight: 700, textAlign: "left", background: "transparent", border: 0, padding: "1px 2px", cursor: "pointer" }}>{open ? "Show less" : `+${items.length - 2} more`}</button> : null}
             </div>
           );
         })}

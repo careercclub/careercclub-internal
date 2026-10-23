@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { initials } from "@/lib/dashboard/summary";
 import { filterCandidates, isBuyer, poolSummary, splitList, type CandidateFilter } from "@/lib/talent-pool/view";
-import { AnalyticsCard, ANALYTICS_COLORS_TP, BarBreakdown, DonutBreakdown, downloadJson, freq, freqMulti, type Entry } from "./analytics-cards";
+import { AnalyticsCard, BarBreakdown, DonutBreakdown, downloadJson, freq, freqMulti, type Entry } from "./analytics-cards";
 import s from "./talent-pool-workspace.module.css";
 import { TalentPoolTools } from "./talent-pool-tools";
 import { Pagination, usePagination } from "./ui-kit";
@@ -182,7 +182,7 @@ function TalentPoolAnalytics({ rows }: { rows: ApiRecord[] }) {
       gpa: buckets.filter(([, count]) => count > 0) as Entry[], gpaTotal: values.length,
     };
   }, [rows]);
-  const donut = (entries: Entry[], of = total) => <DonutBreakdown colors={ANALYTICS_COLORS_TP} entries={entries} total={of} />;
+  const donut = (entries: Entry[], of = total) => <DonutBreakdown entries={entries} total={of} />;
   return (
     <div className={s.analytics}>
       <div className={s.analyticsHead}>
