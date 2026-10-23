@@ -1071,3 +1071,12 @@ Urutan prioritas: (1) yang dipakai harian dan masih kelihatan lama — halaman d
 ### Antrean
 
 Tidak ada sisa dari daftar redesign. Yang masih bisa dirapikan kapan-kapan: warna header email blast default (#2e2a7a, belum dijawab), dan pemeriksaan rahasia di repo (repo Public).
+
+## Cek keamanan repo (Public) — 23 Okt 2026
+
+Diperiksa: seluruh riwayat git (310 commit, branch `main` + `refactor`) untuk pola rahasia (AWS/Google/OpenAI/Anthropic/GitHub/Slack/Resend/SendGrid key, private key, JWT, URL database dengan password, `client_secret`, `private_key`), file data (CSV/XLSX/JSON/SQL dump), alamat IP server, dan email pribadi.
+
+Hasil:
+- **Tidak ada password/token/key asli** di riwayat. URL database di README, `.env.example` dan DEPLOYMENT_VPS.md semuanya placeholder (`password`, `URL_ENCODED_PASSWORD`). Tidak ada IP server. Tidak ada file data/dump — hanya skema & migrasi.
+- **Data pribadi asli di file tes** (diperbaiki): `lib/imports/crm-rows.test.mjs` dan `lib/imports/talent-pool-layout.test.mjs` memuat baris asli dari export (nama lengkap, email, nomor WhatsApp, LinkedIn, kampus, IPK dua orang pembeli/peserta); `lib/search/registry.test.mjs` memuat dua email login akun kantor. Semua diganti data palsu (`@example.com`, nomor 62812000…); tes tetap 140/140. Catatan: versi lama tetap ada di riwayat git — menghapusnya perlu menulis ulang riwayat (force-push), atau cukup jadikan repo Private.
+- **Branch `main` (app lama)** memuat URL project Supabase + *publishable key* di `index.html`. Key jenis ini memang dirancang publik, tapi dengan repo Public siapa pun bisa memakainya ke project itu — aman hanya kalau RLS di semua tabel ketat. Kalau project Supabase lama sudah tidak dipakai (data sudah pindah ke Postgres VPS), sebaiknya di-pause/hapus atau key-nya dicabut.
