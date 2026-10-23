@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import { importCrmTransactions } from "@/lib/api/crm";
 import { mapCrmRow, type CrmImportRow } from "@/lib/imports/crm-rows";
-import ExcelJS from "exceljs";
-import { Readable } from "node:stream";
+import { readWorkbook } from "@/lib/imports/workbook";
+import type ExcelJS from "exceljs";
 
 export const runtime = "nodejs";
 
@@ -18,13 +18,7 @@ function cellText(value: ExcelJS.CellValue) {
 }
 
 async function readRows(file: File): Promise<CrmImportRow[]> {
-  const workbook = new ExcelJS.Workbook();
-  const buffer = Buffer.from(await file.arrayBuffer());
-  if (file.name.toLowerCase().endsWith(".csv")) {
-    await workbook.csv.read(Readable.from(buffer.toString("utf8")));
-  } else {
-    await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
-  }
+  const workbook = await readWorkbook(new Uint8Array(await file.arrayBuffer()), file.name);
   const worksheet = workbook.worksheets[0];
   if (!worksheet) return [];
   const headers = new Map<number, string>();

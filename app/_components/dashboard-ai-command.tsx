@@ -29,7 +29,7 @@ export function DashboardAiCommand() {
       if (module === "auto") {
         const aliases: Record<string, ModuleKey> = { ticket: "ticket", tickets: "ticket", task: "task", tasks: "task", carousel: "carousel", partnership: "partnership", b2b: "partnership" };
         const target = aliases[String(result.data.module || "").toLowerCase()];
-        if (!target || !result.data.data || typeof result.data.data !== "object") throw new Error("AI tidak menemukan modul tujuan yang didukung.");
+        if (!target || !result.data.data || typeof result.data.data !== "object") throw new Error("The AI could not tell which module this belongs to. Try saying ticket, task or content plan.");
         setModule(target); setParsed(result.data.data as Record<string, unknown>);
       } else setParsed(result.data);
       setMessage("Cek field hasil ekstraksi sebelum menyimpan.");

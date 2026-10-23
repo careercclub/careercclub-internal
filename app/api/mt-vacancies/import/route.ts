@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { importMtVacancies } from "@/lib/api/job-vacancy-mt";
-import ExcelJS from "exceljs";
-import { Readable } from "node:stream";
+import { parseDate } from "@/lib/imports/csv-text";
+import { readWorkbook } from "@/lib/imports/workbook";
+import type ExcelJS from "exceljs";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,6 @@ const aliases: Record<string, string[]> = { company: ["company", "perusahaan"], 
 export async function POST(request: Request) {
   if (!(await auth())?.user) return Response.json({ error: "Unauthorized" }, { status: 401 }); const formData = await request.formData(); const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0 || file.size > 10 * 1024 * 1024 || !/\.(csv|xlsx)$/i.test(file.name)) return Response.json({ error: "A CSV or XLSX file up to 10 MB is required." }, { status: 400 });
-  try { const workbook = new ExcelJS.Workbook(); const buffer = Buffer.from(await file.arrayBuffer()); if (/\.csv$/i.test(file.name)) await workbook.csv.read(Readable.from(buffer.toString("utf8"))); else await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]); const sheet = workbook.worksheets[0]; if (!sheet) return Response.json({ error: "Workbook is empty." }, { status: 400 }); const headers = new Map<number, string>(); sheet.getRow(1).eachCell((cell, column) => headers.set(column, key(text(cell.value)))); const rows: Array<Record<string, string>> = []; sheet.eachRow((row, number) => { if (number === 1) return; const source = new Map<string, string>(); headers.forEach((header, column) => source.set(header, text(row.getCell(column).value))); const target: Record<string, string> = {}; Object.entries(aliases).forEach(([field, names]) => { target[field] = names.map((name) => source.get(name)).find((item) => item !== undefined) || ""; }); if (target.company && target.program) rows.push(target); }); return Response.json(await importMtVacancies(rows)); }
+  try { const workbook = await readWorkbook(new Uint8Array(await file.arrayBuffer()), file.name); const sheet = workbook.worksheets[0]; if (!sheet) return Response.json({ error: "Workbook is empty." }, { status: 400 }); const headers = new Map<number, string>(); sheet.getRow(1).eachCell((cell, column) => headers.set(column, key(text(cell.value)))); const rows: Array<Record<string, string>> = []; const warnings: string[] = []; sheet.eachRow((row, number) => { if (number === 1) return; const source = new Map<string, string>(); headers.forEach((header, column) => source.set(header, text(row.getCell(column).value))); const target: Record<string, string> = {}; Object.entries(aliases).forEach(([field, names]) => { target[field] = names.map((name) => source.get(name)).find((item) => item !== undefined) || ""; }); if (!target.company || !target.program) return; for (const field of ["deadline", "open_date"]) { if (target[field]) { const parsed = parseDate(target[field], "dmy"); if (!parsed) warnings.push(`Row ${number}: ${field.replace("_", " ")} "${target[field]}" is not a date — left empty.`); target[field] = parsed || ""; } } rows.push(target); }); if (!rows.length) return Response.json({ error: "No rows with both Company and Program were found. Check that row 1 holds the column names." }, { status: 400 }); return Response.json({ ...await importMtVacancies(rows), warnings: warnings.slice(0, 50) }); }
   catch (error) { console.error("MT vacancy import failed", error); return Response.json({ error: "The workbook could not be imported." }, { status: 500 }); }
 }

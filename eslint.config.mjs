@@ -5,6 +5,8 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    // Bundled route handlers written by tests/imports/build.mjs.
+    "tests/imports/out/**",
     // Default ignores of eslint-config-next:
     ".next/**",
     ".open-next/**",

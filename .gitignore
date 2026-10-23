@@ -49,3 +49,4 @@ memory.md
 .open-next/
 .wrangler/
 .dev.vars
+tests/imports/out/

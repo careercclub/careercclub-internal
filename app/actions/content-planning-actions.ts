@@ -125,7 +125,7 @@ export type CarouselPlanInput = {
 export async function createCarouselPlanAction(input: CarouselPlanInput) {
   const name = await actor();
   const judul = input.judul.trim();
-  if (!judul) throw new Error("Judul wajib diisi.");
+  if (!judul) throw new Error("Title is required.");
   await createCarouselPlan({
     judul,
     tanggal_posting: cleanDate(input.tanggal_posting),
@@ -143,7 +143,7 @@ export async function createCarouselPlanAction(input: CarouselPlanInput) {
 export async function updateCarouselPlanAction(id: string, input: CarouselPlanInput) {
   const name = await actor();
   const judul = input.judul.trim();
-  if (!judul) throw new Error("Judul wajib diisi.");
+  if (!judul) throw new Error("Title is required.");
   await updateCarouselPlan(id, {
     judul,
     tanggal_posting: cleanDate(input.tanggal_posting),
@@ -285,14 +285,14 @@ function kolValues(input: KolInput) {
 
 export async function createKolAction(input: KolInput) {
   await actor();
-  if (!input.nama.trim()) throw new Error("Nama KOL wajib diisi.");
+  if (!input.nama.trim()) throw new Error("KOL name is required.");
   await createKol(kolValues(input));
   refresh();
 }
 
 export async function updateKolAction(id: string, input: KolInput) {
   await actor();
-  if (!input.nama.trim()) throw new Error("Nama KOL wajib diisi.");
+  if (!input.nama.trim()) throw new Error("KOL name is required.");
   await updateKol(id, kolValues(input));
   refresh();
 }
@@ -336,14 +336,14 @@ function mtValues(input: MtStoryInput) {
 
 export async function createMtStoryAction(input: MtStoryInput) {
   await actor();
-  if (!input.nama.trim()) throw new Error("Nama wajib diisi.");
+  if (!input.nama.trim()) throw new Error("Name is required.");
   await createMtStory(mtValues(input));
   refresh();
 }
 
 export async function updateMtStoryAction(id: string, input: MtStoryInput) {
   await actor();
-  if (!input.nama.trim()) throw new Error("Nama wajib diisi.");
+  if (!input.nama.trim()) throw new Error("Name is required.");
   await updateMtStory(id, mtValues(input));
   refresh();
 }

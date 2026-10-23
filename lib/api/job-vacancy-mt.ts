@@ -1,4 +1,5 @@
 import "server-only";
+import { parseDate } from "@/lib/imports/csv-text";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
 
@@ -36,11 +37,13 @@ export function importMtVacancies(rows: Array<Record<string, unknown>>) {
       const company = String(row.company || "").trim(); const program = String(row.program || "").trim();
       if (!company || !program) continue;
       const year = String(row.year || "").trim();
-      const deadline = String(row.deadline || "").trim() || null;
-      const openDate = String(row.open_date || "").trim() || null;
+      // Sheets carry "30/11/2026", "2026-11-30" or date cells; anything unreadable is
+      // stored empty rather than failing the whole import on a date column.
+      const deadline = parseDate(row.deadline instanceof Date ? row.deadline : String(row.deadline || "").trim(), "dmy");
+      const openDate = parseDate(row.open_date instanceof Date ? row.open_date : String(row.open_date || "").trim(), "dmy");
       const [existing] = await tx<{ id: string }[]>`select id from mt_vacancies where lower(company) = lower(${company}) and lower(program) = lower(${program}) and coalesce(year::text, '') = ${year} limit 1`;
       const values = {
-        company, program, industry: String(row.industry || ""), roles: list(row.roles), selection: list(row.selection),
+        company, program, industry: String(row.industry || ""), roles: list(row.roles), selection: JSON.stringify(list(row.selection)), // text column holding a JSON list, as the legacy app stored it
         career_links: list(row.career_links), ref_links: list(row.ref_links), deadline,
         status: String(row.status || "Active"), gpa: String(row.gpa || ""), edu: String(row.edu || ""), majors: list(row.majors),
         placement: list(row.placement), other_req: String(row.other_req || ""), duration: String(row.duration || ""),

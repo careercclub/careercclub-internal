@@ -13,6 +13,7 @@
     "test": "node --test \"lib/**/*.test.mjs\"",
     "schema:check": "node scripts/schema-expectations.mjs > database/schema-expectations.sql",
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js",
+    "test:imports": "node tests/imports/build.mjs && node tests/imports/run.mjs",
     "vps:rebuild": "bash scripts/vps-rebuild-full.sh",
     "vps:rebuild:frontend": "bash scripts/vps-rebuild-frontend.sh"
   },

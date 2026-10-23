@@ -68,11 +68,11 @@ function vacancyValues(input: VacancyInput) {
   const company = cleanText(input.company);
   const industry = cleanText(input.industry);
   const program = cleanText(input.program);
-  if (!company || !industry || !program) throw new Error("Isi dulu: Nama Perusahaan, Industri, dan Nama Program!");
+  if (!company || !industry || !program) throw new Error("Company, industry and program are required.");
   const months = cleanMonths(input.months);
-  if (!months.length) throw new Error("Pilih minimal 1 bulan buka!");
+  if (!months.length) throw new Error("Pick at least one opening month.");
   const careerLinks = cleanArray(input.career_links);
-  if (!careerLinks.length) throw new Error("Isi minimal 1 Career Platform Link!");
+  if (!careerLinks.length) throw new Error("Add at least one career platform link.");
   return {
     company, industry, program,
     roles: cleanArray(input.roles),
@@ -82,7 +82,9 @@ function vacancyValues(input: VacancyInput) {
     placement: cleanArray(input.placement),
     other_req: cleanText(input.other_req),
     duration: cleanText(input.duration),
-    selection: cleanArray(input.selection),
+    // `selection` is a text column holding an ordered JSON list (legacy schema); a raw
+    // array would be written as "a,b" and split wrongly when a step contains a comma.
+    selection: JSON.stringify(cleanArray(input.selection)),
     months,
     year: cleanText(input.year) || String(new Date().getFullYear()),
     open_date: cleanDate(input.open_date),
@@ -126,7 +128,7 @@ export async function createIndustryAction(nama: string) {
   const trimmed = nama.trim();
   if (!trimmed) return;
   const existing = await listMtIndustries();
-  if (existing.some((row) => String(row.nama).toLowerCase() === trimmed.toLowerCase())) throw new Error("Industri sudah ada!");
+  if (existing.some((row) => String(row.nama).toLowerCase() === trimmed.toLowerCase())) throw new Error("That industry already exists.");
   await createMtIndustry({ nama: trimmed });
   await logActivity({ userName: name, module: "MT Vacancies", action: "Tambah", detail: trimmed, table: "mt_industries" });
   refresh();
@@ -135,7 +137,7 @@ export async function createIndustryAction(nama: string) {
 export async function deleteIndustryAction(id: string, nama: string) {
   const name = await actor();
   const vacancies = await listMtVacancies();
-  if (vacancies.some((row) => row.industry === nama)) throw new Error("Tidak bisa dihapus — industri ini masih dipakai oleh beberapa loker.");
+  if (vacancies.some((row) => row.industry === nama)) throw new Error("This industry is still used by some vacancies, so it cannot be deleted.");
   await deleteMtIndustry(id);
   await logActivity({ userName: name, module: "MT Vacancies", action: "Hapus", detail: nama, table: "mt_industries" });
   refresh();

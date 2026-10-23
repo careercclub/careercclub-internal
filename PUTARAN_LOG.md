@@ -1080,3 +1080,46 @@ Hasil:
 - **Tidak ada password/token/key asli** di riwayat. URL database di README, `.env.example` dan DEPLOYMENT_VPS.md semuanya placeholder (`password`, `URL_ENCODED_PASSWORD`). Tidak ada IP server. Tidak ada file data/dump — hanya skema & migrasi.
 - **Data pribadi asli di file tes** (diperbaiki): `lib/imports/crm-rows.test.mjs` dan `lib/imports/talent-pool-layout.test.mjs` memuat baris asli dari export (nama lengkap, email, nomor WhatsApp, LinkedIn, kampus, IPK dua orang pembeli/peserta); `lib/search/registry.test.mjs` memuat dua email login akun kantor. Semua diganti data palsu (`@example.com`, nomor 62812000…); tes tetap 140/140. Catatan: versi lama tetap ada di riwayat git — menghapusnya perlu menulis ulang riwayat (force-push), atau cukup jadikan repo Private.
 - **Branch `main` (app lama)** memuat URL project Supabase + *publishable key* di `index.html`. Key jenis ini memang dirancang publik, tapi dengan repo Public siapa pun bisa memakainya ke project itu — aman hanya kalau RLS di semua tabel ketat. Kalau project Supabase lama sudah tidak dipakai (data sudah pindah ke Postgres VPS), sebaiknya di-pause/hapus atau key-nya dicabut.
+
+## Putaran 27 — Cek fungsional import data (23 Okt 2026)
+
+Permintaan: cek fungsi, bukan tampilan — terutama import data.
+
+### Cara uji
+
+Bukan lewat UI tiruan. Keenam route import asli (`/api/talent-pool|crm|content-evaluation|instagram|mt-vacancies|free-class/import`) dijalankan langsung (login di-stub) ke **Postgres 16 sungguhan**, dengan tabel dibentuk seperti production (kolom dari migrasi 022, tipe `mt_vacancies` dari app lama: list = jsonb, `selection` = text, `year` = text). File uji dibuat menyerupai export asli: sheet Google Form Talent Pool (31 kolom + baris angka di atas), `myorder.xlsx` lynk.id, CSV Meta Business Suite, CSV harian Meta Insights (UTF-16 + `sep=,`), sheet lowongan, Google Form Free Class — plus variasi yang sering terjadi: BOM, `;` dari Excel Indonesia, judul kolom di bawah banner, sel tanggal Excel, `30/11/2026`, `1,234`, import ulang. Setelah import, isi tabel diperiksa dengan SQL.
+
+Alat uji ini masuk repo: `tests/imports/` + `npm run test:imports` (menolak database yang namanya tanpa "test", karena tabelnya dikosongkan).
+
+### Bug yang ketemu & diperbaiki
+
+| # | Import | Gejala | Penyebab | Perbaikan |
+|---|---|---|---|---|
+| 1 | **Content Evaluation (Meta)** | 4 post berbeda masuk jadi 2; data post satu menimpa post lain | Pembaca CSV (ExcelJS) mengubah Post ID 17 digit jadi angka → digit belakang dibulatkan, ID bertabrakan | Semua CSV dibaca sebagai teks apa adanya (`lib/imports/workbook.ts`) |
+| 2 | Content Evaluation (XLSX) | Sama, kalau Post ID disimpan Excel sebagai angka | Excel sendiri hanya menyimpan 15 digit — ID sudah rusak di file | Ditolak dengan alasan jelas ("…lost digits… import the CSV from Meta / format the column as Text"), tidak ada yang tercampur |
+| 3 | Semua CSV | WhatsApp "0812…" tersimpan "812…", kode voucher "0012" jadi "12", IPK "3.50" jadi "3.5" | Sama dengan #1 | Sama dengan #1 |
+| 4 | Semua CSV | CSV dari Excel setting Indonesia (pemisah `;`) tidak terbaca sama sekali | Pemisah selalu dianggap koma | Pemisah dideteksi otomatis (`,` `;` tab, juga baris `sep=`) |
+| 5 | **Instagram** | Angka "1,234" di CSV Insights terbaca 1 | Baris dipecah per koma tanpa memperhatikan tanda kutip | Pemecah CSV yang benar + pembaca angka (`1,234`, `1.234.567`, `Rp 99.000`) |
+| 6 | **Instagram** | Import ulang hanya file Views → Reach & Follows minggu itu jadi 0 | Update menulis semua metrik, yang tidak ada di file diisi 0 | Hanya metrik yang ada di file yang diubah |
+| 7 | **Job Vacancy (file)** | Deadline `30/11/2026` → seluruh import gagal, pesan umum | Teks tanggal dimasukkan mentah ke kolom date | Tanggal dibaca (ISO, dd/mm/yyyy, "5 Okt 2026", serial Excel); yang tak terbaca dikosongkan + peringatan per baris |
+| 8 | **Job Vacancy (Google Sheet)** | Sama, dan gagalnya **tanpa pesan** sama sekali | Sama + error tidak ditangkap di tombol Confirm | Parsing tanggal dipindah ke fungsi simpan bersama; error ditampilkan ("Nothing was saved: …") |
+| 9 | Job Vacancy | Langkah seleksi tersimpan "a,b" — langkah yang mengandung koma terpecah | Array ditulis ke kolom text | Disimpan sebagai daftar JSON (seperti app lama); pembacaan sudah mendukung keduanya |
+| 10 | **Talent Pool / Free Class (link sheet)** | Sheet belum dipublish → pesan membingungkan ("no header row…") | Google mengembalikan halaman login HTML, dibaca sebagai CSV | Dikenali: "Google returned a web page… Publish the tab first: File → Share → Publish to web…" |
+| 11 | CRM (beberapa file) | File ke-2 gagal → pesan hanya error, padahal file ke-1 sudah tersimpan; dicoba ulang di mode *results* → riwayat pembelian dobel | — | Pesan menyebut file yang sudah masuk dan minta dikeluarkan saat coba ulang |
+| 12 | Pesan error server | Masih Indonesia ("Isi dulu: Nama Perusahaan…", "Judul wajib diisi.", "Industri sudah ada!", dll.) | — | Diterjemahkan ke Inggris |
+
+### Yang dicek dan sudah benar
+
+Talent Pool: XLSX & CSV export, header di bawah banner + baris kosong, link sheet yang dipublish & link edit biasa (diubah ke export), import ulang tanpa dobel (email tanpa beda huruf besar/kecil), file lynk.id salah tempat ditolak ke CRM. CRM: order baru, PENDING dilewati, tanggal lynk day-first (31-07), catatan checkout (sumber/tahap/industri), import ulang tidak dobel, mode *results* mencocokkan WA beda format → Upsell + riwayat bertambah, sel tanggal Excel. Content Evaluation: tanggal Meta month-first, Reel/Carousel, import ulang memperbarui tanpa menghapus WTR/action yang diisi manual. Instagram: 14 hari → 2 minggu Senin dengan jumlah benar, import ulang minggu yang sama mengganti bukan menambah, CSV mingguan. Free Class: duplikat digabung, nilai & jawaban terbuka di kolom yang benar, BOM.
+
+### Check
+
+- Uji fungsional import **45/45** (sebelum perbaikan: 10 gagal pada putaran pertama; setelah fixture dibenahi, 9 bug nyata + 1 kasus Excel yang kini ditolak dengan jelas).
+- Unit baru `lib/imports/csv-text.test.mjs` (decode, pemisah, kutip, angka, tanggal) — unit total **145/145**.
+- Regresi UI semua lolos (Putaran 26 39, 25 44, Marketing 47, Settings 12, Competitor 19, Job Vacancy 20, Products 17, Content Planning 26, Customer Knowledge 20, Partnership 23, CRM 24, Talent Pool 21, Program 21, Tickets 19, modul 12, popup 31, navigasi 32, search 46, form & tabel 946, Content Library, Design Assets 49).
+- tsc bersih; lint 0 masalah; `npm run build` lolos.
+
+### Catatan
+
+- Tipe kolom tabel dump (buyers, content_evaluations, ig_snapshots, mt_vacancies, free_class_eval) di uji ini direkonstruksi dari migrasi + app lama, bukan dari database production. Kalau di production ada tipe yang beda, `npm run test:imports` bisa dijalankan ke salinan skema production (database terpisah bernama …test).
+- Belum diuji fungsional: kirim email blast (Resend), AI parse/screenshot, upload R2, Google Calendar — semuanya butuh layanan luar.

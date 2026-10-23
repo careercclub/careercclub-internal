@@ -60,9 +60,17 @@ export function importInstagramSnapshots(rows: Array<Record<string, string | num
       if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) continue;
       const [existing] = await tx<{ id: string }[]>`select id from ig_snapshots where week_start = ${weekStart} limit 1`;
       const values = ["followers_total", "follows_gained", "reach", "views", "interactions", "link_clicks", "profile_visits"] as const;
-      const metrics = Object.fromEntries(values.map((field) => [field, Number(row[field] || 0)]));
-      if (existing) await tx`update ig_snapshots set ${tx(metrics)}, notes = ${String(row.notes || "")} where id = ${existing.id}`;
-      else await tx`insert into ig_snapshots ${tx({ week_start: weekStart, ...metrics, notes: String(row.notes || "") })}`;
+      // Only the metrics this file carries: re-importing just the Views export must not
+      // zero the week's Reach or Follows that came from another file.
+      const provided = values.filter((field) => row[field] !== undefined && row[field] !== null);
+      const metrics = Object.fromEntries(provided.map((field) => [field, Number(row[field] || 0)]));
+      const notes = row.notes === undefined ? undefined : String(row.notes || "");
+      if (existing) {
+        const changes = { ...metrics, ...(notes === undefined ? {} : { notes }) };
+        if (Object.keys(changes).length) await tx`update ig_snapshots set ${tx(changes)} where id = ${existing.id}`;
+      } else {
+        await tx`insert into ig_snapshots ${tx({ week_start: weekStart, ...Object.fromEntries(values.map((field) => [field, Number(row[field] || 0)])), notes: notes || "" })}`;
+      }
       imported += 1;
     }
     return { imported };

@@ -125,11 +125,15 @@ export function SheetImportPanel({ existingRows }: { existingRows: ApiRecord[] }
     if (!preview || !preview.length) { notify("No valid rows to import.", "error"); return; }
     start(async () => {
       const rows = preview.map(({ classification: _classification, ...row }) => row);
-      const result = await importVacanciesFromSheetAction(rows);
-      setStatus({ text: `${result.inserted} new vacancies added${result.updated ? ` · ${result.updated} updated` : ""}.`, tone: "success" });
-      setPreview(null);
-      setUrl("");
-      setTimeout(() => setOpen(false), 1500);
+      try {
+        const result = await importVacanciesFromSheetAction(rows);
+        setStatus({ text: `${result.inserted} new vacancies added${result.updated ? ` · ${result.updated} updated` : ""}.`, tone: "success" });
+        setPreview(null);
+        setUrl("");
+        setTimeout(() => setOpen(false), 1500);
+      } catch (error) {
+        setStatus({ text: `Nothing was saved: ${error instanceof Error ? error.message : "the import failed"}.`, tone: "error" });
+      }
     });
   }
 

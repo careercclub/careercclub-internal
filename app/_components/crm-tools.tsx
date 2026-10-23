@@ -26,11 +26,15 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
       const files = formData.getAll("files").filter((item): item is File => item instanceof File && item.size > 0);
       if (!files.length) throw new Error("Select at least one CSV or XLSX file.");
       const total = { added: 0, updated: 0, skipped: 0, warnings: 0 };
+      const done: string[] = [];
       for (const file of files) {
         const request = new FormData(); request.set("mode", String(formData.get("mode") || "new")); request.set("file", file);
         const response = await fetch("/api/crm/import", { method: "POST", body: request });
-        const result = await response.json() as ImportResult;
-        if (!response.ok) throw new Error(`${file.name}: ${result.error || "Import failed."}`);
+        const result = await response.json().catch(() => ({ error: "The server did not answer." })) as ImportResult;
+        // Each file is saved on its own. Say which ones already went in, so a retry does not
+        // import them twice (in "results" mode that would append the purchase history again).
+        if (!response.ok) throw new Error(`${file.name}: ${result.error || "Import failed."}${done.length ? ` Already imported: ${done.join(", ")} — leave those out if you retry.` : ""}`);
+        done.push(file.name);
         total.added += result.added || 0; total.updated += result.updated || 0; total.skipped += result.skipped || 0; total.warnings += result.warnings?.length || 0;
       }
       setMessage(`Added ${total.added}, updated ${total.updated}, skipped ${total.skipped}.${total.warnings ? ` ${total.warnings} classification warning(s).` : ""}`);
