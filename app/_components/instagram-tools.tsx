@@ -1,68 +1,62 @@
 "use client";
 
 import { saveInstagramBaselineAction } from "@/app/actions/instagram-actions";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ApiRecord } from "@/lib/api/_crud";
+import { compact, day, followersSeries, num } from "@/lib/marketing/view";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { FollowersChart, MetricsChart } from "./charts";
-import { StatCard, StatsGrid } from "./ui-kit";
+import s from "./marketing.module.css";
 
-type Tab = "dashboard" | "upload" | "target";
-type ComputedSnapshot = ApiRecord & { computedFollowers: number };
-function numeric(value: unknown) { const result = Number(value || 0); return Number.isFinite(result) ? result : 0; }
-function compact(value: unknown) { return new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(numeric(value)); }
-function day(value: unknown) { if (value instanceof Date) return value.toISOString().slice(0, 10); return typeof value === "string" ? value.slice(0, 10) : ""; }
+// Instagram in the IJIS layout: one hero for the follower count and the yearly goal, a stat
+// strip, three charts, then the weekly history. Import and Target/baseline are their own views.
 
-function computeFollowers(snapshots: ApiRecord[], baseline: ApiRecord | null): ComputedSnapshot[] {
-  const sorted = [...snapshots].sort((a, b) => day(a.week_start).localeCompare(day(b.week_start))).map((row) => ({ ...row, computedFollowers: numeric(row.followers_total) } as ComputedSnapshot));
-  if (!sorted.length) return sorted;
-  // The stored followers_total values are accumulated gross follows — Instagram's
-  // "Follows" counts new follows but not unfollows, so they drift above reality (17.8k
-  // against a real 14.8k). The manually entered baseline is the one number a human has
-  // verified against the account, so it anchors the whole series and every other week
-  // is derived from it. That keeps the KPI, the chart and the history table on one
-  // number instead of mixing a verified total with drifted ones.
-  const anchorDate = day(baseline?.baseline_date) || day(sorted.at(-1)?.week_start);
-  const anchorValue = numeric(baseline?.followers_total) || numeric(sorted.at(-1)?.followers_total);
-  let anchor = sorted.length - 1; let distance = Number.POSITIVE_INFINITY;
-  sorted.forEach((row, index) => { const diff = Math.abs(new Date(day(row.week_start)).getTime() - new Date(anchorDate).getTime()); if (diff < distance) { distance = diff; anchor = index; } });
-  sorted[anchor].computedFollowers = anchorValue;
-  for (let index = anchor + 1; index < sorted.length; index += 1) {
-    sorted[index].computedFollowers = sorted[index - 1].computedFollowers + numeric(sorted[index].follows_gained);
-  }
-  for (let index = anchor - 1; index >= 0; index -= 1) {
-    // Subtract the *later* week's gain: week[i+1] = week[i] + gained[i+1]. The original
-    // subtracted gained[i], which shifted every week before the anchor by one week's growth.
-    sorted[index].computedFollowers = Math.max(0, sorted[index + 1].computedFollowers - numeric(sorted[index + 1].follows_gained));
-  }
-  return sorted;
-}
+type View = "overview" | "import" | "target";
+const VIEWS: { key: View; label: string; icon: string }[] = [
+  { key: "overview", label: "Overview", icon: "ti-layout-dashboard" },
+  { key: "import", label: "Import", icon: "ti-upload" },
+  { key: "target", label: "Target & baseline", icon: "ti-target" },
+];
+const fmt = (value: number) => value.toLocaleString("en-US");
+const PAGE = 6;
 
 export function InstagramTools({ snapshots, targets, baseline, referenceDate, snapshotManagement, targetManagement }: { snapshots: ApiRecord[]; targets: ApiRecord[]; baseline: ApiRecord | null; referenceDate: string; snapshotManagement: ReactNode; targetManagement: ReactNode }) {
-  const router = useRouter(); const [tab, setTab] = useState<Tab>("dashboard"); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [page, setPage] = useState(0);
-  const analytics = useMemo(() => {
-    const now = new Date(referenceDate); const sorted = computeFollowers(snapshots, baseline); const latest = sorted.at(-1); const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 30); const recent = sorted.filter((row) => day(row.week_start) >= cutoff.toISOString().slice(0, 10)); const reach30 = recent.reduce((sum, row) => sum + numeric(row.reach), 0); const interactions30 = recent.reduce((sum, row) => sum + numeric(row.interactions), 0); const follows30 = recent.reduce((sum, row) => sum + numeric(row.follows_gained), 0); const avgPerDay = [...sorted].reverse().slice(0, 4).reduce((sum, row) => sum + numeric(row.follows_gained), 0) / Math.max(1, Math.min(4, sorted.length) * 7); const baselineDate = new Date(`${day(baseline?.baseline_date) || referenceDate.slice(0, 10)}T00:00:00`); const end = new Date(baselineDate.getFullYear(), 11, 31); const predicted = Math.round(numeric(baseline?.followers_total) + avgPerDay * Math.max(0, (end.getTime() - baselineDate.getTime()) / 86400000)); const currentTarget = targets.find((item) => numeric(item.year) === now.getFullYear()) || null;
-    const monthly = new Map<string, { followers: number; reach: number; interactions: number }>(); sorted.forEach((row) => { const key = day(row.week_start).slice(0, 7); if (!key) return; const item = monthly.get(key) || { followers: 0, reach: 0, interactions: 0 }; item.followers = row.computedFollowers; item.reach += numeric(row.reach); item.interactions += numeric(row.interactions); monthly.set(key, item); });
-    return { sorted, latest, reach30, interactions30, follows30, er30: reach30 ? interactions30 / reach30 * 100 : 0, avgPerDay, predicted, currentTarget, monthly: [...monthly.entries()].sort(([a], [b]) => a.localeCompare(b)) };
-  }, [snapshots, targets, baseline, referenceDate]);
-  const history = [...analytics.sorted].reverse(); const pages = Math.max(1, Math.ceil(history.length / 5)); const pageRows = history.slice(Math.min(page, pages - 1) * 5, Math.min(page, pages - 1) * 5 + 5);
-  const weekly = [...analytics.sorted].reverse().slice(0, 8).reverse().map((row) => ({ label: day(row.week_start).slice(5), values: [numeric(row.follows_gained) / 7] }));
-  const metricMonths = analytics.monthly.slice(-12);
-  const metricRows = metricMonths.map(([label, value]) => ({ label: label.slice(2), values: [value.reach, value.interactions] }));
+  const router = useRouter();
+  const [view, setView] = useState<View>("overview");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [picked, setPicked] = useState(0);
+  const [page, setPage] = useState(0);
 
-  // Extend the followers series with the current year's remaining months so the
-  // dashed prediction line can project forward, matching the legacy `igChartFollowers` combo chart.
+  const a = useMemo(() => {
+    const now = new Date(referenceDate);
+    const sorted = followersSeries(snapshots, baseline);
+    const latest = sorted.at(-1);
+    const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 30);
+    const recent = sorted.filter((row) => day(row.week_start) >= cutoff.toISOString().slice(0, 10));
+    const sum = (key: string) => recent.reduce((total, row) => total + num(row[key]), 0);
+    const reach30 = sum("reach"); const interactions30 = sum("interactions"); const follows30 = sum("follows_gained");
+    const last4 = [...sorted].reverse().slice(0, 4);
+    const avgPerDay = last4.reduce((total, row) => total + num(row.follows_gained), 0) / Math.max(1, last4.length * 7);
+    // Project from the verified baseline; without one, from the latest derived week.
+    const anchorFollowers = num(baseline?.followers_total) || num(latest?.computedFollowers);
+    const baselineDate = new Date(`${day(baseline?.baseline_date) || day(latest?.week_start) || referenceDate.slice(0, 10)}T00:00:00`);
+    const yearEnd = new Date(baselineDate.getFullYear(), 11, 31);
+    const predicted = Math.round(anchorFollowers + avgPerDay * Math.max(0, (yearEnd.getTime() - baselineDate.getTime()) / 86400000));
+    const currentTarget = targets.find((item) => num(item.year) === now.getFullYear()) || null;
+    const monthly = new Map<string, { followers: number; reach: number; interactions: number }>();
+    sorted.forEach((row) => { const key = day(row.week_start).slice(0, 7); if (!key) return; const item = monthly.get(key) || { followers: 0, reach: 0, interactions: 0 }; item.followers = row.computedFollowers; item.reach += num(row.reach); item.interactions += num(row.interactions); monthly.set(key, item); });
+    return { sorted, latest, reach30, interactions30, follows30, er30: reach30 ? interactions30 / reach30 * 100 : 0, avgPerDay, predicted, currentTarget, monthly: [...monthly.entries()].sort(([x], [y]) => x.localeCompare(y)) };
+  }, [snapshots, targets, baseline, referenceDate]);
+
+  // Followers series extended to the end of the year so the dashed projection can run forward.
   const followersChart = useMemo(() => {
-    const monthMap = new Map(analytics.monthly);
-    const baselineDate = new Date(`${day(baseline?.baseline_date) || referenceDate.slice(0, 10)}T00:00:00Z`);
-    const baselineFollowers = numeric(baseline?.followers_total);
+    const monthMap = new Map(a.monthly);
+    const baselineDate = new Date(`${day(baseline?.baseline_date) || day(a.latest?.week_start) || referenceDate.slice(0, 10)}T00:00:00Z`);
+    const baselineFollowers = num(baseline?.followers_total) || num(a.latest?.computedFollowers);
     const currentYear = new Date(referenceDate).getFullYear();
-    const actualKeys = analytics.monthly.map(([key]) => key);
+    const actualKeys = a.monthly.map(([key]) => key);
     const lastActualKey = actualKeys.at(-1);
     const futureKeys: string[] = [];
     if (lastActualKey) {
@@ -73,135 +67,162 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
       }
     }
     const keys = [...actualKeys.slice(-8), ...futureKeys].slice(-12);
-    function predictedForKey(key: string) {
-      const [year, month] = key.split("-").map(Number);
-      const endOfMonth = new Date(Date.UTC(year, month, 0));
-      const daysFromBaseline = Math.round((endOfMonth.getTime() - baselineDate.getTime()) / 86400000);
-      return Math.round(baselineFollowers + analytics.avgPerDay * daysFromBaseline);
-    }
-    return {
-      labels: keys.map((key) => key.slice(2)),
-      actual: keys.map((key) => monthMap.get(key)?.followers ?? null),
-      predicted: keys.map((key) => (key === lastActualKey || futureKeys.includes(key)) ? predictedForKey(key) : null),
-    };
-  }, [analytics.monthly, analytics.avgPerDay, baseline, referenceDate]);
+    const projected = (key: string) => { const [year, month] = key.split("-").map(Number); const end = new Date(Date.UTC(year, month, 0)); return Math.round(baselineFollowers + a.avgPerDay * Math.round((end.getTime() - baselineDate.getTime()) / 86400000)); };
+    return { labels: keys.map((key) => key.slice(2)), actual: keys.map((key) => monthMap.get(key)?.followers ?? null), predicted: keys.map((key) => (key === lastActualKey || futureKeys.includes(key)) ? projected(key) : null) };
+  }, [a.monthly, a.avgPerDay, a.latest, baseline, referenceDate]);
 
-  async function importSnapshots(formData: FormData) { setBusy(true); setMessage(""); try { const response = await fetch("/api/instagram/import", { method: "POST", body: formData }); const result = await response.json() as { imported?: number; files?: number; error?: string }; if (!response.ok) throw new Error(result.error || "Import failed."); setMessage(`Imported ${result.imported || 0} weekly snapshot(s) from ${result.files || 0} file(s).`); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); } finally { setBusy(false); } }
-  const currentFollowers = numeric(baseline?.followers_total) || numeric(analytics.latest?.computedFollowers);
-  // The KPI reads the manually verified baseline, so say when it was last set —
-  // otherwise a stale baseline looks like a live number.
-  const followersUpdatedAt = numeric(baseline?.followers_total)
-    ? day(baseline?.baseline_date) || day(baseline?.updated_at)
-    : day(analytics.latest?.week_start);
-  // Weeks after the baseline are derived by adding follows_gained, which is Instagram's
-  // gross "Follows" and ignores unfollows — so the further the baseline is behind the
-  // latest snapshot, the more the derived history overstates reality. Flag it instead of
-  // presenting a months-old figure as today's follower count.
-  const latestWeek = day(analytics.latest?.week_start);
-  const baselineStaleDays = followersUpdatedAt && latestWeek
-    ? Math.round((new Date(latestWeek).getTime() - new Date(followersUpdatedAt).getTime()) / 86400000)
-    : 0;
-  const baselineStale = baselineStaleDays > 21; const target = numeric(analytics.currentTarget?.target_followers); const progress = target ? Math.min(100, currentFollowers / target * 100) : 0;
+  const history = [...a.sorted].reverse();
+  const pages = Math.max(1, Math.ceil(history.length / PAGE)); const current = Math.min(page, pages - 1);
+  const pageRows = history.slice(current * PAGE, current * PAGE + PAGE);
+  const weekly = [...a.sorted].slice(-8).map((row) => ({ label: day(row.week_start).slice(5), value: num(row.follows_gained) / 7 }));
+  const weeklyMax = Math.max(1, ...weekly.map((row) => row.value));
+  const metricRows = a.monthly.slice(-12);
+
+  const currentFollowers = num(baseline?.followers_total) || num(a.latest?.computedFollowers);
+  // The headline reads the manually verified baseline, so say when it was set; weeks after it
+  // are derived from gross follows (no unfollows), so a baseline far behind the data drifts.
+  const updatedAt = num(baseline?.followers_total) ? day(baseline?.baseline_date) || day(baseline?.updated_at) : day(a.latest?.week_start);
+  const latestWeek = day(a.latest?.week_start);
+  const staleDays = updatedAt && latestWeek ? Math.round((new Date(latestWeek).getTime() - new Date(updatedAt).getTime()) / 86400000) : 0;
+  const stale = staleDays > 21;
+  const target = num(a.currentTarget?.target_followers);
+  const progress = target ? Math.min(100, currentFollowers / target * 100) : 0;
+  const year = new Date(referenceDate).getFullYear();
+
+  async function importSnapshots(formData: FormData) {
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch("/api/instagram/import", { method: "POST", body: formData });
+      const result = await response.json() as { imported?: number; files?: number; error?: string };
+      if (!response.ok) throw new Error(result.error || "Import failed.");
+      setMessage(`Imported ${result.imported || 0} weekly snapshot${result.imported === 1 ? "" : "s"} from ${result.files || 0} file${result.files === 1 ? "" : "s"}.`);
+      setPicked(0); router.refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); } finally { setBusy(false); }
+  }
 
   return (
-    <div className="grid gap-3.5">
-      <Tabs onValueChange={(value) => setTab(value as Tab)} value={tab}>
-        <TabsList variant="line">
-          <TabsTrigger value="dashboard"><i className="ti ti-layout-dashboard" /> Dashboard</TabsTrigger>
-          <TabsTrigger value="upload"><i className="ti ti-upload" /> Upload CSV</TabsTrigger>
-          <TabsTrigger value="target"><i className="ti ti-target" /> Target &amp; Baseline</TabsTrigger>
-        </TabsList>
-        <TabsContent value="dashboard">
-          <div className="grid gap-3.5">
-            <StatsGrid className="mb-0 grid-cols-2 md:grid-cols-5">
-              <StatCard label={followersUpdatedAt ? `Followers · per ${followersUpdatedAt}${baselineStale ? " · perlu update" : ""}` : "Followers"} tone={baselineStale ? "var(--amber)" : undefined} value={currentFollowers.toLocaleString("id-ID")} />
-              <StatCard label="Reach, 30 days" value={compact(analytics.reach30)} tone="#3b82f6" />
-              <StatCard label="Interactions, 30 days" value={compact(analytics.interactions30)} tone="#ec4899" />
-              <StatCard label="Average ER" value={`${analytics.er30.toFixed(2)}%`} tone="#0f6e56" />
-              <StatCard label="Follows, 30 days" value={`+${analytics.follows30.toLocaleString("id-ID")}`} tone="#f59e0b" />
-            </StatsGrid>
-            <Card className="gap-2 p-4">
-              <div className="flex items-center justify-between"><strong className="text-[13px] font-semibold">Target followers {new Date(referenceDate).getFullYear()}</strong><span className="text-[11px] text-muted-foreground">{target ? `${currentFollowers.toLocaleString("id-ID")} / ${target.toLocaleString("id-ID")} · projection ${analytics.predicted.toLocaleString("id-ID")}` : "No target configured"}</span></div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-[var(--bg)]"><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "linear-gradient(90deg, var(--purple-accent), #a78bfa)" }} /></div>
-            </Card>
-            <div className="grid gap-3 lg:grid-cols-3">
-              <Card className="gap-2 p-4">
-                <h3 className="text-[11px] font-bold">Followers &middot; actual vs prediksi</h3>
-                <FollowersChart actual={followersChart.actual} labels={followersChart.labels} predicted={followersChart.predicted} target={target || null} />
-              </Card>
-              <Chart legends={["Follows/day"]} rows={weekly} title={`Average follows/day (${analytics.avgPerDay.toFixed(1)})`} />
-              <Card className="gap-2 p-4">
-                <h3 className="text-[11px] font-bold">Monthly reach and interactions</h3>
-                <MetricsChart interactions={metricRows.map((row) => row.values[1])} labels={metricRows.map((row) => row.label)} reach={metricRows.map((row) => row.values[0])} />
-              </Card>
+    <div className={s.page}>
+      <header className={s.head}>
+        <div>
+          <span className={s.eyebrow}>Marketing</span>
+          <h1>Instagram</h1>
+          <p>{fmt(currentFollowers)} followers · {history.length} weekly snapshot{history.length === 1 ? "" : "s"}{latestWeek ? ` · latest week ${latestWeek}` : ""}</p>
+        </div>
+        <button className={s.ghost} onClick={() => setView("import")} type="button"><i className="ti ti-upload" aria-hidden="true" /> Import Meta CSV</button>
+      </header>
+
+      <div aria-label="Instagram views" className={s.segmented} role="tablist">
+        {VIEWS.map((item) => <button aria-selected={view === item.key} className={view === item.key ? s.segmentActive : s.segment} key={item.key} onClick={() => setView(item.key)} role="tab" type="button"><i className={`ti ${item.icon}`} aria-hidden="true" /> {item.label}</button>)}
+      </div>
+
+      {view === "overview" ? (
+        <>
+          <section aria-label="Followers" className={s.hero}>
+            <div>
+              <span>Followers</span>
+              <b className={s.big}>{fmt(currentFollowers)}</b>
+              <p>{updatedAt ? `As of ${updatedAt}` : "No baseline yet"} · +{fmt(a.follows30)} follows in the last 30 days</p>
+              {stale ? <button className={s.stale} onClick={() => setView("target")} type="button"><i className="ti ti-alert-triangle" aria-hidden="true" /> Baseline is {staleDays} days behind — update it</button> : null}
             </div>
-            <Card className="gap-3 p-0">
-              <div className="flex items-center justify-between p-4 pb-0"><h2 className="text-sm font-bold">Snapshot history</h2><span className="text-[11px] text-muted-foreground">{history.length} weeks</span></div>
-              <Table>
-                <TableHeader><TableRow><TableHead>Week</TableHead><TableHead>Followers</TableHead><TableHead>+Follows</TableHead><TableHead>Reach</TableHead><TableHead>Interactions</TableHead><TableHead>ER</TableHead></TableRow></TableHeader>
-                <TableBody>{pageRows.map((row) => <TableRow key={String(row.id)}><TableCell>{day(row.week_start)}</TableCell><TableCell>{row.computedFollowers.toLocaleString("id-ID")}</TableCell><TableCell>+{numeric(row.follows_gained).toLocaleString("id-ID")}</TableCell><TableCell>{numeric(row.reach).toLocaleString("id-ID")}</TableCell><TableCell>{numeric(row.interactions).toLocaleString("id-ID")}</TableCell><TableCell>{numeric(row.reach) ? (numeric(row.interactions) / numeric(row.reach) * 100).toFixed(2) : "0.00"}%</TableCell></TableRow>)}</TableBody>
-              </Table>
-              <div className="flex items-center justify-center gap-2 p-4 pt-0">
-                <Button disabled={page <= 0} onClick={() => setPage((value) => Math.max(0, value - 1))} size="icon-sm" variant="outline"><i className="ti ti-chevron-left" /></Button>
-                <span className="text-[11px] text-muted-foreground">Page {Math.min(page, pages - 1) + 1} / {pages}</span>
-                <Button disabled={page >= pages - 1} onClick={() => setPage((value) => Math.min(pages - 1, value + 1))} size="icon-sm" variant="outline"><i className="ti ti-chevron-right" /></Button>
-              </div>
-            </Card>
-            <details className="rounded-lg border border-border bg-white">
-              <summary className="cursor-pointer px-3.5 py-2.5 text-xs font-bold text-[var(--purple-dark)]"><i className="ti ti-settings" /> Manage snapshots</summary>
-              <div className="p-3.5">{snapshotManagement}</div>
-            </details>
-          </div>
-        </TabsContent>
-        <TabsContent value="upload">
-          <Card className="max-w-xl gap-3 p-5">
-            <div><i className="ti ti-brand-meta text-xl text-[var(--purple-mid)]" /><h2 className="mt-1 text-sm font-bold">Import Meta Insights</h2><p className="mt-1 text-[12px] text-muted-foreground">Select one or more original Meta CSV exports (Views, Reach, Content interactions, Link clicks, Profile visits, and Follows) or a normalized CSV/XLSX. Daily exports are combined and aggregated into Monday-based weeks.</p></div>
-            <form action={importSnapshots} className="grid gap-3">
-              <label className="grid cursor-pointer place-items-center gap-1 rounded-lg border border-dashed border-border bg-[var(--bg)] p-8 text-center text-muted-foreground">
-                <i className="ti ti-upload text-2xl text-[var(--purple-mid)]" /><strong className="text-foreground">Select CSV/XLSX files</strong><span className="text-xs">Multiple files supported</span>
-                <input accept=".csv,.xlsx" className="hidden" multiple name="files" required type="file" />
-              </label>
-              <Button disabled={busy} type="submit">{busy ? "Importing..." : "Import weekly snapshots"}</Button>
-            </form>
-            {message ? <p className="text-[11px] text-muted-foreground">{message}</p> : null}
-          </Card>
-        </TabsContent>
-        <TabsContent value="target">
-          <div className="grid gap-3.5">
-            <Card className="gap-3 p-4">
-              <div><h2 className="text-sm font-bold">Baseline followers</h2><p className="mt-1 text-[11px] text-muted-foreground">This anchor reconstructs total followers forward and backward from weekly follows gained.</p></div>
-              <form action={saveInstagramBaselineAction} className="grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-1 text-[10px] font-semibold text-muted-foreground uppercase"><span>Total followers</span><input className="h-9 rounded-md border border-input px-2 text-xs font-normal normal-case text-foreground" defaultValue={currentFollowers || ""} min="1" name="followers_total" required type="number" /></label>
-                <label className="grid gap-1 text-[10px] font-semibold text-muted-foreground uppercase"><span>As of date</span><input className="h-9 rounded-md border border-input px-2 text-xs font-normal normal-case text-foreground" defaultValue={day(baseline?.baseline_date) || referenceDate.slice(0, 10)} name="baseline_date" required type="date" /></label>
-                <Button className="w-max" size="sm" type="submit">Update baseline</Button>
-              </form>
-            </Card>
-            <div><h2 className="mb-2 text-sm font-bold">Annual targets</h2>{targetManagement}</div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
+            <div className={s.goal}>
+              <span>Goal {year}</span>
+              {target ? (
+                <>
+                  <div className={s.goalRow}><b>{Math.round(progress)}%</b><span>{fmt(currentFollowers)} / {fmt(target)}</span></div>
+                  <div aria-label={`Goal progress ${Math.round(progress)}%`} className={s.goalBar} role="img"><i style={{ width: `${progress}%` }} /></div>
+                  <p>Projected by 31 Dec: {fmt(a.predicted)} ({a.predicted >= target ? "on track" : `${fmt(target - a.predicted)} short`})</p>
+                </>
+              ) : <p>No target for {year} yet. <button className={s.heroLink} onClick={() => setView("target")} type="button">Set a target</button></p>}
+            </div>
+          </section>
 
-function Chart({ title, rows, legends, target }: { title: string; rows: { label: string; values: number[] }[]; legends: string[]; target?: number }) {
-  const maximum = Math.max(1, target || 0, ...rows.flatMap((row) => row.values));
-  const seriesColor = (index: number) => index === 1 ? "#34a37b" : "var(--purple-accent)";
-  return (
-    <Card className="gap-2 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="text-[11px] font-bold">{title}</h3>
-        <div className="flex flex-wrap gap-2">{legends.map((label, index) => <span className="flex items-center gap-1 text-[9px] text-muted-foreground" key={label}><i className="inline-block h-1.5 w-1.5 rounded-sm" style={{ background: seriesColor(index) }} />{label}</span>)}</div>
-      </div>
-      <div className="flex items-stretch gap-1.5 overflow-x-auto border-b border-border pt-2" style={{ height: 170 }}>
-        {rows.length ? rows.map((row) => (
-          <div className="grid min-w-[30px] flex-1 grid-rows-[minmax(0,1fr)_18px] gap-1" key={row.label}>
-            <div className="flex min-h-0 items-end justify-center gap-0.5">{row.values.map((value, index) => <i key={index} style={{ height: `${Math.max(3, value / maximum * 100)}%`, width: "min(16px, 45%)", borderRadius: "3px 3px 0 0", background: seriesColor(index), display: "block" }} title={`${legends[index]}: ${value.toLocaleString("id-ID", { maximumFractionDigits: 1 })}`} />)}</div>
-            <span className="overflow-hidden text-center text-[7px] text-ellipsis whitespace-nowrap text-muted-foreground">{row.label}</span>
+          <div className={s.stats}>
+            <div className={s.stat}><span>Reach, 30 days</span><b>{compact(a.reach30)}</b></div>
+            <div className={s.stat}><span>Interactions, 30 days</span><b>{compact(a.interactions30)}</b></div>
+            <div className={s.stat}><span>Engagement rate</span><b>{a.er30.toFixed(2)}%</b><small>Interactions ÷ reach</small></div>
+            <div className={s.stat}><span>Follows per day</span><b>{a.avgPerDay.toFixed(1)}</b><small>Last 4 weeks</small></div>
           </div>
-        )) : <p className="text-[11px] text-muted-foreground">No snapshot data.</p>}
-      </div>
-      {target ? <small className="text-[10px] text-muted-foreground">Target reference: {target.toLocaleString("id-ID")}</small> : null}
-    </Card>
+
+          <div className={s.grid3}>
+            <section className={s.card}>
+              <div><h3>Followers</h3><p className={s.cardSub}>Actual vs projection{target ? " · target line" : ""}</p></div>
+              <FollowersChart actual={followersChart.actual} labels={followersChart.labels} predicted={followersChart.predicted} target={target || null} />
+            </section>
+            <section className={s.card}>
+              <div><h3>Follows per day</h3><p className={s.cardSub}>Last 8 weeks</p></div>
+              {weekly.length ? (
+                <div className={s.barChart}>
+                  {weekly.map((row) => <div className={s.barCol} key={row.label}><span><i style={{ height: `${Math.max(3, row.value / weeklyMax * 100)}%` }} title={`${row.label}: ${row.value.toFixed(1)}/day`} /></span><small>{row.label}</small></div>)}
+                </div>
+              ) : <p className={s.empty}>No snapshots yet.</p>}
+            </section>
+            <section className={s.card}>
+              <div><h3>Reach &amp; interactions</h3><p className={s.cardSub}>Per month</p></div>
+              <MetricsChart interactions={metricRows.map(([, v]) => v.interactions)} labels={metricRows.map(([label]) => label.slice(2))} reach={metricRows.map(([, v]) => v.reach)} />
+            </section>
+          </div>
+
+          <section aria-label="Snapshot history" className={s.card}>
+            <div className={s.cardHead}><h2>Snapshot history</h2><span className={s.chipMuted}>{history.length} weeks</span></div>
+            {history.length ? (
+              <>
+                <div className={s.tableWrap}>
+                  <table className={s.table}>
+                    <thead><tr><th>Week</th><th className={s.num}>Followers</th><th className={s.num}>Follows</th><th className={s.num}>Reach</th><th className={s.num}>Interactions</th><th className={s.num}>ER</th></tr></thead>
+                    <tbody>{pageRows.map((row) => <tr key={String(row.id)}><td>{day(row.week_start)}</td><td className={s.num}>{fmt(row.computedFollowers)}</td><td className={s.num}>+{fmt(num(row.follows_gained))}</td><td className={s.num}>{fmt(num(row.reach))}</td><td className={s.num}>{fmt(num(row.interactions))}</td><td className={s.num}>{num(row.reach) ? (num(row.interactions) / num(row.reach) * 100).toFixed(2) : "0.00"}%</td></tr>)}</tbody>
+                  </table>
+                </div>
+                {pages > 1 ? (
+                  <div className={s.pager}>
+                    <button aria-label="Previous page" className={s.iconButton} disabled={current <= 0} onClick={() => setPage(current - 1)} type="button"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
+                    <span>Page {current + 1} of {pages}</span>
+                    <button aria-label="Next page" className={s.iconButton} disabled={current >= pages - 1} onClick={() => setPage(current + 1)} type="button"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
+                  </div>
+                ) : null}
+              </>
+            ) : <p className={s.empty}>No snapshots yet. Import Meta Insights CSVs to start.</p>}
+          </section>
+
+          <details className={s.details}>
+            <summary><i className="ti ti-settings" aria-hidden="true" /> Manage snapshots</summary>
+            <div>{snapshotManagement}</div>
+          </details>
+        </>
+      ) : null}
+
+      {view === "import" ? (
+        <section aria-label="Import Meta Insights" className={s.card} style={{ maxWidth: 640 }}>
+          <div><h2>Import Meta Insights</h2><p className={s.cardSub}>Pick one or more original Meta CSV exports (Views, Reach, Content interactions, Link clicks, Profile visits, Follows) or a normalized CSV/XLSX. Daily rows are combined into Monday-based weeks.</p></div>
+          <form action={importSnapshots} style={{ display: "grid", gap: 12 }}>
+            <label className={s.drop}>
+              <i className="ti ti-file-upload" aria-hidden="true" />
+              <b>Choose CSV or XLSX files</b>
+              <span>{picked ? <span className={s.files}>{picked} file{picked === 1 ? "" : "s"} selected</span> : "You can select several files at once"}</span>
+              <input accept=".csv,.xlsx" aria-label="Meta Insights files" multiple name="files" onChange={(e) => setPicked(e.target.files?.length || 0)} required style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} type="file" />
+            </label>
+            <button className={s.primary} disabled={busy || !picked} type="submit">{busy ? "Importing…" : "Import snapshots"}</button>
+          </form>
+          {message ? <p className={s.message} role="status">{message}</p> : null}
+        </section>
+      ) : null}
+
+      {view === "target" ? (
+        <>
+          <section aria-label="Baseline followers" className={s.card} style={{ maxWidth: 760 }}>
+            <div><h2>Baseline followers</h2><p className={s.cardSub}>The one number checked against the account. Every week is rebuilt forward and back from it using weekly follows.</p></div>
+            {stale ? <p className={s.danger}><i className="ti ti-alert-triangle" aria-hidden="true" /> Last set {updatedAt}, {staleDays} days before the latest snapshot.</p> : null}
+            <form action={saveInstagramBaselineAction} className={s.form2}>
+              <label className={s.field}><span>Total followers <b className={s.req}>*</b></span><input className={s.input} defaultValue={currentFollowers || ""} min="1" name="followers_total" required type="number" /></label>
+              <label className={s.field}><span>As of date <b className={s.req}>*</b></span><input className={s.input} defaultValue={day(baseline?.baseline_date) || referenceDate.slice(0, 10)} name="baseline_date" required type="date" /></label>
+              <div><button className={s.primary} type="submit">Save baseline</button></div>
+            </form>
+          </section>
+          <section aria-label="Yearly targets" className={s.card}>
+            <div><h2>Yearly targets</h2><p className={s.cardSub}>The goal on the overview reads this year&apos;s row.</p></div>
+            {targetManagement}
+          </section>
+        </>
+      ) : null}
+    </div>
   );
 }

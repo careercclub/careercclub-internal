@@ -946,3 +946,35 @@ Settings → Content Evaluation / Meta Ads / Instagram → Design Assets / Resou
 ### Antrean
 
 Content Evaluation / Meta Ads / Instagram → Design Assets / Resources / Collaborators.
+
+## Putaran 24 — Content Evaluation, Meta Ads, Instagram (IJIS layout) (23 Okt 2026)
+
+### Do — yang berubah
+
+| Sebelum | Sesudah |
+|---|---|
+| **Meta Ads**: daftar kartu + 3 dropdown filter | Judul + ringkasan ("3 candidates · 1 to boost · 1 still to decide"), pil funnel dengan jumlah, **papan keputusan 3 kolom To decide / Boost / Skip**; kartu: format, funnel · objective, sinyal boost (batang, bukan warna merah), reach/views/saves, pilihan Pending/Boost/Skip (aksi yang sama) |
+| **Instagram**: tab bergaris, 5 kartu angka warna-warni, label campur ("perlu update", "prediksi") | Segmented Overview / Import / Target & baseline; **hero followers + goal tahun ini** (progres + proyeksi 31 Des); peringatan merah hanya kalau baseline >21 hari tertinggal; 4 angka; 3 grafik satu palet; riwayat mingguan berhalaman; Import dengan dropzone + jumlah file dipilih |
+| **Content Evaluation**: tab, banner sync, teks campur Indonesia ("Kalender Posting", "Semua Konten", "Tambah", "Korelasi per Hari"), modal buatan sendiri | Judul + Import Meta CSV / Add evaluation di kepala; segmented view dengan jumlah; pil rentang tanggal; Overview: angka → Top content (urut follows+link taps / follows / link taps) → 3 grafik bulanan → kalender posting (Senin dulu) → Top 5 Reels/Carousels/Stories; Reels & Feed: tabel dengan baris bisa diklik; Story vs Buyer: hari yang bisa dibuka; popup standar (Dialog, footer menempel) |
+
+- Nilai "action" yang tersimpan tetap Indonesia ("Boost ke Meta Ads", dst.) — hanya labelnya Inggris ("Boost on Meta Ads", "Turn into a template", "Repurpose to another format"). Filter & form tetap menyimpan nilai lama.
+- Teks insight otomatis di detail evaluasi (lib/analytics/content) diterjemahkan ke Inggris; rumus skor tidak berubah.
+- Grafik followers & reach/interactions: satu palet biru, garis target abu-abu (dulu merah), legenda Inggris (dulu "Followers Aktual", "Prediksi").
+- Logika perhitungan followers dari baseline dipindah ke `lib/marketing/view.ts` (+ unit test), isinya sama.
+- Grade skor (Top Performer / Performing Well / Average / Needs Improvement) memakai gradasi biru — skor rendah bukan bahaya, jadi tidak merah.
+
+### Bug lama yang ikut diperbaiki
+
+- Instagram tanpa baseline: proyeksi dihitung dari 0 followers sehingga garis prediksi minus (−10.000). Sekarang tanpa baseline proyeksi berangkat dari minggu terakhir.
+- Import CSV bisa ditekan tanpa file; sekarang tombol aktif setelah file dipilih.
+
+### Check
+
+- Desain 1440 & 390 untuk ketiga halaman (termasuk popup detail & form evaluasi). Ditemukan & diperbaiki: pil rentang tanggal terbelah dua baris di HP → satu baris yang bisa digeser; legenda grafik masih Indonesia; insight otomatis masih Indonesia.
+- E2E baru marketing **47/47** (papan keputusan & filter funnel, aksi keputusan sama, tidak ada merah di kartu, ?focus iklan; hero + goal, pager riwayat, import menunggu file + pesan hasil, baseline kosong ditandai & difokus tanpa tersimpan; Top content & urutan, kalender Inggris Senin dulu, label action Inggris tapi nilai tersimpan tetap, judul kosong ditandai & difokus, simpan ke content_evaluations, filter action, Story vs Buyer, import, hapus minta konfirmasi; HP tanpa scroll samping).
+- Regresi: unit 131/131, Settings 12/12, Competitor 19/19, Job Vacancy 20/20, Products 17/17, Content Planning 26/26, Customer Knowledge 20/20, Partnership 23/23, CRM 24/24, Talent Pool 21/21, Program 21/21, Tickets+Dashboard 19/19, modul 12/12 (termasuk "detail evaluasi terbuka dari ?focus"), popup 31/31, navigasi 32/32, search 46/46, form & tabel 893/893, Content Library lolos, Design Assets 49/49, audit popup Content Evaluation/Instagram bersih (Meta Ads tidak punya popup).
+- tsc bersih; lint 0 error (1 peringatan lama); `npm run build` lolos.
+
+### Antrean
+
+Design Assets / Resources / Collaborators. Nice-to-have: pie chart multiwarna (`charts.tsx` DistributionPie/IndustryDoughnut) ke satu palet.

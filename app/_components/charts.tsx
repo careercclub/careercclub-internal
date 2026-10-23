@@ -29,9 +29,9 @@ export function FollowersChart({ labels, actual, predicted, target }: { labels: 
         data={{
           labels,
           datasets: [
-            { type: "bar" as const, label: "Followers Aktual", data: actual, backgroundColor: "rgba(124,111,247,0.7)", borderRadius: 5, order: 2 },
-            { type: "line" as const, label: "Prediksi", data: predicted, borderColor: "#0f52ba", borderDash: [5, 4], borderWidth: 1.5, pointRadius: 2, fill: false, tension: 0.3, spanGaps: false, order: 1 },
-            ...(target ? [{ type: "line" as const, label: "Target", data: labels.map(() => target), borderColor: "#e24b4a", borderDash: [6, 3], borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0, order: 0 }] : []),
+            { type: "bar" as const, label: "Followers", data: actual, backgroundColor: "rgba(21,84,192,0.8)", borderRadius: 5, order: 2 },
+            { type: "line" as const, label: "Projection", data: predicted, borderColor: "#0b2f6e", borderDash: [5, 4], borderWidth: 1.5, pointRadius: 2, fill: false, tension: 0.3, spanGaps: false, order: 1 },
+            ...(target ? [{ type: "line" as const, label: "Target", data: labels.map(() => target), borderColor: "#6b7280", borderDash: [6, 3], borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0, order: 0 }] : []),
           ],
         }}
         options={{ ...baseOptions, scales: { y: { beginAtZero: false, ticks: { font: { size: 11 } }, grid: { color: "#f0f2ff" } }, x: { ticks: { font: { size: 10 } }, grid: { display: false } } } }}
@@ -45,7 +45,7 @@ export function MetricsChart({ labels, reach, interactions }: { labels: string[]
   return (
     <div style={{ height: 200 }}>
       <Bar
-        data={{ labels, datasets: [{ label: "Reach", data: reach, backgroundColor: "#0f52ba", borderRadius: 4 }, { label: "Interactions", data: interactions, backgroundColor: "#34d399", borderRadius: 4 }] }}
+        data={{ labels, datasets: [{ label: "Reach", data: reach, backgroundColor: "#1554c0", borderRadius: 4 }, { label: "Interactions", data: interactions, backgroundColor: "#9bb8ec", borderRadius: 4 }] }}
         options={{ ...baseOptions, scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } }, grid: { color: "#f0f2ff" } }, x: { ticks: { font: { size: 10 } }, grid: { display: false } } } }}
       />
     </div>
