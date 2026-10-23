@@ -1123,3 +1123,26 @@ Talent Pool: XLSX & CSV export, header di bawah banner + baris kosong, link shee
 
 - Tipe kolom tabel dump (buyers, content_evaluations, ig_snapshots, mt_vacancies, free_class_eval) di uji ini direkonstruksi dari migrasi + app lama, bukan dari database production. Kalau di production ada tipe yang beda, `npm run test:imports` bisa dijalankan ke salinan skema production (database terpisah bernama …test).
 - Belum diuji fungsional: kirim email blast (Resend), AI parse/screenshot, upload R2, Google Calendar — semuanya butuh layanan luar.
+
+## Putaran 28 — Pindah halaman terasa berat 2–3 detik (23 Okt 2026)
+
+### Diukur di internal.ccclub.id (Chrome user, belum login)
+
+| Yang diukur | Hasil |
+|---|---|
+| Redirect dari server (tanpa database) | median 130 ms |
+| `/api/health` (`select 1` ke Postgres) | median 130 ms (sekali lonjakan 420 ms) |
+| File JS statis yang sudah di cache Cloudflare | ~80 ms |
+| File JS statis pertama kali setelah deploy (cache Cloudflare MISS) | 1,8–3,9 detik — server lambat menyajikan file statis saat banyak diminta bersamaan |
+
+Kesimpulan awal: jaringan & database dasar sehat. Penyebab yang pasti dari kode: **tidak ada `loading.tsx`**, jadi setiap klik menu menunggu server menyiapkan seluruh halaman sambil layar diam di halaman lama — terasa "freeze". Halaman yang perlu login belum bisa diukur (Chrome yang tersambung belum login).
+
+### Do
+
+- `app/(dashboard)/loading.tsx`: kerangka halaman (judul, tab, kartu, efek shimmer; tanpa animasi bila *reduced motion*) muncul **seketika** saat menu diklik; Next juga mem-prefetch kerangka ini untuk link yang terlihat.
+- Layout: dua putaran query berurutan (settings + task terlambat, lalu tiket terlambat) → satu putaran paralel.
+- Content Evaluation: tidak lagi memuat **seluruh** tabel buyers (dengan riwayat pembelian) hanya untuk tab Story vs Buyer — kini hanya buyer bersumber Instagram Story (id, tanggal) + jumlah total.
+
+### Check
+
+- Build lolos; lint 0; Marketing 47/47.

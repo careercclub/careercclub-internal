@@ -13,11 +13,20 @@ type DashboardLayoutProps = Readonly<{
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
   const today = jakartaNow().today;
-  const [session, settings, lateTasks] = await Promise.all([auth(), listAppSettings(), countLateTasks(today)]);
+  const session = await auth();
 
   if (!session?.user) {
     redirect("/sign-in");
   }
+
+  // One round of queries in parallel (was two rounds: settings + late tasks, then tickets).
+  const [settings, lateTasks, lateTickets] = await Promise.all([
+    listAppSettings(),
+    countLateTasks(today),
+    // Menu badges show only what is late (red = late), using the Dashboard's rule; tickets
+    // are limited to what this person can open on the Tickets page.
+    countLateVisibleTickets({ role: session.user.role, userId: session.user.id, email: session.user.email }, today),
+  ]);
 
   const menuSetting = settings.find((row) => row.key === "menu_visibility" || row.key === "hidden_modules");
   const settingValue = typeof menuSetting?.value === "string"
@@ -29,9 +38,6 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       ? settingValue.hiddenSlugs.map(String)
       : [];
 
-  // Menu badges show only what is late (red = late), using the Dashboard's rule; tickets
-  // are limited to what this person can open on the Tickets page.
-  const lateTickets = await countLateVisibleTickets({ role: session.user.role, userId: session.user.id, email: session.user.email }, today);
 
   const monthLabel = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date());
 

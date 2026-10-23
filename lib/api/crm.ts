@@ -17,6 +17,18 @@ const deals = createTableApi<CrmDealRecord>("crm_deals", {
 });
 
 export const listBuyers = buyers.list;
+
+/** What Content Evaluation needs from CRM: Instagram Story buyers (date only) and the
+ * buyer total — not every buyer row with its purchase history. */
+export function getStoryBuyerSummary() {
+  return withPostgres(async (sql) => {
+    const [rows, totals] = await Promise.all([
+      sql<{ id: string; tanggal: string | null; sumber: string }[]>`select id, tanggal, sumber from buyers where sumber = 'Instagram Story'`,
+      sql<{ total: number }[]>`select count(*)::int as total from buyers`,
+    ]);
+    return { storyBuyers: [...rows] as unknown as ApiRecord[], total: totals[0]?.total || 0 };
+  });
+}
 export const countBuyers = buyers.count;
 export const getBuyer = buyers.get;
 export const createBuyer = buyers.create;

@@ -1,0 +1,13 @@
+/* Page skeleton shared by every module while its data loads. Neutral greys, no red. */
+.page { display: flex; flex-direction: column; gap: 18px; max-width: 1360px; margin: 0 auto; }
+.head { display: flex; flex-direction: column; gap: 10px; }
+.head span, .tabs span, .card { display: block; border-radius: 999px; background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%); background-size: 200% 100%; animation: shimmer 1.2s ease-in-out infinite; }
+.eyebrow { width: 90px; height: 12px; }
+.title { width: min(320px, 70%); height: 30px; border-radius: 10px !important; }
+.line { width: min(420px, 85%); height: 14px; }
+.tabs { display: flex; gap: 8px; }
+.tabs span { width: 110px; height: 36px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card { height: 132px; border-radius: var(--radius-lg) !important; }
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .head span, .tabs span, .card { animation: none; } }

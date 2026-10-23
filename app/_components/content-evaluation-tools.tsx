@@ -39,7 +39,7 @@ function sortItems(items: Scored[], mode: SortMode) {
   return [...items].sort((a, b) => value(b) - value(a));
 }
 
-export function ContentEvaluationTools({ evaluations, buyers }: { evaluations: ApiRecord[]; buyers: ApiRecord[] }) {
+export function ContentEvaluationTools({ evaluations, buyers, buyerTotal }: { evaluations: ApiRecord[]; buyers: ApiRecord[]; /** All buyers across sources; `buyers` may hold only the Instagram Story ones. */ buyerTotal?: number }) {
   const router = useRouter();
   const [view, setView] = useState<View>("overview");
   const [range, setRange] = useState("0");
@@ -119,7 +119,7 @@ export function ContentEvaluationTools({ evaluations, buyers }: { evaluations: A
 
       {view === "overview" ? <Overview allScored={allScored} average={average} buyerByDate={buyerByDate} feed={feed} reels={reels} scored={scored} select={setSelected} stories={stories} /> : null}
       {view === "reel" || view === "feed" ? <FormatView add={() => setEditing(null)} items={view === "reel" ? reels : feed} key={view} select={setSelected} view={view} /> : null}
-      {view === "story-buyer" ? <StoryBuyer buyerByDate={buyerByDate} buyers={buyers} items={stories} scored={scored} select={setSelected} /> : null}
+      {view === "story-buyer" ? <StoryBuyer buyerByDate={buyerByDate} buyers={buyers} items={stories} total={buyerTotal ?? buyers.length} scored={scored} select={setSelected} /> : null}
 
       {importOpen ? <ImportDialog close={() => setImportOpen(false)} done={(text) => { setMessage(text); setImportOpen(false); router.refresh(); }} /> : null}
       {editing !== undefined ? <EvaluationEditor close={() => setEditing(undefined)} record={editing} remove={removeEvaluation} save={saveEvaluation} /> : null}
@@ -339,16 +339,16 @@ function FormatView({ view, items, select, add }: { view: "reel" | "feed"; items
   );
 }
 
-function StoryBuyer({ items, scored, buyers, buyerByDate, select }: { items: Scored[]; scored: Scored[]; buyers: ApiRecord[]; buyerByDate: Map<string, number>; select: (item: Scored) => void }) {
+function StoryBuyer({ items, scored, buyers, buyerByDate, select, total }: { items: Scored[]; scored: Scored[]; buyers: ApiRecord[]; buyerByDate: Map<string, number>; select: (item: Scored) => void; total: number }) {
   const [sort, setSort] = useState<"recent" | "buyers">("recent");
   const storyBuyers = buyers.filter((row) => row.sumber === "Instagram Story" && scored.some(({ row: item }) => day(item.tanggal) === day(row.tanggal)));
   const dates = [...new Set([...items.map((item) => day(item.row.tanggal)), ...storyBuyers.map((row) => day(row.tanggal))].filter(Boolean))].sort((a, b) => sort === "buyers" ? (buyerByDate.get(b) || 0) - (buyerByDate.get(a) || 0) : b.localeCompare(a));
   return (
     <>
       <div className={s.stats}>
-        <div className={s.stat}><span>All buyers</span><b>{buyers.length}</b><small>Every source</small></div>
+        <div className={s.stat}><span>All buyers</span><b>{total}</b><small>Every source</small></div>
         <div className={s.stat}><span>Buyers from IG Story</span><b>{storyBuyers.length}</b><small>Source: Instagram Story</small></div>
-        <div className={s.stat}><span>Story share</span><b>{buyers.length ? pct(storyBuyers.length / buyers.length * 100) : "0.0%"}</b><small>IG Story ÷ all buyers</small></div>
+        <div className={s.stat}><span>Story share</span><b>{total ? pct(storyBuyers.length / total * 100) : "0.0%"}</b><small>IG Story ÷ all buyers</small></div>
       </div>
       <section aria-label="Stories and buyers by day" className={s.card}>
         <div className={s.cardHead}>
