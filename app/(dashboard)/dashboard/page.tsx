@@ -3,6 +3,7 @@ import { DashboardCalendar } from "@/app/_components/dashboard-calendar";
 import { DashboardHome } from "@/app/_components/dashboard-home";
 import { listProgramEvents, listProgramTasks } from "@/lib/api/program";
 import { getVisibleTicketWorkspace } from "@/lib/api/tickets";
+import { calendarTasks, calendarTickets } from "@/lib/tickets/calendar";
 import { jakartaNow, summarizeDashboard } from "@/lib/dashboard/summary";
 import { auth } from "@/auth";
 
@@ -18,7 +19,7 @@ export default async function DashboardPage() {
   return (
     <DashboardHome
       aiCommand={<DashboardAiCommand />}
-      calendar={<DashboardCalendar tickets={workspace.tickets} tasks={tasks} events={events} people={workspace.people} divisions={workspace.divisions} referenceDate={new Date().toISOString()} />}
+      calendar={<DashboardCalendar tickets={calendarTickets(workspace.tickets)} tasks={calendarTasks(tasks)} events={events} people={workspace.people} divisions={workspace.divisions} referenceDate={new Date().toISOString()} />}
       firstName={firstName}
       hour={now.hour}
       summary={summary}

@@ -1353,3 +1353,33 @@ Permintaan user: "gua mau lo kerjain semuanya" — semua daftar evaluasi: uji vo
 - Ukur kecepatan halaman setelah login di produksi (harness tidak bisa login; gua tidak memasukkan password).
 - Jalankan `database/checks/content-evaluation-post-ids.sql` langkah 1 di VPS dan kirim hasilnya.
 - Mode gelap: belum dikerjakan — perlu keputusan (masih ada warna tetap `#fff` di beberapa modul yang harus jadi token dulu).
+
+## Putaran 35 — Halaman lebih ringan: kirim yang ditampilkan saja (24 Okt 2026)
+
+Diukur di produksi (akun user yang sudah login, lewat Chrome): pindah modul ±1 detik; server menjawab dalam 0,2–0,4 detik untuk semua modul, browser tidak nge-freeze (blocking 0, JS ±30 ms). Bedanya ada di **ukuran data yang dikirim** ke browser. Temuan sampingan: produksi masih di build **23 Okt 14:39 UTC (Putaran 27, commit e39c90b)** — Putaran 28–34 belum di-deploy.
+
+### Do
+
+- `lib/records/lean.ts` (`leanRow`/`leanRows`): baris yang dikirim ke daftar tanpa isian kosong (null) dan tanpa kolom yang tidak ditampilkan. null dan "tidak ada" diperlakukan sama di semua komponen (dicek).
+- **Content Evaluation**: daftar tanpa caption, account, Post ID, thumbnail, timestamp (`listContentEvaluationsForPage`). Editor memuat baris lengkap lewat `loadContentEvaluationAction` sebelum form tampil ("Loading the evaluation…"), jadi simpan tidak mengosongkan kolom itu.
+- **Kalender Dashboard & Program**: satu aturan `isCalendarTicket` (`lib/tickets/calendar.ts`) — tiket terbuka, ada deadline, tidak dicerminkan task Program — dipakai server (hanya kirim itu) dan kalender. Task di Dashboard hanya yang ada deadline.
+- **Tickets, Talent Pool**: tanpa null dan timestamp. **CRM**: tanpa null dan `updated_at` (`created_at` tetap — dipakai mengurutkan riwayat buyer). Catatan: Export JSON di Talent Pool/CRM ikut tanpa kolom kosong dan timestamp itu.
+- `database/checks/content-evaluation-post-ids.sql`: `fixed_at` = waktu build produksi Putaran 27 (`2026-10-23 14:39+00`).
+
+### Hasil (data produksi, aturan yang sama diterapkan ke payload asli)
+
+| Halaman | Sekarang di produksi | Setelah deploy |
+|---|---|---|
+| Content Evaluation | 1.692 KB | 429 KB |
+| Dashboard | 347 KB | 118 KB |
+| Program | 351 KB | 163 KB |
+| Tickets | 205 KB | 164 KB |
+| Talent Pool | 761 KB | 690 KB |
+| CRM | 574 KB | 538 KB |
+
+Talent Pool dan CRM memang isinya data (763 kandidat, 872 buyer + riwayat); turun lebih jauh butuh paging di server — nice-to-have kalau datanya terus tumbuh.
+
+### Check
+
+- Unit baru: `lib/records/lean.test.mjs`, `lib/tickets/calendar.test.mjs`. Suite `mkt` +2 (editor memuat baris lengkap; caption & Post ID terisi dari baris lengkap).
+- Regresi penuh lolos: 23 suite modul (mkt 49, sisanya sama dengan Putaran 34), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 157, import 58, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend` (tanpa migrasi) — sekaligus membawa Putaran 28–34.

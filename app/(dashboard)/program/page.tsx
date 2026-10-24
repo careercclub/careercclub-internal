@@ -1,6 +1,7 @@
 import { ProgramWorkspace } from "@/app/_components/program-workspace";
 import { listEventLinkTemplates, listEventRundown, listProgramEvents, listProgramTasks } from "@/lib/api/program";
 import { getVisibleTicketWorkspace } from "@/lib/api/tickets";
+import { calendarTickets } from "@/lib/tickets/calendar";
 import { auth } from "@/auth";
 
 export const metadata = { title: "Program" };
@@ -15,5 +16,5 @@ export default async function ProgramPage() {
     listEventLinkTemplates(),
     listEventRundown(),
   ]);
-  return <ProgramWorkspace events={events} tasks={tasks} people={workspace.people} divisions={workspace.divisions} tickets={workspace.tickets} linkTemplates={linkTemplates} rundown={rundown} referenceDate={new Date().toISOString()} />;
+  return <ProgramWorkspace events={events} tasks={tasks} people={workspace.people} divisions={workspace.divisions} tickets={calendarTickets(workspace.tickets)} linkTemplates={linkTemplates} rundown={rundown} referenceDate={new Date().toISOString()} />;
 }

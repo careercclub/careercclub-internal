@@ -19,6 +19,7 @@ import { AssigneeField, personName } from "./assignee-field";
 import styles from "../record-manager.module.css";
 import { confirmAction } from "./app-dialog";
 import { DateInput } from "./date-input";
+import { isCalendarTicket } from "@/lib/tickets/calendar";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -199,7 +200,7 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
     const push = (key: string, item: CalItem) => { if (!key) return; (map[key] ||= []).push(item); };
     events.forEach((row) => push(dateKey(row.tanggal), { kind: "event", row }));
     taskRows.forEach((row) => push(dateKey(row.due_date), { kind: "task", row }));
-    ticketRows.forEach((row) => { if (text(row.status) === "Done" || row.related_task_id) return; push(dateKey(row.due_date), { kind: "ticket", row }); });
+    ticketRows.forEach((row) => { if (!isCalendarTicket(row)) return; push(dateKey(row.due_date), { kind: "ticket", row }); });
     return map;
   }, [events, taskRows, ticketRows]);
 

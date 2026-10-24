@@ -12,9 +12,11 @@
 --
 -- Run on the VPS, one step at a time, in psql:
 --   docker compose -f docker-compose.production.yml exec postgres psql -U ccc_user -d ccc
--- Set the date below to the day the Putaran 27 fix (commit e39c90b) was deployed.
+-- fixed_at is when the Putaran 27 fix (commit e39c90b) went live: the production build is
+-- dated 23 Oct 2026 14:39 UTC (checked on internal.ccclub.id). Rows created before it went
+-- through the old reader.
 
-\set fixed_at '2026-10-24'
+\set fixed_at '2026-10-23 14:39+00'
 
 -- ── Step 1 (reads only): rows imported before the fix with a long Post ID ──────────
 -- These went through the old reader, so their ID may be rounded. If this is 0, stop here.

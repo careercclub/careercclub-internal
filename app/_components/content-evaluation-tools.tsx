@@ -1,5 +1,6 @@
 "use client";
 
+import { loadContentEvaluationAction } from "@/app/actions/content-evaluation-actions";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,7 +9,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { ACTION_VALUES, actionLabel, compact, day, inRange, num } from "@/lib/marketing/view";
 import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { confirmAction, notifyError } from "./app-dialog";
 import { guard } from "./safe-action";
 import c from "./content-evaluation.module.css";
@@ -128,7 +129,7 @@ export function ContentEvaluationTools({ evaluations, buyers, buyerTotal }: { ev
       {view === "story-buyer" ? <StoryBuyer buyerByDate={buyerByDate} buyers={buyers} items={stories} total={buyerTotal ?? buyers.length} scored={scored} select={setSelected} /> : null}
 
       {importOpen ? <ImportDialog close={() => setImportOpen(false)} done={(text) => { setMessage(text); setImportOpen(false); router.refresh(); }} /> : null}
-      {editing !== undefined ? <EvaluationEditor close={() => setEditing(undefined)} record={editing} remove={removeEvaluation} save={saveEvaluation} /> : null}
+      {editing !== undefined ? <EvaluationEditorLoader close={() => setEditing(undefined)} record={editing} remove={removeEvaluation} save={saveEvaluation} /> : null}
       {selected ? <EvaluationDetail close={() => setSelected(null)} edit={() => { setEditing(selected.row); setSelected(null); }} item={selected} /> : null}
     </div>
   );
@@ -409,6 +410,33 @@ function ImportDialog({ close, done }: { close: () => void; done: (message: stri
       </DialogContent>
     </Dialog>
   );
+}
+
+/** The page list is lean (no caption, account or Post ID columns); editing an existing
+ * evaluation loads the full row first so saving never blanks those fields. */
+function EvaluationEditorLoader(props: { record: ApiRecord | null; save: (formData: FormData) => Promise<void>; remove: () => Promise<void>; close: () => void }) {
+  const { record, close } = props;
+  const id = record?.id ? String(record.id) : "";
+  const [full, setFull] = useState<ApiRecord | null>(null);
+  const closeRef = useRef(close);
+  useEffect(() => { closeRef.current = close; });
+  useEffect(() => {
+    if (!id) return;
+    let live = true;
+    loadContentEvaluationAction(id).then((row) => { if (live) setFull(row); }).catch((error) => { if (!live) return; notifyError(error, "Could not open the evaluation."); closeRef.current(); });
+    return () => { live = false; };
+  }, [id]);
+  if (!id) return <EvaluationEditor {...props} />;
+  if (!full) {
+    return (
+      <Dialog onOpenChange={(open) => { if (!open) close(); }} open>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader><DialogTitle>Edit evaluation</DialogTitle><DialogDescription>Loading the evaluation…</DialogDescription></DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  return <EvaluationEditor {...props} record={full} />;
 }
 
 function EvaluationEditor({ record, save, remove, close }: { record: ApiRecord | null; save: (formData: FormData) => Promise<void>; remove: () => Promise<void>; close: () => void }) {

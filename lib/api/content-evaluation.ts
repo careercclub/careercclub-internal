@@ -1,6 +1,7 @@
 import "server-only";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
+import { leanRows } from "@/lib/records/lean";
 
 export type ContentEvaluationRecord = ApiRecord;
 
@@ -10,6 +11,14 @@ const contentEvaluations = createTableApi<ContentEvaluationRecord>("content_eval
 });
 
 export const listContentEvaluations = contentEvaluations.list;
+
+/** Columns the Content Evaluation page never shows in its lists; the editor loads them by id. */
+const LIST_SKIP = ["description", "account_id", "account_username", "post_id", "thumbnail_url", "created_at", "updated_at"] as const;
+
+/** The page's list: no empty fields, no edit-only columns (about half the size of the full rows). */
+export async function listContentEvaluationsForPage() {
+  return leanRows(await contentEvaluations.list(), LIST_SKIP);
+}
 export const countContentEvaluations = contentEvaluations.count;
 export const getContentEvaluation = contentEvaluations.get;
 export const createContentEvaluation = contentEvaluations.create;
