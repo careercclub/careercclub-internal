@@ -1457,3 +1457,25 @@ Masukan user (screenshot produksi): "password" di search tidak menemukan apa-apa
 ### Deploy
 
 Ada migrasi → `git pull origin refactor && npm run vps:rebuild` (bukan `:frontend`).
+
+## Putaran 40 — "Ask AI" di search, level 1 (25 Okt 2026)
+
+Usulan user: app sudah punya API AI (Anthropic, dipakai "Add with AI"), jadi pakai untuk search. Keputusan user: **level 1** — AI membantu mencari (memahami pertanyaan), tidak menjawab dari data. (Ganti nama Ticket → Task: dibatalkan user.)
+
+### Do
+
+- **Palette**: baris **"Ask AI: '…'"** muncul di paling atas untuk pertanyaan 3+ kata, atau kalau search biasa tidak menemukan apa-apa. Enter/klik → "Asking AI what to look for…" → grup **AI search** dengan "Searched for: canva · design · login" dan hasilnya (dibuka seperti hasil lain). Search biasa tetap instan dan tidak menunggu AI. AI gagal → pesan jelas, palette tetap jalan.
+- **Yang dikirim ke AI**: hanya kalimat yang diketik + daftar nama modul & kolom (`lib/search/ai-plan.ts`). Isi data tidak pernah dikirim. AI mengembalikan kata kunci + modul; jawaban disaring (hanya modul yang dikenal, kata 2–40 huruf, maks. 8).
+- **Pencarian dengan kata kunci AI** (`searchWithKeywords`, `lib/search/query.ts`): satu kata kunci (atau sinonimnya) cukup, lebih banyak kata = lebih atas, modul yang disebut AI didahulukan. Aturan lihat tiket per role tetap berlaku; password tetap tidak pernah ikut.
+- **Route** `POST /api/search/ai`: wajib login; model terpisah `ANTHROPIC_SEARCH_MODEL` (default `claude-haiku-5-5`, kecil & cepat; "Add with AI" tetap memakai `ANTHROPIC_MODEL`), maks. 200 token, timeout 8 detik; pertanyaan yang sama dalam 10 menit memakai hasil tersimpan (tanpa panggilan AI); batas 20 panggilan AI per orang per menit. `requestAnthropicJson` mendapat opsi model/token/timeout (perilaku lama tidak berubah).
+- `.env.example` & `DEPLOYMENT_VPS.md`: `ANTHROPIC_SEARCH_MODEL`.
+
+### Check
+
+- `tests/search` 19/19 (PostgreSQL sungguhan + Anthropic disimulasikan): kata kunci AI → Canva; tidak ada isi password; route mengirim hanya pertanyaan, tanpa data; model kecil; cache (tanpa panggilan kedua); AI mati → 502 dengan pesan jelas.
+- Unit baru `lib/search/ai-plan.test.mjs` 3. Suite baru `p40.mjs` 14 (kapan Ask AI ditawarkan, hanya `{q}` dikirim, kata kunci tampil, hasil bisa dibuka, gagal → pesan, tidak ada "No results" di bawah hasil AI).
+- Regresi penuh lolos: 26 suite modul (termasuk p40 14, p39 23, dark 63), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 169, lint 0 error, build lolos.
+
+### Deploy
+
+Isi `ANTHROPIC_SEARCH_MODEL` di env VPS bila model default tidak tersedia di akun Anthropic. Kalau Putaran 39 belum di-deploy: `npm run vps:rebuild` (migrasi 026); kalau sudah: `npm run vps:rebuild:frontend`.

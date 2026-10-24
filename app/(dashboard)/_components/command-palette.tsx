@@ -6,12 +6,14 @@ import { recordDefinitions } from "@/lib/records/catalog";
 import { moduleChildren } from "@/lib/records/links";
 import { MIN_SEARCH_LENGTH, highlightParts, searchTerms, type SearchHit } from "@/lib/search/registry";
 import { expandTerm } from "@/lib/search/synonyms";
+import { looksLikeQuestion } from "@/lib/search/ai-plan";
 import { RECENT_STORAGE_KEY, addRecent, parseRecent, type RecentItem } from "@/lib/search/recent";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { enhancedNavSections } from "../_data/navigation-all";
 
 type PaletteItem =
+  | { kind: "ai"; key: string; href: string; icon: string; title: string; detail: string; module: string }
   | { kind: "page"; key: string; href: string; icon: string; title: string; detail: string; module: string; action?: boolean }
   | { kind: "data" | "recent"; key: string; href: string; path: string; icon: string; title: string; detail: string; detailLabel: string; module: string; marks?: string[]; close?: boolean; credential?: boolean };
 
@@ -23,6 +25,8 @@ function writeRecent(list: RecentItem[]) {
 }
 
 type DataState = { status: "idle" | "loading" | "done" | "error"; hits: SearchHit[] };
+type AiState = { status: "idle" | "loading" | "done" | "error"; query: string; keywords: string[]; hits: SearchHit[]; error: string };
+const AI_IDLE: AiState = { status: "idle", query: "", keywords: [], hits: [], error: "" };
 
 const PAGE_LIMIT_WITH_DATA = 5;
 const GROUP_LABEL = "flex items-center gap-1.5 px-3 pt-3 pb-1 text-[12px] font-bold text-[var(--text-muted)]";
@@ -46,6 +50,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
   const [active, setActive] = useState(0);
   const [data, setData] = useState<DataState>({ status: "idle", hits: [] });
   const [recent, setRecent] = useState<RecentItem[]>([]);
+  const [ai, setAi] = useState<AiState>(AI_IDLE);
   const listRef = useRef<HTMLDivElement>(null);
 
   const entries = useMemo(() => buildPaletteIndex(enhancedNavSections, Object.values(recordDefinitions), hiddenSlugs, moduleChildren(isAdmin)), [hiddenSlugs, isAdmin]);
@@ -58,11 +63,8 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
     return (searchingData ? found.slice(0, PAGE_LIMIT_WITH_DATA) : found).map(pageItem);
   }, [entries, query, searchingData]);
 
-  const records = useMemo<PaletteItem[]>(() => (searchingData ? data.hits : [])
-    .filter((hit) => !isHidden(hit.path))
-    .map((hit) => ({
+  const toItem = useMemo(() => (prefix: string) => (hit: SearchHit): PaletteItem => ({
       kind: "data",
-      key: `data:${hit.key}:${hit.id}`,
       href: hit.href,
       path: hit.path,
       icon: iconForPath(enhancedNavSections, hit.path),
@@ -73,7 +75,15 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
       marks: hit.marks,
       close: hit.close,
       credential: hit.credential,
-    })), [data.hits, isHidden, searchingData]);
+      key: `${prefix}:${hit.key}:${hit.id}`,
+    }), []);
+  const records = useMemo<PaletteItem[]>(() => (searchingData ? data.hits : []).filter((hit) => !isHidden(hit.path)).map(toItem("data")), [data.hits, isHidden, searchingData, toItem]);
+  // AI results belong to the question they answered; typing something new hides them.
+  const aiCurrent = ai.query === trimmed && trimmed.length > 0;
+  const aiRecords = useMemo<PaletteItem[]>(() => (aiCurrent && ai.status === "done" ? ai.hits : []).filter((hit) => !isHidden(hit.path)).map(toItem("ai")), [ai, aiCurrent, isHidden, toItem]);
+  // Offer AI for sentence-like questions, or when the normal search found nothing.
+  const offerAi = searchingData && !aiCurrent && (looksLikeQuestion(trimmed) || (data.status === "done" && !data.hits.length));
+  const aiRow = useMemo<PaletteItem[]>(() => (offerAi ? [{ kind: "ai", key: "ai:ask", href: "", icon: "ti-sparkles", title: `Ask AI: “${trimmed}”`, detail: "Understands questions in English or Indonesian, e.g. “akun buat desain”", module: "AI" }] : []), [offerAi, trimmed]);
   // Records grouped by module, modules in the order of their best result.
   const recordGroups = useMemo(() => {
     const groups = new Map<string, PaletteItem[]>();
@@ -86,7 +96,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
     .filter((item) => !isHidden(item.path))
     .map((item) => ({ ...item, kind: "recent", key: `recent:${item.href}`, icon: iconForPath(enhancedNavSections, item.path) })), [recent, isHidden, trimmed]);
 
-  const items = useMemo(() => [...recents, ...pages, ...recordGroups.flatMap((group) => group.items)], [recents, pages, recordGroups]);
+  const items = useMemo(() => [...aiRow, ...aiRecords, ...recents, ...pages, ...recordGroups.flatMap((group) => group.items)], [aiRow, aiRecords, recents, pages, recordGroups]);
   const terms = useMemo(() => searchTerms(query), [query]);
   // Pages highlight the typed words and their synonyms ("password" also marks "Logins").
   const pageMarks = useMemo(() => [...new Set(terms.flatMap(expandTerm))], [terms]);
@@ -135,9 +145,24 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
     listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
+  async function askAi() {
+    const question = trimmed;
+    setAi({ ...AI_IDLE, status: "loading", query: question });
+    try {
+      const response = await fetch("/api/search/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q: question }) });
+      const result = (await response.json().catch(() => ({}))) as { plan?: { keywords?: string[] }; hits?: SearchHit[]; error?: string };
+      if (!response.ok) throw new Error(result.error || "AI search is not available right now.");
+      setAi({ status: "done", query: question, keywords: result.plan?.keywords || [], hits: result.hits || [], error: "" });
+      setActive(0);
+    } catch (error) {
+      setAi({ ...AI_IDLE, status: "error", query: question, error: error instanceof Error ? error.message : "AI search is not available right now." });
+    }
+  }
+
   function go(item: PaletteItem | undefined) {
     if (!item) return;
-    if (item.kind !== "page") {
+    if (item.kind === "ai") { void askAi(); return; }
+    if (item.kind === "data" || item.kind === "recent") {
       const next = addRecent(readRecent(), { href: item.href, path: item.path, title: item.title, detail: item.detail, detailLabel: item.detailLabel, module: item.module });
       writeRecent(next);
       setRecent(next);
@@ -154,7 +179,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
 
   function renderItem(item: PaletteItem, index: number) {
     const isActive = index === active;
-    const marks = item.kind === "page" ? pageMarks : item.kind === "data" ? item.marks || terms : terms;
+    const marks = item.kind === "page" ? pageMarks : item.kind === "data" ? item.marks || terms : item.kind === "ai" ? [] : terms;
     const icon = item.kind === "data" && item.credential ? "ti-lock" : item.icon;
     return (
       <button
@@ -175,7 +200,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-semibold text-[var(--text)]" data-title=""><Highlighted terms={marks} text={item.title} /></span>
-          <span className="block truncate text-[12px] text-[var(--text-muted)]">{item.kind !== "page" ? <>{item.detailLabel ? `${item.detailLabel}: ` : ""}<Highlighted terms={marks} text={item.detail} /></> : <Highlighted terms={marks} text={item.detail} />}</span>
+          <span className="block truncate text-[12px] text-[var(--text-muted)]">{item.kind === "ai" ? item.detail : item.kind !== "page" ? <>{item.detailLabel ? `${item.detailLabel}: ` : ""}<Highlighted terms={marks} text={item.detail} /></> : <Highlighted terms={marks} text={item.detail} />}</span>
         </span>
         {item.kind === "data" && item.credential ? <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-2 text-[12px] font-semibold text-[var(--text-muted)]">Login</span> : null}
         {item.kind === "data" && item.close ? <span className="shrink-0 rounded-full bg-[var(--amber-bg)] px-2 text-[12px] font-semibold text-[var(--amber)]" title="Spelled differently from what you typed">Close match</span> : null}
@@ -188,7 +213,9 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
 
   const loadingRecords = searchingData && data.status === "loading" && !records.length;
   const failed = searchingData && data.status === "error";
-  const nothing = searchingData && data.status === "done" && !records.length && !pages.length;
+  // AI results (or an AI search in progress) answer the question: no "No results" under them.
+  const aiAnswering = aiCurrent && (ai.status === "loading" || aiRecords.length > 0);
+  const nothing = searchingData && data.status === "done" && !records.length && !pages.length && !aiAnswering;
 
   return (
     <>
@@ -234,23 +261,39 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
 
           <div className="max-h-[min(62vh,540px)] overflow-y-auto p-1.5" ref={listRef}>
             <div aria-label="Search results" id="palette-listbox" role="listbox">
+              {aiRow.length ? (
+                <div aria-labelledby="palette-group-ai" role="group">
+                  <p className={GROUP_LABEL} id="palette-group-ai"><i aria-hidden="true" className="ti ti-sparkles" />AI search</p>
+                  {aiRow.map((item, index) => renderItem(item, index))}
+                </div>
+              ) : null}
+              {aiCurrent && ai.status !== "idle" ? (
+                <div aria-labelledby="palette-group-ai-results" role="group">
+                  <p className={GROUP_LABEL} id="palette-group-ai-results"><i aria-hidden="true" className="ti ti-sparkles" />AI search{ai.status === "done" ? <span className="font-normal text-[var(--text-hint)]">· {aiRecords.length}</span> : null}</p>
+                  {ai.status === "loading" ? <p className="flex items-center gap-2 px-3 pb-2 text-[12px] text-[var(--text-muted)]" role="status"><i aria-hidden="true" className="ti ti-loader-2 animate-spin" />Asking AI what to look for…</p> : null}
+                  {ai.status === "error" ? <p className="px-3 pb-2 text-[12px] text-[var(--red)]" role="alert">{ai.error}</p> : null}
+                  {ai.status === "done" ? <p className="px-3 pb-1 text-[12px] text-[var(--text-muted)]" data-ai-keywords="">{ai.keywords.length ? <>Searched for: {ai.keywords.map((word) => <span className="mr-1 inline-block rounded-full bg-[var(--purple-light)] px-2 font-semibold text-[var(--purple-dark)]" key={word}>{word}</span>)}</> : "The AI could not turn that into a search. Try other words."}</p> : null}
+                  {ai.status === "done" && ai.keywords.length && !aiRecords.length ? <p className="px-3 pb-2 text-[12px] text-[var(--text-muted)]" role="status">Nothing found for those words either.</p> : null}
+                  {aiRecords.map((item, index) => renderItem(item, aiRow.length + index))}
+                </div>
+              ) : null}
               {recents.length ? (
                 <div aria-labelledby="palette-group-recent" role="group">
                   <div className="flex items-center justify-between pr-3">
                     <p className={GROUP_LABEL} id="palette-group-recent"><i aria-hidden="true" className="ti ti-history" />Recently opened</p>
                     <button className="pt-2 text-[12px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text)] hover:underline" onClick={() => { writeRecent([]); setRecent([]); setActive(0); }} type="button">Clear history</button>
                   </div>
-                  {recents.map((item, index) => renderItem(item, index))}
+                  {recents.map((item, index) => renderItem(item, aiRow.length + aiRecords.length + index))}
                 </div>
               ) : null}
               {pages.length ? (
                 <div aria-labelledby="palette-group-pages" role="group">
                   <p className={GROUP_LABEL} id="palette-group-pages"><i aria-hidden="true" className="ti ti-layout-sidebar" />{trimmed ? "Pages & actions" : "Pages"}</p>
-                  {pages.map((item, index) => renderItem(item, recents.length + index))}
+                  {pages.map((item, index) => renderItem(item, aiRow.length + aiRecords.length + recents.length + index))}
                 </div>
               ) : null}
               {searchingData ? recordGroups.map((group, groupIndex) => {
-                const offset = recents.length + pages.length + recordGroups.slice(0, groupIndex).reduce((total, previous) => total + previous.items.length, 0);
+                const offset = aiRow.length + aiRecords.length + recents.length + pages.length + recordGroups.slice(0, groupIndex).reduce((total, previous) => total + previous.items.length, 0);
                 const id = `palette-group-data-${groupIndex}`;
                 return (
                   <div aria-labelledby={id} key={group.module} role="group">
@@ -278,7 +321,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
                 <p className="m-0 text-[12px] text-[var(--text-muted)]">{searchingData ? "Check the spelling, or try a name, email, company or link." : `Type at least ${MIN_SEARCH_LENGTH} letters to search records too.`}</p>
               </div>
             ) : null}
-            {searchingData && data.status === "done" && !records.length && pages.length ? <p className="px-3 pt-2 pb-3 text-[12px] text-[var(--text-muted)]" role="status">No matching records.</p> : null}
+            {searchingData && data.status === "done" && !records.length && pages.length && !aiAnswering ? <p className="px-3 pt-2 pb-3 text-[12px] text-[var(--text-muted)]" role="status">No matching records.</p> : null}
             {!searchingData && trimmed && pages.length ? <p className="px-3 pt-2 pb-3 text-[12px] text-[var(--text-muted)]">Type at least {MIN_SEARCH_LENGTH} letters to search records.</p> : null}
           </div>
 
@@ -286,7 +329,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
             <span className="hidden items-center gap-1 sm:inline-flex"><Kbd>↑</Kbd><Kbd>↓</Kbd> Move</span>
             <span className="hidden items-center gap-1 sm:inline-flex"><Kbd>↵</Kbd> Open</span>
             <span className="hidden items-center gap-1 sm:inline-flex"><Kbd>Esc</Kbd> Close</span>
-            <span className="ml-auto">{pages.length} page{pages.length === 1 ? "" : "s"}{searchingData ? ` · ${records.length} record${records.length === 1 ? "" : "s"}` : ""}</span>
+            <span className="ml-auto">{pages.length} page{pages.length === 1 ? "" : "s"}{searchingData ? ` · ${records.length + aiRecords.length} record${records.length + aiRecords.length === 1 ? "" : "s"}` : ""}</span>
           </div>
         </DialogContent>
       </Dialog>

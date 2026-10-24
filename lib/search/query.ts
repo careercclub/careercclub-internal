@@ -108,3 +108,40 @@ export async function searchEverything(query: string, viewer: SearchViewer): Pro
   if (failedTables.length) console.warn("[search] tables failed:", failedTables.join(", "));
   return { hits: rankSearchHits(hits, terms).slice(0, TOTAL_LIMIT), failedTables };
 }
+
+/**
+ * "Ask AI" (level 1): search with the keywords the AI derived from a question. A record needs
+ * one keyword (or synonym), more keywords rank higher; modules the AI named are searched and
+ * ranked first. Same tables, columns and row guards as the normal search.
+ */
+export async function searchWithKeywords(keywords: string[], moduleKeys: string[], viewer: SearchViewer): Promise<SearchHit[]> {
+  const words = [...new Set(termGroups(keywords).flat())].filter((word) => word.length >= 2);
+  if (!words.length) return [];
+  const all = searchSpecs();
+  const named = moduleKeys.length ? all.filter((spec) => moduleKeys.includes(spec.key)) : [];
+  const specs = named.length ? named : all;
+  const order = (key: string) => { const index = moduleKeys.indexOf(key); return index < 0 ? moduleKeys.length : index; };
+  const settled = await withPostgres((sql) => Promise.allSettled(specs.map(async (spec) => {
+    assertTableName(spec.table);
+    const columns = spec.fields.map((field) => field.name);
+    const guard = ROW_GUARDS[spec.key];
+    columns.forEach(assertIdentifier);
+    guard?.columns.forEach(assertIdentifier);
+    const haystack = `concat_ws(' ', ${columns.map((column) => `"${column}"::text`).join(", ")})`;
+    const selected = ["id", ...columns, ...(guard?.columns || [])].map((column) => `"${column}"`).join(", ");
+    const rows = await sql<Record<string, unknown>[]>`
+      select ${sql.unsafe(selected)} from ${sql.unsafe(`"${spec.table}"`)}
+      where ${sql.unsafe(haystack)} ilike any(${words.map(likePattern)}::text[])
+      limit ${GUARDED_FETCH_LIMIT}
+    `;
+    const allowed = guard ? await guard.load(sql, viewer) : () => true;
+    return [...rows].filter(allowed).map((row) => {
+      const matched = keywords.filter((keyword) => rowMatches(row, spec, [keyword]));
+      return { hit: toSearchHit(row, spec, matched.length ? matched : keywords), score: matched.length, order: order(spec.key) };
+    }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, PER_TABLE_LIMIT);
+  })));
+  return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+    .sort((a, b) => b.score - a.score || a.order - b.order || a.hit.title.localeCompare(b.hit.title))
+    .slice(0, TOTAL_LIMIT)
+    .map((item) => item.hit);
+}

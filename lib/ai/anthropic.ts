@@ -36,7 +36,9 @@ function parseJsonResponse(text: string): unknown {
   throw new Error(`Anthropic did not return valid JSON. Raw reply: ${cleaned.slice(0, 300)}`);
 }
 
-export async function requestAnthropicJson(system: string, content: AnthropicContent[]) {
+type RequestOptions = { model?: string; maxTokens?: number; timeoutMs?: number };
+
+export async function requestAnthropicJson(system: string, content: AnthropicContent[], options: RequestOptions = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
 
@@ -48,13 +50,13 @@ export async function requestAnthropicJson(system: string, content: AnthropicCon
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
-      max_tokens: 1200,
+      model: options.model || process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
+      max_tokens: options.maxTokens ?? 1200,
       temperature: 0,
       system,
       messages: [{ role: "user", content }],
     }),
-    signal: AbortSignal.timeout(45_000),
+    signal: AbortSignal.timeout(options.timeoutMs ?? 45_000),
   });
 
   const payload = (await response.json()) as AnthropicResponse;
