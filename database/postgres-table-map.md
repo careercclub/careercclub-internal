@@ -21,7 +21,7 @@ restored into Postgres with the same table names, then wired module by module.
 | `lib/api/crm.ts` | `buyers`, `crm_deals`, plus `count_unique_buyers()` and `ccc_normalize_wa()` |
 | `lib/api/talent-pool.ts` | `talent_pool` |
 | `lib/api/collaborators.ts` | `collaborators` |
-| `lib/api/job-vacancy-mt.ts` | `mt_vacancies`, `mt_industries` |
+| `lib/api/mt-prospects.ts` | `mt_prospects`, `mt_prospect_contacts`, `mt_prospect_research`, `mt_prospect_imports` |
 | `lib/api/competitor-intel.ts` | `competitor_profiles`, `competitor_snapshots`, `competitor_flags`, `competitor_products`, `competitor_product_prices` |
 | `lib/api/customer-knowledge.ts` | `pain_points`, `pain_point_platforms`, `pain_point_categories`, `free_class_eval` |
 | `lib/api/tickets.ts` | `tickets`, `tkt_divisi`, `tkt_people`, `tkt_types` |

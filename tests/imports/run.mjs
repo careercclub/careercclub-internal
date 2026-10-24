@@ -237,40 +237,125 @@ await test("instagram: normalized weekly CSV", async () => {
   ok(r.status === 200 && rows.length === 2 && rows[1].followers_total === 14821 && rows[0].interactions === 420, "instagram weekly csv: 2 weeks", JSON.stringify({ r: r.json, rows }));
 });
 
-// ---------- MT vacancies ----------
-const MT_HEADERS = ["Company", "Program", "Industry", "Roles", "Selection", "Career links", "Deadline", "Status", "GPA", "Education", "Majors", "Placement", "Duration", "Months", "Year", "Open date", "Notes"];
-await test("mt vacancies: CSV import into the live schema (jsonb lists)", async () => {
-  await reset("mt_vacancies");
-  const r = await post("mt-vacancies", { file: file("mt.csv", csv([MT_HEADERS, ["Unilever", "UFLP", "FMCG", "MT Marketing; MT Supply Chain", "Online test; Interview", "https://careers.unilever.com", "2026-11-30", "Active", "3.0", "S1", "All majors", "Jakarta; Surabaya", "24 months", "3,9", "2026", "2026-09-01", ""], ["Bank Mandiri", "ODP", "Banking", "ODP", "Test", "", "", "Active", "3.0", "S1", "", "", "", "", "", "", ""]])) });
-  const rows = await sql`select company, roles, months, selection, deadline, year from mt_vacancies order by company`;
-  ok(r.status === 200 && r.json?.inserted === 2 && rows.length === 2, "mt csv: 2 inserted", JSON.stringify(r).slice(0, 300));
-  const u = rows.find((x) => x.company === "Unilever");
-  ok(u && JSON.stringify(u.roles) === '["MT Marketing","MT Supply Chain"]' && JSON.stringify(u.months) === '["3","9"]', "mt csv: lists stored as JSON arrays", JSON.stringify(u));
-  ok(u && (u.selection === '["Online test","Interview"]' || JSON.stringify(u.selection) === '["Online test","Interview"]'), "mt csv: selection stored the way the app reads it", JSON.stringify(u?.selection));
-  ok(String(u?.deadline?.toISOString?.() || u?.deadline).startsWith("2026-11-30") && u?.year === "2026", "mt csv: deadline and year", JSON.stringify({ d: u?.deadline, y: u?.year }));
-});
-await test("mt vacancies: deadline written 30/11/2026", async () => {
-  await reset("mt_vacancies");
-  const r = await post("mt-vacancies", { file: file("mt.csv", csv([MT_HEADERS, ["Astra", "AMDP", "Automotive", "MT", "", "", "30/11/2026", "Active", "", "", "", "", "", "", "2026", "", ""]])) });
-  const row = (await sql`select deadline from mt_vacancies`)[0];
-  ok(r.status === 200 && row && String(row.deadline?.toISOString?.() || row.deadline).startsWith("2026-11-30"), "mt csv: dd/mm/yyyy deadline understood", JSON.stringify({ r: r.json, row }));
-});
-await test("mt vacancies: re-import updates (same company+program+year)", async () => {
-  await reset("mt_vacancies");
-  const rows = [MT_HEADERS, ["Unilever", "UFLP", "FMCG", "MT Marketing", "", "", "", "Active", "", "", "", "", "", "", "2026", "", ""]];
-  await post("mt-vacancies", { file: file("mt.csv", csv(rows)) });
-  rows[1][7] = "Closed";
-  const r = await post("mt-vacancies", { file: file("mt.csv", csv(rows)) });
-  const all = await sql`select status from mt_vacancies`;
-  ok(r.status === 200 && r.json?.updated === 1 && all.length === 1 && all[0].status === "Closed", "mt re-import: 1 updated", JSON.stringify({ r: r.json, all }));
-});
+// ---------- Job Vacancy MT: the "CCC List MT" workbook ----------
+const MT_MIGRATION = (await import("node:fs")).readFileSync(new URL("../../database/migrations/025_mt_prospects.sql", import.meta.url), "utf8").replace(/^\s*(begin|commit);\s*$/gm, ""); // the deploy runs it through psql; here it runs as one statement batch
+const CO_HEADERS = ["Nama PT (legal)", "Brand", "Tahun Aktif", "Total Pembukaan", "Bulan Langganan", "Nama MT / Program", "2024\nBulan Buka", "2024\nTanggal Buka", "2025\nBulan Buka", "2025\nTanggal Buka", "2026\nBulan Buka", "2026\nTanggal Buka", "Catatan", "Industry"];
+function mtWorkbook({ active = [], before = [], older = [], contacts = [], requirements = [], updates = [], steps = [], predictions = [], skip = [] } = {}) {
+  const sheets = {
+    "Ringkasan Industri": [["Industry", "Active 2026"], ["FMCG", { formula: "COUNTIF('Aktif (MT 2026)'!N:N,A2)" }]],
+    "Aktif (MT 2026)": [CO_HEADERS, ...active],
+    "Pernah Buka (2025)": [CO_HEADERS.filter((h) => !h.startsWith("2026")), ...before],
+    "Lama (2024 saja)": [CO_HEADERS.filter((h) => !/^202[56]/.test(h)), ...older],
+    "Kontak HR": [["Nama PT (legal)", "Brand", "Status MT", "Nama", "Jabatan", "LinkedIn", "Industry"], ...contacts],
+    "Syarat Gabungan": [["Asal Data", "ID", "Brand", "Program", "Reference Year", "Bulan Buka (asumsi)", "Roles", "Education", "GPA", "Majors", "Placement", "Requirements", "Selection Steps", "Duration", "Source Type", "Source Links", "Confidence", "Notes"], ...requirements],
+    "Update Tgl & Status": [["Sumber", "ID", "Brand", "Program", "Tgl Buka", "Tgl Tutup", "Status / Periode (per 9 Okt 2026)", "Sumber verifikasi", "Confidence", "Syarat inti", "Catatan"], ...updates],
+    "Tahapan Tambahan": [["Sumber", "ID", "Brand", "Program", "Tahapan seleksi", "Sumber / Status verifikasi", "Confidence / Catatan"], ...steps],
+    "Prediksi 2026": [["Prioritas", "Nama PT (legal)", "Brand", "Program", "Pola buka", "Estimasi buka 2026 (dari pola)", "Dasar (tanggal tahun lalu)", "Jumlah kontak HR", "Saran approach", "Confidence", "Catatan", "Industry"], ...predictions],
+  };
+  const wb = new ExcelJS.Workbook();
+  for (const [name, rows] of Object.entries(sheets)) { if (skip.includes(name)) continue; const ws = wb.addWorksheet(name); rows.forEach((row) => ws.addRow(row)); }
+  return wb.xlsx.writeBuffer().then((buffer) => Buffer.from(buffer));
+}
+const ACTIVE = [
+  ["PT Contoh Pangan Tbk", "Contoh Food", "3 dari 3", "5", "Agustus", "Management Trainee\nRole/varian: Sales; Supply Chain", "Agustus–November", "23 Agustus", "Juli–Agustus", "14 Juli", "Mei, Juni", "8 Mei\n27 Juni", "Catatan contoh", "FMCG"],
+  ["PT Bank Contoh Tbk", "Bank Contoh (BCO)", "2 dari 3", "3", "", "Officer Development Program", "", "tutup 15 Januari", "Maret–November", "3 Maret", "Oktober", "6 Oktober", "", "Banking"],
+  ["Belum terkonfirmasi", "Grup Kopi", "1 dari 3", "1", "", "MT Store", "", "", "", "", "Desember–Februari", "", "", "Retail & E-commerce"],
+];
+const BEFORE = [["PT Logistik Contoh", "Kirim Cepat", "2 dari 2", "2", "", "Graduate Program", "Desember", "2 Desember", "November", "21 November", "", "Logistics, Transport & Aviation"]];
+const OLDER = [["PT Bank Contoh Tbk", "Bank Contoh (BCO)", "1 dari 1", "1", "", "Next Generation Talent", "Maret", "25 Maret", "", "Banking"]];
+const CONTACTS = [
+  ["PT Contoh Pangan Tbk", "Contoh Food", "Aktif", "Rina Contoh", "Talent Acquisition", "https://id.linkedin.com/in/rina-contoh", "FMCG"],
+  ["PT Contoh Pangan Tbk", "Contoh Food", "Aktif", "(Email rekrutmen umum)", "Email rekrutmen", "rekrut@contoh.test", "FMCG"],
+  ["PT Bank Contoh Tbk", "Bank Contoh (BCO)", "Aktif", "Agus Contoh", "HR Manager", "https://id.linkedin.com/in/agus", "Banking"],
+  ["PT Bank Contoh Tbk", "Bank Contoh (BCO)", "Lama (2024 saja)", "Dewi Contoh", "Recruiter", "https://id.linkedin.com/in/dewi", "Banking"],
+  ["PT Logistik Contoh", "Kirim Cepat", "Pernah Buka", "Budi Contoh", "HRBP", "https://id.linkedin.com/in/budi", "Logistics"],
+];
+const REQS = [
+  ["Riset S-series", "S001", "Contoh Food", "MT Sales", "2026", "Jul 2026 [K]", "Sales", "S1", "Min 3.00", "Semua jurusan", "Seluruh Indonesia", "Fresh graduate", "CV > Psikotes > Interview", "12 bulan", "Official", "https://karir.contoh.test", "High", ""],
+  ["Poster IG", "", "BCO", "ODP", "2026", "", "Banking", "S1", "TIDAK KETEMU", "", "", "", "", "", "Poster", "", "Medium", ""],
+  ["Poster IG", "", "Perusahaan Hilang", "MT", "2026", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+];
+const UPDATES = [["Lampiran C", "S001", "Contoh Food", "MT Sales", "8 Mei 2026", "30 Juni 2026", "Sudah tutup", "Poster", "Medium", "IPK 3.0", ""], ["Catatan: tidak ada data baru", "", "", "", "", "", "", "", "", "", ""]];
+const STEPS = [["Lampiran H3", "S001", "PT Contoh Pangan Tbk", "MT Sales", "Online Application > Test > Interview", "Official", "High"]];
+const PREDICTIONS = [["A. Approach sekarang", "PT Logistik Contoh", "Kirim Cepat", "Graduate Program", "Rutin", "November", "2025: 21 November", "1", "Kirim penawaran Oktober", "Sedang", "", "Logistics, Transport & Aviation"]];
+const fullBook = () => mtWorkbook({ active: ACTIVE, before: BEFORE, older: OLDER, contacts: CONTACTS, requirements: REQS, updates: UPDATES, steps: STEPS, predictions: PREDICTIONS });
+const mtReset = async () => { await sql.unsafe(MT_MIGRATION); await reset("mt_prospects", "mt_prospect_imports"); };
 
-await test("mt vacancies: Google Sheet path (server action) with dd/mm dates", async () => {
-  await reset("mt_vacancies");
-  const { importMtVacancies } = await import(`${OUT}mt-lib.mjs`);
-  const r = await importMtVacancies([{ company: "Astra", program: "AMDP", industry: "Automotive", roles: ["MT"], months: [3], year: "2026", deadline: "30/11/2026", open_date: "01/09/2026" }, { company: "BCA", program: "PPA", industry: "Banking", roles: ["PPA"], months: [2], year: "2026", deadline: "soon", open_date: null }]);
-  const rows = await sql`select company, deadline, open_date from mt_vacancies order by company`;
-  ok(r.inserted === 2 && String(rows[0].deadline?.toISOString?.()).startsWith("2026-11-30") && String(rows[0].open_date?.toISOString?.()).startsWith("2026-09-01") && rows[1].deadline === null, "mt sheet path: dd/mm dates read, unreadable date left empty", JSON.stringify({ r, rows }));
+await test("mt list: preview reports what would change and writes nothing", async () => {
+  await mtReset();
+  const r = await post("mt-prospects", { file: file("CCC_List_MT.xlsx", await fullBook()), mode: "preview" });
+  const [{ count }] = await sql`select count(*)::int from mt_prospects`;
+  const s = r.json?.summary;
+  ok(r.status === 200 && s?.companies?.added === 5 && s.companies.updated === 0 && s.contacts === 5 && count === 0, "mt preview: 5 companies to add, 5 contacts, nothing written", JSON.stringify(r).slice(0, 400));
+  ok(s?.research?.requirement === 2 && s.research.update === 1 && s.research.steps === 1 && s.skippedNotes === 1 && s.unmatched.length === 1 && /Perusahaan Hilang/.test(s.unmatched[0].label), "mt preview: research matched by brand / bracket / legal name; note row skipped; stray row reported", JSON.stringify(s));
+});
+await test("mt list: apply stores companies, openings, contacts, research, prediction", async () => {
+  await mtReset();
+  const r = await post("mt-prospects", { file: file("CCC_List_MT.xlsx", await fullBook()), mode: "apply" });
+  const rows = await sql`select id, brand, status, industry, total_openings, usual_months, openings, prediction, source, import_key from mt_prospects order by brand, status`;
+  ok(r.status === 200 && rows.length === 5 && rows.every((row) => row.source === "import" && row.import_key), "mt apply: 5 companies from the workbook", JSON.stringify(r.json).slice(0, 300));
+  const food = rows.find((row) => row.brand === "Contoh Food");
+  ok(food && JSON.stringify(food.openings["2024"].months) === "[8,9,10,11]" && JSON.stringify(food.openings["2026"].months) === "[5,6]" && food.openings["2026"].dates === "8 Mei\n27 Juni" && JSON.stringify(food.usual_months) === "[8]" && food.total_openings === 5, "mt apply: month ranges, lists, dates and usual months", JSON.stringify(food));
+  const kopi = rows.find((row) => row.brand === "Grup Kopi");
+  ok(kopi && JSON.stringify(kopi.openings["2026"].months) === "[1,2,12]", "mt apply: a range over the new year (Desember–Februari)", JSON.stringify(kopi?.openings));
+  const banks = rows.filter((row) => row.brand === "Bank Contoh (BCO)");
+  ok(banks.length === 2 && banks.map((row) => row.status).sort().join() === "active,older" && new Set(banks.map((row) => row.import_key)).size === 2, "mt apply: same company in two sheets stays two rows", JSON.stringify(banks.map((row) => [row.status, row.import_key])));
+  const contacts = await sql`select c.name, p.brand, p.status from mt_prospect_contacts c join mt_prospects p on p.id = c.prospect_id order by c.name`;
+  ok(contacts.length === 5 && contacts.find((c) => c.name === "Dewi Contoh")?.status === "older" && contacts.find((c) => c.name === "Agus Contoh")?.status === "active", "mt apply: contacts follow their Status MT to the right row", JSON.stringify(contacts));
+  const research = await sql`select r.kind, p.brand, r.details from mt_prospect_research r join mt_prospects p on p.id = r.prospect_id order by r.kind, p.brand`;
+  ok(research.length === 4 && research.filter((x) => x.brand === "Contoh Food").length === 3 && research.find((x) => x.brand === "Bank Contoh (BCO)")?.details.gpa === "TIDAK KETEMU", "mt apply: requirements, update and steps on the right companies", JSON.stringify(research.map((x) => [x.kind, x.brand])));
+  const logistics = rows.find((row) => row.brand === "Kirim Cepat");
+  ok(logistics?.status === "predicted" && logistics.prediction?.priority === "A. Approach sekarang" && logistics.prediction?.estimate === "November", "mt apply: prediction attached to the predicted company", JSON.stringify(logistics?.prediction));
+  const [log] = await sql`select file_name, imported_by, summary from mt_prospect_imports`;
+  ok(log?.file_name === "CCC_List_MT.xlsx" && log.summary.companies.added === 5, "mt apply: upload recorded", JSON.stringify(log));
+});
+await test("mt list: re-upload updates in place, keeps app edits' rows, removes dropped companies", async () => {
+  await mtReset();
+  await post("mt-prospects", { file: file("v1.xlsx", await fullBook()), mode: "apply" });
+  const [food] = await sql`select id from mt_prospects where brand = 'Contoh Food'`;
+  const [manual] = await sql`insert into mt_prospects (legal_name, brand, status, industry, program, source) values ('PT Manual', 'Manual Co', 'active', 'FMCG', 'MT', 'manual') returning id`;
+  await sql`insert into mt_prospect_contacts (prospect_id, name, title, link, source) values (${food.id}, 'Kontak Manual', 'HR', 'https://linkedin.com/in/manual', 'manual'), (${manual.id}, 'Orang Manual', 'HR', 'x@y.test', 'manual')`;
+  await sql`update mt_prospects set industry = 'Edited in app' where id = ${food.id}`;
+  const v2 = ACTIVE.map((row) => [...row]); v2[0][10] = "September"; // Contoh Food now opens in September
+  const r = await post("mt-prospects", { file: file("v2.xlsx", await mtWorkbook({ active: v2, older: OLDER, contacts: CONTACTS, requirements: REQS, updates: UPDATES, steps: STEPS })), mode: "apply" });
+  const rows = await sql`select id, brand, industry, openings, source from mt_prospects order by brand`;
+  const food2 = rows.find((row) => row.brand === "Contoh Food");
+  ok(r.status === 200 && r.json?.summary?.companies?.updated === 4 && r.json.summary.companies.removed === 1 && r.json.summary.companies.keptFromApp === 1, "mt re-upload: 4 updated, 1 removed, 1 app company kept", JSON.stringify(r.json?.summary?.companies));
+  ok(food2?.id === food.id && JSON.stringify(food2.openings["2026"].months) === "[9]" && food2.industry === "FMCG", "mt re-upload: same row id, new months, file wins over the app edit", JSON.stringify(food2));
+  ok(!rows.some((row) => row.brand === "Kirim Cepat") && rows.some((row) => row.brand === "Manual Co" && row.source === "manual"), "mt re-upload: company no longer in the file removed; app-added company kept", JSON.stringify(rows.map((row) => row.brand)));
+  const contacts = await sql`select name, source from mt_prospect_contacts order by name`;
+  ok(contacts.length === 6 && contacts.filter((c) => c.name === "Rina Contoh").length === 1 && contacts.some((c) => c.name === "Kontak Manual") && contacts.some((c) => c.name === "Orang Manual"), "mt re-upload: workbook contacts replaced (no duplicates), app-added contacts kept", JSON.stringify(contacts));
+  const [{ research }] = await sql`select count(*)::int as research from mt_prospect_research`;
+  ok(research === 4, "mt re-upload: research replaced, not doubled", String(research));
+});
+await test("mt list: a company dropped from the file keeps the contacts added in the app", async () => {
+  await mtReset();
+  await post("mt-prospects", { file: file("v1.xlsx", await fullBook()), mode: "apply" });
+  const [kirim] = await sql`select id from mt_prospects where brand = 'Kirim Cepat'`;
+  await sql`insert into mt_prospect_contacts (prospect_id, name, title, link, source) values (${kirim.id}, 'Kontak App', 'HR', 'a@b.test', 'manual')`;
+  const v2 = () => mtWorkbook({ active: ACTIVE, older: OLDER, contacts: CONTACTS, requirements: REQS, updates: UPDATES, steps: STEPS });
+  const preview = await post("mt-prospects", { file: file("v2.xlsx", await v2()), mode: "preview" });
+  ok(preview.json?.summary?.companies?.removed === 0 && preview.json.summary.companies.keptForAppContacts === 1, "mt dropped+app contact: preview says kept, not removed", JSON.stringify(preview.json?.summary?.companies));
+  await post("mt-prospects", { file: file("v2.xlsx", await v2()), mode: "apply" });
+  const [row] = await sql`select id, source, import_key from mt_prospects where brand = 'Kirim Cepat'`;
+  const contacts = await sql`select name from mt_prospect_contacts where prospect_id = ${kirim.id}`;
+  ok(row?.id === kirim.id && row.source === "manual" && row.import_key === null && contacts.map((c) => c.name).join() === "Kontak App", "mt dropped+app contact: company kept as an app company with the app contact (imported contact gone)", JSON.stringify({ row, contacts }));
+});
+await test("mt list: a hyperlinked cell keeps its link, not its label", async () => {
+  await mtReset();
+  const contacts = [["PT Contoh Pangan Tbk", "Contoh Food", "Aktif", "Sari Link", "HR", { text: "Profile", hyperlink: "https://id.linkedin.com/in/sari-link" }, "FMCG"]];
+  await post("mt-prospects", { file: file("v1.xlsx", await mtWorkbook({ active: ACTIVE, before: BEFORE, older: OLDER, contacts })), mode: "apply" });
+  const [c] = await sql`select link from mt_prospect_contacts where name = 'Sari Link'`;
+  ok(c?.link === "https://id.linkedin.com/in/sari-link", "mt hyperlink: URL stored", JSON.stringify(c));
+});
+await test("mt list: a different workbook is refused and nothing changes", async () => {
+  await mtReset();
+  await post("mt-prospects", { file: file("v1.xlsx", await fullBook()), mode: "apply" });
+  const r = await post("mt-prospects", { file: file("other.xlsx", await mtWorkbook({ active: ACTIVE, skip: ["Pernah Buka (2025)"] })), mode: "apply" });
+  const [{ count }] = await sql`select count(*)::int from mt_prospects`;
+  ok(r.status === 400 && /Pernah Buka/.test(r.json?.error || "") && count === 5, "mt wrong file: refused with the missing sheet named, data untouched", JSON.stringify({ r, count }));
+  const csvTry = await post("mt-prospects", { file: file("list.csv", Buffer.from("a,b\n1,2")), mode: "preview" });
+  ok(csvTry.status === 400 && /xlsx/.test(csvTry.json?.error || ""), "mt wrong type: CSV refused", JSON.stringify(csvTry));
 });
 
 // ---------- Free Class evaluation (Google Form) ----------

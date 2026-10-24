@@ -3,7 +3,7 @@
 Runs the real `/api/*/import` route handlers (login stubbed) against a throwaway
 Postgres, with files shaped like the real exports: the Talent Pool Google Form sheet,
 lynk.id `myorder.xlsx`, Meta Business Suite CSV, Meta Insights daily CSVs (UTF-16),
-MT vacancy sheets and the Free Class Google Form — plus the variants people actually
+the "CCC List MT" workbook for Job Vacancy MT and the Free Class Google Form — plus the variants people actually
 upload (BOM, `;` from Excel in Indonesian, banner rows, date cells, `30/11/2026`,
 `1,234`, re-imports).
 

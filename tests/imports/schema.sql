@@ -11,10 +11,6 @@ create table content_evaluations (
   created_at timestamptz default now());
 create table ig_snapshots (id uuid primary key default gen_random_uuid(), week_start date not null, followers_total integer default 0, follows_gained integer default 0,
   reach integer default 0, views integer default 0, interactions integer default 0, link_clicks integer default 0, profile_visits integer default 0, notes text default '', created_at timestamptz default now());
-create table mt_vacancies (id uuid primary key default gen_random_uuid(), company text, program text, industry text, roles jsonb default '[]', selection text,
-  links jsonb default '[]', deadline date, status text default 'Active', notes text, input_date date, gpa text, edu text, majors jsonb default '[]', placement jsonb default '[]',
-  other_req text, duration text, months jsonb default '[]', year text, open_date date, career_links jsonb default '[]', ref_links jsonb default '[]', created_at timestamptz default now());
-create table mt_industries (id uuid primary key default gen_random_uuid(), nama text);
 create table free_class_eval (id uuid primary key default gen_random_uuid(), email text, seri text, nama text, universitas text, angkatan text, timestamp text,
   materi_judul numeric, materi_kebutuhan numeric, materi_mudah numeric, materi_jawab numeric, nara_kuasai numeric, nara_jelas numeric, kualitas_teknis numeric, waktu numeric,
   moderator numeric, info_webinar numeric, kepuasan numeric, minat numeric, rekomendasi numeric, hal_baik text, ditingkatkan text, topik_keinginan text, created_at timestamptz default now());

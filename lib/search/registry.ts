@@ -63,7 +63,7 @@ const CONTEXT_PREFERENCE = ["industry", "email", "username", "contact_email", "c
 
 // Records without a natural name are titled from a combination of fields.
 const TITLE_OVERRIDES: Record<string, string[]> = {
-  mt_vacancies: ["company", "program"],
+  mt_prospects: ["brand", "legal_name"],
   content_library: ["platform", "jenis"],
   partner_outreach: ["channel", "respons"],
   org_outreach: ["channel", "respons"],

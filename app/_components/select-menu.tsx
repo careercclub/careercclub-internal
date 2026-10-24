@@ -9,7 +9,7 @@
 // the same input + change events the browser would. Phones keep the native picker,
 // which is the better control on touch. Add data-native-select to an element to opt out.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./select-menu.module.css";
 
@@ -42,6 +42,19 @@ function visibleItems(menu: Menu) {
   return menu.items.filter((item) => item.kind === "option" && !item.placeholder && item.label.toLowerCase().includes(query));
 }
 
+/** Under its select, or above it when there is more room there. */
+function placeFor(select: HTMLSelectElement) {
+  const rect = select.getBoundingClientRect();
+  const gap = 6;
+  const below = window.innerHeight - rect.bottom - gap - 8;
+  const above = rect.top - gap - 8;
+  const width = Math.min(Math.max(rect.width, 200), 420, window.innerWidth - 16);
+  const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+  return below < 220 && above > below
+    ? { left, width, bottom: window.innerHeight - rect.top + gap, maxHeight: Math.min(340, above) }
+    : { left, width, top: rect.bottom + gap, maxHeight: Math.min(340, below) };
+}
+
 function choosable(items: Item[]) {
   return items.flatMap((item, position) => (item.kind === "option" && !item.disabled ? [position] : []));
 }
@@ -52,18 +65,18 @@ export function SelectMenuHost() {
   const menuRef = useRef<Menu | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  menuRef.current = menu;
+  // The menu lives in a ref too, so the window listeners read the latest one without re-subscribing.
+  const commit = useCallback((next: Menu | null) => { menuRef.current = next; setMenu(next); }, []);
 
   const close = useCallback((refocus = false) => {
     const current = menuRef.current;
     if (!current) return;
     current.select.removeAttribute("aria-expanded");
     current.select.removeAttribute("aria-activedescendant");
-    menuRef.current = null;
-    setMenu(null);
+    commit(null);
     setPlace(null);
     if (refocus) current.select.focus({ preventScroll: true });
-  }, []);
+  }, [commit]);
 
   const choose = useCallback((item: Item | undefined) => {
     const current = menuRef.current;
@@ -82,8 +95,9 @@ export function SelectMenuHost() {
     const active = Math.max(0, items.findIndex((item) => item.kind === "option" && item.index === select.selectedIndex));
     select.setAttribute("aria-expanded", "true");
     select.focus({ preventScroll: true });
-    setMenu({ select, items, active, query: "" });
-  }, []);
+    setPlace(placeFor(select));
+    commit({ select, items, active, query: "" });
+  }, [commit]);
 
   // Open on press / keys, close on outside press, scroll, resize, focus elsewhere.
   useEffect(() => {
@@ -132,7 +146,7 @@ export function SelectMenuHost() {
       const items = visibleItems(current);
       const ids = choosable(items);
       const at = ids.indexOf(current.active);
-      const move = (next: number) => setMenu({ ...current, active: ids[Math.max(0, Math.min(ids.length - 1, next))] ?? 0 });
+      const move = (next: number) => commit({ ...current, active: ids[Math.max(0, Math.min(ids.length - 1, next))] ?? 0 });
       let handled = true;
       if (event.key === "Escape") close(true);
       else if (event.key === "Tab") { handled = false; close(); }
@@ -143,11 +157,11 @@ export function SelectMenuHost() {
       else if (event.key === "PageDown") move(at + 8);
       else if (event.key === "PageUp") move(at - 8);
       else if (event.key === "Enter" || (event.key === " " && !current.query)) choose(items[current.active]);
-      else if (event.key === "Backspace") setMenu({ ...current, query: current.query.slice(0, -1), active: 0 });
+      else if (event.key === "Backspace") commit({ ...current, query: current.query.slice(0, -1), active: 0 });
       else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
         const query = current.query + event.key;
         const next = { ...current, query };
-        setMenu({ ...next, active: choosable(visibleItems(next))[0] ?? 0 });
+        commit({ ...next, active: choosable(visibleItems(next))[0] ?? 0 });
       } else handled = false;
       if (handled) { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }
     }
@@ -174,22 +188,8 @@ export function SelectMenuHost() {
       window.removeEventListener("resize", onResize);
       document.removeEventListener("focusin", onFocusIn);
     };
-  }, [choose, close, open]);
+  }, [choose, close, commit, open]);
 
-  // Place the menu under (or above) its select.
-  useLayoutEffect(() => {
-    if (!menu) return;
-    const rect = menu.select.getBoundingClientRect();
-    const gap = 6;
-    const below = window.innerHeight - rect.bottom - gap - 8;
-    const above = rect.top - gap - 8;
-    const width = Math.min(Math.max(rect.width, 200), 420, window.innerWidth - 16);
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
-    const upward = below < 220 && above > below;
-    setPlace(upward
-      ? { left, width, bottom: window.innerHeight - rect.top + gap, maxHeight: Math.min(340, above) }
-      : { left, width, top: rect.bottom + gap, maxHeight: Math.min(340, below) });
-  }, [menu?.select]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the active option in view; the page's scroll lock in popups blocks wheel scrolling, so scroll the list by hand.
   useEffect(() => {
@@ -241,7 +241,7 @@ export function SelectMenuHost() {
               key={`o-${item.index}`}
               role="option"
               onClick={() => choose(item)}
-              onMouseMove={() => { if (!item.disabled && menu.active !== position) setMenu({ ...menu, active: position }); }}
+              onMouseMove={() => { if (!item.disabled && menu.active !== position) commit({ ...menu, active: position }); }}
             >
               <span>{item.label || " "}</span>
               {item.index === selected && !item.placeholder ? <i className="ti ti-check" aria-hidden="true" /> : null}

@@ -61,6 +61,13 @@ export const partnershipLinks: NavLink[] = [
   { href: "/b2b-partnership?tab=outreach", label: "Outreach log" },
 ];
 
+export const mtProspectLinks: NavLink[] = [
+  { href: "/job-vacancy-mt", label: "Overview" },
+  { href: "/job-vacancy-mt?tab=companies", label: "Companies" },
+  { href: "/job-vacancy-mt?tab=calendar", label: "Calendar" },
+  { href: "/job-vacancy-mt?tab=contacts", label: "HR contacts" },
+];
+
 export const orgPartnershipLinks: NavLink[] = [
   { href: "/org-partnership", label: "Pipeline" },
   { href: "/org-partnership?tab=deals", label: "Deals & scope" },
@@ -139,6 +146,7 @@ export function moduleChildren(isAdmin: boolean): Record<string, NavLink[]> {
     "/competitor-intel": competitorLinks,
     "/b2b-partnership": partnershipLinks,
     "/org-partnership": orgPartnershipLinks,
+    "/job-vacancy-mt": mtProspectLinks,
     "/settings": SETTINGS_SECTIONS.filter((section) => isAdmin || !("adminOnly" in section)).map((section) => ({ href: settingsHref(section.id), label: section.label })),
   };
 }

@@ -1211,3 +1211,47 @@ Masukan user: panel "Add with AI" di All partners berantakan; dropdown masih tam
 
 - Suite baru `selmenu.mjs` 32/32 (mouse, posisi, centang, klik luar, cari, Enter, wheel, keyboard, state React, nilai ikut tersimpan di form, di popup Radix & modal custom, HP tetap native); ikut regresi penuh.
 - Regresi penuh lolos: semua suite modul (termasuk ux 22, selmenu 32), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 145, lint 0, build lolos.
+
+## Putaran 31 — Job Vacancy MT dibangun ulang dari workbook "CCC List MT" (24 Okt 2026)
+
+Permintaan user: modul Job Vacancy lama dihapus total dan diganti; basis datanya Excel "CCC List MT" (14 sheet); tampilannya mengikuti dashboard HTML user ("Prospek MT") tapi dengan gaya app. Keputusan user: data di-update dengan upload ulang Excel **dan** bisa diedit di app; belum perlu tracking approach; tabel lama dihapus permanen.
+
+### Data
+
+- Migrasi `025_mt_prospects.sql`: **drop** `mt_vacancies` dan `mt_industries` (permanen, keputusan user); tabel baru `mt_prospects` (perusahaan + riwayat buka per tahun + prediksi), `mt_prospect_contacts`, `mt_prospect_research` (syarat, update tanggal/status, tahapan seleksi), `mt_prospect_imports` (riwayat upload). Grant ke `ccc_ops_app` eksplisit. Diuji dua kali di Postgres lokal (aman diulang).
+- Baris dari Excel bertanda `source = import` + `import_key` (nama PT | brand | urutan); yang ditambah di app `source = manual` dan tidak pernah disentuh upload.
+
+### Import Excel (`/api/mt-prospects/import`, `lib/mt-prospects/parse.ts`)
+
+- Sheet & kolom dicari dari nama, bukan posisi → kolom tahun baru (2027) ikut terbaca. Sheet arsip & ringkasan (rumus) tidak dibaca karena sudah tergabung di "Syarat Gabungan".
+- Bulan: rentang ("Agustus–November"), daftar, lintas tahun ("Desember–Februari").
+- Pencocokan kontak/riset ke perusahaan: pasangan nama PT+brand → brand → nama PT → tanpa "PT/Tbk/aksen" → isi kurung (hanya bila menunjuk satu perusahaan); kontak mengikuti "Status MT" bila perusahaan muncul di dua sheet (mis. KB Bank aktif & lama).
+- Dua langkah: **cek dulu** (berapa baru/diperbarui/dihapus, kontak, riset, baris tak cocok, nama ganda dengan data app) → **Import Excel**. Satu transaksi; gagal = tidak ada yang berubah.
+- File asli user: 392 perusahaan (270 aktif, 85 prediksi, 33 lama, 4 dikeluarkan), 2.428 kontak (semua cocok), 1.471 baris riset; 1 baris tak cocok + 20 baris catatan tanpa brand dilaporkan. ±3 detik. Upload ulang = 392 diperbarui, tanpa duplikat.
+
+### Tampilan (`mt-prospects-workspace/detail/forms.tsx`)
+
+- Tab: **Overview** (angka, grafik per bulan dgn tahun sebelumnya, perkiraan 2 bulan ke depan, per industri → klik ke daftar), **Companies** (cari, filter status & industri, A–Z tanpa peduli huruf besar), **Calendar** (12 bulan: terjadwal vs biasanya buka), **HR contacts** (cari, link LinkedIn/email). Sub-menu sidebar sama.
+- Detail perusahaan: prediksi, program, riwayat buka per tahun, kontak HR (tambah/ubah/hapus), update tanggal & status, syarat & tahapan (tahapan jadi langkah, "TIDAK KETEMU" → "Not found"), catatan. Riset dimuat saat dibuka.
+- Form perusahaan & kontak: isian wajib merah + fokus; detail lanjutan (bulan buka per tahun, prediksi, catatan) dilipat. Data dari Excel diberi tahu: "upload berikutnya mengganti editan".
+- Pencarian global: perusahaan & kontak HR (hasil kontak membuka perusahaannya).
+- Dihapus: komponen/aksi/API/view lama Job Vacancy (daftar lowongan, newsletter, master industri, company intel lama).
+
+### Check
+
+- Unit 10 (parse/view) + search 11 lulus; tes import fungsional: 17 tes baru Job Vacancy (pratinjau, simpan, upload ulang, file salah) — total 55/55.
+- UI `mt.mjs` 62/62 (semua tab, filter, detail, kontak, form wajib, import pratinjau→terapkan, kosong, HP tanpa geser samping); sapuan klik 25 tombol: 0 tanpa efek, 0 error, 0 gagal diam-diam.
+- Review terpisah (agen lain, tanpa konteks kerja) → diperbaiki:
+  - Perusahaan yang hilang dari file tapi punya kontak yang ditambah di app **tidak dihapus**; jadi perusahaan app beserta kontaknya (pratinjau menyebut jumlahnya).
+  - Pratinjau import selalu milik file terakhir yang dipilih (balasan lama diabaikan).
+  - Sel Excel ber-hyperlink ("Profile") menyimpan URL-nya.
+  - Prediksi bisa dikosongkan.
+  - Batang industri (tahun mana pun, termasuk "Other") membuka daftar dengan jumlah yang sama; badge angka di tab dihapus karena daftar dibuka terfilter.
+  - Tambah perusahaan = satu query.
+  - Body upload rusak → 400, bukan 500.
+- Tes setelah perbaikan: import 58/58 (+ kontak app selamat, hyperlink), UI `mt.mjs` 65/65, unit 151, lint 0, build lolos. Regresi penuh: semua suite modul, navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup.
+- **Temuan samping:** `select-menu.tsx` (Putaran 30) ternyata punya 2 error lint yang lolos karena script regresi hanya membaca baris terakhir output lint (kosong saat ada error). Diperbaiki (ref tidak ditulis saat render; posisi menu dihitung saat dibuka) dan script regresi kini mencetak jumlah error lint.
+
+### Deploy
+
+- Ada migrasi → `git pull origin refactor` lalu **`npm run vps:rebuild`** (bukan `:frontend`). Migrasi 025 menghapus `mt_vacancies` & `mt_industries` permanen (keputusan user). Setelah deploy, buka Job Vacancy MT → **Import Excel** → pilih file "CCC List MT".

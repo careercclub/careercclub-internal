@@ -1,7 +1,11 @@
-import { JobVacancyMtTools } from "@/app/_components/job-vacancy-mt-tools";
-import { listMtIndustries, listMtVacancies } from "@/lib/api/job-vacancy-mt";
+import { MtProspectsWorkspace } from "@/app/_components/mt-prospects-workspace";
+import { latestProspectImport, listProspectContacts, listProspects } from "@/lib/api/mt-prospects";
 
-export default async function JobVacancyMtPage() {
-  const [rows, industries] = await Promise.all([listMtVacancies(), listMtIndustries()]);
-  return <JobVacancyMtTools industries={industries} referenceDate={new Date().toISOString()} rows={rows} />;
+export const metadata = { title: "Job Vacancy MT" };
+
+export default async function JobVacancyMtPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
+  const requested = (await searchParams).tab;
+  const tab = Array.isArray(requested) ? requested[0] : requested;
+  const [prospects, contacts, lastImport] = await Promise.all([listProspects(), listProspectContacts(), latestProspectImport()]);
+  return <MtProspectsWorkspace contacts={contacts} initialTab={tab} key={tab || "overview"} lastImport={lastImport} prospects={prospects} referenceDate={new Date().toISOString()} />;
 }

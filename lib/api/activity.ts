@@ -4,8 +4,6 @@ import type { TableName } from "@/lib/db/tables";
 
 const skippedTables = new Set<string>([
   "activity_log",
-  "mt_industries",
-  "mt_companies",
   "divisi",
   "people",
   "ticket_types",
