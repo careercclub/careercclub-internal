@@ -8,7 +8,7 @@ import { compact, day, followersSeries, num } from "@/lib/marketing/view";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { FollowersChart, MetricsChart } from "./charts";
+import { dayLabel, FollowersChart, monthLabel, SeriesBarChart } from "./charts";
 import s from "./page-kit.module.css";
 import { DateInput } from "./date-input";
 
@@ -71,14 +71,14 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
     }
     const keys = [...actualKeys.slice(-8), ...futureKeys].slice(-12);
     const projected = (key: string) => { const [year, month] = key.split("-").map(Number); const end = new Date(Date.UTC(year, month, 0)); return Math.round(baselineFollowers + a.avgPerDay * Math.round((end.getTime() - baselineDate.getTime()) / 86400000)); };
-    return { labels: keys.map((key) => key.slice(2)), actual: keys.map((key) => monthMap.get(key)?.followers ?? null), predicted: keys.map((key) => (key === lastActualKey || futureKeys.includes(key)) ? projected(key) : null) };
+    // The projection starts at the last actual month (same value), so the dashed line continues the solid one.
+    return { months: keys, actual: keys.map((key) => monthMap.get(key)?.followers ?? null), predicted: keys.map((key) => (key === lastActualKey ? monthMap.get(key)?.followers ?? null : futureKeys.includes(key) ? projected(key) : null)) };
   }, [a.monthly, a.avgPerDay, a.latest, baseline, referenceDate]);
 
   const history = [...a.sorted].reverse();
   const pages = Math.max(1, Math.ceil(history.length / PAGE)); const current = Math.min(page, pages - 1);
   const pageRows = history.slice(current * PAGE, current * PAGE + PAGE);
-  const weekly = [...a.sorted].slice(-8).map((row) => ({ label: day(row.week_start).slice(5), value: num(row.follows_gained) / 7 }));
-  const weeklyMax = Math.max(1, ...weekly.map((row) => row.value));
+  const weekly = [...a.sorted].slice(-8).map((row) => ({ label: dayLabel(day(row.week_start)), value: Math.round((num(row.follows_gained) / 7) * 10) / 10 }));
   const metricRows = a.monthly.slice(-12);
 
   const currentFollowers = num(baseline?.followers_total) || num(a.latest?.computedFollowers);
@@ -146,22 +146,22 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
             <div className={s.stat}><span>Follows per day</span><b>{a.avgPerDay.toFixed(1)}</b><small>Last 4 weeks</small></div>
           </div>
 
-          <div className={s.grid3}>
-            <section className={s.card}>
-              <div><h3>Followers</h3><p className={s.cardSub}>Actual vs projection{target ? " · target line" : ""}</p></div>
-              <FollowersChart actual={followersChart.actual} labels={followersChart.labels} predicted={followersChart.predicted} target={target || null} />
+          <div className={s.chartGrid}>
+            <section aria-label="Followers chart" className={s.card}>
+              <div><h3>Followers</h3><p className={s.cardSub}>End of each month · dashed = projection to December</p></div>
+              {followersChart.months.length ? <FollowersChart actual={followersChart.actual} months={followersChart.months} predicted={followersChart.predicted} target={target || null} /> : <p className={s.empty}>No snapshots yet.</p>}
             </section>
-            <section className={s.card}>
-              <div><h3>Follows per day</h3><p className={s.cardSub}>Last 8 weeks</p></div>
-              {weekly.length ? (
-                <div className={s.barChart}>
-                  {weekly.map((row) => <div className={s.barCol} key={row.label}><span><i style={{ height: `${Math.max(3, row.value / weeklyMax * 100)}%` }} title={`${row.label}: ${row.value.toFixed(1)}/day`} /></span><small>{row.label}</small></div>)}
-                </div>
-              ) : <p className={s.empty}>No snapshots yet.</p>}
+            <section aria-label="Follows per day chart" className={s.card}>
+              <div><h3>Follows per day</h3><p className={s.cardSub}>Weekly average · last {weekly.length || 8} weeks</p></div>
+              {weekly.length ? <SeriesBarChart labels={weekly.map((row) => row.label)} name="Follows per day" values={weekly.map((row) => row.value)} /> : <p className={s.empty}>No snapshots yet.</p>}
             </section>
-            <section className={s.card}>
-              <div><h3>Reach &amp; interactions</h3><p className={s.cardSub}>Per month</p></div>
-              <MetricsChart interactions={metricRows.map(([, v]) => v.interactions)} labels={metricRows.map(([label]) => label.slice(2))} reach={metricRows.map(([, v]) => v.reach)} />
+            <section aria-label="Reach per month chart" className={s.card}>
+              <div><h3>Reach per month</h3><p className={s.cardSub}>Accounts reached · last {metricRows.length || 12} months</p></div>
+              {metricRows.length ? <SeriesBarChart labels={metricRows.map(([key]) => monthLabel(key))} name="Reach" values={metricRows.map(([, v]) => v.reach)} /> : <p className={s.empty}>No snapshots yet.</p>}
+            </section>
+            <section aria-label="Interactions per month chart" className={s.card}>
+              <div><h3>Interactions per month</h3><p className={s.cardSub}>Content interactions from Meta · last {metricRows.length || 12} months</p></div>
+              {metricRows.length ? <SeriesBarChart labels={metricRows.map(([key]) => monthLabel(key))} name="Interactions" values={metricRows.map(([, v]) => v.interactions)} /> : <p className={s.empty}>No snapshots yet.</p>}
             </section>
           </div>
 

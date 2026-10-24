@@ -111,7 +111,11 @@ function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: 
   const [pending, start] = useTransition();
   const [dragId, setDragId] = useState("");
   const [over, setOver] = useState("");
+  const [query, setQuery] = useState("");
   const columns = useMemo(() => pipelineColumns(rows), [rows]);
+  // Search narrows every column at once, so a partner is found without scrolling a long stage.
+  const matches = (row: ApiRecord) => !query.trim() || `${text(row.name)} ${text(row.contact_name)} ${text(row.category)}`.toLowerCase().includes(query.trim().toLowerCase());
+  const shown = columns.reduce((total, column) => total + column.rows.filter(matches).length, 0);
 
   function moveTo(status: string) {
     const row = rows.find((item) => String(item.id) === dragId);
@@ -122,28 +126,42 @@ function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: 
 
   return (
     <section aria-label="Pipeline" className={s.boardWrap}>
-      <p className={s.hint}>Drag a card to another column to change its stage{pending ? " · saving…" : ""}. On a phone, open the card and change Status.</p>
+      <div className={s.toolbar}>
+        <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label={`Find a ${entityLabel} on the board`} onChange={(event) => setQuery(event.target.value)} placeholder={`Find a ${entityLabel}…`} value={query} /></label>
+        {query.trim() ? <span className={s.hint}>{shown} of {rows.length} shown</span> : null}
+        <span className={s.spacer} />
+        <span className={`${s.hint} ${s.hintDesktop}`}>Drag a card to change its stage{pending ? " · saving…" : ""}</span>
+        <span className={`${s.hint} ${s.hintPhone}`}>Open a card to change its stage</span>
+      </div>
       <div className={s.board}>
-        {columns.map(({ status, rows: items }, index) => (
-          <div aria-label={`${status}, ${items.length}`} className={over === status ? s.columnOver : s.column} key={status} onDragLeave={() => setOver("")} onDragOver={(event) => { event.preventDefault(); setOver(status); }} onDrop={() => moveTo(status)} role="group">
-            <div className={s.columnHead}><span className={s.step}>{index + 1}</span><b>{status}</b><span className={s.count}>{items.length}</span></div>
-            <ul className={s.cards}>
-              {items.map((row) => (
-                <li key={String(row.id)}>
-                  <button className={s.card} data-record-id={String(row.id)} draggable onClick={() => onEdit(row)} onDragStart={() => setDragId(String(row.id))} type="button">
-                    <span className={s.cardTop}><b>{text(row.name) || "Untitled"}</b>{text(row.tier) === "Strategic" ? <span className={s.strategic}>Strategic</span> : null}</span>
-                    {text(row.category) ? <small className={s.meta}>{text(row.category)}</small> : null}
-                    <span className={s.cardFoot}>
-                      {text(row.contact_name) ? <span className={s.pic}><span className={s.avatar} aria-hidden="true">{initials(row.contact_name)}</span>{text(row.contact_name)}</span> : <span className={s.noPic}>No PIC yet</span>}
-                    </span>
-                    <PartnerMeta activity={activity} row={row} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button className={s.addCard} onClick={() => onAdd(status)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add {entityLabel}</button>
-          </div>
-        ))}
+        {columns.map(({ status, rows: all }, index) => {
+          const items = all.filter(matches);
+          return (
+            <div aria-label={`${status}, ${items.length}`} className={over === status ? s.columnOver : s.column} key={status} onDragLeave={() => setOver("")} onDragOver={(event) => { event.preventDefault(); setOver(status); }} onDrop={() => moveTo(status)} role="group">
+              <div className={s.columnHead}><span className={s.step}>{index + 1}</span><b>{status}</b><span className={s.count}>{query.trim() && items.length !== all.length ? `${items.length}/${all.length}` : all.length}</span></div>
+              <ul className={s.cards}>
+                {items.map((row) => {
+                  const info = activity.get(String(row.id));
+                  // Only what differs from card to card: deals and last contact, when there are any.
+                  const meta = [info?.deals ? `${info.deals} deal${info.deals === 1 ? "" : "s"}` : "", info?.lastContact ? shortDate(info.lastContact, false) : ""].filter(Boolean).join(" · ");
+                  return (
+                    <li key={String(row.id)}>
+                      <button className={s.card} data-record-id={String(row.id)} draggable onClick={() => onEdit(row)} onDragStart={() => setDragId(String(row.id))} title={[text(row.name), text(row.category), text(row.contact_name) ? `PIC ${text(row.contact_name)}` : "No PIC yet"].filter(Boolean).join(" · ")} type="button">
+                        <span className={s.cardTop}><b>{text(row.name) || "Untitled"}</b>{text(row.tier) === "Strategic" ? <span className={s.strategic}>Strategic</span> : null}</span>
+                        <span className={s.cardFoot}>
+                          {text(row.contact_name) ? <span className={s.pic}><span className={s.avatar} aria-hidden="true">{initials(row.contact_name)}</span>{text(row.contact_name)}</span> : <span className={s.noPic}><i className="ti ti-user-question" aria-hidden="true" /> No PIC</span>}
+                          {meta ? <small className={s.meta} title={info?.lastContact ? "Deals · last contact" : "Deals"}>{meta}</small> : null}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+                {!items.length ? <li className={s.columnEmpty}>{query.trim() ? "No match" : "Drop a card here"}</li> : null}
+              </ul>
+              <button className={s.addCard} onClick={() => onAdd(status)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add {entityLabel}</button>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

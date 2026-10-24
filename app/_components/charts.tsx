@@ -2,44 +2,85 @@
 
 import { BarController, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
 import { Bar, Chart } from "react-chartjs-2";
+import { useState } from "react";
 
 ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, LineController, LineElement, PointElement, Legend, Tooltip);
 
 
-const baseOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: true, position: "top" as const, labels: { font: { size: 11 }, boxWidth: 14 } }, tooltip: { mode: "index" as const, intersect: false } },
-};
+// Colours come from the app's tokens so charts match the page (Chart.js cannot read CSS vars itself).
+type Tokens = { mark: string; markSoft: string; ink: string; muted: string; grid: string; ref: string };
+const FALLBACK: Tokens = { mark: "#1554c0", markSoft: "#dee7f6", ink: "#14212c", muted: "#5f6b77", grid: "#edf0f4", ref: "#6b7682" };
+function readTokens(): Tokens {
+  if (typeof window === "undefined") return FALLBACK;
+  const css = getComputedStyle(document.documentElement);
+  const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+  return { mark: read("--purple-mid", FALLBACK.mark), markSoft: read("--purple-light", FALLBACK.markSoft), ink: read("--text", FALLBACK.ink), muted: read("--text-muted", FALLBACK.muted), grid: read("--bg", FALLBACK.grid), ref: read("--text-hint", FALLBACK.ref) };
+}
+/** Canvas colours only (the canvas is drawn in the browser); markup uses the CSS variables directly. */
+function useTokens(): Tokens {
+  const [tokens] = useState(readTokens);
+  return tokens;
+}
 
-/** Reproduces the legacy `ig-chart-followers` Chart.js combo: actual followers bars, a dashed
- * prediction line, and an optional dashed target reference line — matching `igChartFollowers`. */
-export function FollowersChart({ labels, actual, predicted, target }: { labels: string[]; actual: Array<number | null>; predicted: Array<number | null>; target?: number | null }) {
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "2026-02" → "Feb ’26" — one month format for every chart. */
+export const monthLabel = (key: string) => { const [year, month] = key.split("-"); return MONTHS[Number(month) - 1] ? `${MONTHS[Number(month) - 1]} ’${year.slice(2)}` : key; };
+/** "2026-09-07" → "7 Sep". */
+export const dayLabel = (iso: string) => { const [, month, dayOfMonth] = iso.split("-"); return MONTHS[Number(month) - 1] ? `${Number(dayOfMonth)} ${MONTHS[Number(month) - 1]}` : iso; };
+const compact = (value: number) => (Math.abs(value) >= 1_000_000 ? `${+(value / 1_000_000).toFixed(1)}M` : Math.abs(value) >= 1_000 ? `${+(value / 1_000).toFixed(1)}K` : `${+value.toFixed(1)}`);
+const full = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 1 });
+
+function axes(t: Tokens) {
+  return {
+    x: { grid: { display: false }, border: { color: t.grid }, ticks: { color: t.muted, font: { size: 12 }, maxRotation: 0, autoSkip: true, autoSkipPadding: 12 } },
+    y: { beginAtZero: true, grid: { color: t.grid }, border: { display: false }, ticks: { color: t.muted, font: { size: 12 }, maxTicksLimit: 5, callback: (value: string | number) => compact(Number(value)) } },
+  };
+}
+const tooltip = (t: Tokens) => ({ mode: "index" as const, intersect: false, backgroundColor: "#fff", titleColor: t.ink, bodyColor: t.ink, borderColor: t.grid, borderWidth: 1, padding: 10, boxPadding: 4, titleFont: { weight: "bold" as const }, usePointStyle: true });
+const CHART_HEIGHT = 220;
+
+/** Legend in text ink with line swatches (solid / dashed), above the plot. */
+function LineLegend({ items }: { items: Array<{ label: string; color: string; dashed?: boolean }> }) {
   return (
-    <div style={{ height: 240 }}>
-      <Chart
-        type="bar"
-        data={{
-          labels,
-          datasets: [
-            { type: "bar" as const, label: "Followers", data: actual, backgroundColor: "rgba(21,84,192,0.8)", borderRadius: 5, order: 2 },
-            { type: "line" as const, label: "Projection", data: predicted, borderColor: "#0b2f6e", borderDash: [5, 4], borderWidth: 1.5, pointRadius: 2, fill: false, tension: 0.3, spanGaps: false, order: 1 },
-            ...(target ? [{ type: "line" as const, label: "Target", data: labels.map(() => target), borderColor: "#6b7280", borderDash: [6, 3], borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0, order: 0 }] : []),
-          ],
-        }}
-        options={{ ...baseOptions, scales: { y: { beginAtZero: false, ticks: { font: { size: 11 } }, grid: { color: "#f0f2ff" } }, x: { ticks: { font: { size: 10 } }, grid: { display: false } } } }}
-      />
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+      {items.map((item) => <span className="inline-flex items-center gap-1.5" key={item.label}><svg aria-hidden="true" height="8" width="18"><line stroke={item.color} strokeDasharray={item.dashed ? "4 3" : undefined} strokeLinecap="round" strokeWidth="2" x1="1" x2="17" y1="4" y2="4" /></svg>{item.label}</span>)}
     </div>
   );
 }
 
-/** Reproduces the legacy `ig-chart-metrics` Chart.js bar chart (monthly Reach + Interactions). */
-export function MetricsChart({ labels, reach, interactions }: { labels: string[]; reach: number[]; interactions: number[] }) {
+/** Followers over time: a level, so a line from zero — actual (solid), projection to the year end
+ * (dashed, same hue, starting at the last actual month) and the year's target as a grey reference. */
+export function FollowersChart({ months, actual, predicted, target }: { months: string[]; actual: Array<number | null>; predicted: Array<number | null>; target?: number | null }) {
+  const t = useTokens();
   return (
-    <div style={{ height: 200 }}>
+    <div className="grid gap-2">
+      <LineLegend items={[{ label: "Followers", color: "var(--purple-mid)" }, { label: "Projection", color: "var(--purple-mid)", dashed: true }, ...(target ? [{ label: `Target ${full(target)}`, color: "var(--text-hint)", dashed: true }] : [])]} />
+      <div style={{ height: CHART_HEIGHT }}>
+        <Chart
+          type="line"
+          data={{
+            labels: months.map(monthLabel),
+            datasets: [
+              { label: "Followers", data: actual, borderColor: t.mark, backgroundColor: t.mark, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.25, spanGaps: false },
+              { label: "Projection", data: predicted, borderColor: t.mark, backgroundColor: t.mark, borderDash: [5, 4], borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.25, spanGaps: false },
+              ...(target ? [{ label: "Target", data: months.map(() => target), borderColor: t.ref, backgroundColor: t.ref, borderDash: [3, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, tension: 0 }] : []),
+            ],
+          }}
+          options={{ responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { ...tooltip(t), callbacks: { label: (item) => (item.raw === null || item.raw === undefined ? "" : ` ${item.dataset.label}: ${full(Number(item.raw))}`) } } }, scales: axes(t) }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** One measure over periods as bars from zero (Reach per month, Interactions per month, follows per day). */
+export function SeriesBarChart({ labels, values, name, unit = "" }: { labels: string[]; values: number[]; name: string; unit?: string }) {
+  const t = useTokens();
+  return (
+    <div style={{ height: CHART_HEIGHT }}>
       <Bar
-        data={{ labels, datasets: [{ label: "Reach", data: reach, backgroundColor: "#1554c0", borderRadius: 4 }, { label: "Interactions", data: interactions, backgroundColor: "#9bb8ec", borderRadius: 4 }] }}
-        options={{ ...baseOptions, scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } }, grid: { color: "#f0f2ff" } }, x: { ticks: { font: { size: 10 } }, grid: { display: false } } } }}
+        data={{ labels, datasets: [{ label: name, data: values, backgroundColor: t.mark, hoverBackgroundColor: t.ink, borderRadius: 4, borderSkipped: "start", maxBarThickness: 28 }] }}
+        options={{ responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { ...tooltip(t), displayColors: false, callbacks: { label: (item) => `${name}: ${full(Number(item.raw))}${unit}` } } }, scales: axes(t) }}
       />
     </div>
   );

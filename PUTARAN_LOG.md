@@ -1288,3 +1288,26 @@ Lima prioritas dari usulan sebelumnya, semuanya dikerjakan.
 
 - UI saja → `npm run vps:rebuild:frontend`. Kalau migrasi Putaran 31 belum dijalankan, pakai `npm run vps:rebuild`.
 - Cek Post ID: jalankan `database/checks/content-evaluation-post-ids.sql` langkah demi langkah (isi tanggal deploy Putaran 27 di baris `\set fixed_at`).
+
+## Putaran 33 — Pipeline untuk 100+ partner, grafik Instagram yang jujur (24 Okt 2026)
+
+Masukan user (screenshot produksi): pipeline B2B harus di-scroll sampai bawah karena 100 partner di satu kolom; grafik Instagram tidak rapi dan informasinya tidak rapi. Jenis evaluasinya: **uji volume data asli** (*stress test with real data*: tampilan yang enak dengan 6 data contoh pecah di 108) dan **review visualisasi data** (*dataviz audit*: jujur, konsisten, buang yang tidak menambah informasi).
+
+### Do
+
+- **Pipeline (B2B & Org Partnership)**:
+  - Kolom punya tinggi maksimal dan scroll sendiri, judul kolom tetap terlihat; "Add partner" di kaki kolom terlihat tanpa scroll halaman.
+  - Kartu ringkas: nama + Strategic, avatar PIC / "No PIC", dan hanya info yang beda antar kartu (jumlah deal · kontak terakhir). Kategori dan "no outreach yet" tidak diulang di tiap kartu (kategori tetap ada saat disorot).
+  - Kotak "Find a partner…" menyaring semua kolom sekaligus (hitungan kolom jadi "ditemukan/total", kolom kosong bilang "No match").
+  - HP: petunjuk "Open a card to change its stage" (drag tidak jalan di layar sentuh).
+- **Grafik Instagram** (`charts.tsx`, `instagram-tools.tsx`):
+  - Followers: dari batang yang sumbunya mulai 5.000 (pertumbuhan terlihat berlebihan) → garis dari 0; proyeksi putus-putus menyambung dari bulan terakhir; target abu-abu dengan angkanya di legend.
+  - "Follows per day": judul dan isi kini cocok (rata-rata harian per minggu), punya sumbu dan tooltip.
+  - Reach dan Interactions dipisah jadi dua grafik — satu sumbu per grafik; interactions sebelumnya nyaris tak terlihat di skala reach.
+  - Satu format waktu: bulan "Feb ’26", minggu "7 Sep"; label tidak miring.
+  - Kartu grafik 2×2 dengan tinggi sama; legend seragam (garis solid/putus-putus); warna dari token app, teks pakai warna teks, grid samar, ujung batang membulat 4 px; satu kolom di layar < 900 px.
+
+### Check
+
+- Suite baru `viz.mjs` 19/19 (108 partner: halaman tetap pendek, kolom scroll sendiri, cari menyaring semua kolom, petunjuk HP; empat grafik di kartu masing-masing, reach & interactions tidak satu sumbu, tinggi kartu sama, legend). Suite `partner` & `mkt` disesuaikan (kartu "1 deal · 8 Oct"; nama region unik).
+- Regresi penuh lolos: semua suite modul (termasuk viz 19), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 152, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend`.
