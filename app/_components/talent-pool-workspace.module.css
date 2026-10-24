@@ -31,7 +31,7 @@
 .personName { min-width: 0; display: grid; }
 .personName b { overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .personName small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.buyer { padding: 3px 9px; border-radius: 999px; color: var(--purple-dark); background: var(--purple-light); font-size: 11px; font-weight: 700; }
+.buyer { padding: 3px 9px; border-radius: 999px; color: var(--purple-dark); background: var(--purple-light); font-size: 12px; font-weight: 700; }
 .meta { color: var(--text-muted); font-size: 12px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
 .tag, .more { max-width: 100%; overflow: hidden; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

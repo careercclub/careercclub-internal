@@ -61,7 +61,7 @@
   color: var(--text);
   padding: 0 28px 0 9px;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .filterSpacer {
@@ -71,7 +71,7 @@
 .notice {
   flex: 0 0 auto;
   color: var(--purple-mid);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .addButton {
@@ -131,7 +131,7 @@
 }
 
 .imageEmpty small {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .platformBadge,
@@ -145,7 +145,7 @@
   background: rgb(0 0 0 / 62%);
   color: #fff;
   padding: 3px 7px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .platformBadge { left: 6px; }
@@ -174,7 +174,7 @@
 
 .contentKind {
   color: var(--purple-mid);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -191,7 +191,7 @@
   background: var(--purple-light);
   color: var(--purple-mid);
   padding: 2px 7px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -200,7 +200,7 @@
   margin: 0;
   overflow: hidden;
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -212,7 +212,7 @@
   flex-wrap: wrap;
   gap: 8px;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .metrics span {
@@ -296,7 +296,7 @@
 
 .dropzone i { margin-bottom: 3px; font-size: 28px; }
 .dropzone strong { color: var(--text); font-size: 12px; }
-.dropzone span { font-size: 11px; font-weight: 400; }
+.dropzone span { font-size: 12px; font-weight: 400; }
 
 .filePreviewArea {
   display: flex;
@@ -341,7 +341,7 @@
   background: var(--bg);
   color: var(--text-muted);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -428,7 +428,7 @@
   background: var(--purple-light);
   color: var(--purple-mid);
   padding: 3px 7px 3px 9px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -462,7 +462,7 @@
   color: var(--text-muted);
   padding: 3px 8px;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -472,7 +472,7 @@
   background: #fff1f0;
   color: #b42318;
   padding: 8px 10px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .dialogFooter {
@@ -603,7 +603,7 @@
   background: rgb(0 0 0 / 60%);
   color: #fff;
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .previewCopy,
@@ -636,7 +636,7 @@
   background: var(--bg);
   color: var(--text-muted);
   padding: 8px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .previewMetrics i { color: var(--purple-mid); font-size: 14px; }
@@ -750,13 +750,13 @@
 .tileMedia { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--purple-light); }
 .tileImage { width: 100%; height: 100%; min-height: 0 !important; }
 .tileText { position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 18px; color: var(--purple-dark); font-size: 17px; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; padding-top: 48px; }
-.tilePlatform, .tileCount { position: absolute; top: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+.tilePlatform, .tileCount { position: absolute; top: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .tilePlatform { left: 12px; color: var(--text); background: rgb(255 255 255 / 92%); }
 .tileCount { right: 12px; color: #fff; background: rgb(10 16 22 / 60%); }
 .tileBody { display: grid; gap: 8px; padding: 12px 14px 14px; }
 .tileBody > b { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13.5px; font-weight: 700; line-height: 1.35; min-height: 2.7em; }
 .tileMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
-.tileLabel, .tileKind { overflow: hidden; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.tileLabel, .tileKind { overflow: hidden; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .tileLabel { color: var(--purple-dark); background: var(--purple-light); }
 .tileKind { color: var(--text-muted); background: var(--surface-2); }
 .tileMetric { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 600; }

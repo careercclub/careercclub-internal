@@ -4,7 +4,7 @@ import type { StorageArea } from "@/lib/storage/r2";
 export type ManagedField = {
   name: string;
   label: string;
-  type?: "text" | "number" | "date" | "time" | "textarea" | "select" | "checkbox" | "json" | "uuid-array" | "text-array";
+  type?: "text" | "number" | "money" | "date" | "time" | "textarea" | "select" | "checkbox" | "json" | "uuid-array" | "text-array";
   required?: boolean;
   placeholder?: string;
   options?: readonly string[];
@@ -33,7 +33,7 @@ export const recordDefinitions = {
   buyers: {
     table: "buyers", title: "CRM buyers", eyebrow: "CRM", path: "/crm", orderBy: "created_at", ascending: false,
     description: "Manage imported buyers, payment state, product classification, outreach, and talent-pool status.", columns: ["name", "wa", "email", "produk", "payment_status", "status"],
-    fields: [{ name: "name", label: "Name", required: true }, { name: "wa", label: "WhatsApp" }, { name: "email", label: "Email" }, { name: "produk", label: "Product" }, { name: "klasifikasi", label: "Classification" }, { name: "harga", label: "Price", type: "number" }, { name: "industri", label: "Industry" }, { name: "tahap", label: "Stage" }, { name: "sumber", label: "Source" }, { name: "status", label: "Outreach status" }, { name: "payment_status", label: "Payment status" }, { name: "talent_pool", label: "Talent pool", type: "checkbox" }, { name: "tanggal", label: "Transaction date", type: "date" }, { name: "riwayat", label: "History JSON", type: "json", placeholder: "[]" }],
+    fields: [{ name: "name", label: "Name", required: true }, { name: "wa", label: "WhatsApp" }, { name: "email", label: "Email" }, { name: "produk", label: "Product" }, { name: "klasifikasi", label: "Classification" }, { name: "harga", label: "Price", type: "money" }, { name: "industri", label: "Industry" }, { name: "tahap", label: "Stage" }, { name: "sumber", label: "Source" }, { name: "status", label: "Outreach status" }, { name: "payment_status", label: "Payment status" }, { name: "talent_pool", label: "Talent pool", type: "checkbox" }, { name: "tanggal", label: "Transaction date", type: "date" }, { name: "riwayat", label: "History JSON", type: "json", placeholder: "[]" }],
   },
   content_evaluations: {
     table: "content_evaluations", title: "Content evaluation", eyebrow: "Content", path: "/content-evaluation", orderBy: "tanggal", ascending: false,
@@ -88,7 +88,7 @@ export const recordDefinitions = {
   crm_deals: {
     table: "crm_deals", title: "CRM deals", eyebrow: "CRM", path: "/crm/deals", orderBy: "created_at", ascending: false,
     description: "Track parallel upsell, downsell, and cross-sell opportunities for buyers.", columns: ["buyer_id", "tipe", "produk_target", "harga_target", "stage", "tanggal"],
-    fields: [{ name: "buyer_id", label: "Buyer ID", required: true }, { name: "tipe", label: "Deal type", type: "select", options: ["Upsell", "Downsell", "Cross-sell"] }, { name: "produk_target", label: "Target product" }, { name: "klas_target", label: "Target classification" }, { name: "harga_target", label: "Target value", type: "number" }, { name: "stage", label: "Stage", type: "select", options: ["Belum diblast", "Diblast", "Sedang di-upsell", "Sedang di-downsell", "Convert"] }, { name: "catatan", label: "Notes", type: "textarea" }, { name: "tanggal", label: "Date", type: "date" }],
+    fields: [{ name: "buyer_id", label: "Buyer ID", required: true }, { name: "tipe", label: "Deal type", type: "select", options: ["Upsell", "Downsell", "Cross-sell"] }, { name: "produk_target", label: "Target product" }, { name: "klas_target", label: "Target classification" }, { name: "harga_target", label: "Target value", type: "money" }, { name: "stage", label: "Stage", type: "select", options: ["Belum diblast", "Diblast", "Sedang di-upsell", "Sedang di-downsell", "Convert"] }, { name: "catatan", label: "Notes", type: "textarea" }, { name: "tanggal", label: "Date", type: "date" }],
   },
   tasks: {
     table: "tasks", title: "Program tasks", eyebrow: "Program", path: "/program/tasks", orderBy: "created_at", ascending: false,
@@ -108,7 +108,7 @@ export const recordDefinitions = {
   partner_deals: {
     table: "partner_deals", title: "B2B partnership deals", eyebrow: "Partnerships", path: "/b2b-partnership", orderBy: "created_at", ascending: false,
     description: "Track multiple commercial scopes and values for each corporate partner.", columns: ["title", "partner_id", "stage", "scope", "deadline", "value"],
-    fields: [{ name: "partner_id", label: "Partner ID", required: true }, { name: "title", label: "Deal", required: true }, { name: "stage", label: "Stage", type: "select", options: ["Active", "Negotiation", "Done", "Cancelled"] }, { name: "scope", label: "Scope", type: "textarea" }, { name: "deadline", label: "Deadline", type: "date" }, { name: "value", label: "Value", type: "number" }, { name: "notes", label: "Notes", type: "textarea" }],
+    fields: [{ name: "partner_id", label: "Partner ID", required: true }, { name: "title", label: "Deal", required: true }, { name: "stage", label: "Stage", type: "select", options: ["Active", "Negotiation", "Done", "Cancelled"] }, { name: "scope", label: "Scope", type: "textarea" }, { name: "deadline", label: "Deadline", type: "date" }, { name: "value", label: "Value", type: "money" }, { name: "notes", label: "Notes", type: "textarea" }],
   },
   partner_outreach: {
     table: "partner_outreach", title: "B2B outreach log", eyebrow: "Partnerships", path: "/b2b-partnership", orderBy: "tanggal", ascending: false,
@@ -118,7 +118,7 @@ export const recordDefinitions = {
   org_deals: {
     table: "org_deals", title: "Organization partnership deals", eyebrow: "Partnerships", path: "/org-partnership", orderBy: "created_at", ascending: false,
     description: "Track scopes, deadlines, values, and status for organization partnerships.", columns: ["title", "org_partner_id", "stage", "scope", "deadline", "value"],
-    fields: [{ name: "org_partner_id", label: "Organization ID", required: true }, { name: "title", label: "Deal", required: true }, { name: "stage", label: "Stage", type: "select", options: ["Active", "Negotiation", "Done", "Cancelled"] }, { name: "scope", label: "Scope", type: "textarea" }, { name: "deadline", label: "Deadline", type: "date" }, { name: "value", label: "Value", type: "number" }, { name: "notes", label: "Notes", type: "textarea" }],
+    fields: [{ name: "org_partner_id", label: "Organization ID", required: true }, { name: "title", label: "Deal", required: true }, { name: "stage", label: "Stage", type: "select", options: ["Active", "Negotiation", "Done", "Cancelled"] }, { name: "scope", label: "Scope", type: "textarea" }, { name: "deadline", label: "Deadline", type: "date" }, { name: "value", label: "Value", type: "money" }, { name: "notes", label: "Notes", type: "textarea" }],
   },
   org_outreach: {
     table: "org_outreach", title: "Organization outreach log", eyebrow: "Partnerships", path: "/org-partnership", orderBy: "tanggal", ascending: false,
@@ -138,12 +138,12 @@ export const recordDefinitions = {
   competitor_products: {
     table: "competitor_products", title: "Competitor products", eyebrow: "Research", path: "/competitor-intel/products", orderBy: "created_at", ascending: false,
     description: "Map competitor offers, positioning, pricing, features, links, and product imagery.", columns: ["competitor_id", "name", "category", "price_min", "price_max", "status"],
-    fields: [{ name: "competitor_id", label: "Competitor ID", required: true }, { name: "name", label: "Product", required: true }, { name: "category", label: "Category" }, { name: "description", label: "Description", type: "textarea" }, { name: "price_min", label: "Minimum price", type: "number" }, { name: "price_max", label: "Maximum price", type: "number" }, { name: "status", label: "Status" }, { name: "features", label: "Features JSON", type: "json", placeholder: "[]" }, { name: "links", label: "Links JSON", type: "json", placeholder: "[]" }, { name: "image_url", label: "Primary image", storageArea: "design-assets" }, { name: "image_urls", label: "Images JSON", type: "json", placeholder: "[]" }],
+    fields: [{ name: "competitor_id", label: "Competitor ID", required: true }, { name: "name", label: "Product", required: true }, { name: "category", label: "Category" }, { name: "description", label: "Description", type: "textarea" }, { name: "price_min", label: "Minimum price", type: "money" }, { name: "price_max", label: "Maximum price", type: "money" }, { name: "status", label: "Status" }, { name: "features", label: "Features JSON", type: "json", placeholder: "[]" }, { name: "links", label: "Links JSON", type: "json", placeholder: "[]" }, { name: "image_url", label: "Primary image", storageArea: "design-assets" }, { name: "image_urls", label: "Images JSON", type: "json", placeholder: "[]" }],
   },
   competitor_product_prices: {
     table: "competitor_product_prices", title: "Competitor price history", eyebrow: "Research", path: "/competitor-intel/prices", orderBy: "recorded_at", ascending: false,
     description: "Keep dated price observations for competitor products.", columns: ["product_id", "price_min", "price_max", "recorded_at", "notes"],
-    fields: [{ name: "product_id", label: "Product ID", required: true }, { name: "price_min", label: "Minimum price", type: "number" }, { name: "price_max", label: "Maximum price", type: "number" }, { name: "recorded_at", label: "Recorded date", type: "date", required: true }, { name: "notes", label: "Notes", type: "textarea" }],
+    fields: [{ name: "product_id", label: "Product ID", required: true }, { name: "price_min", label: "Minimum price", type: "money" }, { name: "price_max", label: "Maximum price", type: "money" }, { name: "recorded_at", label: "Recorded date", type: "date", required: true }, { name: "notes", label: "Notes", type: "textarea" }],
   },
   pain_point_platforms: {
     table: "pain_point_platforms", title: "Pain-point platforms", eyebrow: "Customer knowledge", path: "/settings", orderBy: "nama",
@@ -177,7 +177,7 @@ export const recordDefinitions = {
       { name: "nama", label: "Name", required: true },
       { name: "type", label: "Type", type: "select", options: ["satuan", "bundling"] },
       { name: "kategori", label: "Classification" },
-      { name: "harga", label: "Price", type: "number" },
+      { name: "harga", label: "Price", type: "money" },
       { name: "status", label: "Status", type: "select", options: ["Draft", "Pre-launch", "Live", "Archived"] },
       { name: "deskripsi", label: "Description", type: "textarea" },
       { name: "link", label: "Landing URL" },
@@ -212,7 +212,7 @@ export const recordDefinitions = {
   sub_products: {
     table: "sub_products", title: "Sub-products", eyebrow: "Products", path: "/products/sub-products", orderBy: "created_at",
     description: "Variants and component offers attached to a primary product.", columns: ["product_id", "name", "harga"],
-    fields: [{ name: "product_id", label: "Product ID", required: true }, { name: "name", label: "Name", required: true }, { name: "harga", label: "Price", type: "number" }],
+    fields: [{ name: "product_id", label: "Product ID", required: true }, { name: "name", label: "Name", required: true }, { name: "harga", label: "Price", type: "money" }],
   },
   sub_product_links: {
     table: "sub_product_links", title: "Sub-product shortlinks", eyebrow: "Products", path: "/products/sub-product-links", orderBy: "created_at",

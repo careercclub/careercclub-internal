@@ -7,6 +7,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { MonthlyOpenChart } from "./charts";
 import s from "./email-blast.module.css";
 import { askText, confirmAction } from "./app-dialog";
+import { compareText } from "@/lib/text/sort";
 
 type BlastTab = "compose" | "templates" | "history" | "settings";
 type Segment = "all" | "has_email" | "belum_diblast" | "custom";
@@ -38,7 +39,7 @@ function writeStore(key: string, value: unknown) {
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 type Row = Record<string, unknown>;
 function unique(rows: Row[], field: string) {
-  return [...new Set(rows.map((row) => text(row[field])).filter(Boolean))].sort();
+  return [...new Set(rows.map((row) => text(row[field])).filter(Boolean))].sort(compareText);
 }
 function escapeHtml(value: string) {
   return value.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character);

@@ -12,6 +12,7 @@ import { normalizeObjectKey, StorageImage } from "./storage-image";
 import g from "./library.module.css";
 import s from "./page-kit.module.css";
 import { useRecordFocus } from "./use-record-focus";
+import { compareText } from "@/lib/text/sort";
 
 type Props = {
   rows: ApiRecord[];
@@ -78,8 +79,8 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
   const [query, setQuery] = useState(""); const [category, setCategory] = useState(""); const [secondary, setSecondary] = useState(""); const [label, setLabel] = useState(""); const [sort, setSort] = useState("newest");
   const [transferId, setTransferId] = useState(""); const [selectedId, setSelectedId] = useState(""); const [imageIndex, setImageIndex] = useState(0); const [pending, startTransition] = useTransition();
   const definition = definitionKey ? recordDefinitions[definitionKey] : null;
-  const categories = categoryField ? [...new Set(rows.map((row) => String(row[categoryField] || "Uncategorized")))].sort() : [];
-  const secondaryField = rows.some((row) => row.jenis) ? "jenis" : rows.some((row) => row.tipe) ? "tipe" : ""; const secondaryOptions = secondaryField ? [...new Set(rows.map((row) => String(row[secondaryField] || "Unknown")))].sort() : []; const labelOptions = [...new Set(rows.flatMap((row) => labels(row.labels)))].sort();
+  const categories = categoryField ? [...new Set(rows.map((row) => String(row[categoryField] || "Uncategorized")))].sort(compareText) : [];
+  const secondaryField = rows.some((row) => row.jenis) ? "jenis" : rows.some((row) => row.tipe) ? "tipe" : ""; const secondaryOptions = secondaryField ? [...new Set(rows.map((row) => String(row[secondaryField] || "Unknown")))].sort(compareText) : []; const labelOptions = [...new Set(rows.flatMap((row) => labels(row.labels)))].sort(compareText);
   const hasCounts = rows.some((row) => row.likes !== undefined || row.views !== undefined);
   const visible = useMemo(() => rows.filter((row) => (!query || `${row[titleField]} ${categoryField ? row[categoryField] : ""} ${row.copywriting || ""} ${row.notes || ""}`.toLowerCase().includes(query.toLowerCase())) && (!category || String(categoryField ? row[categoryField] || "Uncategorized" : "") === category) && (!secondary || String(row[secondaryField] || "Unknown") === secondary) && (!label || labels(row.labels).includes(label))).sort((a, b) => sort === "likes" ? Number(b.likes || 0) - Number(a.likes || 0) : sort === "views" ? Number(b.views || 0) - Number(a.views || 0) : sort === "name" ? String(a[titleField] || "").localeCompare(String(b[titleField] || "")) : String(b.created_at || "").localeCompare(String(a.created_at || ""))), [rows, query, category, secondary, label, sort, titleField, categoryField, secondaryField]);
   const fieldLabel = useMemo(() => {
@@ -211,7 +212,7 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
                     <>
                       <button aria-label="Previous image" className="absolute top-1/2 left-2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/60 text-white hover:bg-black/75" onClick={() => step(-1)} type="button"><i aria-hidden="true" className="ti ti-chevron-left" /></button>
                       <button aria-label="Next image" className="absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/60 text-white hover:bg-black/75" onClick={() => step(1)} type="button"><i aria-hidden="true" className="ti ti-chevron-right" /></button>
-                      <span aria-live="polite" className="absolute right-2 bottom-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] text-white">{imageIndex + 1} / {selectedImages.length}</span>
+                      <span aria-live="polite" className="absolute right-2 bottom-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">{imageIndex + 1} / {selectedImages.length}</span>
                     </>
                   ) : null}
                 </div>

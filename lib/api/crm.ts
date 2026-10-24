@@ -109,7 +109,7 @@ const fallbackClassifications = [
 export function importCrmTransactions(rows: CrmImportRow[], mode: ImportMode) {
   return withPostgres(async (sql) => sql.begin(async (tx) => {
     const mappings = await tx<{ nama: string; klasifikasi: string }[]>`
-      select nama, klasifikasi from master_produk order by nama
+      select nama, klasifikasi from master_produk order by lower(nama), nama
     `;
     const classify = (product: string) => {
       const normalized = product.trim().toLowerCase();

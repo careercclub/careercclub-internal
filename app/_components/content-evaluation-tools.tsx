@@ -15,6 +15,7 @@ import c from "./content-evaluation.module.css";
 import s from "./page-kit.module.css";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
+import { DateInput } from "./date-input";
 
 // Content Evaluation in the IJIS layout. Same records (content_evaluations), same scoring
 // (evaluateContentEvaluation), same import endpoint; the stored "action" values stay
@@ -114,8 +115,8 @@ export function ContentEvaluationTools({ evaluations, buyers, buyerTotal }: { ev
         </div>
         {range === "custom" ? (
           <div className={c.custom}>
-            <label className={s.filterPill}><span>From</span><input aria-label="From date" onChange={(e) => setCustomStart(e.target.value)} type="date" value={customStart} /></label>
-            <label className={s.filterPill}><span>To</span><input aria-label="To date" onChange={(e) => setCustomEnd(e.target.value)} type="date" value={customEnd} /></label>
+            <label className={s.filterPill}><span>From</span><DateInput aria-label="From date" onChange={(e) => setCustomStart(e.target.value)}  value={customStart} /></label>
+            <label className={s.filterPill}><span>To</span><DateInput aria-label="To date" onChange={(e) => setCustomEnd(e.target.value)}  value={customEnd} /></label>
           </div>
         ) : null}
       </div>
@@ -433,7 +434,7 @@ function EvaluationEditor({ record, save, remove, close }: { record: ApiRecord |
             <div className={c.formGrid}>
               <Field label="Title" required><input className={s.input} defaultValue={value("judul")} name="judul" required /></Field>
               <Field label="Format"><select className={s.input} name="format" onChange={(e) => setFormat(e.target.value)} value={format}><option>Carousel</option><option>Feed Photo</option><option>Reel</option><option>Story</option></select></Field>
-              <Field label="Publish date"><input className={s.input} defaultValue={day(record?.tanggal)} name="tanggal" type="date" /></Field>
+              <Field label="Publish date"><DateInput className={s.input} defaultValue={day(record?.tanggal)} name="tanggal"  /></Field>
               <Field label="Topic"><input className={s.input} defaultValue={value("topik")} name="topik" /></Field>
               <Field label="Post URL"><input className={s.input} defaultValue={value("url")} name="url" placeholder="https://" type="url" /></Field>
               <Field label="Post ID"><input className={s.input} defaultValue={value("post_id")} name="post_id" /></Field>

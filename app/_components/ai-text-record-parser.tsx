@@ -6,6 +6,7 @@ import type { RecordDefinitionKey } from "@/lib/records/catalog";
 import { useRouter } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
 import styles from "./ai-text-record-parser.module.css";
+import { DateInput } from "./date-input";
 
 type ParserKind = "ticket" | "partnership" | "carousel" | "task";
 type ParserField = {
@@ -131,6 +132,7 @@ export function AiTextRecordParser({ definitionKey, fields, kind, noun, title = 
                     <span>{field.label}{field.required ? <b className={styles.req} aria-hidden="true"> *</b> : null}</span>
                     {field.type === "textarea" ? <textarea {...common} rows={3} onChange={(event) => setValue(field.name, event.target.value)} />
                       : field.type === "select" ? <select {...common} onChange={(event) => setValue(field.name, event.target.value)}><option value="">Select {field.label.toLowerCase()}</option>{field.options?.map((option) => <option key={option}>{option}</option>)}</select>
+                        : field.type === "date" ? <DateInput {...common} onChange={(event) => setValue(field.name, event.target.value)} />
                         : <input {...common} type={field.type || "text"} onChange={(event) => setValue(field.name, event.target.value)} />}
                     {isInvalid ? <small className={styles.fieldError}>Fill in {field.label.toLowerCase()}.</small> : null}
                   </label>

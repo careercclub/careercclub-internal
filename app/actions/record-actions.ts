@@ -19,6 +19,12 @@ function parseField(field: ManagedField, formData: FormData) {
   if (field.type === "checkbox") return value === "on";
   const text = typeof value === "string" ? value.trim() : "";
   if (!text) return null;
+  if (field.type === "money") {
+    // "Rp 25.000.000" or "25000000" → 25000000.
+    const digits = text.replace(/\D/g, "");
+    if (!digits) throw new Error(`${field.label} must be an amount in rupiah.`);
+    return Number(digits);
+  }
   if (field.type === "number") {
     const number = Number(text);
     if (!Number.isFinite(number)) throw new Error(`${field.label} must be a number.`);

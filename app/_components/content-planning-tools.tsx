@@ -36,6 +36,7 @@ import { guard } from "./safe-action";
 import s from "./content-planning.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { useModal } from "./use-modal";
+import { compareText } from "@/lib/text/sort";
 
 // Content Planning in the IJIS layout: each plan type gets a planner — a month calendar that
 // shows what is planned on each day, next to a week-by-week agenda. KOL and MT Story are
@@ -582,7 +583,7 @@ function KolView({ kols, adding, onAdded }: { kols: ApiRecord[]; adding: boolean
   const [niche, setNiche] = useState("");
   const [modal, setModal] = useState<{ kol: ApiRecord | null } | null>(null);
   const [pending, start] = useTransition();
-  const niches = useMemo(() => [...new Set(kols.map((k) => text(k.niche)).filter(Boolean))].sort(), [kols]);
+  const niches = useMemo(() => [...new Set(kols.map((k) => text(k.niche)).filter(Boolean))].sort(compareText), [kols]);
   const filtered = kols.filter((k) => {
     const q = search.toLowerCase();
     if (q && ![k.nama, k.username_ig, k.username_tiktok].some((value) => text(value).toLowerCase().includes(q))) return false;

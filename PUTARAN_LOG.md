@@ -1255,3 +1255,36 @@ Permintaan user: modul Job Vacancy lama dihapus total dan diganti; basis datanya
 ### Deploy
 
 - Ada migrasi → `git pull origin refactor` lalu **`npm run vps:rebuild`** (bukan `:frontend`). Migrasi 025 menghapus `mt_vacancies` & `mt_industries` permanen (keputusan user). Setelah deploy, buka Job Vacancy MT → **Import Excel** → pilih file "CCC List MT".
+
+## Putaran 32 — Urutan nama, tanggal dd/mm/yyyy, teks ≥ 12 px, rupiah, cek Post ID (24 Okt 2026)
+
+Lima prioritas dari usulan sebelumnya, semuanya dikerjakan.
+
+### Do
+
+1. **Urutan A–Z tidak peduli huruf besar/kecil** (dropdown partner sebelumnya: AIA, ARISTA, ASIATOP, ASTRO, baru Adidas).
+   - Penyebab: database mengurutkan `order by name` per kode huruf (collation), dan beberapa daftar pilihan memakai `.sort()` polos.
+   - `lib/db/query.ts`: kolom nama (`name`, `nama`, `label`, `kategori`, `judul`, `title`) diurutkan `lower(...)`; dua query mentah (`tkt_types`, `master_produk`) juga.
+   - `lib/text/sort.ts` `compareText` (Intl.Collator: tanpa beda huruf besar/aksen, angka sebagai angka) dipakai di 14 daftar pilihan.
+2. **Satu tanggal untuk semua: dd/mm/yyyy + kalender bergaya app** (`app/_components/date-input.tsx`).
+   - `<input type="date">` asli tetap ada (name, required, min/max, onChange, FormData aman); teks bawaan browser (mm/dd atau dd/mm tergantung laptop) ditutup label dd/mm/yyyy.
+   - Mouse/trackpad: klik → kalender (Senin di depan, hari ini bercincin, Today/Clear; Clear tidak muncul di isian wajib). Keyboard: Enter/Space/↓ membuka, panah pindah hari/minggu, PageUp/PageDown bulan (+Shift = tahun), ketik angka langsung "24102026". Di popup: Esc/klik luar hanya menutup kalender.
+   - HP tetap picker bawaan, tapi tampilannya tetap dd/mm/yyyy.
+   - Dipasang di 21 tempat + RecordManager + parser AI; tanggal di tabel RecordManager juga tampil dd/mm/yyyy.
+3. **Teks minimal 12 px**: 276 ukuran 8–11,5 px dinaikkan (CSS module, Tailwind `text-[10px]` → `text-xs`, style inline). Dicek sebelum/sesudah di Products, Dashboard, Content Library, CRM, Settings, Customer Knowledge: tidak ada yang pecah. Satu sisa sengaja: footer template email (bukan layar app).
+4. **Rupiah** (`app/_components/money-input.tsx`): diketik dan tampil "Rp 25.000.000", yang tersimpan tetap angka. Tipe field baru `money` di katalog untuk 10 field (harga produk & sub-produk, target deal CRM, harga min/max produk kompetitor, nilai deal B2B/Org); juga form harga di Products dan nilai deal di kartu Deals. Tabel RecordManager menampilkan rupiah; harga kompetitor memakai format yang sama. Simpan saat keluar field hanya kalau nilainya berubah.
+5. **Cek Post ID Content Evaluation**: `database/checks/content-evaluation-post-ids.sql` (bukan migrasi, dijalankan manual).
+   - Temuan saat menyiapkan: ID yang sudah dibulatkan **tidak bisa** dikenali dari bentuknya — ±43% ID asli juga lolos uji "hasil pembulatan float". Jadi query memakai permalink (url): import ulang CSV Meta → post dengan dua baris ber-url sama = ID lama dibulatkan.
+   - Langkah: 1 hitung baris lama ber-ID panjang + daftar url ganda (baca saja); 2 backup; 3 import ulang CSV di app; 4 (dalam transaksi) isian manual (topik, hook, CTA, win, improve, action, WTR, thumbnail) dipindah ke baris baru bila kosong, baris lama dihapus.
+   - Diuji di Postgres lokal: post yang tertimpa mendapat isiannya kembali, isian yang sudah ada tidak ditimpa, ID yang benar tidak tersentuh, url ganda habis.
+
+### Check
+
+- Suite baru `dm.mjs` 22/22 (kalender di popup Radix, posisi, Esc/klik luar, pilih/ketik/panah/Today/Clear, field yang simpan saat berubah, rupiah ketik & simpan digit, HP native + dd/mm/yyyy, isian wajib tanpa Clear); unit `compareText`.
+- Regresi penuh lolos: semua suite modul (termasuk dm 22, mt 65, selmenu 32), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 152, lint 0 error, build lolos.
+  - Dua harness disesuaikan karena perubahan sengaja: harga kompetitor kini "Rp 750.000" (bukan "Rp750K"), dan salinan aturan simpan di harness RecordManager kini mengenal tipe `money`.
+
+### Untuk user
+
+- UI saja → `npm run vps:rebuild:frontend`. Kalau migrasi Putaran 31 belum dijalankan, pakai `npm run vps:rebuild`.
+- Cek Post ID: jalankan `database/checks/content-evaluation-post-ids.sql` langkah demi langkah (isi tanggal deploy Putaran 27 di baris `\set fixed_at`).

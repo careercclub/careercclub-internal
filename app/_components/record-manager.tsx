@@ -15,6 +15,8 @@ import { guard } from "./safe-action";
 import s from "./page-kit.module.css";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import styles from "../record-manager.module.css";
+import { DateInput, formatDayMonthYear } from "./date-input";
+import { formatRupiah, MoneyInput } from "./money-input";
 
 type RecordManagerProps = {
   definitionKey: RecordDefinitionKey;
@@ -31,10 +33,12 @@ type OptionsState = { status: "idle" | "loading" | "done" | "error"; options: Re
 
 const PAGE_SIZE = 12;
 
-function displayValue(value: unknown) {
+function displayValue(value: unknown, field?: ManagedField) {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (field?.type === "money") return formatRupiah(value) || "-";
+  if (value instanceof Date) return formatDayMonthYear(value.toISOString().slice(0, 10));
+  if (field?.type === "date" && /^\d{4}-\d{2}-\d{2}/.test(String(value))) return formatDayMonthYear(String(value));
   if (Array.isArray(value)) return value.map((item) => (typeof item === "object" ? JSON.stringify(item) : String(item))).join(", ") || "-";
   if (typeof value === "object") return JSON.stringify(value);
   const text = String(value);
@@ -172,7 +176,7 @@ function Field({ definitionKey, field, value, options, optionsState }: { definit
       {caption}
       {field.storageArea ? <R2UploadField area={field.storageArea} defaultValue={String(common.defaultValue)} name={field.name} /> : wide ? <textarea {...common} rows={field.type === "json" ? 5 : 3} spellCheck={field.type !== "json"} /> : field.type === "select" ? (
         <select {...common}><option value="">{`Select ${singular(label)}…`}</option>{(options || field.options)?.map((option) => <option key={option}>{option}</option>)}</select>
-      ) : <input {...common} type={field.type === "number" ? "number" : field.type === "date" ? "date" : field.type === "time" ? "time" : "text"} />}
+      ) : field.type === "date" ? <DateInput {...common} /> : field.type === "money" ? <MoneyInput {...common} /> : <input {...common} type={field.type === "number" ? "number" : field.type === "time" ? "time" : "text"} />}
     </label>
   );
 }
@@ -264,12 +268,12 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
     const maps = Object.fromEntries(Object.entries(optionsState.options).map(([field, list]) => [field, new Map(list.map((option) => [option.value, option.label]))]));
     return (column: string, value: unknown) => {
       const map = maps[column];
-      if (!map) return displayValue(value);
+      if (!map) return displayValue(value, definition.fields.find((field) => field.name === column));
       const ids = idList(value);
       if (!ids.length) return "-";
       return ids.map((id) => map.get(id) || "Unknown").join(", ");
     };
-  }, [optionsState.options]);
+  }, [optionsState.options, definition]);
 
   const columnLabel = (column: string) => {
     const field = fields.find((item) => item.name === column);

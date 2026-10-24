@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { FollowersChart, MetricsChart } from "./charts";
 import s from "./page-kit.module.css";
+import { DateInput } from "./date-input";
 
 // Instagram in the IJIS layout: one hero for the follower count and the yearly goal, a stat
 // strip, three charts, then the weekly history. Import and Target/baseline are their own views.
@@ -215,7 +216,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
             {stale ? <p className={s.danger}><i className="ti ti-alert-triangle" aria-hidden="true" /> Last set {updatedAt}, {staleDays} days before the latest snapshot.</p> : null}
             <form className={s.form2} onSubmit={submitTo(saveInstagramBaselineAction, { success: "Baseline saved.", failure: "Could not save the baseline." })}>
               <label className={s.field}><span>Total followers <b className={s.req}>*</b></span><input className={s.input} defaultValue={currentFollowers || ""} min="1" name="followers_total" required type="number" /></label>
-              <label className={s.field}><span>As of date <b className={s.req}>*</b></span><input className={s.input} defaultValue={day(baseline?.baseline_date) || referenceDate.slice(0, 10)} name="baseline_date" required type="date" /></label>
+              <label className={s.field}><span>As of date <b className={s.req}>*</b></span><DateInput className={s.input} defaultValue={day(baseline?.baseline_date) || referenceDate.slice(0, 10)} name="baseline_date" required  /></label>
               <div><button className={s.primary} type="submit">Save baseline</button></div>
             </form>
           </section>

@@ -11,6 +11,8 @@ import { confirmAction, notifyError } from "./app-dialog";
 import { guard } from "./safe-action";
 import s from "./competitor-tools.module.css";
 import { useRecordFocus } from "./use-record-focus";
+import { compareText } from "@/lib/text/sort";
+import { formatRupiah } from "./money-input";
 
 // Competitor Intel in the IJIS layout: a threat landscape (High / Medium / Low columns),
 // a competitor directory and a price board. Same data and actions as before.
@@ -137,7 +139,7 @@ function Directory({ workspace, onEdit }: { workspace: Workspace; onEdit: (recor
   const { profiles, snapshots } = workspace;
   const [filter, setFilter] = useState<CompetitorFilter>({ query: "", category: "", threat: "", audience: "", sort: "" });
   const [pending, start] = useTransition();
-  const audiences = useMemo(() => [...new Set(profiles.flatMap((row) => list(row.target_audience)))].sort(), [profiles]);
+  const audiences = useMemo(() => [...new Set(profiles.flatMap((row) => list(row.target_audience)))].sort(compareText), [profiles]);
   const shown = useMemo(() => filterCompetitors(profiles, snapshots, filter), [profiles, snapshots, filter]);
   const set = (patch: CompetitorFilter) => setFilter((current) => ({ ...current, ...patch }));
   const filtersOn = Boolean(filter.query || filter.category || filter.threat || filter.audience);
@@ -210,9 +212,9 @@ function Pricing({ workspace }: { workspace: Workspace }) {
                   const owner = profileOf(product.competitor_id);
                   return (
                     <li key={String(product.id)}>
-                      {owner ? <CompetitorLogo profile={owner} size={28} /> : <span className={s.logo} style={{ width: 28, height: 28, fontSize: 11 }}>?</span>}
+                      {owner ? <CompetitorLogo profile={owner} size={28} /> : <span className={s.logo} style={{ width: 28, height: 28, fontSize: 12 }}>?</span>}
                       <span className={s.cardName}><b>{text(product.nama) || text(product.name) || "—"}</b><small>{text(owner?.name) || "No competitor"}</small></span>
-                      <span className={s.priceValue}>{price ? `Rp${fmtN(price)}` : "—"}</span>
+                      <span className={s.priceValue}>{price ? formatRupiah(price) : "—"}</span>
                       {group.max > group.min && price ? <span className={s.priceBar} aria-hidden="true"><i style={{ width: `${Math.max(6, ((price - group.min) / (group.max - group.min)) * 100)}%` }} /></span> : null}
                     </li>
                   );

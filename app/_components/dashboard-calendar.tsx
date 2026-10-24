@@ -18,6 +18,7 @@ import { type CSSProperties, type DragEvent, useMemo, useState, useTransition } 
 import { AssigneeField, personName } from "./assignee-field";
 import styles from "../record-manager.module.css";
 import { confirmAction } from "./app-dialog";
+import { DateInput } from "./date-input";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -40,7 +41,7 @@ function dateKey(value: unknown) { if (!value) return ""; return value instanceo
 type CalItem = { kind: "event" | "task" | "ticket"; row: ApiRecord };
 
 const navBtn: CSSProperties = { minHeight: 28, padding: "4px 8px", border: "0.5px solid var(--border-md)", borderRadius: 6, background: "var(--white)", fontSize: 12, color: "var(--text)" };
-const chipBase: CSSProperties = { display: "block", width: "100%", textAlign: "left", border: 0, padding: "2px 6px", borderRadius: 6, fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
+const chipBase: CSSProperties = { display: "block", width: "100%", textAlign: "left", border: 0, padding: "2px 6px", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
 const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 16 };
 
 function Legend({ color, label }: { color: string; label: string }) {
@@ -52,10 +53,10 @@ function CalChip({ item, onOpen, onDragStart }: { item: CalItem; onOpen: () => v
   const row = item.row;
   const title = text(row.title) || text(row.nama) || (item.kind === "ticket" ? "Ticket" : item.kind === "event" ? "Program" : "Task");
   if (item.kind === "event") {
-    return <button type="button" onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--text)", color: "#fff", cursor: "pointer" }}><i className="ti ti-broadcast" style={{ fontSize: 10 }} /> {title}</button>;
+    return <button type="button" onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--text)", color: "#fff", cursor: "pointer" }}><i className="ti ti-broadcast" style={{ fontSize: 12 }} /> {title}</button>;
   }
   if (item.kind === "ticket") {
-    return <button type="button" draggable onDragStart={onDragStart} onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--white)", color: "var(--text)", boxShadow: "inset 0 0 0 1px var(--border-md)", fontWeight: 500, cursor: "grab" }}><i className="ti ti-ticket" style={{ fontSize: 10 }} /> {title}</button>;
+    return <button type="button" draggable onDragStart={onDragStart} onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--white)", color: "var(--text)", boxShadow: "inset 0 0 0 1px var(--border-md)", fontWeight: 500, cursor: "grab" }}><i className="ti ti-ticket" style={{ fontSize: 12 }} /> {title}</button>;
   }
   const done = text(row.status) === "Done";
   const progress = text(row.status) === "On Progress";
@@ -106,7 +107,7 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama) || text(d.name)}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
@@ -154,7 +155,7 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["High", "Med", "Low"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           <div className="flex gap-2 rounded-md bg-secondary/60 px-3 py-2 text-xs text-muted-foreground"><i className="ti ti-info-circle mt-0.5" /><span>File uploads and Google Calendar sync are on the <Link href="/program/tasks" className="text-primary underline">Program tasks</Link>.</span></div>
@@ -245,10 +246,10 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
             <div key={`${key}-${idx}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const [kind, id] = e.dataTransfer.getData("calendar-item").split(":"); if (id) reschedule(kind, id, key); }}
               style={{ minHeight: 76, padding: "3px 3px 4px", borderRight: idx % 7 !== 6 ? "0.5px solid var(--border)" : "none", borderBottom: idx < view.cells.length - 7 ? "0.5px solid var(--border)" : "none", background: !cell.inMonth ? "var(--surface-2)" : isToday ? "var(--purple-light)" : isWeekend ? "var(--surface-2)" : "var(--white)", opacity: cell.inMonth ? 1 : 0.55, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
               <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 600, color: isToday ? "var(--purple-mid)" : cell.inMonth ? "var(--text)" : "var(--text-hint)" }}>
-                {cell.date.getDate()}{isToday ? <span style={{ fontSize: 11, marginLeft: 4, background: "var(--purple-mid)", color: "#fff", padding: "0 6px", borderRadius: 999 }}>Today</span> : null}
+                {cell.date.getDate()}{isToday ? <span style={{ fontSize: 12, marginLeft: 4, background: "var(--purple-mid)", color: "#fff", padding: "0 6px", borderRadius: 999 }}>Today</span> : null}
               </div>
               {visible.map((item) => <CalChip key={`${item.kind}-${item.row.id}`} item={item} onOpen={() => (item.kind === "event" ? router.push("/program") : setModal(item))} onDragStart={(e) => { if (item.kind !== "event") e.dataTransfer.setData("calendar-item", `${item.kind}:${item.row.id}`); }} />)}
-              {items.length > 2 ? <button type="button" onClick={() => setExpanded((s) => ({ ...s, [key]: !open }))} style={{ fontSize: 11, color: "var(--purple-mid)", fontWeight: 700, textAlign: "left", background: "transparent", border: 0, padding: "1px 2px", cursor: "pointer" }}>{open ? "Show less" : `+${items.length - 2} more`}</button> : null}
+              {items.length > 2 ? <button type="button" onClick={() => setExpanded((s) => ({ ...s, [key]: !open }))} style={{ fontSize: 12, color: "var(--purple-mid)", fontWeight: 700, textAlign: "left", background: "transparent", border: 0, padding: "1px 2px", cursor: "pointer" }}>{open ? "Show less" : `+${items.length - 2} more`}</button> : null}
             </div>
           );
         })}

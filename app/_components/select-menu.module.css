@@ -36,6 +36,6 @@
 .option[aria-disabled="true"][data-active="true"] { background: transparent; }
 .placeholder { color: var(--text-muted); }
 
-.group { margin: 8px 10px 4px; color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.group { margin: 8px 10px 4px; color: var(--text-muted); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .group:first-child { margin-top: 4px; }
 .empty { margin: 0; padding: 12px 10px; color: var(--text-muted); }

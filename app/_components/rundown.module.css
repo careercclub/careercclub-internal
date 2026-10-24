@@ -14,7 +14,7 @@
 .activity { font-size: 14px; font-weight: 700; line-height: 1.4; white-space: pre-line; }
 .notes { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; white-space: pre-line; }
 .cue { display: flex; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); font-size: 13px; line-height: 1.5; white-space: pre-line; }
-.cue span { flex-shrink: 0; color: var(--purple-dark); font-size: 11px; font-weight: 800; letter-spacing: 0.06em; }
+.cue span { flex-shrink: 0; color: var(--purple-dark); font-size: 12px; font-weight: 800; letter-spacing: 0.06em; }
 .link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; color: var(--purple-mid); font-size: 13px; font-weight: 600; text-decoration: none; }
 .link:hover { text-decoration: underline; }
 .actions { display: flex; gap: 2px; }

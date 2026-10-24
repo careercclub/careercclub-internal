@@ -16,6 +16,7 @@ import s from "./crm-workspace.module.css";
 import { Pagination, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DialogBehaviour } from "./use-modal";
+import { compareText } from "@/lib/text/sort";
 
 // CRM in the IJIS layout: a blast funnel you can click, a buyer list (one status per buyer),
 // a floating bar for bulk actions and a customer drawer with the purchase timeline.
@@ -24,7 +25,7 @@ type View = "buyers" | "blast" | "import" | "analytics";
 const EMPTY: CrmFilter = { query: "", stage: "", classification: "", payment: "", pool: "", repeat: "", industry: "", tahap: "", source: "", status: "" };
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value).trim(); }
-function unique(rows: Customer[], key: string) { return [...new Set(rows.map((row) => text(row[key])).filter(Boolean))].sort(); }
+function unique(rows: Customer[], key: string) { return [...new Set(rows.map((row) => text(row[key])).filter(Boolean))].sort(compareText); }
 function csvCell(value: unknown) { return `"${String(value ?? "").replaceAll('"', '""')}"`; }
 function dateLabel(value: unknown) { const key = text(value).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(key) ? shortDate(key, false) + ` ${key.slice(0, 4)}` : text(value) || "—"; }
 function waLink(value: unknown) { let d = text(value).replace(/\D/g, ""); if (d.startsWith("0")) d = `62${d.slice(1)}`; else if (d.startsWith("8")) d = `62${d}`; return d ? `https://wa.me/${d}` : ""; }

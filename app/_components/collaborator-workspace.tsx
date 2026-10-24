@@ -13,6 +13,7 @@ import g from "./library.module.css";
 import s from "./page-kit.module.css";
 import { StorageImage } from "./storage-image";
 import { useRecordFocus } from "./use-record-focus";
+import { compareText } from "@/lib/text/sort";
 
 // Collaborators & advisors in the IJIS layout: one directory per kind, people as avatars,
 // one status chip each. The profile popup saves the same fields as before.
@@ -37,7 +38,7 @@ export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[];
   const selected = rows.find((row) => String(row.id) === selectedId);
   const kind = tab === "advisor" ? "advisor" : "collaborator";
   const visible = filterPeople(rows, kind, query, status);
-  const statuses = [...new Set(rows.filter((row) => kindOf(row) === kind).map((row) => String(row.status || "")).filter(Boolean))].sort();
+  const statuses = [...new Set(rows.filter((row) => kindOf(row) === kind).map((row) => String(row.status || "")).filter(Boolean))].sort(compareText);
 
   useRecordFocus((id) => {
     const row = rows.find((item) => String(item.id) === id);

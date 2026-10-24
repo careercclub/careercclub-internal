@@ -4,6 +4,7 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useRef, useState } from "react";
 import { askText, confirmAction } from "./app-dialog";
 import s from "./email-blast.module.css";
+import { compareText } from "@/lib/text/sort";
 
 type Template = { name: string; subject: string; headerTitle: string; headerSub: string; headerColor: string; body: string; ctaText: string; ctaUrl: string; footer: string };
 type Log = { subject: string; total: number; sent: number; failed: number; sentAt: string };
@@ -16,7 +17,7 @@ function readStore(key: string, fallback: string) { try { return typeof window =
 function readJson<T>(key: string): T[] { try { const value = JSON.parse(readStore(key, "[]")); return Array.isArray(value) ? value : []; } catch { return []; } }
 function writeStore(key: string, value: string | null) { try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* storage blocked: keep in memory */ } }
 function escapeHtml(value: string) { return value.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character); }
-function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => text(row[field]).trim()).filter(Boolean))].sort(); }
+function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => text(row[field]).trim()).filter(Boolean))].sort(compareText); }
 
 
 export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {

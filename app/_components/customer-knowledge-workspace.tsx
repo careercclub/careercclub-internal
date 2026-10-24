@@ -15,6 +15,7 @@ import { DistributionPie, MonthlyOpenChart } from "./charts";
 import s from "./customer-knowledge-workspace.module.css";
 import { Pagination, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
+import { compareText } from "@/lib/text/sort";
 
 // Customer Knowledge in the IJIS layout: a feed of what customers say, with the
 // "what stands out" panel beside it (categories, keywords, platforms, months), and the
@@ -55,7 +56,7 @@ export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeCl
     setView("pain"); setFilter(EMPTY); setModal({ record });
     return true;
   });
-  const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(), [rows]);
+  const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(compareText), [rows]);
   const averageRating = useMemo(() => {
     const values = freeClassRows.flatMap((row) => RATING_FIELDS.map(([key]) => Number(row[key])).filter((value) => value >= 1 && value <= 5));
     return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
@@ -98,7 +99,7 @@ function PainPointsView({ rows, filter, setFilter, onEdit }: { rows: ApiRecord[]
   const byPlatform = useMemo(() => distribution(rows, "platform"), [rows]);
   const keywords = useMemo(() => topKeywords(rows), [rows]);
   const months = useMemo(() => monthCounts(rows), [rows]);
-  const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(), [rows]);
+  const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(compareText), [rows]);
   const filtersOn = Object.values(filter).some(Boolean);
   const maxCategory = byCategory[0]?.[1] || 1;
 
@@ -220,24 +221,24 @@ function LabelPicker({ selected, allLabels, onChange }: { selected: string[]; al
     <div className="relative">
       <div className="flex flex-wrap items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-md)] bg-[var(--bg)] p-2">
         {selected.map((value) => { return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--purple-light)] px-2 py-0.5 text-[11px] font-medium text-[var(--purple-dark)]" key={value}>
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--purple-light)] px-2 py-0.5 text-xs font-medium text-[var(--purple-dark)]" key={value}>
             {value}
-            <button aria-label={`Remove label ${value}`} onClick={() => onChange(selected.filter((item) => item !== value))} type="button"><i className="ti ti-x" style={{ fontSize: 9 }} /></button>
+            <button aria-label={`Remove label ${value}`} onClick={() => onChange(selected.filter((item) => item !== value))} type="button"><i className="ti ti-x" style={{ fontSize: 12 }} /></button>
           </span>
         ); })}
-        <button aria-expanded={open} className="text-[12px] text-muted-foreground" onClick={() => setOpen((value) => !value)} type="button">Add label <i className="ti ti-chevron-down" style={{ fontSize: 10 }} /></button>
+        <button aria-expanded={open} className="text-[12px] text-muted-foreground" onClick={() => setOpen((value) => !value)} type="button">Add label <i className="ti ti-chevron-down" style={{ fontSize: 12 }} /></button>
       </div>
       {open ? (
         <div className="absolute z-20 mt-1 max-h-[180px] w-full min-w-[200px] overflow-y-auto rounded-lg border border-border bg-white p-2 shadow-md">
-          {available.map((value) => <button className="block w-full rounded px-2 py-1 text-left text-[11px] hover:bg-[var(--bg)]" key={value} onClick={() => { add(value); setOpen(false); }} type="button">{value}</button>)}
-          {!available.length && !creating ? <p className="px-2 py-1 text-[11px] text-muted-foreground">No other labels</p> : null}
+          {available.map((value) => <button className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-[var(--bg)]" key={value} onClick={() => { add(value); setOpen(false); }} type="button">{value}</button>)}
+          {!available.length && !creating ? <p className="px-2 py-1 text-xs text-muted-foreground">No other labels</p> : null}
           {creating ? (
             <div className="flex gap-1 p-1">
-              <input autoFocus className="h-7 flex-1 rounded border border-border px-2 text-[11px]" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commitDraft(); }} placeholder="New label name…" value={draft} />
-              <button className="rounded bg-[var(--purple-mid)] px-2 text-[10px] text-white" onClick={commitDraft} type="button">Add label</button>
+              <input autoFocus className="h-7 flex-1 rounded border border-border px-2 text-xs" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commitDraft(); }} placeholder="New label name…" value={draft} />
+              <button className="rounded bg-[var(--purple-mid)] px-2 text-xs text-white" onClick={commitDraft} type="button">Add label</button>
             </div>
           ) : (
-            <button className="mt-1 block w-full rounded px-2 py-1 text-left text-[11px] text-[var(--purple-mid)] hover:bg-[var(--bg)]" onClick={() => setCreating(true)} type="button">+ New label</button>
+            <button className="mt-1 block w-full rounded px-2 py-1 text-left text-xs text-[var(--purple-mid)] hover:bg-[var(--bg)]" onClick={() => setCreating(true)} type="button">+ New label</button>
           )}
         </div>
       ) : null}
@@ -312,7 +313,7 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
         <div className="flex flex-col gap-3.5 overflow-y-auto p-5">
           {!record ? (
             <div className="rounded-lg border border-dashed border-[var(--border-md)] p-3 text-center" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const image = Array.from(event.dataTransfer.files).find((file) => file.type.startsWith("image/")); if (image) void parseScreenshot(image); }} onPaste={(event) => { const image = Array.from(event.clipboardData.files).find((file) => file.type.startsWith("image/")); if (image) { event.preventDefault(); void parseScreenshot(image); } }} tabIndex={0}>
-              <button className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--purple-mid)]" onClick={() => inputRef.current?.click()} type="button"><i className="ti ti-camera" /> Upload or paste a screenshot (Ctrl+V)</button>
+              <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--purple-mid)]" onClick={() => inputRef.current?.click()} type="button"><i className="ti ti-camera" /> Upload or paste a screenshot (Ctrl+V)</button>
               <input accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void parseScreenshot(file); }} ref={inputRef} type="file" />
               <p className="mt-1 text-xs text-muted-foreground">{aiStatus}</p>
             </div>

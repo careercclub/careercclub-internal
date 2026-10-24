@@ -35,12 +35,20 @@ function whereSql(sql: Sql, options?: QueryOptions) {
   })}`;
 }
 
+const TEXT_ORDER_COLUMNS = new Set(["name", "nama", "label", "kategori", "judul", "title"]);
+
 function orderSql(sql: Sql, options?: QueryOptions) {
   if (!options?.orderBy) {
     return sql``;
   }
 
   const direction = options.ascending === false ? sql`desc` : sql`asc`;
+  // Name columns sort A–Z without regard to case. The database's own collation may be "C",
+  // which puts every capitalised name before every lower-case one ("ASTRO" before "Adidas").
+  if (TEXT_ORDER_COLUMNS.has(options.orderBy)) {
+    const column = columnSql(sql, options.orderBy);
+    return sql`order by lower(${column}) ${direction}, ${column} ${direction}`;
+  }
   return sql`order by ${columnSql(sql, options.orderBy)} ${direction}`;
 }
 

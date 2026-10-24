@@ -38,7 +38,7 @@
 .programNew:hover { border-color: var(--purple-mid); color: var(--purple-dark); }
 
 .avatars { display: flex; }
-.avatar, .avatarOnColor, .avatarEmpty { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 700; }
+.avatar, .avatarOnColor, .avatarEmpty { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; font-size: 12px; font-weight: 700; }
 .avatar { color: var(--purple-dark); background: var(--purple-light); }
 .avatarOnColor { border: 2px solid rgb(255 255 255 / 55%); color: #fff; background: rgb(255 255 255 / 20%); }
 .avatarEmpty { border: 1.5px dashed var(--border-md); color: var(--text-muted); }
@@ -64,9 +64,9 @@
 .day, .dayToday { display: grid; justify-items: center; gap: 2px; padding: 10px 2px; border-radius: 14px; text-align: center; }
 .day { background: var(--surface-2); }
 .dayToday { color: #fff; background: var(--purple-mid); }
-.day span, .dayToday span { font-size: 11px; font-weight: 600; opacity: 0.8; }
+.day span, .dayToday span { font-size: 12px; font-weight: 600; opacity: 0.8; }
 .day b, .dayToday b { font-size: 18px; font-weight: 800; line-height: 1.2; }
-.day small, .dayToday small { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.day small, .dayToday small { font-size: 12px; font-weight: 700; white-space: nowrap; }
 .day small { color: var(--text-muted); }
 .weekEvents { display: grid; gap: 2px; margin: 4px 0 0; padding: 10px 0 0; border-top: 1px solid var(--border); list-style: none; }
 .weekEvents a { display: flex; justify-content: space-between; gap: 10px; padding: 6px 8px; border-radius: 10px; color: var(--text); }
@@ -87,6 +87,6 @@
   .split { grid-template-columns: minmax(0, 1fr); }
   .panel, .calendarPanel { padding: 14px 12px; }
   .week { gap: 4px; }
-  .day small, .dayToday small { font-size: 10px; }
+  .day small, .dayToday small { font-size: 12px; }
   .primaryButton { min-height: 40px; }
 }

@@ -13,11 +13,11 @@
 .thumb:hover img { transform: scale(1.03); }
 .thumb img { transition: transform 0.2s; }
 .noImage { width: 100%; height: 100%; display: grid; place-items: center; color: var(--text-muted); font-size: 26px; }
-.multi { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; background: rgb(15 23 42 / 0.65); color: #fff; font-size: 11px; font-weight: 700; }
+.multi { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; background: rgb(15 23 42 / 0.65); color: #fff; font-size: 12px; font-weight: 700; }
 .assetBody { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
 .assetBody > b { overflow: hidden; font-size: 13px; font-weight: 700; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
 .tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.tags span { max-width: 100%; overflow: hidden; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.tags span { max-width: 100%; overflow: hidden; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .counts { display: flex; gap: 10px; color: var(--text-muted); font-size: 12px; }
 .counts b { color: var(--text); }
 .assetActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); }

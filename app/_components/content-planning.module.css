@@ -55,7 +55,7 @@
 .calendarNav { display: flex; align-items: center; gap: 4px; }
 .todayButton { min-height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
 .calendarGrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
-.weekday { padding: 4px 6px; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.weekday { padding: 4px 6px; color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .cell, .cellToday, .cellBlank { position: relative; min-width: 0; min-height: 92px; display: flex; flex-direction: column; gap: 3px; padding: 4px; border-radius: 12px; }
 .cell, .cellToday { background: var(--surface-2); }
 .cellToday { box-shadow: inset 0 0 0 2px var(--purple-mid); }
@@ -64,7 +64,7 @@
 .cell:hover .cellAdd i, .cellToday:hover .cellAdd i, .cellAdd:focus-visible i { opacity: 1; }
 .cellToday .cellAdd span { color: var(--purple-dark); }
 .cellItems { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.chipPlanned, .chipDone, .chipMore { min-width: 0; overflow: hidden; padding: 2px 6px; border: 0; border-radius: 6px; font-size: 11px; font-weight: 600; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.chipPlanned, .chipDone, .chipMore { min-width: 0; overflow: hidden; padding: 2px 6px; border: 0; border-radius: 6px; font-size: 12px; font-weight: 600; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .chipPlanned { color: var(--purple-dark); background: var(--purple-light); }
 .chipDone { color: var(--text-muted); background: var(--white); }
 .chipDone i { margin-right: 3px; color: var(--purple-mid); }
@@ -101,7 +101,7 @@
 .refAdd:hover { border-color: var(--purple-mid); color: var(--purple-dark); }
 .inlineLink { display: flex; flex-wrap: wrap; flex-basis: 100%; gap: 6px; }
 .inlineLink .input { flex: 1 1 180px; min-height: 36px; }
-.person, .personEmpty { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 800; }
+.person, .personEmpty { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 12px; font-weight: 800; }
 .person { color: var(--purple-dark); background: var(--purple-light); }
 .personEmpty { border: 1.5px dashed var(--border-md); color: var(--text-muted); }
 
@@ -114,7 +114,7 @@
 .storyTitle small { color: var(--text-muted); font-size: 12px; }
 .slides { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 4px; padding: 0; list-style: none; }
 .slide { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
-.slideNo { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: var(--purple-dark); background: var(--purple-light); font-size: 11px; font-weight: 800; }
+.slideNo { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: var(--purple-dark); background: var(--purple-light); font-size: 12px; font-weight: 800; }
 .slideInput { min-width: 0; min-height: 34px; padding: 0 8px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text); font-size: 13px; outline: none; }
 .slideInput:hover { border-color: var(--border); }
 .slideInput:focus { border-color: var(--purple-mid); background: var(--white); }
@@ -137,7 +137,7 @@
 .personCardMuted { background: var(--surface-2); box-shadow: none; }
 .personHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
 .avatar, .avatarLg { flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background-color: var(--purple-light); background-position: center; background-size: cover; color: var(--purple-dark); font-weight: 800; }
-.avatar { width: 32px; height: 32px; font-size: 11px; }
+.avatar { width: 32px; height: 32px; font-size: 12px; }
 .avatarLg { width: 48px; height: 48px; font-size: 15px; }
 .personName { min-width: 0; display: grid; }
 .personName b { overflow: hidden; font-size: 15px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
@@ -157,7 +157,7 @@
 .picker { padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--white); }
 .pickerTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
 .pickerGrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
-.pickerWeekday { padding: 2px 0; color: var(--text-muted); font-size: 11px; font-weight: 700; text-align: center; }
+.pickerWeekday { padding: 2px 0; color: var(--text-muted); font-size: 12px; font-weight: 700; text-align: center; }
 .day, .dayPlanned, .dayDone, .dayPicked { position: relative; min-height: 34px; border: 0; border-radius: 9px; font-size: 13px; cursor: pointer; }
 .day { color: var(--text); background: transparent; }
 .day:hover { background: var(--surface-2); }
@@ -165,7 +165,7 @@
 .dayDone { color: var(--text-muted); background: var(--surface-2); font-weight: 600; text-decoration: line-through; }
 .dayPicked { color: #fff; background: var(--purple-mid); font-weight: 800; }
 .dayToday { box-shadow: inset 0 0 0 1.5px var(--purple-mid); }
-.day small, .dayPlanned small, .dayDone small, .dayPicked small { position: absolute; top: 0; right: 3px; font-size: 11px; line-height: 1; font-weight: 800; text-decoration: none; }
+.day small, .dayPlanned small, .dayDone small, .dayPicked small { position: absolute; top: 0; right: 3px; font-size: 12px; line-height: 1; font-weight: 800; text-decoration: none; }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .swatchPlanned, .swatchDone { width: 12px; height: 12px; border-radius: 4px; }

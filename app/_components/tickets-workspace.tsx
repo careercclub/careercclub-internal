@@ -23,6 +23,7 @@ import { dueChip, groupTickets } from "@/lib/tickets/groups";
 import { isDone, isOverdue, localIso } from "@/lib/dashboard/summary";
 import { settingsHref } from "@/lib/records/links";
 import { confirmAction } from "./app-dialog";
+import { DateInput } from "./date-input";
 
 const PRIORITIES = ["High", "Med", "Low"];
 
@@ -66,7 +67,7 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           <div className="grid gap-1.5"><Label>Link <span className="font-normal text-muted-foreground">(optional)</span></Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /></div>
@@ -115,7 +116,7 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           <div className="grid gap-1.5">

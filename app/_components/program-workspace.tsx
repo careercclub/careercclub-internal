@@ -23,6 +23,7 @@ import { confirmAction } from "./app-dialog";
 import ps from "./program-workspace.module.css";
 import { dueChip } from "@/lib/tickets/groups";
 import { isOverdue, localIso } from "@/lib/dashboard/summary";
+import { DateInput } from "./date-input";
 
 const JENIS = ["CCA", "Webinar", "Workshop", "Bootcamp", "Seminar"];
 const EVENT_STATUS = ["Planning", "On Progress", "Done", "Cancelled"];
@@ -66,7 +67,7 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
           <div className="grid gap-1.5"><Label htmlFor="event-name">Event name <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.nama.trim()} id="event-name" required value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} placeholder="e.g. Free Class: insider tips to pass MT selection" /></div>
           <div className="grid gap-1.5"><Label>Program type</Label><Select value={form.jenisProgram || "none"} onValueChange={(v) => setForm({ ...form, jenisProgram: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select program type" /></SelectTrigger><SelectContent><SelectItem value="none">Select program type</SelectItem>{JENIS.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label htmlFor="event-date">Date <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.tanggal} id="event-date" required type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label htmlFor="event-date">Date <span className="text-[var(--red)]">*</span></Label><DateInput as={Input} aria-invalid={Boolean(error) && !form.tanggal} id="event-date" required  value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
             <div className="grid gap-1.5"><Label>Time</Label><Input type="time" value={form.waktu} onChange={(e) => setForm({ ...form, waktu: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -111,7 +112,7 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Deadline</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
@@ -161,30 +162,30 @@ function EventLinksPanel({ event, templates, onAdd, onDelete, error }: { event: 
     <div style={panelCard}>
       <button type="button" onClick={() => setOpen((value) => !value)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}>
         <i className="ti ti-link" style={{ fontSize: 13, color: "var(--purple-accent)" }} />
-        <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>Links{total > 0 ? <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 400 }}> ({total})</span> : null}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>Links{total > 0 ? <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400 }}> ({total})</span> : null}</span>
         <i className={`ti ti-chevron-${open ? "up" : "down"}`} style={{ fontSize: 13, color: "var(--text-muted)" }} />
       </button>
       {open ? (
         <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
           {relevant.map((template) => (
             <a key={String(template.id)} href={text(template.url)} target="_blank" rel="noreferrer" title={text(template.label)} style={{ ...chip, border: "0.5px solid var(--border)", background: "var(--purple-light)", color: "var(--purple-mid)", textDecoration: "none" }}>
-              <i className="ti ti-bookmark" style={{ fontSize: 11, color: "var(--purple-accent)" }} />
+              <i className="ti ti-bookmark" style={{ fontSize: 12, color: "var(--purple-accent)" }} />
               <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{text(template.label)}</span>
             </a>
           ))}
           {adhoc.map((link, index) => (
             <span key={`${link.url}-${index}`} style={{ ...chip, border: "0.5px solid var(--border)", background: "var(--white)" }} title={link.label}>
               <a href={link.url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, color: "inherit", textDecoration: "none", overflow: "hidden" }}>
-                <i className="ti ti-link" style={{ fontSize: 11, color: "var(--text-muted)" }} />
+                <i className="ti ti-link" style={{ fontSize: 12, color: "var(--text-muted)" }} />
                 <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{link.label}</span>
               </a>
-              <button type="button" onClick={() => onDelete(index)} aria-label="Delete link" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, display: "flex", flexShrink: 0, marginLeft: 2 }}><i className="ti ti-x" style={{ fontSize: 10 }} /></button>
+              <button type="button" onClick={() => onDelete(index)} aria-label="Delete link" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, display: "flex", flexShrink: 0, marginLeft: 2 }}><i className="ti ti-x" style={{ fontSize: 12 }} /></button>
             </span>
           ))}
-          <button type="button" onClick={onAdd} style={{ ...chip, border: "0.5px dashed var(--border)", color: "var(--text-muted)", background: "none", cursor: "pointer" }}><i className="ti ti-plus" style={{ fontSize: 11 }} /><span style={{ whiteSpace: "nowrap" }}>Add link</span></button>
+          <button type="button" onClick={onAdd} style={{ ...chip, border: "0.5px dashed var(--border)", color: "var(--text-muted)", background: "none", cursor: "pointer" }}><i className="ti ti-plus" style={{ fontSize: 12 }} /><span style={{ whiteSpace: "nowrap" }}>Add link</span></button>
         </div>
       ) : null}
-      {open && error ? <p style={{ fontSize: 11, color: "var(--red)", marginTop: 8 }}>{error}</p> : null}
+      {open && error ? <p style={{ fontSize: 12, color: "var(--red)", marginTop: 8 }}>{error}</p> : null}
     </div>
   );
 }
@@ -211,8 +212,8 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label>Event title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Start</Label><div className="flex gap-1"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /><Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div></div>
-            <div className="grid gap-1.5"><Label>Finished</Label><div className="flex gap-1"><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /><Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
+            <div className="grid gap-1.5"><Label>Start</Label><div className="flex gap-1"><DateInput as={Input} value={startDate} onChange={(e) => setStartDate(e.target.value)} /><Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div></div>
+            <div className="grid gap-1.5"><Label>Finished</Label><div className="flex gap-1"><DateInput as={Input} value={endDate} onChange={(e) => setEndDate(e.target.value)} /><Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
           </div>
           {assigneePeople.length ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Undang {assigneePeople.map((person) => text(person.nama) || text(person.email)).join(", ")}</label> : null}
           {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar is not set up for this app yet.</p> : null}
@@ -323,8 +324,8 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
         {tab !== "calendar" ? (
           <>
             <label className={ps.filterPill}><span>Type</span><select aria-label="Filter program type" value={jenisFilter} onChange={(e) => setJenisFilter(e.target.value)}><option value="">All</option>{jenisOptions.map((j) => <option key={j} value={j}>{j}</option>)}</select></label>
-            <label className={ps.filterPill}><span>From</span><input aria-label="From date" onChange={(e) => setDateFrom(e.target.value)} type="date" value={dateFrom} /></label>
-            <label className={ps.filterPill}><span>To</span><input aria-label="To date" onChange={(e) => setDateTo(e.target.value)} type="date" value={dateTo} /></label>
+            <label className={ps.filterPill}><span>From</span><DateInput aria-label="From date" onChange={(e) => setDateFrom(e.target.value)}  value={dateFrom} /></label>
+            <label className={ps.filterPill}><span>To</span><DateInput aria-label="To date" onChange={(e) => setDateTo(e.target.value)}  value={dateTo} /></label>
             {filtersOn ? <button className={ps.clear} onClick={() => { setDateFrom(""); setDateTo(""); setJenisFilter(""); }} type="button">Clear filters</button> : null}
           </>
         ) : null}

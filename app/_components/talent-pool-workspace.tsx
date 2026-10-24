@@ -11,6 +11,7 @@ import { TalentPoolTools } from "./talent-pool-tools";
 import { Pagination, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DialogBehaviour } from "./use-modal";
+import { compareText } from "@/lib/text/sort";
 
 // Talent Pool in the IJIS layout: a people directory (cards, not a 12-column table),
 // a profile drawer, analytics, email blast and data management as views of one page.
@@ -18,7 +19,7 @@ import { DialogBehaviour } from "./use-modal";
 type View = "candidates" | "analytics" | "blast" | "manage";
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value).trim(); }
-function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => text(row[field])).filter(Boolean))].sort(); }
+function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => text(row[field])).filter(Boolean))].sort(compareText); }
 
 function Field({ label, value, wide }: { label: string; value: unknown; wide?: boolean }) {
   if (!text(value)) return null;

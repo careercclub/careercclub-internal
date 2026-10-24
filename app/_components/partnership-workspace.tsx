@@ -12,6 +12,8 @@ import { guard } from "./safe-action";
 import s from "./partnership-workspace.module.css";
 import { Pagination, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
+import { DateInput } from "./date-input";
+import { digitsOf, MoneyInput } from "./money-input";
 
 // Partnership (B2B and Organization) in the IJIS layout: the pipeline board first,
 // then the partner list, deals, an outreach timeline and insights — same data and actions.
@@ -228,8 +230,8 @@ function DealsView({ rows, deals, dealsKey, partnerField, entityLabel }: { rows:
               <span className={s.dealPartner}><i className="ti ti-building" aria-hidden="true" /> {partnerName(deal[partnerField])}</span>
               <div className={s.dealGridFields}>
                 <label><span>Stage</span><select defaultValue={text(deal.stage) || "Negotiation"} onChange={(event) => saveField(deal, { stage: event.target.value })}>{DEAL_STAGES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-                <label><span>Deadline</span><input defaultValue={dayValue(deal.deadline)} onChange={(event) => saveField(deal, { deadline: event.target.value })} type="date" /></label>
-                <label><span>Value</span><input defaultValue={text(deal.value)} onBlur={blur(deal, "value")} placeholder="e.g. Rp25jt" /></label>
+                <label><span>Deadline</span><DateInput defaultValue={dayValue(deal.deadline)} onChange={(event) => saveField(deal, { deadline: event.target.value })}  /></label>
+                <label><span>Value</span><MoneyInput defaultValue={text(deal.value)} onCommit={(digits) => { if (digits !== digitsOf(deal.value)) saveField(deal, { value: digits }); }} placeholder="e.g. Rp 25.000.000" /></label>
               </div>
               <label className={s.dealField}><span>Scope</span><textarea defaultValue={text(deal.scope)} onBlur={blur(deal, "scope")} placeholder="What the collaboration covers" rows={2} /></label>
               <label className={s.dealField}><span>Notes</span><textarea defaultValue={text(deal.notes)} onBlur={blur(deal, "notes")} rows={2} /></label>
@@ -271,7 +273,7 @@ function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }
                   <div className={s.logHead}>
                     <b>{partnerName(log[partnerField])}</b>
                     <select aria-label="Channel" className={s.inlineSelect} defaultValue={text(log.channel) || "WhatsApp"} onChange={(event) => saveField(log, { channel: event.target.value })}>{CHANNELS.map((value) => <option key={value} value={value}>{value}</option>)}</select>
-                    <input aria-label="Date" className={s.inlineDate} defaultValue={dayValue(log.tanggal)} onChange={(event) => saveField(log, { tanggal: event.target.value })} type="date" />
+                    <DateInput aria-label="Date" className={s.inlineDate} defaultValue={dayValue(log.tanggal)} onChange={(event) => saveField(log, { tanggal: event.target.value })}  />
                     <select aria-label="Response" className={text(log.respons) === "Declined" ? s.responseOff : text(log.respons) === "No Reply" || !text(log.respons) ? s.responseWait : s.responseOn} defaultValue={text(log.respons) || "No Reply"} onChange={(event) => saveField(log, { respons: event.target.value })}>{RESPONSES.map((value) => <option key={value} value={value}>{value}</option>)}</select>
                     <button aria-label="Delete outreach log" className={s.iconButton} onClick={() => remove(log)} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
                   </div>
@@ -372,7 +374,7 @@ function PartnerModal({ profile, tableKey, categories, defaultStatus, onClose }:
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className={labelClass}>Status</span><select className={inputClass} onChange={(event) => set({ status: event.target.value })} value={form.status}>{STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-            <label className="block"><span className={labelClass}>Date added</span><input className={inputClass} onChange={(event) => set({ input_date: event.target.value })} type="date" value={form.input_date} /></label>
+            <label className="block"><span className={labelClass}>Date added</span><DateInput className={inputClass} onChange={(event) => set({ input_date: event.target.value })}  value={form.input_date} /></label>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className={labelClass}>PIC</span><input className={inputClass} onChange={(event) => set({ contact_name: event.target.value })} value={form.contact_name} /></label>

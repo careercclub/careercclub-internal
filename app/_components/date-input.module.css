@@ -1,0 +1,38 @@
+/* DateInput: the real date field stays underneath; its locale text is hidden behind a dd/mm/yyyy label. */
+.wrap { position: relative; display: block; min-width: 0; }
+.wrap > input { color: transparent !important; caret-color: transparent; }
+.wrap > input::-webkit-datetime-edit { opacity: 0; }
+.wrap > input::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
+.wrap > input::-webkit-inner-spin-button, .wrap > input::-webkit-clear-button { display: none; }
+.label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; overflow: hidden; color: var(--text); white-space: nowrap; pointer-events: none; }
+.text { overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.placeholder { overflow: hidden; color: var(--text-hint); text-overflow: ellipsis; }
+.icon { flex: none; color: var(--text-muted); font-size: 16px; }
+.wrap > input:disabled + .label { opacity: 0.55; }
+
+.popover {
+  position: fixed; z-index: 10000; width: 296px; padding: 10px;
+  border: 1px solid var(--border); border-radius: 16px; background: var(--white); color: var(--text);
+  box-shadow: 0 2px 6px rgba(20, 33, 44, 0.06), 0 16px 40px rgba(20, 33, 44, 0.16);
+  font-size: 13px; pointer-events: auto; animation: popIn 0.12s ease-out;
+}
+@keyframes popIn { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .popover { animation: none; } }
+.head { display: grid; grid-template-columns: 30px 30px 1fr 30px 30px; align-items: center; gap: 2px; margin-bottom: 6px; }
+.head b { font-size: 14px; font-weight: 800; text-align: center; }
+.head button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 16px; }
+.head button:hover { background: var(--purple-light); color: var(--purple-dark); }
+.typed { display: flex; justify-content: space-between; margin: 0 2px 6px; padding: 6px 10px; border-radius: 9px; background: var(--surface-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+.typed span { color: var(--text-hint); font-weight: 500; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.weekday { padding: 4px 0; color: var(--text-muted); font-size: 12px; font-weight: 700; text-align: center; }
+.day { height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.day[data-outside] { color: var(--text-hint); }
+.day[data-today] { box-shadow: inset 0 0 0 1.5px var(--purple-mid); font-weight: 700; }
+.day[data-active="true"] { background: var(--purple-light); color: var(--purple-dark); }
+.day[aria-selected="true"] { background: var(--purple-mid); color: #fff; font-weight: 700; }
+.day:disabled { color: var(--border-md); cursor: not-allowed; background: transparent; }
+.foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.foot button { min-height: 32px; padding: 0 12px; border: 1px solid var(--border-md); border-radius: 999px; background: var(--white); color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
+.foot button:hover:not(:disabled) { border-color: var(--purple-mid); background: var(--purple-light); }
+.foot button:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -13,6 +13,8 @@ import { confirmAction, notifyError } from "./app-dialog";
 import { guard } from "./safe-action";
 import s from "./product-workbench.module.css";
 import { useRecordFocus } from "./use-record-focus";
+import { compareText } from "@/lib/text/sort";
+import { MoneyInput } from "./money-input";
 
 // Products in the IJIS layout: a catalog list on the left, and on the right the chosen
 // product's page — the product card, bundle math, and its whole knowledge base as a board
@@ -43,7 +45,7 @@ export function ProductWorkbench({ workspace, management }: { workspace: Workspa
   const summary = useMemo(() => catalogSummary(workspace.products), [workspace.products]);
   const products = useMemo(() => filterProducts(workspace.products, filter), [workspace.products, filter]);
   const selected = workspace.products.find((product) => String(product.id) === selectedId) || products[0];
-  const classifications = useMemo(() => [...new Set(workspace.products.map((product) => text(product.kategori)).filter(Boolean))].sort(), [workspace.products]);
+  const classifications = useMemo(() => [...new Set(workspace.products.map((product) => text(product.kategori)).filter(Boolean))].sort(compareText), [workspace.products]);
   const set = (patch: ProductFilter) => setFilter((current) => ({ ...current, ...patch }));
   useRecordFocus((id) => {
     if (!workspace.products.some((product) => String(product.id) === id)) return;
@@ -255,7 +257,7 @@ function KnowledgeForm({ kind, one, productId, onDone }: { kind: Kind; one: stri
         <label className={s.field}><span>{one[0].toUpperCase() + one.slice(1)} <b className={s.req}>*</b></span><input aria-invalid={invalid === "nama" || undefined} autoFocus className={cls("nama")} name="nama" onInput={clear("nama")} /></label>
       )}
       {kind !== "asset" && kind !== "subProduct" ? <label className={s.field}><span>Description{kind === "feedback" ? <b className={s.req}> *</b> : null}</span><textarea aria-invalid={invalid === "text" || undefined} autoFocus={kind === "feedback"} className={cls("text")} name="text" onInput={clear("text")} rows={2} /></label> : null}
-      {kind === "subProduct" ? <label className={s.field}><span>Price</span><input className={s.input} name="harga" type="number" /></label> : null}
+      {kind === "subProduct" ? <label className={s.field}><span>Price</span><MoneyInput className={s.input} name="harga" /></label> : null}
       <div className={s.formActions}><button className={s.ghostSm} onClick={onDone} type="button">Cancel</button><Button disabled={pending} size="sm" type="submit">Add {one}</Button></div>
     </form>
   );
@@ -311,7 +313,7 @@ function AddProductDialog({ onClose }: { onClose: () => void }) {
             <label className={s.field}><span>Type</span><select className={s.input} defaultValue="satuan" name="type"><option value="satuan">Single product</option><option value="bundling">Bundle</option></select></label>
             <label className={s.field}><span>Status</span><select className={s.input} defaultValue="Draft" name="status">{STATUSES.map((v) => <option key={v}>{v}</option>)}</select></label>
             <label className={s.field}><span>Classification</span><input className={s.input} name="kategori" /></label>
-            <label className={s.field}><span>Price</span><input className={s.input} name="harga" type="number" /></label>
+            <label className={s.field}><span>Price</span><MoneyInput className={s.input} name="harga" /></label>
           </div>
           <label className={s.field}><span>Landing page URL</span><input className={s.input} name="link" placeholder="https://…" /></label>
           <label className={s.field}><span>Description</span><textarea className={s.input} name="deskripsi" rows={3} /></label>

@@ -24,7 +24,7 @@ function writeRecent(list: RecentItem[]) {
 type DataState = { status: "idle" | "loading" | "done" | "error"; hits: SearchHit[] };
 
 const PAGE_LIMIT_WITH_DATA = 5;
-const GROUP_LABEL = "text-[10px] font-semibold uppercase tracking-wide text-muted-foreground";
+const GROUP_LABEL = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
 function Highlighted({ text, terms }: { text: string; terms: string[] }) {
   return <>{highlightParts(text, terms).map((part, index) => (part.match ? <strong className="font-semibold text-foreground" key={index}>{part.text}</strong> : <span key={index}>{part.text}</span>))}</>;
@@ -155,7 +155,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
           <span className="block truncate text-sm"><Highlighted terms={terms} text={item.title} /></span>
           <span className="block truncate text-xs text-muted-foreground">{item.kind !== "page" ? <>{item.detailLabel ? `${item.detailLabel}: ` : ""}<Highlighted terms={terms} text={item.detail} /></> : item.detail}</span>
         </span>
-        <span className="shrink-0 text-[10px] text-muted-foreground">{item.module}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">{item.module}</span>
       </button>
     );
   }
@@ -176,7 +176,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
       >
         <i className="ti ti-search" aria-hidden="true" />
         <span className="hidden sm:inline">Search anything…</span>
-        <kbd className="ml-auto hidden rounded-md border px-1.5 py-0.5 font-sans text-[11px] sm:inline">Ctrl K</kbd>
+        <kbd className="ml-auto hidden rounded-md border px-1.5 py-0.5 font-sans text-xs sm:inline">Ctrl K</kbd>
       </button>
 
       <Dialog open={open} onOpenChange={(next) => { if (next) openPalette(); else setOpen(false); }}>
@@ -204,7 +204,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
               aria-activedescendant={items[active] ? `palette-option-${active}` : undefined}
               className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Esc</kbd>
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">Esc</kbd>
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto p-1" ref={listRef}>
@@ -213,7 +213,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
                 <div aria-labelledby="palette-group-recent" role="group">
                   <div className="flex items-center justify-between px-3 pt-2 pb-1">
                     <p className={GROUP_LABEL} id="palette-group-recent">Recently opened</p>
-                    <button className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => { writeRecent([]); setRecent([]); setActive(0); }} type="button"><span className="text-[10px]">Clear history</span></button>
+                    <button className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => { writeRecent([]); setRecent([]); setActive(0); }} type="button"><span className="text-xs">Clear history</span></button>
                   </div>
                   {recents.map((item, index) => renderItem(item, index))}
                 </div>
@@ -241,7 +241,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
             ) : null}
           </div>
 
-          <div className="flex items-center gap-3 border-t px-3 py-2 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-3 border-t px-3 py-2 text-xs text-muted-foreground">
             <span className="hidden sm:inline">↑↓ pilih</span><span className="hidden sm:inline">↵ buka</span><span>{pages.length} halaman{searchingData ? ` · ${records.length} data` : ""}</span>
           </div>
         </DialogContent>

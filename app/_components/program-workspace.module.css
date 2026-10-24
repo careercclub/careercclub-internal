@@ -30,7 +30,7 @@
 .eventActive .eventText b { color: var(--purple-dark); }
 .eventCount { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .ring { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--purple-mid) var(--pct), var(--surface-2) 0); }
-.ring > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--white); font-size: 10.5px; font-weight: 800; }
+.ring > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--white); font-size: 12px; font-weight: 800; }
 .eventActive .ring { background: conic-gradient(var(--purple-mid) var(--pct), var(--white) 0); }
 .eventActive .ring > span { background: var(--purple-light); }
 
@@ -63,7 +63,7 @@
 .rowMain { min-width: 0; min-height: 44px; display: grid; align-content: center; border: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .rowMain b { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .rowMain small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.avatar, .avatarEmpty { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 700; }
+.avatar, .avatarEmpty { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 12px; font-weight: 700; }
 .avatar { color: var(--purple-dark); background: var(--purple-light); }
 .avatarEmpty { border: 1.5px dashed var(--border-md); color: var(--text-muted); }
 .chip, .chipSoon, .chipLate, .chipNone { min-width: 72px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; text-align: center; white-space: nowrap; }

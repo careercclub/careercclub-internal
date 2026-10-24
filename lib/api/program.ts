@@ -125,7 +125,7 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
     const divisionId = text(person?.divisi_id) || null;
     let requestType: WorkflowRecord | undefined;
     if (divisionId) {
-      [requestType] = await tx<WorkflowRecord[]>`select * from tkt_types where divisi_id = ${divisionId} order by nama limit 1`;
+      [requestType] = await tx<WorkflowRecord[]>`select * from tkt_types where divisi_id = ${divisionId} order by lower(nama) limit 1`;
     }
 
     // requesterId is typically the authenticated user's id (auth_users), which is NOT a

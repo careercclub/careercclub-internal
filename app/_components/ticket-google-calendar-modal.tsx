@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useState } from "react";
 import { useGoogleCalendarAction } from "./google-calendar-tool";
+import { DateInput } from "./date-input";
 
 type Props = {
   ticket: ApiRecord;
@@ -143,11 +144,11 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
               <Label htmlFor="ticket-gcal-start-date">Tanggal mulai</Label>
-              <Input id="ticket-gcal-start-date" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+              <DateInput as={Input} id="ticket-gcal-start-date"  value={startDate} onChange={(event) => setStartDate(event.target.value)} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="ticket-gcal-end-date">Tanggal selesai</Label>
-              <Input id="ticket-gcal-end-date" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+              <DateInput as={Input} id="ticket-gcal-end-date"  value={endDate} onChange={(event) => setEndDate(event.target.value)} />
             </div>
           </div>
 
@@ -184,7 +185,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
 
           {automaticGuests.length ? (
             <section className="rounded-md bg-[var(--purple-light)] px-3 py-2.5">
-              <h3 className="mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase">Assignee &amp; requester</h3>
+              <h3 className="mb-1.5 text-xs font-semibold text-muted-foreground uppercase">Assignee &amp; requester</h3>
               <div className="grid gap-1">
                 {automaticGuests.map((person) => (
                   <div className="flex items-center gap-1.5 text-xs" key={String(person.id)}>
@@ -198,7 +199,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
 
           {additionalPeople.length ? (
             <fieldset className="grid gap-2">
-              <legend className="mb-1 text-[11px] font-semibold text-muted-foreground uppercase">Extra CC</legend>
+              <legend className="mb-1 text-xs font-semibold text-muted-foreground uppercase">Extra CC</legend>
               <div className="grid max-h-[120px] gap-1.5 overflow-y-auto pr-1">
                 {additionalPeople.map((person) => {
                   const email = text(person.email);

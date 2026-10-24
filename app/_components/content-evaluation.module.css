@@ -24,7 +24,7 @@
 .topMetrics b { color: var(--text); }
 
 .barWithValue { flex-direction: column; align-items: center !important; justify-content: flex-end !important; gap: 3px; }
-.barWithValue small { color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.barWithValue small { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 
 .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: var(--text-muted); font-size: 12px; }
 .legend > span { display: inline-flex; align-items: center; gap: 5px; }
@@ -38,7 +38,7 @@
 .day, .dayOn { min-height: 58px; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--white); color: var(--text-muted); text-align: left; }
 .day small, .dayOn small { font-size: 12px; font-weight: 700; }
 .day span, .dayOn span { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
-.day span em, .dayOn span em { color: var(--purple-dark); font-size: 11px; font-style: normal; font-weight: 700; }
+.day span em, .dayOn span em { color: var(--purple-dark); font-size: 12px; font-style: normal; font-weight: 700; }
 .day:disabled { cursor: default; }
 .dayOn { border-color: var(--purple-light); background: var(--surface-2); color: var(--text); cursor: pointer; }
 .dayOn:hover { border-color: var(--purple-mid); }
