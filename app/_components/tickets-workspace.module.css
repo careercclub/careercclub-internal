@@ -22,6 +22,11 @@
 .search:focus-within, .filterPill:focus-within { border-color: var(--purple-mid); }
 .filterPill { min-height: 42px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select { max-width: 160px; min-height: 36px; padding: 0 6px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+.togglePill, .togglePillOn { min-height: 42px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+.togglePill:hover { border-color: var(--purple-mid); }
+.togglePill i { color: var(--text-muted); font-size: 16px; }
+.togglePillOn { border-color: var(--purple-mid); background: var(--purple-light); color: var(--purple-dark); }
+.togglePillOn i { font-size: 16px; }
 
 .panel { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
 .group { display: flex; flex-direction: column; }
@@ -62,7 +67,8 @@
   .segmented { width: 100%; }
   .segment, .segmentActive { flex: 1; justify-content: center; }
   .search { flex-basis: 100%; }
-  .filterPill { flex: 1 1 calc(50% - 5px); min-width: 0; }
+  .filterPill, .togglePill, .togglePillOn { flex: 1 1 calc(50% - 5px); min-width: 0; justify-content: center; }
+  .filterPill { justify-content: flex-start; }
   .filterPill select { min-width: 0; flex: 1; }
   .panel { padding: 6px 6px 10px; }
   .row, .rowDone { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "check main chip" "check main cal"; row-gap: 2px; column-gap: 10px; }

@@ -76,7 +76,7 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
           <div><dt>Converted</dt><dd>{stats.converted}</dd></div>
           <div><dt>Talent Pool matches</dt><dd>{stats.talent}</dd></div>
         </dl>
-        <button className={s.ghost} type="button" onClick={exportJson}><i className="ti ti-download" aria-hidden="true" /> Export CRM JSON</button>
+        <button className={s.ghost} type="button" onClick={exportJson}><i className="ti ti-download" aria-hidden="true" /> Export JSON</button>
       </section>
     </div>
   );

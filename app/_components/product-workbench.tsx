@@ -138,7 +138,7 @@ function ProductPage({ product, workspace }: { product: ApiRecord; workspace: Wo
           <b className={s.price}>{rupiah(product.harga)}</b>
           <div className={s.heroActions}>
             <DuplicateProduct productId={id} />
-            <button className={s.ghostButton} onClick={exportKb} type="button"><i className="ti ti-download" aria-hidden="true" /> Export KB</button>
+            <button className={s.ghostButton} onClick={exportKb} type="button"><i className="ti ti-download" aria-hidden="true" /> Export JSON</button>
           </div>
         </div>
       </div>

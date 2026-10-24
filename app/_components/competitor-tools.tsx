@@ -13,6 +13,7 @@ import s from "./competitor-tools.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { compareText } from "@/lib/text/sort";
 import { formatRupiah } from "./money-input";
+import { formatRupiahShort } from "@/lib/text/money";
 
 // Competitor Intel in the IJIS layout: a threat landscape (High / Medium / Low columns),
 // a competitor directory and a price board. Same data and actions as before.
@@ -206,13 +207,13 @@ function Pricing({ workspace }: { workspace: Workspace }) {
         <div className={s.priceGrid}>
           {board.map((group) => (
             <section aria-label={group.category} className={s.priceCard} key={group.category}>
-              <header className={s.priceHead}><b>{group.category}</b><span>{group.items.length} product{group.items.length === 1 ? "" : "s"}{group.max > group.min ? ` · Rp${fmtN(group.min)}–Rp${fmtN(group.max)}` : group.max ? ` · Rp${fmtN(group.max)}` : ""}</span></header>
+              <header className={s.priceHead}><b>{group.category}</b><span>{group.items.length} product{group.items.length === 1 ? "" : "s"}{group.max > group.min ? ` · ${formatRupiahShort(group.min)}–${formatRupiahShort(group.max)}` : group.max ? ` · ${formatRupiahShort(group.max)}` : ""}</span></header>
               <ul className={s.priceList}>
                 {group.items.map(({ product, price }) => {
                   const owner = profileOf(product.competitor_id);
                   return (
                     <li key={String(product.id)}>
-                      {owner ? <CompetitorLogo profile={owner} size={28} /> : <span className={s.logo} style={{ width: 28, height: 28, fontSize: 12 }}>?</span>}
+                      {owner ? <CompetitorLogo profile={owner} size={28} /> : <span aria-label="Unknown brand" className={s.logo} role="img" style={{ width: 28, height: 28, fontSize: 14 }}><i className="ti ti-building-store" aria-hidden="true" /></span>}
                       <span className={s.cardName}><b>{text(product.nama) || text(product.name) || "—"}</b><small>{text(owner?.name) || "No competitor"}</small></span>
                       <span className={s.priceValue}>{price ? formatRupiah(price) : "—"}</span>
                       {group.max > group.min && price ? <span className={s.priceBar} aria-hidden="true"><i style={{ width: `${Math.max(6, ((price - group.min) / (group.max - group.min)) * 100)}%` }} /></span> : null}

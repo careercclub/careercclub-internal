@@ -13,6 +13,8 @@ import g from "./library.module.css";
 import s from "./page-kit.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { compareText } from "@/lib/text/sort";
+import { ShowMoreList } from "./ui-kit";
+import { formatDay } from "@/lib/text/date";
 
 type Props = {
   rows: ApiRecord[];
@@ -52,6 +54,7 @@ function DetailValue({ value }: { value: unknown }) {
   if (Array.isArray(value)) return <>{value.map((item) => (typeof item === "object" ? JSON.stringify(item) : String(item))).join(", ")}</>;
   if (typeof value === "object" && value) return <>{JSON.stringify(value)}</>;
   const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(text)) return <>{formatDay(text)}</>;
   if (/^https?:\/\//i.test(text)) {
     const host = (() => { try { return new URL(text).hostname.replace(/^www\./, ""); } catch { return text; } })();
     return (
@@ -157,7 +160,7 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
             <section aria-label={categoryField ? groupName : "Gallery"} className={g.group} key={groupName}>
               {categoryField ? <header className={g.groupHead}><i aria-hidden="true" className="ti ti-folder" /><h2>{groupName}</h2><span>{plural(items.length, "item")}</span></header> : null}
               <ul className={g.assets}>
-                {items.map((row) => {
+                <ShowMoreList items={items} step={12} inList>{(visibleItems) => visibleItems.map((row) => {
                   const rowImages = images(row, imageFields);
                   const title = String(row[titleField] || "Untitled");
                   return (
@@ -184,7 +187,7 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
                       </div>
                     </li>
                   );
-                })}
+                })}</ShowMoreList>
               </ul>
             </section>
           )) : (
@@ -252,7 +255,7 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
         {transfer ? (
           <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
             <DialogHeader className="border-b border-border px-6 pt-6 pb-4 pr-12 text-left">
-              <DialogTitle>Add to content library</DialogTitle>
+              <DialogTitle>Add to library</DialogTitle>
               <DialogDescription>{String(transfer[titleField] || "Untitled")} is copied into the content library with its images. Fields marked <span className="text-[var(--red)]">*</span> are required.</DialogDescription>
             </DialogHeader>
             <form action={sendToLibrary} className="flex min-h-0 flex-1 flex-col">

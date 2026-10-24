@@ -118,7 +118,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
                 {summary.topTarget ? <div><dt>Top MT target</dt><dd>{summary.topTarget[0]} <span>{summary.topTarget[1]}</span></dd></div> : null}
                 {summary.topCity ? <div><dt>Top city</dt><dd>{summary.topCity[0]} <span>{summary.topCity[1]}</span></dd></div> : null}
               </dl>
-              <button className={s.glanceAction} onClick={() => setView("blast")} type="button"><i className="ti ti-mail" aria-hidden="true" /> Email {summary.withEmail} candidates</button>
+              <button className={s.glanceAction} disabled={!summary.withEmail} onClick={() => setView("blast")} type="button"><i className="ti ti-mail" aria-hidden="true" /> Email {summary.withEmail} candidates</button>
               <button className={s.glanceLink} onClick={() => setView("analytics")} type="button">See full analytics</button>
             </aside>
           </div>
@@ -188,7 +188,7 @@ function TalentPoolAnalytics({ rows }: { rows: ApiRecord[] }) {
     <div className={s.analytics}>
       <div className={s.analyticsHead}>
         <p>Breakdown of all {total} candidates</p>
-        <button className={s.ghostButton} onClick={() => downloadJson(rows, `talent-pool-analytics-${new Date().toISOString().slice(0, 10)}.json`)} type="button"><i className="ti ti-download" aria-hidden="true" /> Export data</button>
+        <button className={s.ghostButton} onClick={() => downloadJson(rows, `talent-pool-analytics-${new Date().toISOString().slice(0, 10)}.json`)} type="button"><i className="ti ti-download" aria-hidden="true" /> Export JSON</button>
       </div>
       <div className={s.analyticsGrid}>
         <AnalyticsCard icon="ti-map-pin" title="City" total={total}>{donut(data.city)}</AnalyticsCard>

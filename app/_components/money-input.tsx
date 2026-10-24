@@ -4,6 +4,7 @@
 // ("25000000") under the field's name, so saving and the number columns are unchanged.
 
 import { useRef, useState, type ComponentProps } from "react";
+import { formatRupiah } from "@/lib/text/money";
 
 type Props = Omit<ComponentProps<"input">, "type" | "value" | "defaultValue" | "onChange"> & {
   value?: string | number | null;
@@ -22,11 +23,7 @@ export const digitsOf = (value: unknown) => {
   const whole = /^\d+(\.\d+)?$/.test(text) ? text.split(".")[0] : text;
   return whole.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
 };
-/** "25000000" → "Rp 25.000.000"; "" → "". */
-export const formatRupiah = (value: unknown) => {
-  const digits = digitsOf(value);
-  return digits ? `Rp ${digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "";
-};
+export { formatRupiah };
 
 export function MoneyInput({ value, defaultValue, onValueChange, onCommit, name, onBlur, onFocus, placeholder = "Rp 0", ...rest }: Props) {
   const controlled = value !== undefined;

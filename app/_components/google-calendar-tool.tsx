@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ApiRecord } from "@/lib/api/_crud";
 import styles from "../record-manager.module.css";
+import { DateTimeInput } from "./date-input";
 
 type TokenResponse = { access_token?: string; expires_in?: number; error?: string; error_description?: string };
 type TokenClient = { requestAccessToken(): void };
@@ -150,10 +151,10 @@ export function GoogleCalendarTool({ tasks, people, recordType = "task" }: Props
       <summary><i className="ti ti-calendar-plus" aria-hidden="true" /> Add {recordType} to Google Calendar</summary>
       <form action={createEvent} className={styles.formGrid}>
         <label className={styles.field}><span>{recordType === "ticket" ? "Ticket" : "Task"}</span><select name="task_id" required><option value="">Select...</option>{tasks.map((task) => <option key={String(task.id)} value={String(task.id)}>{String(task.title || task.id)}{task.gcal_added ? " (added)" : ""}</option>)}</select></label>
-        <label className={styles.field}><span>Start</span><input name="start" type="datetime-local" required /></label>
-        <label className={styles.field}><span>End</span><input name="end" type="datetime-local" required /></label>
+        <label className={styles.field}><span>Start</span><DateTimeInput aria-label="Start" name="start" required /></label>
+        <label className={styles.field}><span>End</span><DateTimeInput aria-label="End" name="end" required /></label>
         <fieldset className={styles.checkList}><legend>Invite people</legend>{people.filter((person) => person.email).map((person) => <label key={String(person.id)}><input name="attendees" type="checkbox" value={String(person.email)} /><span>{String(person.nama || person.email)}</span></label>)}</fieldset>
-        <button className={styles.primaryButton} disabled={busy || !clientId} type="submit">{busy ? "Authorizing..." : "Create event"}</button>
+        <button className={styles.primaryButton} disabled={busy || !clientId} type="submit">{busy ? "Connecting…" : "Add to Google Calendar"}</button>
         {message ? <p className={styles.formMessage} role="status">{message}</p> : null}
       </form>
     </details>

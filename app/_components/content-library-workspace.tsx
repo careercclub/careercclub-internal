@@ -22,6 +22,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { StorageImage } from "./storage-image";
 import { useRecordFocus } from "./use-record-focus";
 import styles from "./content-library-workspace.module.css";
+import { ShowMoreList } from "./ui-kit";
 
 type LibraryType = "organic" | "ads";
 type SortKey = "" | "views" | "likes" | "comments" | "shares";
@@ -348,7 +349,7 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
 
       {visibleRows.length ? (
         <div className={styles.grid}>
-          {visibleRows.map((row) => {
+          <ShowMoreList key={`${visibleRows.length}`} items={visibleRows} step={24}>{(visibleItems) => visibleItems.map((row) => {
             const images = rowImages(row.storage_paths);
             const copy = text(row.copywriting);
             const labels = rowLabels(row.labels);
@@ -375,7 +376,7 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
                 {row.link ? <a aria-label="Open content link" className={styles.tileLink} href={text(row.link)} rel="noreferrer" target="_blank"><i className="ti ti-external-link" aria-hidden="true" /></a> : null}
               </article>
             );
-          })}
+          })}</ShowMoreList>
         </div>
       ) : (
         <div className={styles.empty}>

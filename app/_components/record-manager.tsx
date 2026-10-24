@@ -15,7 +15,7 @@ import { guard } from "./safe-action";
 import s from "./page-kit.module.css";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import styles from "../record-manager.module.css";
-import { DateInput, formatDayMonthYear } from "./date-input";
+import { DateInput, formatDayMonthYear, TimeInput } from "./date-input";
 import { formatRupiah, MoneyInput } from "./money-input";
 
 type RecordManagerProps = {
@@ -176,7 +176,7 @@ function Field({ definitionKey, field, value, options, optionsState }: { definit
       {caption}
       {field.storageArea ? <R2UploadField area={field.storageArea} defaultValue={String(common.defaultValue)} name={field.name} /> : wide ? <textarea {...common} rows={field.type === "json" ? 5 : 3} spellCheck={field.type !== "json"} /> : field.type === "select" ? (
         <select {...common}><option value="">{`Select ${singular(label)}…`}</option>{(options || field.options)?.map((option) => <option key={option}>{option}</option>)}</select>
-      ) : field.type === "date" ? <DateInput {...common} /> : field.type === "money" ? <MoneyInput {...common} /> : <input {...common} type={field.type === "number" ? "number" : field.type === "time" ? "time" : "text"} />}
+      ) : field.type === "date" ? <DateInput {...common} /> : field.type === "time" ? <TimeInput {...common} /> : field.type === "money" ? <MoneyInput {...common} /> : <input {...common} type={field.type === "number" ? "number" : "text"} />}
     </label>
   );
 }

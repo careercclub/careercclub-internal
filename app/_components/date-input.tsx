@@ -284,3 +284,150 @@ export function DateInput({ as: Field, wrapperClassName, value, defaultValue, on
     </span>
   );
 }
+
+/* ── Time ─────────────────────────────────────────────────────────────────────
+ * Same idea as DateInput: the real <input type="time"> stays (value "HH:MM"), its locale text
+ * (12-hour "--:-- --" on some laptops) is hidden behind a 24-hour HH:MM label. With a mouse a
+ * press opens an hour / minute list; digits can be typed straight in ("0930"). */
+
+const HOURS = Array.from({ length: 24 }, (_, hour) => pad(hour));
+const MINUTES = Array.from({ length: 12 }, (_, index) => pad(index * 5));
+
+export function TimeInput({ as: Field, wrapperClassName, value, defaultValue, onChange, className, style, ref: _ref, ...rest }: Props) {
+  void _ref;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const controlled = value !== undefined;
+  const [own, setOwn] = useState(String(defaultValue ?? ""));
+  const current = (controlled ? String(value ?? "") : own).slice(0, 5);
+  const [open, setOpen] = useState(false);
+  const [typed, setTypedState] = useState("");
+  const typedRef = useRef("");
+  const [place, setPlace] = useState<CSSProperties>({});
+  const [overlay, setOverlay] = useState<CSSProperties>({});
+  const swallowUntil = useRef(0);
+  const setTyped = useCallback((next: string) => { typedRef.current = next; setTypedState(next); }, []);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const measure = () => { const cs = getComputedStyle(input); setOverlay({ paddingLeft: `calc(${cs.paddingLeft} + ${cs.borderLeftWidth})`, paddingRight: `calc(${cs.paddingRight} + ${cs.borderRightWidth})`, fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily }); };
+    measure();
+    const observer = new ResizeObserver(measure); observer.observe(input);
+    return () => observer.disconnect();
+  }, []);
+
+  const commit = useCallback((time: string) => {
+    const input = inputRef.current;
+    if (!input) return;
+    if (input.value !== time) {
+      if (valueSetter) valueSetter.call(input, time); else input.value = time;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (!controlled) setOwn(time);
+  }, [controlled]);
+  const close = useCallback(() => { setOpen(false); setTyped(""); }, [setTyped]);
+  const show = useCallback(() => {
+    const input = inputRef.current;
+    if (!input || input.disabled || input.readOnly) return;
+    const rect = input.getBoundingClientRect();
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - 200 - 8);
+    setPlace(window.innerHeight - rect.bottom < 300 && rect.top > 300 ? { left, bottom: window.innerHeight - rect.top + 6 } : { left, top: rect.bottom + 6 });
+    setTyped(""); setOpen(true);
+  }, [setTyped]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const fine = window.matchMedia("(pointer: fine)");
+    const onDown = (event: MouseEvent) => { if (event.button !== 0 || !fine.matches || input.disabled || input.readOnly) return; event.preventDefault(); input.focus({ preventScroll: true }); if (open) close(); else show(); };
+    const onClick = (event: MouseEvent) => { if (fine.matches) event.preventDefault(); };
+    const onKey = (event: KeyboardEvent) => {
+      if (open || !fine.matches || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === "Enter" || event.key === " " || event.key === "ArrowDown") { event.preventDefault(); show(); }
+      else if (/^\d$/.test(event.key)) { event.preventDefault(); show(); setTyped(event.key); }
+      else if ((event.key === "Backspace" || event.key === "Delete") && !input.required) { event.preventDefault(); commit(""); }
+      else if (event.key.length === 1 || event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "ArrowRight") event.preventDefault();
+    };
+    input.addEventListener("mousedown", onDown); input.addEventListener("click", onClick); input.addEventListener("keydown", onKey);
+    return () => { input.removeEventListener("mousedown", onDown); input.removeEventListener("click", onClick); input.removeEventListener("keydown", onKey); };
+  }, [open, show, close, commit, setTyped]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      let handled = true;
+      if (event.key === "Escape") { close(); inputRef.current?.focus({ preventScroll: true }); }
+      else if (event.key === "Tab") { handled = false; close(); }
+      else if (event.key === "Backspace") setTyped(typedRef.current.slice(0, -1));
+      else if (/^\d$/.test(event.key)) {
+        const next = (typedRef.current + event.key).slice(0, 4);
+        setTyped(next);
+        if (next.length === 4 && Number(next.slice(0, 2)) < 24 && Number(next.slice(2)) < 60) { commit(`${next.slice(0, 2)}:${next.slice(2)}`); close(); }
+      } else if (event.key === "Enter") close();
+      else handled = false;
+      if (handled) { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); }
+    };
+    const onPointer = (event: PointerEvent) => { const target = event.target as Node; if (popRef.current?.contains(target) || target === inputRef.current) return; event.stopPropagation(); swallowUntil.current = performance.now() + 1000; close(); };
+    const onClick = (event: MouseEvent) => { if (performance.now() < swallowUntil.current) { swallowUntil.current = 0; event.preventDefault(); event.stopPropagation(); } };
+    const onScroll = (event: Event) => { if (!popRef.current?.contains(event.target as Node)) close(); };
+    window.addEventListener("keydown", onKey, true); window.addEventListener("pointerdown", onPointer, true); window.addEventListener("click", onClick, true); window.addEventListener("scroll", onScroll, true); window.addEventListener("resize", close);
+    return () => { window.removeEventListener("keydown", onKey, true); window.removeEventListener("pointerdown", onPointer, true); window.removeEventListener("click", onClick, true); window.removeEventListener("scroll", onScroll, true); window.removeEventListener("resize", close); };
+  }, [open, close, commit, setTyped]);
+
+  // Scroll the chosen hour / minute into view when the list opens.
+  useEffect(() => { if (open) popRef.current?.querySelectorAll<HTMLElement>("[aria-selected=true]").forEach((el) => el.scrollIntoView({ block: "center" })); }, [open]);
+
+  const [hour, minute] = current ? current.split(":") : ["", ""];
+  const shown = typed ? `${typed.slice(0, 2)}${typed.length > 2 ? `:${typed.slice(2)}` : ""}` : current;
+  const Component = (Field || "input") as "input";
+  const choose = (nextHour: string, nextMinute: string) => commit(`${nextHour}:${nextMinute}`);
+
+  return (
+    <span className={`${s.wrap} ${wrapperClassName || ""}`} data-date-field="">
+      <Component {...rest} aria-expanded={open || undefined} className={className} data-time-input="" onChange={(event) => { if (!controlled) setOwn(event.target.value); onChange?.(event); }} ref={inputRef} style={style} type="time" {...(controlled ? { value: current } : { defaultValue: defaultValue as string })} />
+      <span aria-hidden="true" className={s.label} style={overlay}>
+        <span className={shown ? s.text : s.placeholder}>{shown || "HH:MM"}</span>
+        <i className={`ti ti-clock ${s.icon}`} />
+      </span>
+      {open ? createPortal(
+        <div aria-label="Choose a time" className={`${s.popover} ${s.timePopover}`} data-select-menu="" onMouseDown={(event) => event.preventDefault()} ref={popRef} role="dialog" style={place}>
+          {typed ? <p className={s.typed}>Typing {shown}<span>HH:MM</span></p> : null}
+          <div className={s.timeCols}>
+            <div aria-label="Hour" className={s.timeCol} role="listbox">{HOURS.map((item) => <button aria-selected={item === hour} className={s.timeCell} key={item} onClick={() => choose(item, minute || "00")} role="option" type="button">{item}</button>)}</div>
+            <div aria-label="Minute" className={s.timeCol} role="listbox">{MINUTES.map((item) => <button aria-selected={item === minute} className={s.timeCell} key={item} onClick={() => { choose(hour || "09", item); close(); inputRef.current?.focus({ preventScroll: true }); }} role="option" type="button">{item}</button>)}</div>
+          </div>
+          <div className={s.foot}>
+            <button onClick={() => { const now = new Date(); commit(`${pad(now.getHours())}:${pad(now.getMinutes())}`); close(); }} type="button">Now</button>
+            {!rest.required && current ? <button onClick={() => { commit(""); close(); }} type="button">Clear</button> : null}
+          </div>
+        </div>,
+        document.body,
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Date and time in one value ("YYYY-MM-DDTHH:MM", what <input type="datetime-local"> holds),
+ * shown as the two fields above. The form gets the joined value under `name`.
+ */
+export function DateTimeInput({ value, defaultValue, onValueChange, name, required, id, className, "aria-label": ariaLabel }: { value?: string; defaultValue?: string; onValueChange?: (value: string) => void; name?: string; required?: boolean; id?: string; className?: string; "aria-label"?: string }) {
+  const controlled = value !== undefined;
+  const [own, setOwn] = useState(defaultValue || "");
+  const current = controlled ? value || "" : own;
+  const [datePart, timePart] = [current.slice(0, 10), current.slice(11, 16)];
+  const update = (nextDate: string, nextTime: string) => {
+    const next = nextDate ? `${nextDate}T${nextTime || "09:00"}` : "";
+    if (!controlled) setOwn(next);
+    onValueChange?.(next);
+  };
+  return (
+    <span className={s.dateTime}>
+      <DateInput aria-label={ariaLabel ? `${ariaLabel} date` : "Date"} className={className} id={id} onChange={(event) => update(event.target.value, timePart)} required={required} value={datePart} />
+      <TimeInput aria-label={ariaLabel ? `${ariaLabel} time` : "Time"} className={className} onChange={(event) => update(datePart, event.target.value)} required={required} value={timePart} />
+      {name ? <input name={name} type="hidden" value={current} /> : null}
+    </span>
+  );
+}

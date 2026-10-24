@@ -14,6 +14,7 @@ import s from "./page-kit.module.css";
 import { StorageImage } from "./storage-image";
 import { useRecordFocus } from "./use-record-focus";
 import { compareText } from "@/lib/text/sort";
+import { ShowMoreList } from "./ui-kit";
 
 // Collaborators & advisors in the IJIS layout: one directory per kind, people as avatars,
 // one status chip each. The profile popup saves the same fields as before.
@@ -57,7 +58,7 @@ export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[];
           <h1>Collaborators</h1>
           <p>{plural(summary.collaborators, "collaborator")} · {plural(summary.advisors, "advisor")}{summary.privyMissing ? ` · ${summary.privyMissing} without Privy` : ""}</p>
         </div>
-        <div className={s.headActions}><button className={s.ghost} onClick={() => switchTab("manage")} type="button"><i className="ti ti-user-plus" aria-hidden="true" /> Add or edit people</button></div>
+        <div className={s.headActions}><button className={s.ghost} onClick={() => switchTab("manage")} type="button"><i className="ti ti-user-plus" aria-hidden="true" /> Manage people</button></div>
       </header>
 
       <div aria-label="Views" className={s.segmented} role="tablist">
@@ -82,7 +83,7 @@ export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[];
           </div>
           {visible.length ? (
             <ul aria-label={kind === "advisor" ? "Advisors" : "Collaborators"} className={g.people}>
-              {visible.map((row) => {
+              <ShowMoreList items={visible} step={24} inList>{(visibleItems) => visibleItems.map((row) => {
                 const obligations = listOf(row.kewajiban).length;
                 const offered = services(row.services);
                 return (
@@ -105,7 +106,7 @@ export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[];
                     </button>
                   </li>
                 );
-              })}
+              })}</ShowMoreList>
             </ul>
           ) : (
             <div className={s.card}>

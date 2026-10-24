@@ -1,5 +1,6 @@
 // Product catalog rules (IJIS layout, Oct 2026). Pure: tested under `node --test`.
 // A bundle is a product with type "bundling"; its knowledge base includes its members' items.
+import { formatRupiah } from "../text/money.ts";
 
 type Row = Record<string, unknown>;
 
@@ -44,4 +45,4 @@ export function knowledgeFor<T extends Row>(rows: T[], productId: string, member
   return rows.filter((row) => ids.has(text(row.product_id)));
 }
 
-export function rupiah(value: unknown) { return `Rp ${Number(value || 0).toLocaleString("id-ID")}`; }
+export function rupiah(value: unknown) { return formatRupiah(value || 0) || "Rp 0"; }

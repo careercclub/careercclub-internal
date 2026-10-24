@@ -14,6 +14,44 @@ export function usePagination<T>(items: T[], pageSize = 10) {
   return { pageItems, page: safePage, setPage, totalPages };
 }
 
+/**
+ * Long lists show their first `step` items, then "Show N more · M left". One pattern for every
+ * gallery, board column and timeline, so a module with hundreds of rows stays a normal page.
+ * Give it a `key` built from the filters so a new search starts from the top again.
+ */
+export function ShowMoreList<T>({ items, step = 24, noun = "", inList = false, children }: { items: T[]; step?: number; noun?: string; inList?: boolean; children: (visible: T[]) => React.ReactNode }) {
+  const [count, setCount] = React.useState(step);
+  const visible = items.length > count ? items.slice(0, count) : items;
+  const left = items.length - visible.length;
+  const next = Math.min(step, left);
+  const button = left > 0 ? (
+    <button className="mx-auto mt-3 flex min-h-9 items-center gap-2 rounded-full border border-[var(--border-md)] bg-[var(--white)] px-4 text-[13px] font-semibold text-[var(--purple-dark)] hover:border-[var(--purple-mid)]" onClick={() => setCount((current) => current + step)} type="button">
+      <i aria-hidden="true" className="ti ti-chevron-down" /> Show {next} more{noun ? ` ${noun}` : ""} <span className="font-normal text-[var(--text-muted)]">· {left} left</span>
+    </button>
+  ) : null;
+  return <>{children(visible)}{button ? (inList ? <li className="flex list-none">{button}</li> : button) : null}</>;
+}
+
+/** A "?" that holds the longer explanation of a view, so the page keeps one short line (or none). */
+export function HelpTip({ label = "How this works", children }: { label?: string; children: React.ReactNode }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLSpanElement>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const close = (event: Event) => { if (!ref.current?.contains(event.target as Node)) setOpen(false); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  return (
+    <span className="relative inline-flex" ref={ref}>
+      <button aria-expanded={open} aria-label={label} className="grid size-7 place-items-center rounded-full border border-[var(--border-md)] bg-[var(--white)] text-[13px] font-bold text-[var(--purple-dark)] hover:border-[var(--purple-mid)]" onClick={() => setOpen((value) => !value)} type="button">?</button>
+      {open ? <span className="absolute top-9 right-0 z-30 w-[min(300px,80vw)] rounded-xl border border-[var(--border)] bg-[var(--white)] p-3 text-[13px] leading-relaxed text-[var(--text)] shadow-[0_12px_32px_rgba(20,33,44,0.14)]" role="note">{children}</span> : null}
+    </span>
+  );
+}
+
 /** Prev/next pager reproducing the legacy `.pagination` control, for Tailwind-based components. */
 export function Pagination({ page, totalPages, onChange, className }: { page: number; totalPages: number; onChange: (page: number) => void; className?: string }) {
   if (totalPages <= 1) return null;

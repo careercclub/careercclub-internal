@@ -1,5 +1,6 @@
 // CRM buyers list rules (IJIS layout, Oct 2026). Pure: tested under `node --test`.
 // A "customer" is every transaction row sharing one WhatsApp number (or email when no WA).
+import { formatRupiahShort } from "../text/money.ts";
 
 type Row = Record<string, unknown>;
 
@@ -87,7 +88,7 @@ export function crmSummary(customers: Customer[]) {
   };
 }
 
+/** Headline totals only; amounts on rows use formatRupiah. */
 export function rupiah(value: number) {
-  if (value >= 1_000_000) return `Rp${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1).replace(/\.0$/, "")}M`;
-  return `Rp${Math.round(value / 1000)}k`;
+  return formatRupiahShort(value);
 }

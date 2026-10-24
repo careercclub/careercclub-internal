@@ -247,7 +247,7 @@ const pages: ModulePage[] = [
     icon: "ti-ticket",
     kind: "pipeline",
     description: "Internal requests, assignees, CCs, file links, priority, status, and SLA coverage.",
-    primaryAction: "Create ticket",
+    primaryAction: "Add ticket",
     tabs: ["Inbox", "In Progress", "Done", "Master Data"],
     stats: [
       { label: "Open", value: "12", note: "across teams", trend: "down" },

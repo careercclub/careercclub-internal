@@ -10,7 +10,7 @@ import { useMemo, useRef, useState, useTransition, type ReactNode } from "react"
 import { confirmAction, notify, notifyError } from "./app-dialog";
 import { guard } from "./safe-action";
 import s from "./partnership-workspace.module.css";
-import { Pagination, usePagination } from "./ui-kit";
+import { HelpTip, Pagination, ShowMoreList, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DateInput } from "./date-input";
 import { digitsOf, MoneyInput } from "./money-input";
@@ -130,8 +130,10 @@ function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: 
         <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label={`Find a ${entityLabel} on the board`} onChange={(event) => setQuery(event.target.value)} placeholder={`Find a ${entityLabel}…`} value={query} /></label>
         {query.trim() ? <span className={s.hint}>{shown} of {rows.length} shown</span> : null}
         <span className={s.spacer} />
-        <span className={`${s.hint} ${s.hintDesktop}`}>Drag a card to change its stage{pending ? " · saving…" : ""}</span>
-        <span className={`${s.hint} ${s.hintPhone}`}>Open a card to change its stage</span>
+        {rows.length ? <>
+          <span className={`${s.hint} ${s.hintDesktop}`}>Drag a card to change its stage{pending ? " · saving…" : ""}</span>
+          <span className={`${s.hint} ${s.hintPhone}`}>Open a card to change its stage</span>
+        </> : <span className={s.hint}>No {entityLabel}s yet. Add the first one in its stage below.</span>}
       </div>
       <div className={s.board}>
         {columns.map(({ status, rows: all }, index) => {
@@ -233,7 +235,8 @@ function DealsView({ rows, deals, dealsKey, partnerField, entityLabel }: { rows:
   return (
     <section aria-label="Deals & scope" className={s.stack}>
       <div className={s.addBar}>
-        <p>Edit right in place — changes save when you leave a field. One {entityLabel} can have several deals.</p>
+        <HelpTip label="About deals">Edit right in place — changes save when you leave a field. One {entityLabel} can have several deals.</HelpTip>
+        <span className={s.spacer} />
         <label className={s.filterPill}><span>{entityLabel[0].toUpperCase() + entityLabel.slice(1)}</span><select aria-label={`Deal ${entityLabel}`} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Choose…</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select></label>
         <Button disabled={pending} onClick={add}><i className="ti ti-plus" aria-hidden="true" /> Add deal</Button>
       </div>
@@ -265,9 +268,16 @@ function DealsView({ rows, deals, dealsKey, partnerField, entityLabel }: { rows:
 function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }: { rows: ApiRecord[]; outreach: ApiRecord[]; outreachKey: string; partnerField: string; entityLabel: string }) {
   const fields = [partnerField, "channel", "tanggal", "isi", "respons", "catatan"];
   const [selectedPartner, setSelectedPartner] = useState("");
+  const [query, setQuery] = useState("");
+  const [response, setResponse] = useState("");
   const [pending, start] = useTransition();
-  const days = useMemo(() => outreachByDay(outreach), [outreach]);
-  const partnerName = (id: unknown) => text(rows.find((row) => String(row.id) === String(id))?.name) || `No ${entityLabel}`;
+  const names = useMemo(() => new Map(rows.map((row) => [String(row.id), text(row.name)])), [rows]);
+  const partnerName = (id: unknown) => names.get(String(id)) || `No ${entityLabel}`;
+  const filtered = useMemo(() => {
+    const words = query.trim().toLowerCase();
+    return outreach.filter((log) => (!response || (text(log.respons) || "No Reply") === response) && (!words || `${names.get(String(log[partnerField])) || ""} ${text(log.isi)} ${text(log.catatan)}`.toLowerCase().includes(words)));
+  }, [outreach, query, response, names, partnerField]);
+  const days = useMemo(() => outreachByDay(filtered), [filtered]);
   const saveField = (log: ApiRecord, patch: Record<string, unknown>) => start(() => guard(async () => { await updateManagedRecord(outreachKey, String(log.id), buildFd(fields, { ...log, ...patch })); }, "Could not save the changes."));
   const add = () => start(() => guard(async () => { await createManagedRecord(outreachKey, buildFd(fields, { [partnerField]: selectedPartner || null, channel: "WhatsApp", tanggal: localIso(new Date()), respons: "No Reply" })); }, "Could not add the outreach log."));
   const remove = async (log: ApiRecord) => { if (await confirmAction({ title: `Delete this outreach to ${partnerName(log[partnerField])}?`, confirmLabel: "Delete outreach log", danger: true })) start(() => guard(async () => { await deleteManagedRecord(outreachKey, String(log.id)); }, "Could not delete the outreach log.")); };
@@ -276,11 +286,14 @@ function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }
   return (
     <section aria-label="Outreach log" className={s.stack}>
       <div className={s.addBar}>
-        <p>Every message, call or meeting with a {entityLabel}, newest first. Edit right in place.</p>
+        <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search outreach" onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${entityLabel} or message…`} value={query} /></label>
+        <label className={s.filterPill}><span>Response</span><select aria-label="Filter response" onChange={(event) => setResponse(event.target.value)} value={response}><option value="">All</option>{RESPONSES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+        <span className={s.spacer} />
+        <HelpTip label="About the outreach log">Every message, call or meeting with a {entityLabel}, newest first. Edit any field right in place — it saves when you leave the field.</HelpTip>
         <label className={s.filterPill}><span>{entityLabel[0].toUpperCase() + entityLabel.slice(1)}</span><select aria-label={`Outreach ${entityLabel}`} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Choose…</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select></label>
         <Button disabled={pending} onClick={add}><i className="ti ti-plus" aria-hidden="true" /> Log outreach</Button>
       </div>
-      {days.length ? days.map(({ date, logs }) => (
+      {days.length ? <ShowMoreList items={days} key={`${query}|${response}`} noun="days" step={10}>{(visibleDays) => visibleDays.map(({ date, logs }) => (
         <div className={s.dayGroup} key={date || "none"}>
           <h3>{date ? shortDate(date) : "No date"}</h3>
           <ul className={s.timeline}>
@@ -302,7 +315,7 @@ function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }
             ))}
           </ul>
         </div>
-      )) : <p className={s.empty}>No outreach logged yet.</p>}
+      ))}</ShowMoreList> : <p className={s.empty}>{outreach.length ? "No outreach matches these filters." : "No outreach logged yet."}</p>}
     </section>
   );
 }

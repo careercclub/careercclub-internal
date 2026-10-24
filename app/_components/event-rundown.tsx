@@ -40,7 +40,8 @@ const hostOf = (value: string) => { try { return new URL(hrefOf(value)).hostname
 // Shared by the standalone /program/rundown page and the event detail on /program,
 // so both edit the same rows through the same actions. A timeline: each row reads, and
 // switches to a form only while it is being edited.
-export function EventRundown({ eventId, rows, startTime, title = "Rundown" }: { eventId: string; rows: ApiRecord[]; startTime: string; title?: string }) {
+/** `secondary` when it sits inside a panel that already has its own main button (Program event detail). */
+export function EventRundown({ eventId, rows, startTime, title = "Rundown", secondary = false }: { eventId: string; rows: ApiRecord[]; startTime: string; title?: string; secondary?: boolean }) {
   const eventRows = useMemo(() => rundownFor(rows, eventId), [rows, eventId]);
   // Index against the full ordered list, not the page, so reordering stays correct
   // once the rows spill onto a second page.
@@ -74,7 +75,7 @@ export function EventRundown({ eventId, rows, startTime, title = "Rundown" }: { 
     <section aria-label={title} className={r.rundown}>
       <header className={r.head}>
         <div><h2>{title}</h2><p className={s.cardSub}>{timed.length} item{timed.length === 1 ? "" : "s"} · {total} min{startTime ? ` · ${startTime}–${addMinutes(startTime, total)}` : " · set the event start time to see clock times"}</p></div>
-        <button className={s.primary} disabled={pending} onClick={add} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add rundown item</button>
+        <button className={secondary ? s.ghost : s.primary} disabled={pending} onClick={add} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add rundown item</button>
       </header>
       {timed.length ? (
         <>

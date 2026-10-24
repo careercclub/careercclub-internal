@@ -11,6 +11,8 @@ import { useMemo, useState } from "react";
 import { dayLabel, FollowersChart, monthLabel, SeriesBarChart } from "./charts";
 import s from "./page-kit.module.css";
 import { DateInput } from "./date-input";
+import { formatDay } from "@/lib/text/date";
+import { HelpTip } from "./ui-kit";
 
 // Instagram in the IJIS layout: one hero for the follower count and the yearly goal, a stat
 // strip, three charts, then the weekly history. Import and Target/baseline are their own views.
@@ -109,7 +111,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
         <div>
           <span className={s.eyebrow}>Marketing</span>
           <h1>Instagram</h1>
-          <p>{fmt(currentFollowers)} followers · {history.length} weekly snapshot{history.length === 1 ? "" : "s"}{latestWeek ? ` · latest week ${latestWeek}` : ""}</p>
+          <p>{fmt(currentFollowers)} followers · {history.length} weekly snapshot{history.length === 1 ? "" : "s"}{latestWeek ? ` · latest week ${formatDay(latestWeek)}` : ""}</p>
         </div>
         {view === "import" ? null : <button className={s.ghost} onClick={() => setView("import")} type="button"><i className="ti ti-upload" aria-hidden="true" /> Import Meta CSV</button>}
       </header>
@@ -124,7 +126,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
             <div>
               <span>Followers</span>
               <b className={s.big}>{fmt(currentFollowers)}</b>
-              <p>{updatedAt ? `As of ${updatedAt}` : "No baseline yet"} · +{fmt(a.follows30)} follows in the last 30 days</p>
+              <p>{updatedAt ? `As of ${formatDay(updatedAt)}` : "No baseline yet"} · +{fmt(a.follows30)} follows in the last 30 days</p>
               {stale ? <button className={s.stale} onClick={() => setView("target")} type="button"><i className="ti ti-alert-triangle" aria-hidden="true" /> Baseline is {staleDays} days behind — update it</button> : null}
             </div>
             <div className={s.goal}>
@@ -172,7 +174,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
                 <div className={s.tableWrap}>
                   <table className={s.table}>
                     <thead><tr><th>Week</th><th className={s.num}>Followers</th><th className={s.num}>Follows</th><th className={s.num}>Reach</th><th className={s.num}>Interactions</th><th className={s.num}>ER</th></tr></thead>
-                    <tbody>{pageRows.map((row) => <tr key={String(row.id)}><td>{day(row.week_start)}</td><td className={s.num}>{fmt(row.computedFollowers)}</td><td className={s.num}>+{fmt(num(row.follows_gained))}</td><td className={s.num}>{fmt(num(row.reach))}</td><td className={s.num}>{fmt(num(row.interactions))}</td><td className={s.num}>{num(row.reach) ? (num(row.interactions) / num(row.reach) * 100).toFixed(2) : "0.00"}%</td></tr>)}</tbody>
+                    <tbody>{pageRows.map((row) => <tr key={String(row.id)}><td>{formatDay(day(row.week_start))}</td><td className={s.num}>{fmt(row.computedFollowers)}</td><td className={s.num}>+{fmt(num(row.follows_gained))}</td><td className={s.num}>{fmt(num(row.reach))}</td><td className={s.num}>{fmt(num(row.interactions))}</td><td className={s.num}>{num(row.reach) ? (num(row.interactions) / num(row.reach) * 100).toFixed(2) : "0.00"}%</td></tr>)}</tbody>
                   </table>
                 </div>
                 {pages > 1 ? (
@@ -194,8 +196,8 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
       ) : null}
 
       {view === "import" ? (
-        <section aria-label="Import Meta Insights" className={s.card} style={{ maxWidth: 640 }}>
-          <div><h2>Import Meta Insights</h2><p className={s.cardSub}>Pick one or more original Meta CSV exports (Views, Reach, Content interactions, Link clicks, Profile visits, Follows) or a normalized CSV/XLSX. Daily rows are combined into Monday-based weeks.</p></div>
+        <section aria-label="Import Meta CSV" className={s.card} style={{ maxWidth: 640 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><h2>Import Meta CSV</h2><HelpTip label="About the Meta CSV import">Pick one or more original Meta CSV exports (Views, Reach, Content interactions, Link clicks, Profile visits, Follows) or a normalized CSV/XLSX. Daily rows are combined into Monday-based weeks.</HelpTip></div>
           <form action={importSnapshots} style={{ display: "grid", gap: 12 }}>
             <label className={s.drop}>
               <i className="ti ti-file-upload" aria-hidden="true" />
@@ -212,7 +214,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
       {view === "target" ? (
         <>
           <section aria-label="Baseline followers" className={s.card} style={{ maxWidth: 760 }}>
-            <div><h2>Baseline followers</h2><p className={s.cardSub}>The one number checked against the account. Every week is rebuilt forward and back from it using weekly follows.</p></div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><h2>Baseline followers</h2><HelpTip label="About baseline followers">The one number checked against the account. Every week is rebuilt forward and back from it using weekly follows.</HelpTip></div>
             {stale ? <p className={s.danger}><i className="ti ti-alert-triangle" aria-hidden="true" /> Last set {updatedAt}, {staleDays} days before the latest snapshot.</p> : null}
             <form className={s.form2} onSubmit={submitTo(saveInstagramBaselineAction, { success: "Baseline saved.", failure: "Could not save the baseline." })}>
               <label className={s.field}><span>Total followers <b className={s.req}>*</b></span><input className={s.input} defaultValue={currentFollowers || ""} min="1" name="followers_total" required type="number" /></label>

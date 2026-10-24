@@ -17,6 +17,7 @@ import { Pagination, usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DialogBehaviour } from "./use-modal";
 import { compareText } from "@/lib/text/sort";
+import { formatRupiah } from "@/lib/text/money";
 
 // CRM in the IJIS layout: a blast funnel you can click, a buyer list (one status per buyer),
 // a floating bar for bulk actions and a customer drawer with the purchase timeline.
@@ -129,7 +130,7 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
           <section aria-label="Buyers" className={s.listCard}>
             <div className={s.listHead}>
               <label className={s.checkAll}><input aria-label="Select all buyers on this page" checked={allOnPage} onChange={(e) => pageItems.forEach((row) => toggle(row._key, e.target.checked))} type="checkbox" /> <span>{filtered.length === customers.length ? `${customers.length} buyers` : `${filtered.length} of ${customers.length} buyers`}</span></label>
-              <button className={s.linkButton} onClick={exportCsv} type="button"><i className="ti ti-download" aria-hidden="true" /> Download CSV</button>
+              <button className={s.linkButton} onClick={exportCsv} type="button"><i className="ti ti-download" aria-hidden="true" /> Export CSV</button>
             </div>
             {filtered.length ? (
               <ul className={s.rows}>
@@ -142,7 +143,7 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
                         <span className={s.avatar} aria-hidden="true">{initials(name)}</span>
                         <span className={s.who}><b>{name}</b><small>{[text(row.wa), text(row.email)].filter(Boolean).join(" · ") || "—"}</small></span>
                         <span className={s.product}><b>{text(row.produk) || "—"}</b><small>{[text(row.klasifikasi) || "Unclassified", !inTalentPool(row) ? "not in Talent Pool" : ""].filter(Boolean).join(" · ")}</small></span>
-                        <span className={s.spend}><b>{rupiah(row.spend)}</b><small>{row.txCount > 1 ? `${row.txCount} orders` : "1 order"}{pay === "FAILED" ? " · " : ""}{pay === "FAILED" ? <em className={s.failed}>payment failed</em> : pay === "PENDING" ? " · pending" : ""}</small></span>
+                        <span className={s.spend}><b>{formatRupiah(row.spend)}</b><small>{row.txCount > 1 ? `${row.txCount} orders` : "1 order"}{pay === "FAILED" ? " · " : ""}{pay === "FAILED" ? <em className={s.failed}>payment failed</em> : pay === "PENDING" ? " · pending" : ""}</small></span>
                         <span className={stage === "converted" ? s.chipDone : stage === "new" ? s.chipNew : s.chip}>{statusLabel(row.status)}</span>
                       </button>
                     </li>
@@ -160,7 +161,7 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
               <button className={s.bulkButton} disabled={!bulkStatus || pending} onClick={() => mutate("status", bulkStatus)} type="button">Apply status</button>
               <label className={s.bulkField}><span className="sr-only">Talent Pool</span><select aria-label="Talent Pool" onChange={(e) => setBulkPool(e.target.value)} value={bulkPool}><option value="">Talent Pool…</option><option value="yes">Mark in pool</option><option value="no">Mark not in pool</option></select></label>
               <button className={s.bulkButton} disabled={!bulkPool || pending} onClick={() => mutate("talent", bulkPool)} type="button">Apply talent pool</button>
-              <button className={s.bulkButton} onClick={exportCsv} type="button"><i className="ti ti-download" aria-hidden="true" /> Download CSV blast</button>
+              <button className={s.bulkButton} onClick={exportCsv} type="button"><i className="ti ti-download" aria-hidden="true" /> Export CSV for blast</button>
               <button className={s.bulkDanger} disabled={pending} onClick={() => mutate("delete")} type="button"><i className="ti ti-trash" aria-hidden="true" /> Delete selected ({selected.length})</button>
               <button aria-label="Clear selection" className={s.bulkClose} onClick={() => setSelected([])} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
@@ -196,7 +197,7 @@ function CustomerDrawer({ customer: c, onClose }: { customer: Customer; onClose:
         </div>
         <div className={s.numbers}>
           <div><b>{c.txCount}</b><span>Orders</span></div>
-          <div><b>{rupiah(c.spend)}</b><span>Total spend</span></div>
+          <div><b>{formatRupiah(c.spend)}</b><span>Total spend</span></div>
           <div><b className={s.numberText}>{statusLabel(c.status)}</b><span>Status</span></div>
         </div>
         <h3>Details</h3>
@@ -210,7 +211,7 @@ function CustomerDrawer({ customer: c, onClose }: { customer: Customer; onClose:
             <li key={`${tx.produk}-${index}`}>
               <span className={s.dot} aria-hidden="true" />
               <div><b>{text(tx.produk) || "—"}</b><small>{dateLabel(tx.tanggal)} · {text(tx.klasifikasi) || "Unclassified"}{tx.paymentStatus ? ` · ${tx.paymentStatus}` : ""}</small></div>
-              <span className={s.txAmount}>{rupiah(Number(tx.harga || 0))}</span>
+              <span className={s.txAmount}>{formatRupiah(Number(tx.harga || 0))}</span>
             </li>
           ))}
         </ol>
@@ -237,7 +238,7 @@ function CrmAnalytics({ customers }: { customers: Customer[] }) {
   }, [customers, total]);
   return (
     <div className={s.analytics}>
-      <div className={s.analyticsHead}><p>Breakdown of all {total} buyers</p><button className={s.ghostButton} onClick={() => downloadJson(customers, `crm-analytics-${new Date().toISOString().slice(0, 10)}.json`)} type="button"><i className="ti ti-download" aria-hidden="true" /> Export data</button></div>
+      <div className={s.analyticsHead}><p>Breakdown of all {total} buyers</p><button className={s.ghostButton} onClick={() => downloadJson(customers, `crm-analytics-${new Date().toISOString().slice(0, 10)}.json`)} type="button"><i className="ti ti-download" aria-hidden="true" /> Export JSON</button></div>
       <div className={s.analyticsGrid}>
         <AnalyticsCard icon="ti-repeat" title="Repeat orders" total={total}><BarBreakdown entries={data.repeat} total={total} /></AnalyticsCard>
         <AnalyticsCard icon="ti-tag" title="Product classification" total={total}><DonutBreakdown entries={data.klas} total={total} /></AnalyticsCard>

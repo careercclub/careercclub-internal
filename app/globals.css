@@ -179,3 +179,67 @@ a {
 select[aria-expanded="true"] {
   outline: none;
 }
+
+/* One checkbox / radio style everywhere (Putaran 34). Switches (role="switch") keep their own look;
+   visually hidden inputs (.sr-only) are left alone. Unlayered so module rules like `.field input`
+   (padding, min-height) cannot stretch it. */
+input[type="checkbox"]:not([role="switch"]):not(.sr-only),
+input[type="radio"]:not(.sr-only) {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: inline-grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--border-md);
+  border-radius: 5px;
+  background: var(--white);
+  vertical-align: middle;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+input[type="radio"]:not(.sr-only) { border-radius: 999px; }
+input[type="checkbox"]:not([role="switch"]):not(.sr-only):hover,
+input[type="radio"]:not(.sr-only):hover { border-color: var(--purple-mid); }
+input[type="checkbox"]:not([role="switch"]):not(.sr-only):checked {
+  border-color: var(--purple-mid);
+  background: var(--purple-mid) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px no-repeat;
+}
+input[type="checkbox"]:not([role="switch"]):not(.sr-only):indeterminate {
+  border-color: var(--purple-mid);
+  background: var(--purple-mid) linear-gradient(white, white) center / 9px 2px no-repeat;
+}
+input[type="radio"]:not(.sr-only):checked {
+  border-color: var(--purple-mid);
+  background: radial-gradient(circle, var(--purple-mid) 0 4px, var(--white) 4.5px);
+}
+input[type="checkbox"]:not(.sr-only):focus-visible,
+input[type="radio"]:not(.sr-only):focus-visible { outline: 2px solid var(--purple-mid); outline-offset: 2px; }
+input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Plain file pickers: the button looks like the app's ghost buttons. */
+input[type="file"]:not(.sr-only) { max-width: 100%; color: var(--text-muted); font-size: 13px; }
+input[type="file"]::file-selector-button {
+  min-height: 34px;
+  margin-right: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--border-md);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--purple-dark);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover { border-color: var(--purple-mid); background: var(--purple-light); }
+
+/* One keyboard focus ring: brand blue, never the browser's black/auto outline. Components that
+   draw their own ring (shadcn `focus-visible:ring…`) keep theirs. */
+:where(button, a[href], summary, [role="button"], [role="tab"], [tabindex]:not([tabindex="-1"])):focus-visible:not([class*="focus-visible:ring"]) {
+  outline: 2px solid var(--purple-mid);
+  outline-offset: 2px;
+}

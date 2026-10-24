@@ -10,6 +10,7 @@ import { copyText } from "./copy-text";
 import g from "./library.module.css";
 import s from "./page-kit.module.css";
 import { useRecordFocus } from "./use-record-focus";
+import { ShowMoreList } from "./ui-kit";
 
 // Resources in the IJIS layout: links and credentials grouped by category, one card per
 // category. Same reorder action (urutan within a category) and the same manage table.
@@ -57,7 +58,7 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
           <h1>Resources</h1>
           <p>{plural(items.length - credentials, "link")} · {plural(credentials, "login")} · {plural(categories.length, "category", "categories")}{pending ? " · saving order…" : ""}</p>
         </div>
-        <div className={s.headActions}><button className={s.ghost} onClick={() => setTab("manage")} type="button"><i className="ti ti-pencil" aria-hidden="true" /> Add or edit resources</button></div>
+        <div className={s.headActions}><button className={s.ghost} onClick={() => setTab("manage")} type="button"><i className="ti ti-pencil" aria-hidden="true" /> Manage resources</button></div>
       </header>
 
       <div aria-label="Views" className={s.segmented} role="tablist">
@@ -82,7 +83,7 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
               {groups.map(([group, list]) => (
                 <section aria-label={group} className={g.resourceCard} key={group}>
                   <header className={g.resourceHead}><i className="ti ti-folder" aria-hidden="true" /><h2>{group}</h2><span className={s.chipMuted}>{plural(list.length, "item")}</span></header>
-                  {list.map((row) => {
+                  <ShowMoreList items={list} step={8}>{(visibleItems) => visibleItems.map((row) => {
                     const id = String(row.id);
                     const cred = isCredential(row);
                     const show = revealed.has(id);
@@ -120,7 +121,7 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
                         </div>
                       </div>
                     );
-                  })}
+                  })}</ShowMoreList>
                 </section>
               ))}
             </div>

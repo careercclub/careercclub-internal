@@ -8,6 +8,7 @@ import { MonthlyOpenChart } from "./charts";
 import s from "./email-blast.module.css";
 import { askText, confirmAction } from "./app-dialog";
 import { compareText } from "@/lib/text/sort";
+import { DateTimeInput } from "./date-input";
 
 type BlastTab = "compose" | "templates" | "history" | "settings";
 type Segment = "all" | "has_email" | "belum_diblast" | "custom";
@@ -171,7 +172,7 @@ export function CrmEmailBlast({ rows, history, daily }: { rows: Row[]; history: 
             <section className={s.card} aria-labelledby="crm-blast-email">
               <div className={s.cardHead}><h3 id="crm-blast-email">Email</h3><button className={s.ghost} onClick={saveTemplate} type="button"><i className="ti ti-bookmark" aria-hidden="true" /> Save as template</button></div>
               <label className={s.field}><span>Subject <b className={s.req}>*</b></span><input aria-invalid={invalid === "subject" || undefined} className={invalid === "subject" ? s.invalid : undefined} onChange={(event) => { setSubject(event.target.value); if (invalid === "subject") setInvalid(""); }} placeholder="Email subject" ref={subjectRef} value={subject} /></label>
-              <label className={s.field}><span>Send at</span><input onChange={(event) => setSchedule(event.target.value)} type="datetime-local" value={schedule} /><small>Leave empty to send now</small></label>
+              <label className={s.field}><span>Send at</span><DateTimeInput aria-label="Send at" onValueChange={setSchedule} value={schedule} /><small>Leave empty to send now</small></label>
               <label className={s.field}><span>Body <b className={s.req}>*</b></span><textarea aria-invalid={invalid === "body" || undefined} className={invalid === "body" ? s.invalid : undefined} onChange={(event) => { setBody(event.target.value); if (invalid === "body") setInvalid(""); }} placeholder="Write the email… use {nama} for each buyer's name." ref={bodyRef} rows={10} value={body} /><small>Tip: <code>{"{nama}"}</code> is replaced with each buyer&apos;s name.</small></label>
             </section>
           </div>

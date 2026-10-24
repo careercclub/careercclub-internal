@@ -24,6 +24,11 @@ function assignees(ticket: Row) {
   return ticket.assigned_to_id ? [String(ticket.assigned_to_id)] : [];
 }
 
+/** True when this person is one of the ticket's assignees (the Tickets "Assigned to me" filter). */
+export function isAssignedTo(ticket: Row, personId: string | null | undefined) {
+  return Boolean(personId) && assignees(ticket).includes(String(personId));
+}
+
 /** Returns a predicate: admin sees all; lead sees own requests + division's assignments; staff sees own requests + own assignments. */
 export function ticketVisibility(viewer: TicketViewer, people: Row[]) {
   const role = String(viewer.role || "staff").toLowerCase();

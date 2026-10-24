@@ -9,6 +9,7 @@ import { compact, decisionOf, DECISIONS, type Decision } from "@/lib/marketing/v
 import { useMemo, useState, useTransition } from "react";
 import s from "./page-kit.module.css";
 import { useRecordFocus } from "./use-record-focus";
+import { ShowMoreList } from "./ui-kit";
 
 // Meta Ads in the IJIS layout: ad candidates from Content Evaluation on a decision board
 // (Pending / Boost / Skip). Moving a card is the same "decision" action as before.
@@ -57,7 +58,7 @@ export function MetaAdsTools({ rows }: { rows: ApiRecord[] }) {
                 <header className={s.columnHead}><i className={`ti ${DECISION_META[decision].icon}`} aria-hidden="true" /><b>{DECISION_META[decision].title}</b><span className={s.count}>{items.length}</span></header>
                 {items.length ? (
                   <ul className={s.cards}>
-                    {items.map(({ row, derived }) => {
+                    <ShowMoreList items={items} step={6} inList>{(visibleItems) => visibleItems.map(({ row, derived }) => {
                       const level = SIGNAL_LEVEL[derived.boostSignal] || 0;
                       return (
                         <li className={s.ad} data-record-id={String(row.id)} key={String(row.id)}>
@@ -78,7 +79,7 @@ export function MetaAdsTools({ rows }: { rows: ApiRecord[] }) {
                           </div>
                         </li>
                       );
-                    })}
+                    })}</ShowMoreList>
                   </ul>
                 ) : <p className={s.empty}>None</p>}
               </section>

@@ -16,14 +16,14 @@ import { AssigneeField, personName } from "./assignee-field";
 import { DashboardCalendar } from "./dashboard-calendar";
 import { EventRundown } from "./event-rundown";
 import { GoogleCalendarScript, useGoogleCalendarAction } from "./google-calendar-tool";
-import { Pagination, usePagination } from "./ui-kit";
+import { Pagination, ShowMoreList, usePagination } from "./ui-kit";
 import styles from "../record-manager.module.css";
 import { useRecordFocus } from "./use-record-focus";
 import { confirmAction } from "./app-dialog";
 import ps from "./program-workspace.module.css";
 import { dueChip } from "@/lib/tickets/groups";
 import { isOverdue, localIso } from "@/lib/dashboard/summary";
-import { DateInput } from "./date-input";
+import { DateInput, TimeInput } from "./date-input";
 
 const JENIS = ["CCA", "Webinar", "Workshop", "Bootcamp", "Seminar"];
 const EVENT_STATUS = ["Planning", "On Progress", "Done", "Cancelled"];
@@ -62,13 +62,13 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-calendar-event" /> {editing ? "Edit event" : "New event"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-calendar-event" /> {editing ? "Edit event" : "Add event"}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="event-name">Event name <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.nama.trim()} id="event-name" required value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} placeholder="e.g. Free Class: insider tips to pass MT selection" /></div>
           <div className="grid gap-1.5"><Label>Program type</Label><Select value={form.jenisProgram || "none"} onValueChange={(v) => setForm({ ...form, jenisProgram: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select program type" /></SelectTrigger><SelectContent><SelectItem value="none">Select program type</SelectItem>{JENIS.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label htmlFor="event-date">Date <span className="text-[var(--red)]">*</span></Label><DateInput as={Input} aria-invalid={Boolean(error) && !form.tanggal} id="event-date" required  value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
-            <div className="grid gap-1.5"><Label>Time</Label><Input type="time" value={form.waktu} onChange={(e) => setForm({ ...form, waktu: e.target.value })} /></div>
+            <div className="grid gap-1.5"><Label>Time</Label><TimeInput aria-label="Event time" as={Input} value={form.waktu} onChange={(e) => setForm({ ...form, waktu: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Platform</Label><Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PLATFORMS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
@@ -78,7 +78,7 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
           <div className="grid gap-1.5"><Label>Target participants</Label><Input type="number" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : editing ? "Save event" : "Create event"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : editing ? "Save event" : "Add event"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -212,14 +212,14 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label>Event title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Start</Label><div className="flex gap-1"><DateInput as={Input} value={startDate} onChange={(e) => setStartDate(e.target.value)} /><Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div></div>
-            <div className="grid gap-1.5"><Label>Finished</Label><div className="flex gap-1"><DateInput as={Input} value={endDate} onChange={(e) => setEndDate(e.target.value)} /><Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
+            <div className="grid gap-1.5"><Label>Start</Label><div className="flex gap-1"><DateInput aria-label="Start date" as={Input} value={startDate} onChange={(e) => setStartDate(e.target.value)} /><TimeInput aria-label="Start time" as={Input} value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div></div>
+            <div className="grid gap-1.5"><Label>Finished</Label><div className="flex gap-1"><DateInput aria-label="Finish date" as={Input} value={endDate} onChange={(e) => setEndDate(e.target.value)} /><TimeInput aria-label="Finish time" as={Input} value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
           </div>
           {assigneePeople.length ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Undang {assigneePeople.map((person) => text(person.nama) || text(person.email)).join(", ")}</label> : null}
           {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar is not set up for this app yet.</p> : null}
           {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
         </div>
-        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy || !configurationLoaded || !clientId}>{busy ? "Menghubungkan…" : "Create event"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy || !configurationLoaded || !clientId}>{busy ? "Connecting…" : "Add event"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -312,7 +312,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
           <h1>Program</h1>
           <p>{upcomingEvents.length} upcoming{lateTasks ? <> · <b className={ps.lateText}>{lateTasks} late {lateTasks === 1 ? "task" : "tasks"}</b></> : null}</p>
         </div>
-        <Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" aria-hidden="true" /> New event</Button>
+        <Button type="button" onClick={() => setEventModal({ event: null })}><i className="ti ti-plus" aria-hidden="true" /> Add event</Button>
       </header>
 
       <div className={ps.toolbar}>
@@ -346,7 +346,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                   <span className={ps.eventCount}>{p.done}/{p.total}</span>
                 </button>
               );
-            }) : <p className={ps.empty}>{filtersOn ? "No events match the filters." : tab === "finished" ? "No finished events yet." : "No upcoming events. Click New event to plan one."}</p>}
+            }) : <p className={ps.empty}>{filtersOn ? "No events match the filters." : tab === "finished" ? "No finished events yet." : "No upcoming events. Click Add event to plan one."}</p>}
           </nav>
 
           {shown ? (
@@ -380,7 +380,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                   <div className={ps.phaseGroup} key={phase}>
                     {phaseTab === "all" ? <h3>{phaseLabel(phase)} <span>{list.filter((task) => task.status === "Done").length}/{list.length}</span></h3> : null}
                     <ul className={ps.rows}>
-                      {list.map((task) => {
+                      <ShowMoreList items={list} step={12} noun="tasks" inList>{(visibleItems) => visibleItems.map((task) => {
                         const isDoneTask = task.status === "Done"; const who = assigneeOf(task); const synced = Boolean(task.gcal_added); const chip = dueChip(task, today); const title = text(task.title) || "Untitled task";
                         return (
                           <li className={isDoneTask ? ps.rowDone : ps.row} key={String(task.id)}>
@@ -394,12 +394,12 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                             <button aria-label={synced ? `Re-sync ${title} to Google Calendar` : `Add ${title} to Google Calendar`} className={synced ? ps.calOn : ps.cal} onClick={() => setGcalTask(task)} title={synced ? "On Google Calendar (click to re-sync)" : "Add to Google Calendar"} type="button"><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} aria-hidden="true" /></button>
                           </li>
                         );
-                      })}
+                      })}</ShowMoreList>
                     </ul>
                   </div>
                 );
               })}
-              <div className={ps.rundown}><EventRundown eventId={shownId} rows={rundown} startTime={text(shown.waktu).slice(0, 5)} /></div>
+              <div className={ps.rundown}><EventRundown eventId={shownId} rows={rundown} secondary startTime={text(shown.waktu).slice(0, 5)} /></div>
             </section>
           ) : null}
         </div>

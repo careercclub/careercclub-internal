@@ -16,6 +16,7 @@ import s from "./page-kit.module.css";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DateInput } from "./date-input";
+import { monthLabel, SeriesBarChart } from "./charts";
 
 // Content Evaluation in the IJIS layout. Same records (content_evaluations), same scoring
 // (evaluateContentEvaluation), same import endpoint; the stored "action" values stay
@@ -202,15 +203,10 @@ function Score({ score, short = false }: { score: ContentEvaluationResult; short
 }
 
 function MonthBars({ title, sub, rows }: { title: string; sub: string; rows: Array<{ key: string; value: number }> }) {
-  const max = Math.max(1, ...rows.map((row) => row.value));
   return (
     <section className={s.card}>
       <div><h3>{title}</h3><p className={s.cardSub}>{sub}</p></div>
-      {rows.length ? (
-        <div className={s.barChart}>
-          {rows.map((row) => <div className={s.barCol} key={row.key}><span className={c.barWithValue}><small>{compact(row.value)}</small><i style={{ height: `${Math.max(3, row.value / max * 100)}%` }} /></span><small>{monthName(row.key)}</small></div>)}
-        </div>
-      ) : <p className={s.empty}>No data yet.</p>}
+      {rows.length ? <SeriesBarChart labels={rows.map((row) => monthLabel(row.key))} name={title.replace(/ per month$/, "")} values={rows.map((row) => row.value)} /> : <p className={s.empty}>No data yet.</p>}
     </section>
   );
 }
@@ -399,7 +395,7 @@ function ImportDialog({ close, done }: { close: () => void; done: (message: stri
   return (
     <Dialog onOpenChange={(open) => { if (!open) close(); }} open>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[520px]">
-        <DialogHeader><DialogTitle>Import Meta Business Suite</DialogTitle><DialogDescription>Posts are matched by Post ID, so re-importing updates instead of duplicating.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Import Meta CSV</DialogTitle><DialogDescription>Posts are matched by Post ID, so re-importing updates instead of duplicating.</DialogDescription></DialogHeader>
         <form id="ce-import" onSubmit={submit} style={{ display: "grid", gap: 12 }}>
           <label className={s.drop}>
             <i className="ti ti-file-type-csv" aria-hidden="true" />

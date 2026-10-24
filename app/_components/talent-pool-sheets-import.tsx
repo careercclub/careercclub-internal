@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import g from "./library.module.css";
 import s from "./page-kit.module.css";
+import { HelpTip } from "./ui-kit";
 
 type Result = { tone: "ok" | "error"; text: string };
 
@@ -47,9 +48,8 @@ export function TalentPoolSheetsImport() {
           <button className={s.primary} disabled={Boolean(busy) || !fileName} type="submit">{busy === "file" ? "Importing…" : "Import file"}</button>
         </form>
         <form className={s.field} onSubmit={(event) => submit(event, "url")} style={{ gap: 10 }}>
-          <span>From a published Google Sheet <b aria-hidden="true" className={s.req}>*</b></span>
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>From a published Google Sheet <b aria-hidden="true" className={s.req}>*</b><HelpTip label="How to get the sheet link">In the sheet: File → Share → Publish to web → pick the Talent Pool tab → Comma-separated values → copy the link.</HelpTip></span>
           <input aria-label="Published Google Sheet link" className={s.input} name="url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&output=csv" required type="url" />
-          <p className={s.hint}>In the sheet: File → Share → Publish to web → pick the Talent Pool tab → Comma-separated values → copy the link.</p>
           <button className={s.primary} disabled={Boolean(busy)} type="submit">{busy === "url" ? "Importing…" : "Import sheet"}</button>
         </form>
       </div>

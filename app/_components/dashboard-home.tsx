@@ -35,7 +35,7 @@ export function DashboardHome({ summary, firstName, hour, aiCommand, calendar }:
           <span className={styles.eyebrow}>{shortDate(s.today)}</span>
           <h1 className={styles.title}>{greeting(hour)}, {firstName}</h1>
         </div>
-        <Link className={styles.primaryButton} href="/tickets?create=ticket"><i className="ti ti-plus" aria-hidden="true" /> Create ticket</Link>
+        <Link className={styles.primaryButton} href="/tickets?create=ticket"><i className="ti ti-plus" aria-hidden="true" /> Add ticket</Link>
       </header>
 
       <section className={styles.stats} aria-label="Today in numbers">
@@ -60,7 +60,7 @@ export function DashboardHome({ summary, firstName, hour, aiCommand, calendar }:
               <span aria-label={`${program.pct}% of tasks done`} className={styles.ring} role="img" style={{ ["--pct" as string]: `${program.pct}%` }}><span>{program.pct}%</span></span>
             </Link>
           ))}
-          <Link className={styles.programNew} href="/program">+ New program</Link>
+          <Link className={styles.programNew} href="/program">+ Add event</Link>
         </div>
       </section>
 
@@ -72,7 +72,7 @@ export function DashboardHome({ summary, firstName, hour, aiCommand, calendar }:
               {s.upNext.map((item) => (
                 <li key={`${item.kind}-${item.id}`}>
                   <Link className={styles.listItem} href={item.href}>
-                    {item.person ? <span className={styles.avatar} title={item.person.name}>{item.person.initials}</span> : <span className={styles.avatarEmpty} title="No assignee">?</span>}
+                    {item.person ? <span className={styles.avatar} title={item.person.name}>{item.person.initials}</span> : <span aria-label="No assignee" className={styles.avatarEmpty} role="img" title="No assignee"><i className="ti ti-user" aria-hidden="true" /></span>}
                     <span className={styles.listText}><b>{item.title}</b><small>{item.where}</small></span>
                     <span className={item.state === "late" ? styles.chipLate : item.state === "later" ? styles.chip : styles.chipSoon}>{item.due}</span>
                   </Link>

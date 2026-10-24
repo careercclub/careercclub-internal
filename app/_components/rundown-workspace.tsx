@@ -27,7 +27,7 @@ export function RundownWorkspace({ events, rows }: { events: ApiRecord[]; rows: 
         <div>
           <span className={s.eyebrow}>Program</span>
           <h1>Event rundown</h1>
-          <p>Running order with clock times worked out from the event start, notes, links and MC cues.</p>
+          <p>Running order, clock times and MC cues per event.</p>
         </div>
         {events.length ? (
           <label className={s.filterPill}><span>Event</span>

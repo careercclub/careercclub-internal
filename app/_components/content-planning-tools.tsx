@@ -141,7 +141,8 @@ function Avatar({ url, name, large }: { url: string; name: string; large?: boole
   const src = url.startsWith("http") ? url : resolved?.key === url ? resolved.src : "";
   const className = large ? s.avatarLg : s.avatar;
   if (src) return <span className={className} role="img" aria-label={name} style={{ backgroundImage: `url("${src.replaceAll('"', "%22")}")` }} />;
-  return <span className={className} aria-hidden="true">{initials(name)}</span>;
+  // No name yet: a neutral person icon, not a "?" that reads like a help button.
+  return <span className={className} aria-hidden="true">{name.trim() ? initials(name) : <i className="ti ti-user" />}</span>;
 }
 
 /* ── Date picker (Monday-first) with what is already planned on each day ── */
@@ -342,7 +343,7 @@ function CarouselView({ carousels, ctas, links, people, adding, onAdded }: { car
                         </span>
                         <span className={s.rowLinks}><CarouselLinkCell kind="brief" plan={plan} /><CarouselLinkCell kind="referensi" plan={plan} /></span>
                       </div>
-                      {assignee ? <span className={s.person} title={text(assignee.nama)}>{initials(text(assignee.nama))}</span> : <span className={s.personEmpty} title="No assignee">?</span>}
+                      {assignee ? <span className={s.person} title={text(assignee.nama)}>{initials(text(assignee.nama))}</span> : <span aria-label="No assignee" className={s.personEmpty} role="img" title="No assignee"><i className="ti ti-user" aria-hidden="true" /></span>}
                       <button aria-label={`Edit ${title}`} className={s.iconButton} onClick={() => setModal({ plan, preset: {} })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
                     </li>
                   );

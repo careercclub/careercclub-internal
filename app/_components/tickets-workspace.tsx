@@ -24,6 +24,7 @@ import { isDone, isOverdue, localIso } from "@/lib/dashboard/summary";
 import { settingsHref } from "@/lib/records/links";
 import { confirmAction } from "./app-dialog";
 import { DateInput } from "./date-input";
+import { isAssignedTo } from "@/lib/tickets/visibility";
 
 const PRIORITIES = ["High", "Med", "Low"];
 
@@ -57,7 +58,7 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Create ticket</DialogTitle><DialogDescription>Send a request to a division or a specific person.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Add ticket</DialogTitle><DialogDescription>Send a request to a division or a specific person.</DialogDescription></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="create-ticket-title">Ticket title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="create-ticket-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. CCA flyer design" /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
@@ -73,7 +74,7 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
           <div className="grid gap-1.5"><Label>Link <span className="font-normal text-muted-foreground">(optional)</span></Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Create ticket"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Add ticket"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -135,16 +136,17 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
   );
 }
 
-export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { rows: ApiRecord[]; people: ApiRecord[]; divisions: ApiRecord[]; types: ApiRecord[]; aiPanel: ReactNode }) {
+export function TicketsWorkspace({ rows, people, divisions, types, meId = null, aiPanel }: { rows: ApiRecord[]; people: ApiRecord[]; divisions: ApiRecord[]; types: ApiRecord[]; meId?: string | null; aiPanel: ReactNode }) {
   const router = useRouter();
   const [items, setItems] = useState(rows);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<"open" | "done" | "all">("open");
   const [fDiv, setFDiv] = useState("");
   const [fPrio, setFPrio] = useState("");
+  const [mine, setMine] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  // "Create ticket" on the Dashboard opens this same form (one way to create a ticket).
+  // "Add ticket" on the Dashboard opens this same form (one way to create a ticket).
   useEffect(() => {
     const url = new URL(window.location.href);
     if (url.searchParams.get("create") !== "ticket") return;
@@ -170,6 +172,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
     if (query && !`${text(row.ticket_no)} ${text(row.title)} ${text(row.description)}`.toLowerCase().includes(query.toLowerCase())) return false;
     if (fDiv && text(row.divisi_id) !== fDiv) return false;
     if (fPrio && text(row.priority) !== fPrio) return false;
+    if (mine && !isAssignedTo(row, meId)) return false;
     return true;
   });
   // Sorted by group first so pages follow the groups; the page is then shown grouped.
@@ -179,7 +182,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
   const detail = items.find((row) => String(row.id) === detailId) || null;
   useRecordFocus((id) => {
     if (!items.some((row) => String(row.id) === id)) return;
-    setTab("all"); setQuery(""); setFDiv(""); setFPrio("");
+    setTab("all"); setQuery(""); setFDiv(""); setFPrio(""); setMine(false);
     setDetailId(id);
     return true;
   });
@@ -208,7 +211,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
         </div>
         <div className={styles.headActions}>
           <Link className={styles.ghostButton} href={settingsHref("tickets", "divisions")}><i className="ti ti-adjustments" aria-hidden="true" /> Ticket setup</Link>
-          <Button type="button" onClick={() => setCreateOpen(true)}><i className="ti ti-plus" aria-hidden="true" /> Create ticket</Button>
+          <Button type="button" onClick={() => setCreateOpen(true)}><i className="ti ti-plus" aria-hidden="true" /> Add ticket</Button>
         </div>
       </header>
 
@@ -221,13 +224,14 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
           ))}
         </div>
         <label className={styles.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search tickets" placeholder="Search tickets…" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+        {meId ? <button aria-pressed={mine} className={mine ? styles.togglePillOn : styles.togglePill} onClick={() => setMine((value) => !value)} type="button"><i className={`ti ${mine ? "ti-user-check" : "ti-user"}`} aria-hidden="true" /> Assigned to me</button> : null}
         <label className={styles.filterPill}><span>Division</span><select aria-label="Filter division" value={fDiv} onChange={(e) => setFDiv(e.target.value)}><option value="">All</option>{divisions.map((d) => <option key={String(d.id)} value={String(d.id)}>{text(d.nama)}</option>)}</select></label>
         <label className={styles.filterPill}><span>Priority</span><select aria-label="Filter priority" value={fPrio} onChange={(e) => setFPrio(e.target.value)}><option value="">All</option>{PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
       </div>
 
       <section className={styles.panel} aria-label="Tickets">
         {visible.length === 0 ? (
-          <div className={styles.empty}><i className="ti ti-inbox" aria-hidden="true" /><strong>No tickets found</strong><span>{query || fDiv || fPrio ? "Try another search or clear the filters." : tab === "open" ? "Nothing open. Click Create ticket to add one." : "No tickets here yet."}</span></div>
+          <div className={styles.empty}><i className="ti ti-inbox" aria-hidden="true" /><strong>No tickets found</strong><span>{query || fDiv || fPrio || mine ? "Try another search or clear the filters." : tab === "open" ? "Nothing open. Click Add ticket to add one." : "No tickets here yet."}</span></div>
         ) : pageGroups.map((group) => (
           <div className={styles.group} key={group.id}>
             <h2 className={group.id === "late" ? styles.groupLate : styles.groupTitle}>{group.title} <span>{groupTickets(visible, today).find((g) => g.id === group.id)?.rows.length}</span></h2>
@@ -248,7 +252,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, aiPanel }: { 
                       <b>{title}</b>
                       <small>{[text(row.ticket_no), division ? text(division.nama) : "", type ? text(type.nama) : "", text(row.priority) === "High" ? "High priority" : ""].filter(Boolean).join(" · ")}{att ? <> · <i className="ti ti-paperclip" aria-hidden="true" />{att}</> : null}</small>
                     </button>
-                    <span className={assignee === "—" ? styles.avatarEmpty : styles.avatar} title={assignee === "—" ? "No assignee" : assignee}>{assignee === "—" ? "?" : initials(assignee)}</span>
+                    <span className={assignee === "—" ? styles.avatarEmpty : styles.avatar} title={assignee === "—" ? "No assignee" : assignee}>{assignee === "—" ? <i className="ti ti-user" aria-hidden="true" /> : initials(assignee)}</span>
                     {chip ? <span className={chip.tone === "late" ? styles.chipLate : chip.tone === "soon" ? styles.chipSoon : styles.chip}>{chip.label}</span> : <span className={styles.chipNone}>No date</span>}
                     <button aria-label={synced ? `Re-sync ${title} to Google Calendar` : `Add ${title} to Google Calendar`} className={synced ? styles.calOn : styles.cal} onClick={() => setCalendarId(String(row.id))} title={synced ? "On Google Calendar (click to re-sync)" : "Add to Google Calendar"} type="button"><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} aria-hidden="true" /></button>
                   </li>

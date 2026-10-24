@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { askText, confirmAction } from "./app-dialog";
 import s from "./email-blast.module.css";
 import { compareText } from "@/lib/text/sort";
+import { DateTimeInput } from "./date-input";
 
 type Template = { name: string; subject: string; headerTitle: string; headerSub: string; headerColor: string; body: string; ctaText: string; ctaUrl: string; footer: string };
 type Log = { subject: string; total: number; sent: number; failed: number; sentAt: string };
@@ -29,7 +30,7 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
   const [subject, setSubject] = useState("");
   const [headerTitle, setHeaderTitle] = useState("CareerCclub");
   const [headerSub, setHeaderSub] = useState("");
-  const [headerColor, setHeaderColor] = useState("#2e2a7a");
+  const [headerColor, setHeaderColor] = useState("#1554c0");
   const [body, setBody] = useState("");
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
@@ -87,7 +88,7 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
 
   function applyTemplate(template: Template) {
     setSubject(template.subject); setHeaderTitle(template.headerTitle); setHeaderSub(template.headerSub);
-    setHeaderColor(template.headerColor || "#2e2a7a"); setBody(template.body); setCtaText(template.ctaText);
+    setHeaderColor(template.headerColor || "#1554c0"); setBody(template.body); setCtaText(template.ctaText);
     setCtaUrl(template.ctaUrl); setFooter(template.footer || "© 2026 CareerCclub | careercclub.com");
     setMessage(`Template "${template.name}" loaded.`);
   }
@@ -183,7 +184,7 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
                     {templates.map((template, index) => <option key={`${template.name}-${index}`} value={index}>{template.name}</option>)}
                   </select>
                 </label>
-                <label className={s.field}><span>Send at</span><input onChange={(event) => setSchedule(event.target.value)} type="datetime-local" value={schedule} /><small>Leave empty to send now</small></label>
+                <label className={s.field}><span>Send at</span><DateTimeInput aria-label="Send at" onValueChange={setSchedule} value={schedule} /><small>Leave empty to send now</small></label>
               </div>
             </section>
 

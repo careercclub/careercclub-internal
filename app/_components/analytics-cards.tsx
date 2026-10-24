@@ -12,6 +12,12 @@ export type Entry = [string, number];
 
 const text = (value: unknown) => (value === null || value === undefined ? "" : String(value));
 const pct = (count: number, total: number) => ((count / (total || 1)) * 100).toFixed(1);
+const ACRONYMS = new Set(["FMCG", "BUMN", "HR", "IT", "MT", "CV", "B2B", "NGO", "SME", "UMKM"]);
+/** Stored values like "SUCCESS" or "BANKING" read as "Success", "Banking"; acronyms stay. */
+export function niceLabel(value: string) {
+  if (value !== value.toUpperCase() || !/[A-Z]{2}/.test(value)) return value;
+  return value.split(/(\s+|\/|&|-)/).map((word) => (/^[A-Z]{2,}$/.test(word) && !ACRONYMS.has(word) ? word[0] + word.slice(1).toLowerCase() : word)).join("");
+}
 
 /** Count occurrences, most frequent first. Blank values are ignored. */
 export function freq(values: unknown[]): Entry[] {
@@ -59,9 +65,9 @@ export function DonutBreakdown({ entries, total, maxSlices = 8 }: { entries: Ent
   return (
     <ul style={{ display: "grid", gap: 8, margin: 0, padding: 0, listStyle: "none" }}>
       {slices.map(([label, count, other]) => (
-        <li key={label} style={{ display: "grid", gap: 4, fontSize: 12 }} title={`${label}: ${count} (${pct(count, total)}%)`}>
+        <li key={label} style={{ display: "grid", gap: 4, fontSize: 12 }} title={`${niceLabel(label)}: ${count} (${pct(count, total)}%)`}>
           <span style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{niceLabel(label)}</span>
             <span style={{ marginLeft: "auto", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{count}</span>
             <span style={{ width: 44, textAlign: "right", color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{pct(count, total)}%</span>
           </span>
@@ -72,24 +78,10 @@ export function DonutBreakdown({ entries, total, maxSlices = 8 }: { entries: Ent
   );
 }
 
+/** Same look as DonutBreakdown (one breakdown style everywhere); keeps the order it is given,
+ * e.g. repeat orders 1x, 2x, 3x. */
 export function BarBreakdown({ entries, total, maxBars = 10 }: { entries: Entry[]; total: number; maxBars?: number }) {
-  const items = entries.slice(0, maxBars);
-  if (!items.length) return <p style={{ fontSize: 12, color: "var(--text-muted)" }}>No data yet</p>;
-  // Bars are scaled against the largest value, while the label reports share of total.
-  const maxVal = items[0]?.[1] || 1;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {items.map(([label, count]) => (
-        <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ fontSize: 12, color: "var(--text)", width: 140, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={label}>{label}</div>
-          <div style={{ flex: 1, background: "var(--surface-2)", borderRadius: 20, overflow: "hidden", height: 10 }}>
-            <div style={{ height: "100%", background: "var(--purple-mid)", borderRadius: 20, width: `${((count / maxVal) * 100).toFixed(1)}%` }} />
-          </div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", width: 76, textAlign: "right", flexShrink: 0 }}>{count} ({pct(count, total)}%)</div>
-        </div>
-      ))}
-    </div>
-  );
+  return <DonutBreakdown entries={entries} maxSlices={maxBars} total={total} />;
 }
 
 const exportButtonStyle: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 10px", fontSize: 12, border: "0.5px solid var(--border-md)", borderRadius: "var(--radius)", background: "var(--white)", color: "var(--text)", cursor: "pointer" };

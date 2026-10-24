@@ -1,5 +1,5 @@
 /* DateInput: the real date field stays underneath; its locale text is hidden behind a dd/mm/yyyy label. */
-.wrap { position: relative; display: block; min-width: 0; }
+.wrap { position: relative; display: block; min-width: 0; flex: 1 1 auto; }
 .wrap > input { color: transparent !important; caret-color: transparent; }
 .wrap > input::-webkit-datetime-edit { opacity: 0; }
 .wrap > input::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
@@ -36,3 +36,10 @@
 .foot button { min-height: 32px; padding: 0 12px; border: 1px solid var(--border-md); border-radius: 999px; background: var(--white); color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
 .foot button:hover:not(:disabled) { border-color: var(--purple-mid); background: var(--purple-light); }
 .foot button:disabled { opacity: 0.5; cursor: not-allowed; }
+.timePopover { width: 200px; }
+.timeCols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.timeCol { display: flex; max-height: 220px; flex-direction: column; gap: 2px; overflow-y: auto; scrollbar-width: thin; }
+.timeCell { min-height: 32px; border: 0; border-radius: 9px; background: transparent; color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.timeCell:hover { background: var(--purple-light); color: var(--purple-dark); }
+.timeCell[aria-selected="true"] { background: var(--purple-mid); color: #fff; font-weight: 700; }
+.dateTime { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }

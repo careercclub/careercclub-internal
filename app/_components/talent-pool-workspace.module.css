@@ -52,6 +52,7 @@
 .tops dd span { color: var(--text-muted); font-weight: 600; }
 .glanceAction { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 999px; color: #fff; background: var(--purple-mid); font-size: 13px; font-weight: 700; cursor: pointer; }
 .glanceAction:hover { background: var(--purple-dark); }
+.glanceAction:disabled { opacity: 0.5; cursor: not-allowed; background: var(--purple-mid); }
 .glanceLink { min-height: 36px; border: 0; background: transparent; color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
 
 /* Profile drawer */

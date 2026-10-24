@@ -1,7 +1,7 @@
 import "server-only";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
-import { TICKET_VISIBILITY_COLUMNS, ticketVisibility, type TicketViewer } from "@/lib/tickets/visibility";
+import { findTicketPerson, TICKET_VISIBILITY_COLUMNS, ticketVisibility, type TicketViewer } from "@/lib/tickets/visibility";
 import { isOverdue } from "@/lib/dashboard/summary";
 
 export type TicketRecord = ApiRecord;
@@ -65,7 +65,8 @@ export async function getTicketWorkspace() {
  */
 export async function getVisibleTicketWorkspace(viewer: TicketViewer) {
   const workspace = await getTicketWorkspace();
-  return { ...workspace, tickets: workspace.tickets.filter(ticketVisibility(viewer, workspace.people)) };
+  const me = findTicketPerson(viewer, workspace.people);
+  return { ...workspace, meId: me ? String(me.id) : null, tickets: workspace.tickets.filter(ticketVisibility(viewer, workspace.people)) };
 }
 
 /** Nav badge: late tickets this viewer can open — the same "late" rule as Dashboard and Tickets. */

@@ -1311,3 +1311,45 @@ Masukan user (screenshot produksi): pipeline B2B harus di-scroll sampai bawah ka
 
 - Suite baru `viz.mjs` 19/19 (108 partner: halaman tetap pendek, kolom scroll sendiri, cari menyaring semua kolom, petunjuk HP; empat grafik di kartu masing-masing, reach & interactions tidak satu sumbu, tinggi kartu sama, legend). Suite `partner` & `mkt` disesuaikan (kartu "1 deal · 8 Oct"; nama region unik).
 - Regresi penuh lolos: semua suite modul (termasuk viz 19), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 152, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend`.
+
+## Putaran 34 — Uji volume, satu kosakata, sisa nice-to-have, aksesibilitas (24 Okt 2026)
+
+Permintaan user: "gua mau lo kerjain semuanya" — semua daftar evaluasi: uji volume semua modul, review grafik sisa, konsistensi uang/tanggal/istilah + kamus, sisa nice-to-have, aksesibilitas & state kosong/loading/error.
+
+### Do
+
+- **Uji volume** (`?vol=1` di harness: 3.000 buyer, 600 tiket, 2.000 talent, 400 konten, 600 outreach, dst.):
+  - `ShowMoreList` (ui-kit): daftar panjang tampil per batch dengan "Show N more · M left" — Outreach (10 hari), Meta Ads (6 per kolom), Content Library (24), Design Assets (12 grup), Resources (8 grup), Collaborators (24), task Program (12).
+  - Outreach log: kotak "Search outreach" + filter Response; petunjuk panjang pindah ke "?".
+  - Tinggi halaman desktop setelah perbaikan: Outreach 3,1k px, Meta Ads 1,6k, Content Library 2,1k, Design Assets 3,4k, Resources 2k, Program 3,4k (sebelumnya puluhan ribu px).
+- **Grafik**: Content Evaluation pakai `SeriesBarChart` bersama (bulan "Feb ’26"); breakdown CRM satu gaya (donut) dengan label rapi (huruf besar semua → Title Case, singkatan FMCG/BUMN/HR dll. tetap).
+- **Input waktu**: `TimeInput` 24 jam (HH:MM, popover jam/menit, Now/Clear) dan `DateTimeInput` (tanggal + jam) menggantikan input bawaan browser di Email blast "Send at", Talent Pool, Google Calendar, Program, RecordManager.
+- **Satu kosakata** (`KAMUS_ISTILAH.md` baru):
+  - Uang: `lib/text/money.ts` — baris/detail "Rp 2.500.000" (`formatRupiah`), ringkasan header "Rp 4.7M" / "Rp 750K" (`formatRupiahShort`). CRM, Products, Competitor pakai ini.
+  - Tanggal: `lib/text/date.ts` `formatDay` → "22 Mar 2026"; Instagram ("As of", "latest week", tabel snapshot) dan detail Design Assets tidak lagi menampilkan ISO mentah.
+  - Label: Create ticket → **Add ticket**; New/Create event → **Add event**; Export CRM JSON / Export data / Export KB → **Export JSON**; Download CSV → **Export CSV**; Add or edit … → **Manage …**; Upload CSV → **Import CSV or Excel**; judul import = tombolnya (**Import Meta CSV**); "Add to library" di tombol & judul dialog; tombol Google Calendar "Add to Google Calendar" / "Re-sync Google Calendar"; sisa teks Indonesia ("Menghubungkan…", "Sinkronkan Ulang") → Inggris.
+- **Nice-to-have**:
+  - Tickets: tombol **Assigned to me** (pakai `isAssignedTo` di `lib/tickets/visibility.ts`; hanya muncul kalau akun tertaut ke orang tiket; hak lihat tiket tidak berubah).
+  - Petunjuk panjang → "?" (`HelpTip`): import & baseline Instagram, link Google Sheet Talent Pool, Settings sidebar, Users. Subjudul Rundown dipendekkan.
+  - Program: panel detail tinggal satu tombol utama (Add task); "Add rundown item" jadi tombol sekunder di panel itu (tetap utama di halaman Event rundown).
+  - Avatar "?" (Content Planning, Tickets, Dashboard, Competitor) → ikon orang/toko, supaya "?" hanya berarti bantuan.
+  - Checkbox/radio satu gaya (biru brand, centang putih) dan tombol file picker gaya ghost — sekali di `globals.css`; switch tetap.
+  - Warna header email blast default #2e2a7a → biru brand #1554c0.
+- **Aksesibilitas & state**:
+  - Ring fokus keyboard satu warna (biru brand) untuk tombol/link/tab, termasuk tombol Close dialog (sebelumnya hitam/abu).
+  - Input jam/tanggal Program punya label (Event time, Start/Finish date & time).
+  - Kontras token dicek: teks 16,4; muted 5,5 (4,8 di latar abu); biru 6,9; merah 5,3; hint 4,6 — semua lolos.
+  - Mode data kosong (`?empty=1`) untuk 19 modul: tidak ada crash, NaN, atau "Invalid Date"; semuanya punya pesan kosong. Perbaikan: pipeline kosong bilang "No partners yet…" (bukan petunjuk drag), tombol "Email 0 candidates" nonaktif, grafik bulan Customer Knowledge kosong → "No data yet.", teks "Click New event"/"+ New program" → Add event.
+  - Loading (`app/(dashboard)/loading.tsx`) dan error boundary (`error.tsx`) sudah ada sejak Putaran 29; aksi gagal tetap lewat `notifyError`.
+
+### Check
+
+- Suite baru: `p34.mjs` 49 (Show more, cari outreach, input 24 jam, label/tanggal/rupiah di 12 halaman, HP), `a11y.mjs` 11 (ring fokus, checkbox, kontras), `empty.mjs` 57 (19 modul tanpa data). Suite `tickets` +3 (Assigned to me). Unit baru: `lib/text/money.test.mjs`, `isAssignedTo`.
+- Suite lama disesuaikan ke label baru (dm, ux, tickets, crm, mkt, Design Assets).
+- Regresi penuh lolos: 23 suite modul (polish 39, lib 44, mkt 47, set 12, ci 19, mt 65, prod 17, cp 26, ck 20, partner 23, crm 24, talent 21, program 21, tickets 23, run 12, popup 31, ux 22, selmenu 32, dm 22, viz 19, p34 49, a11y 11, empty 57), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 155, import 58, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend` (tanpa migrasi).
+
+### Butuh user
+
+- Ukur kecepatan halaman setelah login di produksi (harness tidak bisa login; gua tidak memasukkan password).
+- Jalankan `database/checks/content-evaluation-post-ids.sql` langkah 1 di VPS dan kirim hasilnya.
+- Mode gelap: belum dikerjakan — perlu keputusan (masih ada warna tetap `#fff` di beberapa modul yang harus jadi token dulu).

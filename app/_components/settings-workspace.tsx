@@ -13,6 +13,7 @@ import { useState, useTransition } from "react";
 import { confirmAction, notifyError } from "./app-dialog";
 import { guard, submitTo } from "./safe-action";
 import s from "./settings-workspace.module.css";
+import { HelpTip } from "./ui-kit";
 
 type Page = { slug: string; title: string; section: string; path: string; icon: string };
 type SafeUser = Pick<AuthUserRecord, "id" | "email" | "name" | "role" | "is_active" | "created_at">;
@@ -301,8 +302,7 @@ export function SettingsWorkspace({
           {tab === "menu" ? (
             <div className={s.stack}>
               <form className={s.card} onSubmit={submitTo(saveMenuVisibilityAction, { success: "Menu visibility saved.", failure: "Could not save the menu visibility." })}>
-                <div className={s.cardHead}><h3>Sidebar modules</h3></div>
-                <p className={s.hint}>Hidden modules stay reachable by their address; this only changes what the sidebar shows.</p>
+                <div className={s.cardHead}><h3>Sidebar modules</h3><HelpTip label="About sidebar modules">Hidden modules stay reachable by their address; this only changes what the sidebar shows.</HelpTip></div>
                 {sectionNames.map((section) => (
                   <fieldset className={s.fieldset} key={section}>
                     <legend>{section}</legend>

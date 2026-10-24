@@ -186,7 +186,7 @@ function PainPointsView({ rows, filter, setFilter, onEdit }: { rows: ApiRecord[]
         </section>
         <section className={s.panel} aria-labelledby="ck-months">
           <h2 id="ck-months">By month</h2>
-          <div style={{ height: 160 }}><MonthlyOpenChart counts={months} labels={MONTH_OPTIONS.map((m) => m.label)} /></div>
+          {months.some(Boolean) ? <div style={{ height: 160 }}><MonthlyOpenChart counts={months} labels={MONTH_OPTIONS.map((m) => m.label)} /></div> : <p className={s.emptySmall}>No data yet.</p>}
         </section>
       </aside>
     </div>
@@ -454,7 +454,7 @@ function ImportPanel({ busy, message, onImport }: { busy: boolean; message: stri
   return (
     <div className={s.importRow}>
       <form action={onImport}>
-        <label className={s.ghostButton}><i className="ti ti-upload" aria-hidden="true" /> Upload CSV<input accept=".csv,.xlsx" className="sr-only" name="file" onChange={(event) => event.currentTarget.form?.requestSubmit()} type="file" /></label>
+        <label className={s.ghostButton}><i className="ti ti-upload" aria-hidden="true" /> Import CSV or Excel<input accept=".csv,.xlsx" className="sr-only" name="file" onChange={(event) => event.currentTarget.form?.requestSubmit()} type="file" /></label>
       </form>
       <button aria-expanded={showUrl} className={s.ghostButton} onClick={() => setShowUrl((value) => !value)} type="button"><i className="ti ti-link" aria-hidden="true" /> Import from link</button>
       {showUrl ? (

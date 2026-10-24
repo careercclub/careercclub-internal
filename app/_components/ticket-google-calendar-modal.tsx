@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useState } from "react";
 import { useGoogleCalendarAction } from "./google-calendar-tool";
-import { DateInput } from "./date-input";
+import { DateInput, TimeInput } from "./date-input";
 
 type Props = {
   ticket: ApiRecord;
@@ -156,11 +156,11 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="ticket-gcal-start-time">Jam mulai</Label>
-                <Input id="ticket-gcal-start-time" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+                <TimeInput as={Input} id="ticket-gcal-start-time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="ticket-gcal-end-time">Jam selesai</Label>
-                <Input id="ticket-gcal-end-time" type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+                <TimeInput as={Input} id="ticket-gcal-end-time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
               </div>
             </div>
           ) : null}
@@ -222,7 +222,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
           <Button disabled={busy} onClick={onClose} type="button" variant="ghost">Cancel</Button>
           <Button disabled={busy || !configurationLoaded || !clientId} onClick={submit} type="button">
             <i className="ti ti-calendar-plus" aria-hidden="true" />
-            {busy ? "Menghubungkan..." : synced ? "Sinkronkan Ulang" : "Create event"}
+            {busy ? "Connecting…" : synced ? "Re-sync Google Calendar" : "Add to Google Calendar"}
           </Button>
         </DialogFooter>
       </DialogContent>
