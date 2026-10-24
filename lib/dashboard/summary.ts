@@ -90,12 +90,22 @@ export function shortDate(key: string, withWeekday = true) {
   return `${withWeekday ? WEEKDAYS[date.getDay()] + ", " : ""}${d} ${MONTHS[m - 1]}`;
 }
 
+/** Days between two yyyy-mm-dd keys (later minus earlier), in local calendar days. */
+export function daysBetween(earlier: string, later: string) {
+  const [y1, m1, d1] = earlier.split("-").map(Number); const [y2, m2, d2] = later.split("-").map(Number);
+  return Math.round((new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime()) / 86_400_000);
+}
+
+/** One "late" label everywhere (Dashboard, Tickets, Content Planning): "3d late", "4mo late", "1y+ late".
+ * Capped so a mistyped year (e.g. 2001) does not read "9186 days late". */
+export function lateLabel(days: number) {
+  if (days >= 365) return "1y+ late";
+  if (days >= 60) return `${Math.floor(days / 30)}mo late`;
+  return `${days}d late`;
+}
+
 function dueLabel(due: string, today: string) {
-  if (due < today) {
-    const [y1, m1, d1] = due.split("-").map(Number); const [y2, m2, d2] = today.split("-").map(Number);
-    const days = Math.round((new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime()) / 86_400_000);
-    return `${days} day${days === 1 ? "" : "s"} late`;
-  }
+  if (due < today) return lateLabel(daysBetween(due, today));
   if (due === today) return "Today";
   if (due === addDays(today, 1)) return "Tomorrow";
   return shortDate(due);

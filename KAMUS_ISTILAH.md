@@ -44,6 +44,13 @@ Jangan pakai: "Rp100k", "Rp4.7M" (tanpa spasi), "Rp99K", `toLocaleString` sendir
 
 Jangan tampilkan ISO mentah (2026-09-01) ke user.
 
+Telat: **3d late**, **4mo late**, **1y+ late** — satu fungsi `lateLabel` (`lib/dashboard/summary.ts`) di Dashboard, Tickets, Program. Jangan "3 days late" / "9186 days late".
+
+## Ukuran & lebar
+
+- Lebar halaman ikut jendela (`--page-max: none` di `globals.css`): zoom out = ruang lebih, bukan kolom sempit di tengah.
+- Kepadatan: teks isi 12–13 px (minimal 12), judul halaman ±25 px, tombol/input minimal 32 px tinggi. Ukuran baru diturunkan sekali lewat aturan yang sama (Putaran 36), jangan per modul.
+
 ## Istilah objek
 
 | Pakai | Jangan pakai |

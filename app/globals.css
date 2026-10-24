@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 
 :root {
+  /* Page width: content follows the window (zoom out = more room), no fixed column. */
+  --page-max: none;
   /* IJIS look (Oct 2026): one accent (CareerCclub blue) with light/dark variants, one dark neutral.
      The old --purple-* names are kept so every module follows without edits.
      To switch the whole app to another accent, change --purple-mid / --purple-accent and
@@ -49,7 +51,7 @@ body {
   margin: 0;
 }
 
-.pwa-pull-indicator { position: fixed; z-index: 200; top: env(safe-area-inset-top, 0); left: 50%; min-height: 34px; display: flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1px solid var(--border); border-radius: 18px; color: var(--text-muted); background: var(--white); box-shadow: 0 5px 18px rgba(26,26,46,.14); opacity: 0; pointer-events: none; transition: opacity 120ms ease; font-size: 12px; }
+.pwa-pull-indicator { position: fixed; z-index: 200; top: env(safe-area-inset-top, 0); left: 50%; min-height: 32px; display: flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 18px; color: var(--text-muted); background: var(--white); box-shadow: 0 5px 18px rgba(26,26,46,.14); opacity: 0; pointer-events: none; transition: opacity 120ms ease; font-size: 12px; }
 .pwa-pull-visible { opacity: 1; }
 .pwa-pull-spin { animation: pwa-pull-spin 800ms linear infinite; }
 @keyframes pwa-pull-spin { to { transform: rotate(360deg); } }
@@ -72,7 +74,7 @@ body {
   color: var(--text);
   background: var(--bg);
   font-family: var(--font-ui), "Segoe UI", system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
@@ -224,9 +226,9 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 /* Plain file pickers: the button looks like the app's ghost buttons. */
 input[type="file"]:not(.sr-only) { max-width: 100%; color: var(--text-muted); font-size: 13px; }
 input[type="file"]::file-selector-button {
-  min-height: 34px;
-  margin-right: 10px;
-  padding: 0 14px;
+  min-height: 32px;
+  margin-right: 8px;
+  padding: 0 12px;
   border: 1px solid var(--border-md);
   border-radius: 999px;
   background: var(--white);

@@ -1383,3 +1383,19 @@ Talent Pool dan CRM memang isinya data (763 kandidat, 872 buyer + riwayat); turu
 
 - Unit baru: `lib/records/lean.test.mjs`, `lib/tickets/calendar.test.mjs`. Suite `mkt` +2 (editor memuat baris lengkap; caption & Post ID terisi dari baris lengkap).
 - Regresi penuh lolos: 23 suite modul (mkt 49, sisanya sama dengan Putaran 34), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 157, import 58, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend` (tanpa migrasi) — sekaligus membawa Putaran 28–34.
+
+## Putaran 36 — Layout ikut zoom (fluid), kepadatan 100% dikurangi, label "late" (24 Okt 2026)
+
+Masukan user (screenshot produksi di zoom 50%): isi Dashboard jadi kolom sempit di tengah; di 100% terasa "terlalu dekat". Namanya: **fluid layout** (isi mengikuti lebar jendela) dan **UI density / scale** (kepadatan). Bonus temuan: "9186 days late" (deadline TKT-226 kemungkinan salah ketik tahun).
+
+### Do
+
+- **Fluid layout**: 15 pembungkus halaman yang dikunci 1.180–1.360 px → satu token `--page-max: none` (`globals.css`). Zoom out = kartu, kalender, tabel melebar.
+- **Kepadatan**: satu aturan untuk semua 27 stylesheet (skrip, bukan per modul): font ≥ 14 px ×0,9 (12–13 px tetap, minimal 12); padding/margin/gap ≥ 10 px ×0,85; min-height tombol/input ×0,9 (minimal 32 px). Border, breakpoint, lebar tidak disentuh. CSS `zoom: 0.9` dicoba dan ditolak: tinggi shell jadi 90%, menu dropdown tidak terbuka, hover Chart.js meleset.
+- **Label telat**: satu fungsi `lateLabel` — "3d late", "4mo late", "1y+ late" (Dashboard sebelumnya "3 days late", Tickets "3d late"). `daysBetween` dipakai bersama.
+- `KAMUS_ISTILAH.md`: format telat, aturan lebar & kepadatan.
+
+### Check
+
+- Screenshot sebelum/sesudah di ukuran layar user (1280×720 = 100%, 2560×1440 = 50%, laptop DPR 1,5): Dashboard, Tickets, CRM, Content Evaluation, B2B, Program — tidak ada yang pecah.
+- Unit +1 (`lateLabel`). Regresi penuh lolos: 23 suite modul, navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 158, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend`.

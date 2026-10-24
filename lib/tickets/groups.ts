@@ -2,7 +2,7 @@
 // Uses the one "late" rule from the dashboard summary so both pages always agree.
 // Pure: tested under `node --test`.
 
-import { dateKey, isDone, isOverdue, localIso, shortDate, weekKeys } from "../dashboard/summary.ts";
+import { dateKey, daysBetween, isDone, isOverdue, lateLabel, localIso, shortDate, weekKeys } from "../dashboard/summary.ts";
 
 type Row = Record<string, unknown>;
 
@@ -38,9 +38,7 @@ export function dueChip(row: Row, today: string): { label: string; tone: "late" 
   if (!due) return null;
   if (isDone(row)) return { label: shortDate(due, false), tone: "plain" };
   if (isOverdue(row, today)) {
-    const [y1, m1, d1] = due.split("-").map(Number); const [y2, m2, d2] = today.split("-").map(Number);
-    const days = Math.round((new Date(y2, m2 - 1, d2).getTime() - new Date(y1, m1 - 1, d1).getTime()) / 86_400_000);
-    return { label: `${days}d late`, tone: "late" };
+    return { label: lateLabel(daysBetween(due, today)), tone: "late" };
   }
   if (due === today) return { label: "Today", tone: "soon" };
   const [y, m, d] = today.split("-").map(Number);
