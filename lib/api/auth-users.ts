@@ -80,6 +80,14 @@ export async function resetInternalUserPassword(id: string, password: string) {
   });
 }
 
+/** Current role and Access (Allowed/Blocked) of a signed-in user, by id. */
+export function getAuthUserAccess(id: string) {
+  return withPostgres(async (sql) => {
+    const [row] = await sql<Array<Pick<AuthUserRecord, "role" | "is_active">>>`select role, is_active from auth_users where id = ${id} limit 1`;
+    return row ?? null;
+  });
+}
+
 export function updateInternalUserAccess(id: string, input: { role: string; isActive: boolean }) {
   return withPostgres(async (sql) => {
     await sql`update auth_users set role = ${input.role}, is_active = ${input.isActive} where id = ${id}`;

@@ -1417,3 +1417,20 @@ Keputusan user: mode gelap boleh; **default Light**, tidak ada opsi "System" (ti
 
 - Suite baru `dark.mjs` 63: toggle (default light, tersimpan, kembali ke light), komputer mode gelap tidak mengubah app, kontras 16 pasangan token gelap (semua ≥ 4,5; hint ≥ 3), 20 halaman tanpa kotak terang tersisa & tanpa error. Unit baru `lib/theme/theme.test.mjs`. Dicek manual: dialog, kalender tanggal, dropdown.
 - Regresi penuh lolos: 24 suite modul (termasuk dark 63), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 159, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend`.
+
+## Putaran 38 — Access: Allowed / Blocked yang benar-benar menutup akses (24 Okt 2026)
+
+Pertanyaan user: apa dampak uncheck "Active" di Users & roles? Jawaban: login ditolak dan notifikasi push berhenti, **tapi** orang yang sedang login tidak ikut keluar (sesi disimpan di cookie bertanda tangan, berlaku ±30 hari dan diperpanjang tiap dipakai), dan ganti role baru berlaku setelah login ulang. Keputusan user: orang yang dinonaktifkan tidak boleh bisa masuk.
+
+### Do
+
+- `auth.ts` + `lib/auth/access.ts`: tiap kali sesi dipakai, status dan role dibaca ulang dari `auth_users` (cache 60 detik per user). Blocked atau akun dihapus → sesi berakhir; role baru berlaku tanpa login ulang. Admin bootstrap dari env tidak disentuh. Database tidak terjangkau → sesi dipertahankan (halaman tetap gagal sendiri), dicek lagi di permintaan berikutnya.
+- Settings → Users & roles: checkbox "Active" (sempat dibaca terbalik) → pilihan **Access: "Allowed — can sign in" / "Blocked — cannot sign in"**, chip merah "Blocked" di kartu, penjelasan di "?". Simpan lewat Settings membuang cache orang itu → berlaku seketika di server ini.
+- Admin tidak bisa mem-Blocked akunnya sendiri (supaya tidak terkunci).
+- Label: "Create user" → **Add user** (sama dengan tombol pembukanya).
+
+### Check
+
+- Uji ujung-ke-ujung pada build produksi lokal + Postgres (akun tes buatan sendiri, dihapus sesudahnya): login → role diubah → ≤62 detik sesi ikut role baru; Blocked → ≤62 detik sesi `null`, `/dashboard` dialihkan ke sign-in, login ulang ditolak.
+- Unit baru `lib/auth/access.test.mjs` (Blocked/dihapus kehilangan akses, cache 60 detik, `forget()` seketika). Suite `set` +5 (Access per user, chip Blocked, tanpa checkbox Active, Add user).
+- Regresi penuh lolos: 24 suite modul (set 17), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 161, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend` (tanpa migrasi).

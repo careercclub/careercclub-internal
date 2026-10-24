@@ -1,12 +1,13 @@
 "use server";
 
-import { auth } from "@/auth";
+import { accessCheck, auth } from "@/auth";
 import { createInternalUser, resetInternalUserPassword, updateInternalUserAccess } from "@/lib/api/auth-users";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user || session.user.role?.toLowerCase() !== "admin") throw new Error("Administrator access required.");
+  return session.user;
 }
 
 function password(value: FormDataEntryValue | null) {
@@ -26,10 +27,14 @@ export async function createUserAction(formData: FormData) {
 }
 
 export async function updateUserAccessAction(id: string, formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const role = String(formData.get("role") || "member").trim().toLowerCase();
   if (!/^[a-z][a-z0-9_-]{1,30}$/.test(role)) throw new Error("Invalid role.");
-  await updateInternalUserAccess(id, { role, isActive: formData.get("is_active") === "on" });
+  // Access: "allowed" can sign in; "blocked" cannot, and an open session ends within a minute.
+  const allowed = formData.get("access") !== "blocked";
+  if (!allowed && String(admin.id) === id) throw new Error("You cannot block your own account.");
+  await updateInternalUserAccess(id, { role, isActive: allowed });
+  accessCheck.forget(id);
   const newPassword = String(formData.get("password") || "");
   if (newPassword) await resetInternalUserPassword(id, password(newPassword));
   revalidatePath("/settings");

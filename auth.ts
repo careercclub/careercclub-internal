@@ -2,7 +2,12 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { timingSafeEqual } from "node:crypto";
 import { authConfig } from "./auth.config";
-import { getAuthUserByEmail, verifyPassword } from "@/lib/api/auth-users";
+import { getAuthUserAccess, getAuthUserByEmail, verifyPassword } from "@/lib/api/auth-users";
+import { createAccessCheck } from "@/lib/auth/access";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Shared with user-actions so a change made in Settings applies at once on this server. */
+export const accessCheck = createAccessCheck((id) => (UUID.test(id) ? getAuthUserAccess(id) : Promise.resolve(null)));
 
 function normalizeEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -63,6 +68,28 @@ async function authorizeInternalUser(email: string, password: string) {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    // While signed in: a Blocked or removed account loses its session (within a minute), and a
+    // role change applies without signing in again. The bootstrap admin from the environment is
+    // not in the database and is left as is.
+    async jwt(params) {
+      const token = authConfig.callbacks.jwt(params);
+      if (params.user) return token;
+      const id = String(token.id || "");
+      if (!id || id === "env-admin") return token;
+      try {
+        const access = await accessCheck.check(id);
+        if (!access) return null;
+        token.role = access.role;
+      } catch (error) {
+        // Database unreachable: keep the session rather than signing everyone out; the page
+        // queries fail on their own and access is re-checked on the next request.
+        console.warn("[auth] access check failed", error instanceof Error ? error.message : error);
+      }
+      return token;
+    },
+  },
   providers: [
     Credentials({
       name: "CareerCclub Internal",
