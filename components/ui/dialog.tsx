@@ -76,7 +76,7 @@ function DialogContent({
     // "outside": let it work, and never close this form because of it.
     const original = (event.detail as { originalEvent?: Event } | undefined)?.originalEvent
     const target = (original?.target ?? null) as HTMLElement | null
-    if (target?.closest?.("[aria-live], [role=alert], [role=status]")) { event.preventDefault(); return }
+    if (target?.closest?.("[aria-live], [role=alert], [role=status], [data-select-menu]")) { event.preventDefault(); return }
     if (target?.closest?.('[data-slot="dialog-content"]')) { event.preventDefault(); return }
     if (!guardUnsaved || !dirty.current) return
     event.preventDefault()

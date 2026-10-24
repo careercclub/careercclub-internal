@@ -174,3 +174,8 @@ a {
   --font-sans: var(--font-ui), "Segoe UI", system-ui, sans-serif;
   --default-font-family: var(--font-ui), "Segoe UI", system-ui, sans-serif;
 }
+
+/* The styled option list (select-menu.tsx) is open: the field's own focus style is enough. */
+select[aria-expanded="true"] {
+  outline: none;
+}

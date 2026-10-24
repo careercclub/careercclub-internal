@@ -1187,3 +1187,27 @@ Laporan lengkap per modul: dokumen "Evaluasi Fungsional & UX per Modul — CCC I
 
 - Prioritas: cek SQL baris Content Evaluation rusak oleh bug Post ID lama; ukur halaman setelah login.
 - Nice-to-have: filter "Assigned to me" di Tickets; petunjuk drag Partnership ke "?"; avatar "?" di Content Planning; 3 tombol utama di panel detail Program jadi 1; warna header email blast.
+
+## Putaran 30 — Panel "Add with AI" dan dropdown bergaya app (24 Okt 2026)
+
+Masukan user: panel "Add with AI" di All partners berantakan; dropdown masih tampilan bawaan browser.
+
+### Do
+
+- **Panel "Add with AI"** (`ai-text-record-parser.tsx` + CSS module baru), dipakai di B2B/Org Partnership, Tickets, Program tasks, Content Planning carousels:
+  - Isi panel ber-padding, judul + satu baris petunjuk + chevron; tidak ada lagi kotak outline hitam saat diklik.
+  - Form hanya muncul setelah AI membaca teks (isian minimum dulu); isian panjang (Scope, Notes) di baris bawah, lebar penuh.
+  - Isian wajib bertanda merah, kosong → ditandai dan difokuskan; simpan lewat onSubmit, isian tidak hilang saat gagal; pesan sukses/gagal lewat notifikasi.
+  - Label: pembuka "Add with AI" di semua halaman; simpan "Add partner/ticket/task/carousel plan/organization" (sama dengan tombol Add utama); label Tickets yang masih Indonesia ("Input dengan AI", "Judul", "Deskripsi", "Prioritas") → Inggris.
+- **Dropdown bergaya app untuk semua `<select>`** (`select-menu.tsx`, dipasang sekali di root layout):
+  - `<select>` aslinya tetap ada (style, name, required, validasi, onChange, FormData aman di 107 tempat); hanya daftar pilihan bawaan browser diganti menu satu gaya: sudut bulat, sorotan biru muda, centang di pilihan aktif.
+  - Daftar ≥ 8 pilihan: ketik untuk mencari (mis. daftar 108 partner di Deals); "No matches" bila kosong.
+  - Keyboard: Space/Enter/panah membuka, panah/Home/End/PageUp/PageDown, Enter memilih, Esc menutup.
+  - Di dalam popup: Esc / klik luar hanya menutup daftar, bukan popupnya; scroll mouse jalan meski halaman dikunci popup.
+  - HP (layar sentuh) tetap pakai picker bawaan — itu kontrol yang lebih enak di HP. Opt-out: `data-native-select`.
+- **Dropdown Radix** (Tickets, Program, kalender, assignee): disamakan dengan menu di atas, muncul di bawah field (tidak lagi menutupi field), lebar penuh seperti input lain, tanpa border hitam.
+
+### Check
+
+- Suite baru `selmenu.mjs` 32/32 (mouse, posisi, centang, klik luar, cari, Enter, wheel, keyboard, state React, nilai ikut tersimpan di form, di popup Radix & modal custom, HP tetap native); ikut regresi penuh.
+- Regresi penuh lolos: semua suite modul (termasuk ux 22, selmenu 32), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 145, lint 0, build lolos.

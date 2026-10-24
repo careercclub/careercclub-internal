@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import { PwaRegistration } from "./_components/pwa-registration";
+import { SelectMenuHost } from "./_components/select-menu";
 import "./globals.css";
 
 const uiFont = Plus_Jakarta_Sans({
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className={uiFont.className}>
         <PwaRegistration />
         {children}
+        <SelectMenuHost />
       </body>
     </html>
   );
