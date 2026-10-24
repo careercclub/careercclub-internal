@@ -82,7 +82,7 @@
 .photo { position: relative; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
 .photo::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: rgb(15 23 42 / 0); transition: background 0.15s; }
 .photo:hover::after, .photo:focus-visible::after { background: rgb(15 23 42 / 0.35); }
-.photoBadge { position: absolute; right: -2px; bottom: -2px; z-index: 1; width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: var(--purple-mid); color: #fff; font-size: 12px; }
+.photoBadge { position: absolute; right: -2px; bottom: -2px; z-index: 1; width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid var(--white); border-radius: 50%; background: var(--purple-mid); color: var(--on-accent); font-size: 12px; }
 .switchRow { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
 .switchRow input { width: 18px; height: 18px; accent-color: var(--purple-mid); }
 

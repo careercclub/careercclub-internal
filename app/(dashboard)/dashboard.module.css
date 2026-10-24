@@ -36,7 +36,7 @@
   display: grid;
   place-items: center;
   border-radius: 11px;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--purple-mid);
   font-size: 13px;
   font-weight: 800;
@@ -312,7 +312,7 @@
 }
 
 .signOutButton:hover {
-  border-color: rgba(163, 45, 45, 0.35);
+  border-color: color-mix(in srgb, var(--red) 36%, transparent);
   color: var(--red);
   background: var(--red-bg);
 }
@@ -358,7 +358,7 @@
   padding: 0 4px;
   border: 2px solid var(--white);
   border-radius: 10px;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--red);
   font-size: 12px;
   font-weight: 800;
@@ -570,7 +570,7 @@
   padding: 8px 11px;
   border: 0;
   border-radius: 10px;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--purple-dark);
   font-size: 12px;
   font-weight: 700;
@@ -648,7 +648,7 @@
 }
 
 .tabActive {
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--purple-dark);
   background: var(--purple-dark);
 }
@@ -754,7 +754,7 @@
 }
 
 .weekDayActive {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--purple-dark);
 }
 
@@ -892,7 +892,7 @@
   place-items: center;
   color: var(--purple-mid);
   background:
-    linear-gradient(135deg, rgba(124, 111, 247, 0.14), rgba(83, 74, 183, 0.08)),
+    linear-gradient(135deg, color-mix(in srgb, var(--purple-mid) 14%, transparent), color-mix(in srgb, var(--purple-mid) 6%, transparent)),
     var(--bg);
 }
 

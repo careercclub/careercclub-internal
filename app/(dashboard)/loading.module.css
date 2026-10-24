@@ -20,5 +20,5 @@
 .errorBox small { color: var(--text-muted); font-size: 12px; }
 .errorActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
 .errorPrimary, .errorGhost { min-height: 38px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.errorPrimary { border: 0; color: #fff; background: var(--purple-mid); }
+.errorPrimary { border: 0; color: var(--on-accent); background: var(--purple-mid); }
 .errorGhost { border: 1px solid var(--border); color: var(--text); background: var(--white); }

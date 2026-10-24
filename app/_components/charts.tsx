@@ -2,24 +2,26 @@
 
 import { BarController, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from "chart.js";
 import { Bar, Chart } from "react-chartjs-2";
-import { useState } from "react";
+import { useMemo } from "react";
+import { useResolvedTheme } from "./theme-switch";
 
 ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, LineController, LineElement, PointElement, Legend, Tooltip);
 
 
 // Colours come from the app's tokens so charts match the page (Chart.js cannot read CSS vars itself).
-type Tokens = { mark: string; markSoft: string; ink: string; muted: string; grid: string; ref: string };
-const FALLBACK: Tokens = { mark: "#1554c0", markSoft: "#dee7f6", ink: "#14212c", muted: "#5f6b77", grid: "#edf0f4", ref: "#6b7682" };
+type Tokens = { mark: string; markSoft: string; ink: string; muted: string; grid: string; ref: string; surface: string };
+const FALLBACK: Tokens = { mark: "#1554c0", markSoft: "#dee7f6", ink: "#14212c", muted: "#5f6b77", grid: "#edf0f4", ref: "#6b7682", surface: "#fff" };
 function readTokens(): Tokens {
   if (typeof window === "undefined") return FALLBACK;
   const css = getComputedStyle(document.documentElement);
   const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
-  return { mark: read("--purple-mid", FALLBACK.mark), markSoft: read("--purple-light", FALLBACK.markSoft), ink: read("--text", FALLBACK.ink), muted: read("--text-muted", FALLBACK.muted), grid: read("--bg", FALLBACK.grid), ref: read("--text-hint", FALLBACK.ref) };
+  return { mark: read("--purple-mid", FALLBACK.mark), markSoft: read("--purple-light", FALLBACK.markSoft), ink: read("--text", FALLBACK.ink), muted: read("--text-muted", FALLBACK.muted), grid: read("--bg", FALLBACK.grid), ref: read("--text-hint", FALLBACK.ref), surface: read("--white", FALLBACK.surface) };
 }
 /** Canvas colours only (the canvas is drawn in the browser); markup uses the CSS variables directly. */
 function useTokens(): Tokens {
-  const [tokens] = useState(readTokens);
-  return tokens;
+  const theme = useResolvedTheme();
+  // Re-read when Light/Dark changes (readTokens reads the CSS variables of the current theme).
+  return useMemo(() => (theme ? readTokens() : FALLBACK), [theme]);
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -36,7 +38,7 @@ function axes(t: Tokens) {
     y: { beginAtZero: true, grid: { color: t.grid }, border: { display: false }, ticks: { color: t.muted, font: { size: 12 }, maxTicksLimit: 5, callback: (value: string | number) => compact(Number(value)) } },
   };
 }
-const tooltip = (t: Tokens) => ({ mode: "index" as const, intersect: false, backgroundColor: "#fff", titleColor: t.ink, bodyColor: t.ink, borderColor: t.grid, borderWidth: 1, padding: 10, boxPadding: 4, titleFont: { weight: "bold" as const }, usePointStyle: true });
+const tooltip = (t: Tokens) => ({ mode: "index" as const, intersect: false, backgroundColor: t.surface, titleColor: t.ink, bodyColor: t.ink, borderColor: t.grid, borderWidth: 1, padding: 10, boxPadding: 4, titleFont: { weight: "bold" as const }, usePointStyle: true });
 const CHART_HEIGHT = 220;
 
 /** Legend in text ink with line swatches (solid / dashed), above the plot. */
@@ -92,17 +94,18 @@ export function SeriesBarChart({ labels, values, name, unit = "" }: { labels: st
  * `stepSize` defaults to 1 for small integer counts; pass 0 to let Chart.js choose,
  * which is what a series running into the hundreds needs. */
 export function MonthlyOpenChart({ labels, counts, stepSize = 1 }: { labels: string[]; counts: number[]; stepSize?: number }) {
+  const t = useTokens();
   return (
     <div style={{ height: "100%" }}>
       <Bar
-        data={{ labels, datasets: [{ data: counts, backgroundColor: "#1554c0", borderRadius: 6, borderSkipped: false }] }}
+        data={{ labels, datasets: [{ data: counts, backgroundColor: t.mark, borderRadius: 4, borderSkipped: false }] }}
         options={{
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: { legend: { display: false }, tooltip: tooltip(t) },
           scales: {
-            y: { beginAtZero: true, ticks: { ...(stepSize ? { stepSize } : {}), font: { size: 11 } }, grid: { color: "#f0f2ff" } },
-            x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { ...(stepSize ? { stepSize } : {}), color: t.muted, font: { size: 12 } }, grid: { color: t.grid }, border: { display: false } },
+            x: { ticks: { color: t.muted, font: { size: 12 }, maxRotation: 0, autoSkip: true }, grid: { display: false }, border: { color: t.grid } },
           },
         }}
       />

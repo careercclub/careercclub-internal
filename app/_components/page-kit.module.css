@@ -13,7 +13,7 @@
 .empty { margin: 0; padding: 31px 14px; color: var(--text-muted); font-size: 13px; text-align: center; }
 
 .primary, .ghost { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; cursor: pointer; }
-.primary { border: 0; color: #fff; background: var(--purple-mid); }
+.primary { border: 0; color: var(--on-accent); background: var(--purple-mid); }
 .primary:hover { background: var(--purple-dark); }
 .primary:disabled { opacity: 0.6; }
 .ghost { border: 1px solid var(--border); color: var(--text); background: var(--white); font-weight: 600; }
@@ -31,7 +31,7 @@
 .pill, .pillOn { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pill span, .pillOn span { font-size: 12px; opacity: 0.7; }
 .pill { color: var(--text); background: var(--white); }
-.pillOn { border-color: var(--text); color: #fff; background: var(--text); }
+.pillOn { border-color: var(--text); color: var(--white); background: var(--text); }
 .filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select, .filterPill input { max-width: 170px; min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
 .filterPill:focus-within, .search:focus-within { border-color: var(--purple-mid); }
@@ -52,7 +52,7 @@
 .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; align-items: start; }
 .chip, .chipStrong, .chipMuted { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .chip { color: var(--purple-dark); background: var(--purple-light); }
-.chipStrong { color: #fff; background: var(--purple-mid); }
+.chipStrong { color: var(--on-accent); background: var(--purple-mid); }
 .chipMuted { color: var(--text-muted); background: var(--surface-2); }
 
 /* Meta Ads decision board */
@@ -74,7 +74,7 @@
 .choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface-2); }
 .choice button { min-height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; }
 .choice button[aria-pressed="true"] { color: var(--text); background: var(--white); box-shadow: 0 1px 3px rgb(20 33 44 / 0.12); }
-.choice button[aria-pressed="true"].boost { color: #fff; background: var(--purple-mid); }
+.choice button[aria-pressed="true"].boost { color: var(--on-accent); background: var(--purple-mid); }
 .signal { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
 .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
 .bars i { width: 3px; border-radius: 2px; background: var(--border-md); }
@@ -82,12 +82,12 @@
 .bars i.on { background: var(--purple-mid); }
 
 /* Instagram */
-.hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 17px; padding: 20px; border-radius: var(--radius-xl); color: #fff; background: linear-gradient(140deg, var(--purple-mid), var(--purple-dark)); box-shadow: var(--shadow); }
+.hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 17px; padding: 20px; border-radius: var(--radius-xl); color: var(--on-hero); background: linear-gradient(140deg, var(--hero), var(--hero-deep)); box-shadow: var(--shadow); }
 .hero span { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
 .hero .big { display: block; margin-top: 4px; font-size: clamp(32px, 5vw, 47px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
 .hero p { margin: 8px 0 0; font-size: 13px; opacity: 0.9; }
-.stale { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 10px; border-radius: 999px; color: var(--red); background: #fff; font-size: 12px; font-weight: 700; }
-.heroLink { padding: 0; border: 0; background: none; color: #fff; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.stale { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 10px; border-radius: 999px; color: var(--red); background: var(--white); font-size: 12px; font-weight: 700; }
+.heroLink { padding: 0; border: 0; background: none; color: var(--on-hero); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .goal { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 .goalBar { height: 10px; overflow: hidden; border-radius: 999px; background: rgb(255 255 255 / 0.25); }
 .goalBar i { display: block; height: 100%; border-radius: 999px; background: #fff; }

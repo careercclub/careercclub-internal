@@ -10,6 +10,7 @@ import { AppDialogHost } from "@/app/_components/app-dialog";
 import { CommandPalette } from "./command-palette";
 import { RecordFocus } from "./record-focus";
 import { NotificationCenter } from "./notification-center";
+import { ThemeSwitch } from "@/app/_components/theme-switch";
 import styles from "../dashboard.module.css";
 
 type AppShellProps = Readonly<{
@@ -177,6 +178,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
           </div>
           <div className={styles.topbarRight}>
             {monthLabel ? <span className={styles.topbarMonth}>{monthLabel}</span> : null}
+            <ThemeSwitch />
             <NotificationCenter />
             <div className={styles.userMenu}>
               <div className={styles.userAvatar}>{initials}</div>

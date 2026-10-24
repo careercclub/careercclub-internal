@@ -229,13 +229,13 @@ function LabelPicker({ selected, allLabels, onChange }: { selected: string[]; al
         <button aria-expanded={open} className="text-[12px] text-muted-foreground" onClick={() => setOpen((value) => !value)} type="button">Add label <i className="ti ti-chevron-down" style={{ fontSize: 12 }} /></button>
       </div>
       {open ? (
-        <div className="absolute z-20 mt-1 max-h-[180px] w-full min-w-[200px] overflow-y-auto rounded-lg border border-border bg-white p-2 shadow-md">
+        <div className="absolute z-20 mt-1 max-h-[180px] w-full min-w-[200px] overflow-y-auto rounded-lg border border-border bg-[var(--white)] p-2 shadow-md">
           {available.map((value) => <button className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-[var(--bg)]" key={value} onClick={() => { add(value); setOpen(false); }} type="button">{value}</button>)}
           {!available.length && !creating ? <p className="px-2 py-1 text-xs text-muted-foreground">No other labels</p> : null}
           {creating ? (
             <div className="flex gap-1 p-1">
               <input autoFocus className="h-7 flex-1 rounded border border-border px-2 text-xs" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") commitDraft(); }} placeholder="New label name…" value={draft} />
-              <button className="rounded bg-[var(--purple-mid)] px-2 text-xs text-white" onClick={commitDraft} type="button">Add label</button>
+              <button className="rounded bg-[var(--purple-mid)] px-2 text-xs text-[var(--on-accent)]" onClick={commitDraft} type="button">Add label</button>
             </div>
           ) : (
             <button className="mt-1 block w-full rounded px-2 py-1 text-left text-xs text-[var(--purple-mid)] hover:bg-[var(--bg)]" onClick={() => setCreating(true)} type="button">+ New label</button>

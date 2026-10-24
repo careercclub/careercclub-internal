@@ -34,7 +34,7 @@
 .tile, .tileBundle { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; font-size: 12px; font-weight: 800; }
 .tile { color: var(--purple-dark); background: var(--purple-light); }
 .itemActive .tile { background: var(--white); }
-.tileBundle { color: #fff; background: var(--purple-mid); font-size: 15px; }
+.tileBundle { color: var(--on-accent); background: var(--purple-mid); font-size: 15px; }
 .itemText { min-width: 0; display: grid; }
 .itemText b { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .itemText small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -42,7 +42,7 @@
 .itemSide b { font-size: 12px; font-weight: 700; white-space: nowrap; }
 .chip, .chipLive, .chipMuted { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .chip { color: var(--purple-dark); background: var(--purple-light); }
-.chipLive { color: #fff; background: var(--purple-mid); }
+.chipLive { color: var(--on-accent); background: var(--purple-mid); }
 .chipMuted { color: var(--text-muted); background: var(--surface-2); }
 
 .detail { min-width: 0; display: flex; flex-direction: column; gap: 12px; }

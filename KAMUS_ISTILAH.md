@@ -62,3 +62,10 @@ Telat: **3d late**, **4mo late**, **1y+ late** — satu fungsi `lateLabel` (`lib
 | HR contact | PIC, Contact person |
 | Event (Program) | Activity, Kegiatan |
 | Content Library | Library konten, KB |
+
+## Warna & mode gelap
+
+- Tampilan: tombol bulan/matahari di top bar (kiri lonceng) — **Light** (default) ⇄ **Dark**. Tidak ikut setting komputer. Pilihan disimpan per browser.
+- Warna selalu lewat token (`var(--text)`, `var(--white)` = permukaan kartu, `var(--bg)`, `var(--purple-mid)`, `var(--red)`, `var(--green)`/`--amber`/`--blue` + `-bg`). Jangan tulis `#fff`, `#1554c0`, `bg-white`, `text-white` langsung.
+- Teks di atas isian biru/merah: `var(--on-accent)`. Panel besar berwarna (kartu program, hero Instagram/Customer Knowledge): `var(--hero)` / `var(--hero-deep)` dengan teks `var(--on-hero)`.
+- Pengecualian yang disengaja: preview & template email (tampil seperti email asli, selalu terang), foto/overlay hitam (teks putih), ikon Google.

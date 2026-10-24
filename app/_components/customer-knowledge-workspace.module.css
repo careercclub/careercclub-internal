@@ -41,7 +41,7 @@
 .source { color: var(--text-muted); font-size: 12px; }
 .category, .categoryOn { padding: 3px 8px; border: 0; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .category { color: var(--purple-dark); background: var(--purple-light); }
-.categoryOn { color: #fff; background: var(--purple-mid); }
+.categoryOn { color: var(--on-accent); background: var(--purple-mid); }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; color: var(--text-muted); font-size: 12px; }
 .quoteActions { display: flex; gap: 2px; margin-left: auto; }
 .iconButton, .iconDanger { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--text-muted); cursor: pointer; }
@@ -60,7 +60,7 @@
 .rank:hover { background: var(--surface-2); }
 .rankOn { background: var(--purple-light); }
 .rankNo { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: var(--purple-dark); background: var(--purple-light); font-size: 12px; font-weight: 800; }
-.rankOn .rankNo { color: #fff; background: var(--purple-mid); }
+.rankOn .rankNo { color: var(--on-accent); background: var(--purple-mid); }
 .rankText { min-width: 0; display: grid; gap: 4px; }
 .rankText b { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .rankBar { height: 6px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
@@ -70,8 +70,8 @@
 .cloud { display: flex; flex-wrap: wrap; gap: 6px; }
 .word, .wordOn { padding: 3px 8px; border: 0; border-radius: 999px; font-weight: 700; line-height: 1.4; cursor: pointer; }
 .word { color: var(--purple-dark); background: var(--purple-light); }
-.word:hover { background: #cfdcf2; }
-.wordOn { color: #fff; background: var(--purple-mid); }
+.word:hover { background: color-mix(in srgb, var(--purple-light) 75%, var(--purple-mid)); }
+.wordOn { color: var(--on-accent); background: var(--purple-mid); }
 .platform, .platformOn { width: 100%; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px 8px; border: 0; border-radius: 12px; background: transparent; color: var(--text); font-size: 13px; text-align: left; cursor: pointer; }
 .platform:hover { background: var(--surface-2); }
 .platformOn { background: var(--purple-light); }
@@ -82,7 +82,7 @@
 .importRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .importRow .search { min-width: 260px; }
 .fcGrid { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 12px; align-items: start; }
-.scoreCard { display: flex; flex-direction: column; gap: 8px; padding: 17px; border-radius: var(--radius-xl); color: #fff; background: linear-gradient(150deg, var(--purple-mid), var(--purple-dark)); box-shadow: var(--shadow); }
+.scoreCard { display: flex; flex-direction: column; gap: 8px; padding: 17px; border-radius: var(--radius-xl); color: var(--on-hero); background: linear-gradient(150deg, var(--hero), var(--hero-deep)); box-shadow: var(--shadow); }
 .scoreCard span { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
 .scoreCard b { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
 .scoreCard b small { font-size: 16px; opacity: 0.7; }
@@ -100,7 +100,7 @@
 .subTab, .subTabOn { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .subTab span, .subTabOn span { font-size: 12px; opacity: 0.7; }
 .subTab { color: var(--text); background: var(--white); }
-.subTabOn { border-color: var(--text); color: #fff; background: var(--text); }
+.subTabOn { border-color: var(--text); color: var(--white); background: var(--text); }
 .answerGrid { columns: 3 260px; column-gap: 10px; margin: 0; padding: 0; list-style: none; }
 .answerGrid li { break-inside: avoid; margin-bottom: 10px; padding: 10px 12px; border-left: 3px solid var(--purple-mid); border-radius: 12px; background: var(--surface-2); }
 .answerGrid p { margin: 0; font-size: 13px; line-height: 1.55; }

@@ -89,7 +89,7 @@ export function RecordFocus() {
   }, [message]);
 
   return message ? (
-    <div role="status" className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md bg-[var(--text)] px-3 py-2 text-xs text-white shadow-lg">
+    <div role="status" className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md bg-[var(--text)] px-3 py-2 text-xs text-[var(--white)] shadow-lg">
       {message}
     </div>
   ) : null;

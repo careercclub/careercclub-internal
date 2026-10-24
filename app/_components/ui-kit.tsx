@@ -73,7 +73,7 @@ const pillVariants = cva("rounded-full border-0 font-medium", {
       purple: "bg-[var(--purple-light)] text-[var(--purple-mid)]",
       blue: "bg-[var(--blue-bg)] text-[var(--blue)]",
       red: "bg-[var(--red-bg)] text-[var(--red)]",
-      gray: "bg-[#f1efe8] text-[#5f5e5a]",
+      gray: "bg-[var(--surface-2)] text-[var(--text-muted)]",
       coral: "bg-[var(--coral-bg)] text-[var(--coral)]",
       pink: "bg-[var(--pink-bg)] text-[var(--pink)]",
       teal: "bg-[var(--teal-bg)] text-[var(--teal)]",
@@ -105,7 +105,7 @@ export function FilterBar({ className, ...props }: React.ComponentProps<"div">) 
   return <div className={cn("mb-3 flex flex-wrap items-center gap-1.5", className)} {...props} />;
 }
 
-export const filterFieldClass = "h-9 max-w-[180px] shrink-0 rounded-full border border-input bg-white px-3 text-[13px]";
+export const filterFieldClass = "h-9 max-w-[180px] shrink-0 rounded-full border border-input bg-[var(--white)] px-3 text-[13px]";
 
 /** Pill-shaped toggle button reproducing the legacy `.filter-bar-btn`. */
 export function FilterPill({ active, className, ...props }: React.ComponentProps<"button"> & { active?: boolean }) {
@@ -114,7 +114,7 @@ export function FilterPill({ active, className, ...props }: React.ComponentProps
       type="button"
       className={cn(
         "h-9 shrink-0 rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap",
-        active ? "border-[var(--text)] bg-[var(--text)] text-white" : "border-input bg-white text-foreground",
+        active ? "border-[var(--text)] bg-[var(--text)] text-[var(--white)]" : "border-input bg-[var(--white)] text-foreground",
         className
       )}
       {...props}

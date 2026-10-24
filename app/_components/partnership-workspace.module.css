@@ -68,7 +68,7 @@
 .rowText small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .chip, .chipDone { justify-self: end; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .chip { color: var(--purple-dark); background: var(--purple-light); }
-.chipDone { color: #fff; background: var(--purple-mid); }
+.chipDone { color: var(--on-accent); background: var(--purple-mid); }
 .iconButton { width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--text-muted); cursor: pointer; }
 .iconButton:hover { border-color: var(--red); color: var(--red); background: var(--white); }
 .empty { margin: 0; padding: 34px 14px; color: var(--text-muted); font-size: 13px; text-align: center; }

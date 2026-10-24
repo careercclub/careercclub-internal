@@ -38,7 +38,7 @@
 .ghostButton, .saveButton { min-height: 36px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 700; }
 .ghostButton { border: 1px solid var(--border-md); background: var(--white); color: var(--text); }
 .ghostButton:hover:not(:disabled) { background: var(--surface-2); }
-.saveButton { border: 0; background: var(--purple-dark); color: #fff; }
+.saveButton { border: 0; background: var(--purple-dark); color: var(--on-accent); }
 .saveButton:hover:not(:disabled) { background: var(--purple-mid); }
 .ghostButton:disabled, .saveButton:disabled { opacity: .6; cursor: not-allowed; }
 

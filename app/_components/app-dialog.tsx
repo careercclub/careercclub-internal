@@ -102,7 +102,7 @@ export function AppDialogHost() {
       </Dialog>
       <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-20 z-[100] flex flex-col items-center gap-2 px-4 md:bottom-6">
         {notices.map((notice) => (
-          <div className={`pointer-events-auto flex max-w-md items-start gap-3 rounded-md px-3.5 py-2.5 text-sm shadow-lg ${notice.tone === "error" ? "bg-[var(--red)] text-white" : "bg-[var(--text)] text-white"}`} key={notice.id} role={notice.tone === "error" ? "alert" : "status"}>
+          <div className={`pointer-events-auto flex max-w-md items-start gap-3 rounded-md px-3.5 py-2.5 text-sm shadow-lg ${notice.tone === "error" ? "bg-[var(--red)] text-[var(--on-accent)]" : "bg-[var(--text)] text-[var(--white)]"}`} key={notice.id} role={notice.tone === "error" ? "alert" : "status"}>
             <span className="flex-1">{notice.message}</span>
             <button aria-label="Dismiss message" className="opacity-80 hover:opacity-100" onClick={() => emit({ ...state, notices: state.notices.filter((item) => item.id !== notice.id) })} type="button">×</button>
           </div>

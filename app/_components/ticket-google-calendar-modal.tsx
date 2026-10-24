@@ -173,8 +173,8 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
             type="button"
           >
             <span className="flex items-center gap-1.5"><i className="ti ti-clock text-sm" /> Add a specific time</span>
-            <span className={`relative h-[18px] w-8 rounded-full transition-colors ${specificTime ? "bg-[#0f52ba]" : "bg-border"}`}>
-              <span className={`absolute top-0.5 size-3.5 rounded-full bg-white shadow-sm transition-all ${specificTime ? "left-4" : "left-0.5"}`} />
+            <span className={`relative h-[18px] w-8 rounded-full transition-colors ${specificTime ? "bg-[var(--purple-mid)]" : "bg-border"}`}>
+              <span className={`absolute top-0.5 size-3.5 rounded-full bg-[var(--white)] shadow-sm transition-all ${specificTime ? "left-4" : "left-0.5"}`} />
             </span>
           </button>
 

@@ -1399,3 +1399,21 @@ Masukan user (screenshot produksi di zoom 50%): isi Dashboard jadi kolom sempit 
 
 - Screenshot sebelum/sesudah di ukuran layar user (1280×720 = 100%, 2560×1440 = 50%, laptop DPR 1,5): Dashboard, Tickets, CRM, Content Evaluation, B2B, Program — tidak ada yang pecah.
 - Unit +1 (`lateLabel`). Regresi penuh lolos: 23 suite modul, navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 158, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend`.
+
+## Putaran 37 — Mode gelap di semua modul (24 Okt 2026)
+
+Keputusan user: mode gelap boleh; **default Light**, tidak ada opsi "System" (tidak ikut setting komputer).
+
+### Do
+
+- **Tombol**: satu toggle bulan/matahari di top bar, kiri lonceng ("Switch to dark mode" / "Switch to light mode"). Pilihan disimpan per browser; script kecil di `<head>` memasang tema sebelum halaman tergambar (tidak berkedip). `lib/theme/theme.ts` (`themeFrom`, `THEME_BOOT_SCRIPT`), `app/_components/theme-switch.tsx`.
+- **Token gelap** (`globals.css`, `:root[data-theme="dark"]`): token yang sama diberi nilai gelap. Biru lebih terang (#5b95f8) supaya terbaca sebagai teks; teks di atas isian biru/merah lewat token baru `--on-accent` (putih di terang, gelap di gelap). Panel besar berwarna pakai `--hero` / `--hero-deep` / `--on-hero` (biru tua di gelap, tidak menyilaukan). Tailwind `dark:` mengikuti `data-theme`.
+- **Warna tertulis langsung → token** di 24 stylesheet dan komponen: latar `#fff`, badge hijau/kuning/biru/oranye (→ `--green`/`--amber`/`--blue`/`--coral` + `-bg`), fokus ungu lama, halaman sign-in & offline, `bg-white`/`text-white`. Teks putih di atas foto/overlay hitam tetap putih.
+- **Grafik** membaca ulang warna saat tema berganti (tanpa reload); grafik bulanan lama ikut token dan font 12 px.
+- Sengaja tetap terang: preview & template email (harus sama dengan email yang diterima).
+- Sekalian: badge rating 7 px → 12 px.
+
+### Check
+
+- Suite baru `dark.mjs` 63: toggle (default light, tersimpan, kembali ke light), komputer mode gelap tidak mengubah app, kontras 16 pasangan token gelap (semua ≥ 4,5; hint ≥ 3), 20 halaman tanpa kotak terang tersisa & tanpa error. Unit baru `lib/theme/theme.test.mjs`. Dicek manual: dialog, kalender tanggal, dropdown.
+- Regresi penuh lolos: 24 suite modul (termasuk dark 63), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 159, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend`.

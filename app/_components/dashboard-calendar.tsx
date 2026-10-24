@@ -27,7 +27,7 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 // Stored phase values stay Indonesian ("Hari H"); PHASE_LABEL is display only.
 const PHASE_COLORS: Record<string, { bg: string; fg: string }> = {
   "Pre Event": { bg: "var(--purple-light)", fg: "var(--purple-dark)" },
-  "Hari H": { bg: "var(--purple-mid)", fg: "#fff" },
+  "Hari H": { bg: "var(--purple-mid)", fg: "var(--on-accent)" },
   "Post Event": { bg: "var(--surface-2)", fg: "var(--text)" },
 };
 const PHASE_LABEL: Record<string, string> = { "Pre Event": "Pre-event", "Hari H": "Event day", "Post Event": "Post-event" };
@@ -54,7 +54,7 @@ function CalChip({ item, onOpen, onDragStart }: { item: CalItem; onOpen: () => v
   const row = item.row;
   const title = text(row.title) || text(row.nama) || (item.kind === "ticket" ? "Ticket" : item.kind === "event" ? "Program" : "Task");
   if (item.kind === "event") {
-    return <button type="button" onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--text)", color: "#fff", cursor: "pointer" }}><i className="ti ti-broadcast" style={{ fontSize: 12 }} /> {title}</button>;
+    return <button type="button" onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--text)", color: "var(--white)", cursor: "pointer" }}><i className="ti ti-broadcast" style={{ fontSize: 12 }} /> {title}</button>;
   }
   if (item.kind === "ticket") {
     return <button type="button" draggable onDragStart={onDragStart} onClick={onOpen} title={title} style={{ ...chipBase, background: "var(--white)", color: "var(--text)", boxShadow: "inset 0 0 0 1px var(--border-md)", fontWeight: 500, cursor: "grab" }}><i className="ti ti-ticket" style={{ fontSize: 12 }} /> {title}</button>;
@@ -247,7 +247,7 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
             <div key={`${key}-${idx}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const [kind, id] = e.dataTransfer.getData("calendar-item").split(":"); if (id) reschedule(kind, id, key); }}
               style={{ minHeight: 76, padding: "3px 3px 4px", borderRight: idx % 7 !== 6 ? "0.5px solid var(--border)" : "none", borderBottom: idx < view.cells.length - 7 ? "0.5px solid var(--border)" : "none", background: !cell.inMonth ? "var(--surface-2)" : isToday ? "var(--purple-light)" : isWeekend ? "var(--surface-2)" : "var(--white)", opacity: cell.inMonth ? 1 : 0.55, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
               <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 600, color: isToday ? "var(--purple-mid)" : cell.inMonth ? "var(--text)" : "var(--text-hint)" }}>
-                {cell.date.getDate()}{isToday ? <span style={{ fontSize: 12, marginLeft: 4, background: "var(--purple-mid)", color: "#fff", padding: "0 6px", borderRadius: 999 }}>Today</span> : null}
+                {cell.date.getDate()}{isToday ? <span style={{ fontSize: 12, marginLeft: 4, background: "var(--purple-mid)", color: "var(--on-accent)", padding: "0 6px", borderRadius: 999 }}>Today</span> : null}
               </div>
               {visible.map((item) => <CalChip key={`${item.kind}-${item.row.id}`} item={item} onOpen={() => (item.kind === "event" ? router.push("/program") : setModal(item))} onDragStart={(e) => { if (item.kind !== "event") e.dataTransfer.setData("calendar-item", `${item.kind}:${item.row.id}`); }} />)}
               {items.length > 2 ? <button type="button" onClick={() => setExpanded((s) => ({ ...s, [key]: !open }))} style={{ fontSize: 12, color: "var(--purple-mid)", fontWeight: 700, textAlign: "left", background: "transparent", border: 0, padding: "1px 2px", cursor: "pointer" }}>{open ? "Show less" : `+${items.length - 2} more`}</button> : null}

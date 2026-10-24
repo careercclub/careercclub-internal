@@ -18,7 +18,7 @@
 .stage:hover { border-color: var(--purple-mid); }
 .stageOn { border-color: var(--purple-mid); background: var(--purple-light); }
 .stageStep { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: var(--purple-dark); background: var(--purple-light); font-size: 12px; font-weight: 800; }
-.stageOn .stageStep { color: #fff; background: var(--purple-mid); }
+.stageOn .stageStep { color: var(--on-accent); background: var(--purple-mid); }
 .stageText { min-width: 0; display: grid; }
 .stageText b { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .stageText small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -58,18 +58,18 @@
 .chip, .chipNew, .chipDone { justify-self: end; max-width: 100%; overflow: hidden; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .chip { color: var(--purple-dark); background: var(--purple-light); }
 .chipNew { color: var(--text-muted); background: var(--surface-2); }
-.chipDone { color: #fff; background: var(--purple-mid); }
+.chipDone { color: var(--on-accent); background: var(--purple-mid); }
 .empty { margin: 0; padding: 34px 14px; color: var(--text-muted); font-size: 13px; text-align: center; }
 
-.bulk { position: fixed; left: 50%; bottom: 20px; z-index: 40; width: max-content; max-width: calc(100vw - 32px); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 8px 8px 15px; border-radius: 999px; background: var(--text); box-shadow: 0 14px 40px rgb(20 33 44 / 0.3); color: #fff; font-size: 13px; transform: translateX(-50%); }
+.bulk { position: fixed; left: 50%; bottom: 20px; z-index: 40; width: max-content; max-width: calc(100vw - 32px); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 8px 8px 15px; border-radius: 999px; background: var(--text); box-shadow: 0 14px 40px rgb(20 33 44 / 0.3); color: var(--white); font-size: 13px; transform: translateX(-50%); }
 .bulk strong { margin-right: 4px; }
-.bulkField select { min-height: 32px; padding: 0 8px; border: 1px solid rgb(255 255 255 / 0.25); border-radius: 999px; background: transparent; color: #fff; font-size: 13px; }
+.bulkField select { min-height: 32px; padding: 0 8px; border: 1px solid rgb(255 255 255 / 0.25); border-radius: 999px; background: transparent; color: var(--white); font-size: 13px; }
 .bulkField option { color: var(--text); }
-.bulkButton, .bulkDanger { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.12); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
-.bulkButton:hover:not(:disabled) { background: rgb(255 255 255 / 0.22); }
+.bulkButton, .bulkDanger { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--white) 14%, transparent); color: var(--white); font-size: 13px; font-weight: 600; cursor: pointer; }
+.bulkButton:hover:not(:disabled) { background: color-mix(in srgb, var(--white) 24%, transparent); }
 .bulkButton:disabled, .bulkDanger:disabled { opacity: 0.45; cursor: default; }
 .bulkDanger { background: var(--red); }
-.bulkClose { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #fff; cursor: pointer; }
+.bulkClose { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--white); cursor: pointer; }
 
 /* Customer drawer */
 .overlay { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; background: rgb(20 33 44 / 0.35); }

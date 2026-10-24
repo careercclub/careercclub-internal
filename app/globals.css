@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind `dark:` follows the app's Light / Dark / System choice (html[data-theme]), not only the OS. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   /* Page width: content follows the window (zoom out = more room), no fixed column. */
   --page-max: none;
@@ -35,9 +38,54 @@
   --coral: #993c1d;
   --pink-bg: #fbeaf0;
   --pink: #993556;
+  /* Text and icons on an accent/red fill. White in light mode; dark in dark mode, where the accent is lighter. */
+  --on-accent: #fff;
+  /* Large coloured surfaces (program cards, Instagram & Customer Knowledge heroes): the accent in light
+     mode, a deep blue in dark mode so a big panel never glares. */
+  --hero: var(--purple-mid);
+  --hero-deep: var(--purple-dark);
+  --on-hero: #fff;
+  color-scheme: light;
   --radius: 10px;
   --radius-lg: 18px;
   --radius-xl: 22px;
+}
+
+/* Dark mode (Putaran 37): the same tokens, re-valued. Accent is lighter so it reads as text on dark
+   surfaces; text on accent fills turns dark (--on-accent). Contrast checked by the a11y suite. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --purple-dark: #a9c8ff;
+  --purple-mid: #5b95f8;
+  --purple-accent: #5b95f8;
+  --purple-light: #1c2d48;
+  --on-accent: #08111f;
+  --hero: #1f4fa8;
+  --hero-deep: #183d80;
+  --on-hero: #eef4ff;
+  --bg: #0e141b;
+  --surface-2: #1b242f;
+  --white: #151d26;
+  --text: #e6edf3;
+  --text-muted: #a3afbb;
+  --text-hint: #8d99a6;
+  --border: #26313d;
+  --border-md: #364352;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --green-bg: #17301f;
+  --green: #7fd28f;
+  --amber-bg: #33270f;
+  --amber: #f0bf6a;
+  --red-bg: #3a1714;
+  --red: #ff7a68;
+  --blue-bg: #17284a;
+  --blue: #8db8ff;
+  --teal-bg: #11302a;
+  --teal: #6fd6bb;
+  --coral-bg: #3a1e14;
+  --coral: #ff9f7a;
+  --pink-bg: #3a1726;
+  --pink: #ff8fb4;
 }
 
 * {
@@ -117,7 +165,7 @@ a {
 }
 
 ::selection {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--purple-accent);
 }
 
@@ -132,7 +180,7 @@ a {
   --popover: var(--white);
   --popover-foreground: var(--text);
   --primary: var(--purple-mid);
-  --primary-foreground: #ffffff;
+  --primary-foreground: var(--on-accent);
   --secondary: var(--purple-light);
   --secondary-foreground: var(--purple-dark);
   --muted: var(--bg);
@@ -140,7 +188,7 @@ a {
   --accent: var(--purple-light);
   --accent-foreground: var(--purple-dark);
   --destructive: var(--red);
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: var(--on-accent);
   --input: var(--border-md);
   --ring: var(--purple-accent);
 }
