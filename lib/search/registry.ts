@@ -3,6 +3,13 @@
 // Which tables and columns can be searched is derived from the record catalog, so a
 // new field added there becomes searchable without a second list to maintain. This
 // file is pure (no runtime imports) so it can be tested directly under `node --test`.
+//
+// Matching: every typed word must match; a word matches when it, or a synonym of it
+// (lib/search/synonyms.ts, English + Indonesian), appears in the record. When that finds
+// little, a second pass accepts close spellings ("pasword", "canvaa") — marked as close
+// matches and ranked last.
+
+import { closeWordIn, containsWord, expandTerm, groupMatches } from "./synonyms.ts";
 
 export type SearchFieldInput = {
   name: string;
@@ -38,6 +45,12 @@ export type SearchHit = {
   href: string;
   matchLabel: string;
   snippet: string;
+  /** Words to highlight: the typed words plus the synonyms that matched. */
+  marks?: string[];
+  /** Found by spelling tolerance, not an exact word ("Close match" in the palette). */
+  close?: boolean;
+  /** Logins (Resources type credential): shown with a lock, the secret itself is never sent. */
+  credential?: boolean;
 };
 
 /** Tables that are never searchable: configuration can hold secrets. */
@@ -110,10 +123,31 @@ export function plainText(value: unknown): string {
   return String(value);
 }
 
-/** True when every term appears in at least one searchable field of the row. */
+/** Each typed word with its synonyms: ["password"] → [["password", "login", "credential", …]]. */
+export function termGroups(terms: string[]) {
+  return terms.map(expandTerm);
+}
+
+function haystackOf(row: Record<string, unknown>, spec: SearchSpec) {
+  return spec.fields.map((field) => plainText(row[field.name]).toLowerCase()).join(" \u0001 ");
+}
+
+/** True when every term (or one of its synonyms) appears in at least one searchable field of the row. */
 export function rowMatches(row: Record<string, unknown>, spec: SearchSpec, terms: string[]) {
-  const haystack = spec.fields.map((field) => plainText(row[field.name]).toLowerCase()).join(" \u0001 ");
-  return terms.every((term) => haystack.includes(term));
+  const haystack = haystackOf(row, spec);
+  return termGroups(terms).every((group) => groupMatches(haystack, group));
+}
+
+/** Second pass: every term matches exactly, by synonym, or within its typo budget. */
+export function rowMatchesClosely(row: Record<string, unknown>, spec: SearchSpec, terms: string[]) {
+  const haystack = haystackOf(row, spec);
+  return termGroups(terms).every((group) => groupMatches(haystack, group) || closeWordIn(haystack, group[0]));
+}
+
+/** The words that actually occur in the row (typed or synonym), for highlighting and snippets. */
+export function matchedWords(row: Record<string, unknown>, spec: SearchSpec, terms: string[]) {
+  const haystack = haystackOf(row, spec);
+  return [...new Set(termGroups(terms).flatMap((group) => group.filter((word, index) => containsWord(haystack, word, index === 0))))];
 }
 
 function excerpt(text: string, term: string, width = 70) {
@@ -124,15 +158,18 @@ function excerpt(text: string, term: string, width = 70) {
   return `${start > 0 ? "…" : ""}${clean.slice(start, start + width)}${start + width < clean.length ? "…" : ""}`;
 }
 
-export function toSearchHit(row: Record<string, unknown>, spec: SearchSpec, terms: string[]): SearchHit {
+export function toSearchHit(row: Record<string, unknown>, spec: SearchSpec, typed: string[], close = false): SearchHit {
   const id = plainText(row.id);
+  // Synonyms that occur in the row explain the match ("password" → type "credential").
+  const found = matchedWords(row, spec, typed);
+  const terms = found.length ? found : typed;
   const title = spec.titleFields.map((name) => plainText(row[name]).trim()).filter(Boolean).join(" · ") || spec.module;
   // Show the field that explains the match best: the first non-title field that contains a term,
   // otherwise the title itself matched and the first other filled field gives context.
   const titleNames = new Set(spec.titleFields);
   const candidates = spec.fields.filter((field) => !titleNames.has(field.name) && plainText(row[field.name]).trim());
   const titleText = title.toLowerCase();
-  const titleHasAll = terms.every((term) => titleText.includes(term));
+  const titleHasAll = termGroups(typed).every((group) => groupMatches(titleText, group));
   // When the name already explains the match, show what identifies the record (its email,
   // username, link...) instead of an incidental word in the notes.
   const context = titleHasAll ? CONTEXT_PREFERENCE.map((name) => candidates.find((field) => field.name === name)).find(Boolean) : undefined;
@@ -148,19 +185,26 @@ export function toSearchHit(row: Record<string, unknown>, spec: SearchSpec, term
     href: `${spec.path}?focus=${encodeURIComponent(id)}`,
     matchLabel: shown ? shown.label : "",
     snippet: shown ? excerpt(plainText(row[shown.name]), term) : "",
+    marks: [...new Set([...typed, ...found])],
+    ...(close ? { close: true } : {}),
+    ...(spec.table === "resources" && String(row.tipe || "").toLowerCase() === "credential" ? { credential: true } : {}),
   };
 }
 
-/** Exact title hits first, then title-contains, then matches in other fields. */
+/** Exact title hits first, then title-contains (typed words, then synonyms), then other fields; close spellings last. */
 export function rankSearchHits(hits: SearchHit[], terms: string[]) {
   const query = terms.join(" ");
+  const groups = termGroups(terms);
   const score = (hit: SearchHit) => {
+    if (hit.close) return 7;
     const title = hit.title.toLowerCase();
     if (title === query) return 0;
     if (title.startsWith(query)) return 1;
     if (terms.every((term) => title.includes(term))) return 2;
-    if (terms.some((term) => title.includes(term))) return 3;
-    return 4;
+    if (groups.every((group) => groupMatches(title, group))) return 3;
+    if (terms.some((term) => title.includes(term))) return 4;
+    if (groups.some((group) => groupMatches(title, group))) return 5;
+    return 6;
   };
   return [...hits].sort((a, b) => score(a) - score(b) || a.title.length - b.title.length || a.title.localeCompare(b.title));
 }

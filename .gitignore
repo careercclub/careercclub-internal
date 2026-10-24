@@ -50,3 +50,4 @@ memory.md
 .wrangler/
 .dev.vars
 tests/imports/out/
+tests/search/out/

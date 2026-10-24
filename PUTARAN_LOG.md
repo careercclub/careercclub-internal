@@ -1434,3 +1434,26 @@ Pertanyaan user: apa dampak uncheck "Active" di Users & roles? Jawaban: login di
 - Uji ujung-ke-ujung pada build produksi lokal + Postgres (akun tes buatan sendiri, dihapus sesudahnya): login → role diubah → ≤62 detik sesi ikut role baru; Blocked → ≤62 detik sesi `null`, `/dashboard` dialihkan ke sign-in, login ulang ditolak.
 - Unit baru `lib/auth/access.test.mjs` (Blocked/dihapus kehilangan akses, cache 60 detik, `forget()` seketika). Suite `set` +5 (Access per user, chip Blocked, tanpa checkbox Active, Add user).
 - Regresi penuh lolos: 24 suite modul (set 17), navigasi 32, search 46, RecordManager 946, Design Assets 49, audit popup, unit 161, lint 0 error, build lolos. Deploy: `npm run vps:rebuild:frontend` (tanpa migrasi).
+
+## Putaran 39 — Search yang lebih pintar (tanpa AI) dan tampilan hasil yang baru (24 Okt 2026)
+
+Masukan user (screenshot produksi): "password" di search tidak menemukan apa-apa. Penyebab: search hanya mencocokkan huruf persis; isi password memang sengaja tidak dicari, dan login di Resources tersimpan sebagai tipe `credential`, jadi kata yang dipakai orang ("password", "login", "akun") tidak pernah cocok. Keputusan user: opsi A (tanpa AI) dulu, plus tampilan hasil search diperbaiki.
+
+### Do
+
+- **Sinonim dua bahasa** (`lib/search/synonyms.ts`, satu daftar): password/login/akun → credential, tiket → ticket, loker → vacancy, pembeli → buyer, dst. Kata yang diketik boleh cocok di mana saja; sinonim hanya di awal kata (supaya "wa" tidak kena "Jawa", "password" tidak kena "Passion"). Dipakai sama di server (`lib/search/query.ts`, SQL `ilike` + regex awal kata) dan di browser (halaman).
+- **Tahan salah ketik**: kalau hasil persis < 3, pass kedua memakai `pg_trgm` (`word_similarity`) lalu dicek ulang di JS (1 salah ketik untuk 4–7 huruf, 2 untuk ≥ 8; kata < 4 huruf tidak pernah). Hasilnya ditandai **Close match** dan diurutkan paling bawah. Migrasi `026_search_pg_trgm.sql`; tanpa migrasi itu search tetap jalan (persis + sinonim).
+- **Halaman & aksi**: "password" → **Resources › Logins** (`/resources?kind=credential`, filter Logins langsung aktif), "add ticket" → form Add ticket (juga saat Tickets sudah terbuka — sebelumnya link `?create=ticket` hanya bekerja saat halaman baru dibuka). Shortcut hanya muncul kalau modulnya terlihat.
+- **Tampilan palette** (`command-palette.tsx`): lebih lebar (672 px), hasil dikelompokkan per modul dengan jumlahnya, ikon dalam kotak, kata yang cocok ditandai (termasuk sinonim yang cocok), chip **Login** (tanpa isi rahasia) dan **Close match**, tombol hapus isian, skeleton saat mencari, pesan kosong yang menyebut kata yang dicari, "Try again" saat gagal, footer bahasa Inggris (Move · Open · Close; sebelumnya "pilih/buka/halaman"). HP: menempel di atas dengan margin 8 px. Ikut mode gelap.
+- Tes database baru `tests/search/` (`npm run test:search`, butuh `SEARCH_TEST_DATABASE_URL` database sekali pakai).
+- Harness: regresi kini meng-compile CSS harness search (h2) juga — sebelumnya h2 memakai CSS lama.
+
+### Check
+
+- `tests/search` 10/10 terhadap PostgreSQL 16 sungguhan, dengan dan tanpa `pg_trgm` (password → login Email CCC & Canva tanpa isi password; "akun canva"; "canvaa"/"boklet" sebagai close match; isi password tidak bisa dicari; sinonim tidak menyangkut di tengah kata).
+- Suite baru `p39.mjs` 23. Unit baru: `lib/search/synonyms.test.mjs`, `palette-index` +2. Suite search h2 disesuaikan (grup per modul, `<mark>`, teks Inggris) 46/46.
+- Regresi penuh lolos: 25 suite modul (termasuk p39 23, dark 63), navigasi 32 (diperbarui ke kotak search baru), search 46, RecordManager 946, Design Assets 49, audit popup, unit 166, lint 0 error, build lolos.
+
+### Deploy
+
+Ada migrasi → `git pull origin refactor && npm run vps:rebuild` (bukan `:frontend`).

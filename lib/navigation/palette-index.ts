@@ -8,7 +8,19 @@
 // stays free of runtime imports — the fixture test loads it directly under
 // `node --test`, and it keeps lib/ from reaching back into app/.
 
-export type PaletteEntry = { path: string; title: string; section: string; icon: string; hint: string };
+import { closeWordIn, expandTerm, groupMatches } from "../search/synonyms.ts";
+
+export type PaletteEntry = { path: string; title: string; section: string; icon: string; hint: string; action?: boolean };
+
+/**
+ * Places and actions that are not a page of their own but that people search for by name:
+ * "password" should land on the Logins of Resources, "add ticket" should open the form.
+ * Each one uses a link the page already understands.
+ */
+export const PALETTE_SHORTCUTS: ReadonlyArray<PaletteEntry> = [
+  { path: "/resources?kind=credential", title: "Resources › Logins", section: "Internal", icon: "ti-lock", hint: "Passwords, logins and accounts the team shares" },
+  { path: "/tickets?create=ticket", title: "Add ticket", section: "Actions", icon: "ti-plus", hint: "New ticket request to a division", action: true },
+];
 
 export type PaletteNavSection = {
   label: string;
@@ -41,6 +53,7 @@ export function buildPaletteIndex(
   records: ReadonlyArray<PaletteRecord>,
   hiddenSlugs: ReadonlyArray<string> = [],
   subPages: Readonly<Record<string, ReadonlyArray<{ href: string; label: string }>>> = {},
+  shortcuts: ReadonlyArray<PaletteEntry> = PALETTE_SHORTCUTS,
 ): PaletteEntry[] {
   const navPages = sections.flatMap((section) => section.pages.map((page) => ({ page, section: section.label })));
   const isHidden = hiddenPathPredicate(sections, hiddenSlugs);
@@ -64,6 +77,12 @@ export function buildPaletteIndex(
     entries.set(record.path, { path: record.path, title: record.title, section: record.eyebrow, icon: "ti-table", hint: record.description });
   }
 
+  // A shortcut appears only next to its own page (a hidden or absent module has no shortcuts).
+  for (const shortcut of shortcuts) {
+    if (entries.has(shortcut.path) || isHidden(shortcut.path) || !entries.has(shortcut.path.split("?")[0])) continue;
+    entries.set(shortcut.path, shortcut);
+  }
+
   return [...entries.values()].sort((a, b) => a.section.localeCompare(b.section) || a.title.localeCompare(b.title));
 }
 
@@ -77,6 +96,12 @@ export function scorePaletteEntry(entry: PaletteEntry, query: string) {
   if (entry.path.toLowerCase().includes(query)) return 3;
   if (entry.section.toLowerCase().includes(query)) return 4;
   if (entry.hint.toLowerCase().includes(query)) return 5;
+  // Word by word, with synonyms ("password" → Logins, "tiket" → Tickets), then close spellings.
+  const groups = query.split(/\s+/).filter(Boolean).map(expandTerm);
+  const rest = `${entry.path} ${entry.section} ${entry.hint}`.toLowerCase();
+  if (groups.every((group) => groupMatches(title, group))) return 6;
+  if (groups.every((group) => groupMatches(title, group) || groupMatches(rest, group))) return 7;
+  if (groups.every((group) => groupMatches(title, group) || groupMatches(rest, group) || closeWordIn(`${title} ${entry.hint}`, group[0]))) return 8;
   return -1;
 }
 

@@ -4,7 +4,8 @@ import { reorderResourcesAction } from "@/app/actions/resource-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { filterResources, groupResources, hostOf, hrefOf, isCredential, moveResource, plural, sortResources } from "@/lib/library/view";
 import type { ReactNode } from "react";
-import { useMemo, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { notify, notifyError } from "./app-dialog";
 import { copyText } from "./copy-text";
 import g from "./library.module.css";
@@ -25,6 +26,13 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
   const [category, setCategory] = useState("");
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
   const [pending, startTransition] = useTransition();
+  // "Resources › Logins" in search (and any ?kind= link) opens the list on that type.
+  const wanted = useSearchParams().get("kind");
+  useEffect(() => {
+    if (wanted !== "credential" && wanted !== "link") return;
+    const timer = window.setTimeout(() => { setTab("list"); setKind(wanted); setQuery(""); setCategory(""); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [wanted]);
 
   const visible = useMemo(() => filterResources(items, { query, kind, category }), [items, query, kind, category]);
   const groups = groupResources(visible);

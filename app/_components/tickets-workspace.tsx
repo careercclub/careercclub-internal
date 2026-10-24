@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import type { ApiRecord } from "@/lib/api/_crud";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type CSSProperties, type ReactNode, useMemo, useState, useEffect } from "react";
 import { AssigneeField, personName } from "./assignee-field";
 import { GoogleCalendarScript } from "./google-calendar-tool";
@@ -146,15 +146,17 @@ export function TicketsWorkspace({ rows, people, divisions, types, meId = null, 
   const [mine, setMine] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  // "Add ticket" on the Dashboard opens this same form (one way to create a ticket).
+  // "Add ticket" on the Dashboard and in search opens this same form (one way to create a ticket),
+  // also when the Tickets page is already open (the link only changes the query string).
+  const createParam = useSearchParams().get("create");
   useEffect(() => {
+    if (createParam !== "ticket") return;
     const url = new URL(window.location.href);
-    if (url.searchParams.get("create") !== "ticket") return;
     url.searchParams.delete("create");
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-    const timer = window.setTimeout(() => setCreateOpen(true), 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+    // Not cancelled on cleanup: removing ?create (above) changes createParam and re-runs this effect.
+    window.setTimeout(() => setCreateOpen(true), 0);
+  }, [createParam]);
   const [calendarId, setCalendarId] = useState<string | null>(null);
 
   const personMap = useMemo(() => new Map(people.map((person) => [String(person.id), person])), [people]);
