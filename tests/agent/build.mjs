@@ -10,4 +10,5 @@ const common = {
   alias: { "server-only": `${R}/tests/imports/stubs/empty.ts`, "@/auth": `${here}stubs/auth.ts`, "next/cache": `${R}/tests/imports/stubs/next-cache.ts`, "@": R },
 };
 await build({ ...common, entryPoints: [`${R}/app/api/agent/mt-prospects/route.ts`], outfile: `${here}out/mt-route.mjs` });
-await build({ ...common, stdin: { contents: 'export { createAgentToken, revokeAgentToken, listAgentTokens } from "@/lib/api/agent-tokens"; export { applyProspectImport } from "@/lib/api/mt-prospects";', resolveDir: R, loader: "ts" }, outfile: `${here}out/helpers.mjs` });
+await build({ ...common, entryPoints: [`${R}/app/api/agent/instagram/route.ts`], outfile: `${here}out/ig-route.mjs` });
+await build({ ...common, stdin: { contents: 'export { createAgentToken, revokeAgentToken, listAgentTokens } from "@/lib/api/agent-tokens"; export { applyProspectImport } from "@/lib/api/mt-prospects"; export { importContentEvaluations } from "@/lib/api/content-evaluation";', resolveDir: R, loader: "ts" }, outfile: `${here}out/helpers.mjs` });

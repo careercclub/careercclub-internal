@@ -1529,3 +1529,32 @@ Permintaan user (3 screenshot): popup masih bisa diimprove, isian attach link te
 ### Deploy
 
 Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 026/027 belum: `npm run vps:rebuild`).
+
+## Putaran 43 — Claude access: Instagram & Content Evaluation (+ jalur Claude in Chrome untuk semua modul) (25 Okt 2026)
+
+Permintaan user: Claude di akun lain menarik insight IG lewat Composio lalu memasukkannya ke web otomatis; kirimnya lewat Claude in Chrome (preview → konfirmasi → apply), dan Job Vacancy MT juga bisa lewat jalur yang sama.
+
+### Do
+
+- **`/api/agent/instagram`** (modul baru **Instagram & Content Evaluation** di Settings → Claude access): `GET` menjelaskan format; `POST {mode: "preview" | "apply", posts, weeks}`. `posts` → Content Evaluation (maks. 100), `weeks` (opsional) → halaman Instagram (maks. 60).
+- **Aturan gabung** (`lib/instagram/agent.ts`, satu tempat untuk preview & apply):
+  - post dicocokkan pakai **Post ID** (harus teks; angka panjang ditolak karena digitnya hilang), minggu pakai hari Senin-nya;
+  - angka dari Instagram **menggantikan** yang lama (paling baru), kolom yang tidak dikirim tetap;
+  - URL, tanggal, format, caption ikut Instagram; judul yang diketik tim & followers saat posting hanya diisi kalau kosong;
+  - tidak pernah diubah: topic, hook rating, CTA, what worked, needs improvement, action, catatan minggu. Tidak pernah menghapus;
+  - preview menampilkan apa yang berubah (mis. reach 800 → 950), yang tidak valid ditolak dengan alasan.
+- Apply dalam satu transaksi (baris dikunci, rencana dihitung ulang), tercatat di activity log ("Claude sync"). Import Meta CSV tetap jalan di baris yang sama (tidak dobel).
+- **Synced by Claude**: kolom `synced_by`/`synced_at` (migrasi `028_instagram_claude_sync.sql`); ikon ✦ di daftar Content Evaluation & tabel mingguan Instagram, chip "Synced by Claude (nama key) · tanggal" di detail (komponen bersama `claude-mark.tsx`).
+- **Jalur Claude in Chrome untuk semua modul** (Job Vacancy MT & Instagram): tanpa key, Claude menjalankan `fetch` di halaman internal.ccclub.id yang sudah login. Pengaman baru di `agentCaller`: sesi browser hanya diterima dari halaman app sendiri (header `Origin` harus sama dengan host); dari situs lain atau tanpa `Origin` → 401. Login tetap user sendiri.
+- `docs/claude-access.md`: cara lewat Chrome, format Instagram, dan teks prompt sinkron harian untuk akun Claude yang pakai Composio.
+- Detail Content Evaluation: tombol Close jadi outline (standar Putaran 42).
+
+### Check
+
+- `tests/agent` 36 (PostgreSQL sungguhan, +17): key modul lain → 401; GET panduan; preview tidak mengubah apa-apa & menampilkan perubahan; apply menulis angka & caption terbaru; judul tim, angka yang tidak dikirim & catatan tim tidak tersentuh; tanda Synced by Claude; post baru (judul dari caption, Reel, tanggal); minggu diganti angkanya, catatan tetap, minggu baru di hari Senin; apply ulang tidak dobel; activity log; import Meta CSV tetap update post yang sama; >100 post → 400; Chrome di halaman app boleh; sesi dari situs lain / tanpa Origin ditolak (MT juga).
+- Unit baru `lib/instagram/agent.test.mjs` 6. Suite baru `p43.mjs` 8 (modul di Settings, ✦ & chip di Content Evaluation, ✦ di Instagram, HP).
+- Regresi penuh lolos: 29 suite modul (termasuk p43 8, p42 19), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 175 + 6 baru, import 58, search-db 19, agent-db 36, lint 0 error, build lolos.
+
+### Deploy
+
+Migrasi baru → `git pull origin refactor && npm run vps:rebuild`. Lalu (opsional) Settings → Claude access → Add key dengan modul Instagram & Content Evaluation; untuk jalur Chrome tidak perlu key.

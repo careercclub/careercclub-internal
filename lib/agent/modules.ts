@@ -2,6 +2,7 @@
 // API (server); no runtime imports.
 export const AGENT_MODULES = [
   { id: "job-vacancy-mt", label: "Job Vacancy MT" },
+  { id: "instagram", label: "Instagram & Content Evaluation" },
   { id: "customer-knowledge", label: "Customer Knowledge" },
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number]["id"];

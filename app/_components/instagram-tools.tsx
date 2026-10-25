@@ -1,5 +1,6 @@
 "use client";
 
+import { ClaudeMark } from "./claude-mark";
 import { submitTo } from "./safe-action";
 
 import { saveInstagramBaselineAction } from "@/app/actions/instagram-actions";
@@ -174,7 +175,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
                 <div className={s.tableWrap}>
                   <table className={s.table}>
                     <thead><tr><th>Week</th><th className={s.num}>Followers</th><th className={s.num}>Follows</th><th className={s.num}>Reach</th><th className={s.num}>Interactions</th><th className={s.num}>ER</th></tr></thead>
-                    <tbody>{pageRows.map((row) => <tr key={String(row.id)}><td>{formatDay(day(row.week_start))}</td><td className={s.num}>{fmt(row.computedFollowers)}</td><td className={s.num}>+{fmt(num(row.follows_gained))}</td><td className={s.num}>{fmt(num(row.reach))}</td><td className={s.num}>{fmt(num(row.interactions))}</td><td className={s.num}>{num(row.reach) ? (num(row.interactions) / num(row.reach) * 100).toFixed(2) : "0.00"}%</td></tr>)}</tbody>
+                    <tbody>{pageRows.map((row) => <tr key={String(row.id)}><td>{formatDay(day(row.week_start))}<ClaudeMark at={row.synced_at} by={row.synced_by} /></td><td className={s.num}>{fmt(row.computedFollowers)}</td><td className={s.num}>+{fmt(num(row.follows_gained))}</td><td className={s.num}>{fmt(num(row.reach))}</td><td className={s.num}>{fmt(num(row.interactions))}</td><td className={s.num}>{num(row.reach) ? (num(row.interactions) / num(row.reach) * 100).toFixed(2) : "0.00"}%</td></tr>)}</tbody>
                   </table>
                 </div>
                 {pages > 1 ? (

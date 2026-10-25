@@ -34,6 +34,15 @@ export type AgentCaller = { kind: "key" | "user"; name: string; label: string };
  * ccc_…) that is not revoked and covers the module, or a signed-in person (e.g. Claude in
  * their own browser). null = not allowed.
  */
+/** GET is read-only; anything else from a browser must come from this host. */
+export function sameOrigin(request: Request) {
+  if (request.method === "GET" || request.method === "HEAD") return true;
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || new URL(request.url).host;
+  try { return new URL(origin).host === host.split(",")[0].trim(); } catch { return false; }
+}
+
 export async function agentCaller(request: Request, module: AgentModule): Promise<AgentCaller | null> {
   const key = keyFromHeader(request.headers.get("authorization"));
   if (key) {
@@ -47,6 +56,9 @@ export async function agentCaller(request: Request, module: AgentModule): Promis
     if (!row || !(row.modules || []).filter(isAgentModule).includes(module)) return null;
     return { kind: "key", name: row.name, label: `Claude (${row.name})` };
   }
+  // A browser session only counts from the app's own pages (Claude in Chrome runs fetch there),
+  // so another site cannot use a signed-in person's cookies to send data.
+  if (!sameOrigin(request)) return null;
   const session = await auth();
   if (!session?.user) return null;
   const name = session.user.name || session.user.email || "CCC User";

@@ -14,6 +14,7 @@ import { confirmAction, notifyError } from "./app-dialog";
 import { guard } from "./safe-action";
 import c from "./content-evaluation.module.css";
 import s from "./page-kit.module.css";
+import { ClaudeChip, ClaudeMark } from "./claude-mark";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DateInput } from "./date-input";
@@ -171,7 +172,7 @@ function Overview({ allScored, scored, reels, feed, stories, average, buyerByDat
                 <button className={c.topCard} data-record-id={String(item.row.id)} data-record-open onClick={() => select(item)} type="button">
                   <span className={index === 0 ? c.rankFirst : c.rank}>{index + 1}</span>
                   <span className={c.topBody}>
-                    <b>{String(item.row.judul || "Untitled")}</b>
+                    <b>{String(item.row.judul || "Untitled")}<ClaudeMark at={item.row.synced_at} by={item.row.synced_by} /></b>
                     <span className={c.topTags}><span className={s.chipMuted}>{String(item.row.format || "Unknown")}</span><Score score={item.score} /></span>
                     <span className={c.topMetrics}><span><b>{compact(item.row.follows)}</b> follows</span><span><b>{compact(item.row.link_taps)}</b> link taps</span><span><b>{compact(item.row.reach || item.row.views)}</b> reach</span></span>
                   </span>
@@ -266,7 +267,7 @@ function Leaders({ title, items, select, metric, setMetric, buyerByDate }: { tit
               <li key={String(item.row.id)}>
                 <button onClick={() => select(item)} type="button">
                   <span className={index === 0 ? c.rankFirst : c.rank}>{index + 1}</span>
-                  <span className={c.leaderBody}><b>{String(item.row.judul || "Untitled")}</b><small>{metric === "views" ? `${compact(item.row.views || item.row.reach)} views · ${dateLabel(item.row.tanggal)}` : metric === "buyers" ? `${buyersOnDay} buyer${buyersOnDay === 1 ? "" : "s"} that day · ${dateLabel(item.row.tanggal)}` : `${compact(item.row.follows)} follows · ${compact(item.row.link_taps)} link taps`}</small></span>
+                  <span className={c.leaderBody}><b>{String(item.row.judul || "Untitled")}<ClaudeMark at={item.row.synced_at} by={item.row.synced_by} /></b><small>{metric === "views" ? `${compact(item.row.views || item.row.reach)} views · ${dateLabel(item.row.tanggal)}` : metric === "buyers" ? `${buyersOnDay} buyer${buyersOnDay === 1 ? "" : "s"} that day · ${dateLabel(item.row.tanggal)}` : `${compact(item.row.follows)} follows · ${compact(item.row.link_taps)} link taps`}</small></span>
                   <Score score={item.score} short />
                 </button>
               </li>
@@ -317,7 +318,7 @@ function FormatView({ view, items, select, add }: { view: "reel" | "feed"; items
                   const followRate = num(row.reach) ? num(row.follows) / num(row.reach) * 100 : 0;
                   return (
                     <tr data-record-id={String(row.id)} key={String(row.id)} onClick={() => select(item)}>
-                      <td><button className={c.rowTitle} onClick={(e) => { e.stopPropagation(); select(item); }} type="button"><b>{String(row.judul || "Untitled")}</b><small>{dateLabel(row.tanggal)}{row.topik ? ` · ${String(row.topik)}` : ""}</small></button></td>
+                      <td><button className={c.rowTitle} onClick={(e) => { e.stopPropagation(); select(item); }} type="button"><b>{String(row.judul || "Untitled")}<ClaudeMark at={row.synced_at} by={row.synced_by} /></b><small>{dateLabel(row.tanggal)}{row.topik ? ` · ${String(row.topik)}` : ""}</small></button></td>
                       <td><Score score={item.score} short /></td>
                       <td className={s.num}><b>{compact(row.reach)}</b></td>
                       {reel ? <><td className={s.num}>{num(row.wtr) ? `${num(row.wtr)}%` : "—"}</td><td className={s.num}>{num(row.nf_pct)}%</td><td className={s.num}>{compact(row.saves)}</td><td className={s.num}>{compact(row.shares)}</td><td className={s.num}><b>{compact(row.follows)}</b></td><td className={s.num}>{followRate.toFixed(2)}%</td><td className={s.num}><b>{compact(row.link_taps)}</b></td></> : <><td className={s.num}>{compact(row.saves)}</td><td className={s.num}>{pct(item.score.rates.saveRate || 0)}</td><td className={s.num}>{compact(row.shares)}</td><td className={s.num}>{compact(row.comments)}</td><td className={s.num}><b>{compact(row.follows)}</b></td><td className={s.num}><b>{compact(row.link_taps)}</b></td><td className={s.num}>{num(row.nf_pct)}%</td></>}
@@ -511,6 +512,7 @@ function EvaluationDetail({ item, close, edit }: { item: Scored; close: () => vo
           <div><strong>{GRADE[score.grade]}</strong><small>{score.partial ? "Preliminary — add the advanced metrics for a complete score." : "Complete adaptive score."}</small><span className={c.scoreBar}><i style={{ width: `${score.total}%` }} /></span></div>
           {row.action ? <span className={s.chip}>{actionLabel(row.action)}</span> : null}
         </div>
+        {row.synced_by ? <div><ClaudeChip at={row.synced_at} by={row.synced_by} /></div> : null}
         <div className={c.detailGrid}>
           <section><h3>Metrics</h3><dl className={c.metricList}>{metrics.map(([label, v]) => <div key={label}><dt>{label}</dt><dd>{typeof v === "number" ? compact(v) : String(v || "—")}</dd></div>)}</dl></section>
           <section>
@@ -522,7 +524,7 @@ function EvaluationDetail({ item, close, edit }: { item: Scored; close: () => vo
         </div>
         <DialogFooter sticky>
           {row.url ? <a className={`${s.ghost} mr-auto`} href={String(row.url)} rel="noreferrer" target="_blank"><i className="ti ti-brand-instagram" aria-hidden="true" /> Open post</a> : null}
-          <Button onClick={close} type="button" variant="ghost">Close</Button>
+          <Button onClick={close} type="button" variant="outline">Close</Button>
           <Button onClick={edit} type="button"><i className="ti ti-edit" aria-hidden="true" /> Edit evaluation</Button>
         </DialogFooter>
       </DialogContent>
