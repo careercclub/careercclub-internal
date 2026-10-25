@@ -1703,3 +1703,24 @@ Permintaan user: workflow Competitor Intel sama seperti Customer Knowledge (Clau
 ### Deploy
 
 Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`).
+
+## Putaran 50 — Talent Pool: filter lengkap (25 Okt 2026)
+
+Permintaan user: filter Talent Pool lebih lengkap — status, domisili, willing to relocate, pendidikan terakhir (bahasa Inggris), campus tier, IPK (namanya Grade), angkatan, tahun lulus, pengalaman organisasi (Org Exp), pengalaman exchange (Study Abroad Exp).
+
+### Do
+
+- **Filters** (tombol di toolbar, angka = filter aktif; panel terlipat sampai dibuka, tetap terbuka kalau ada yang aktif): Status, City, Willing to relocate, Education, Campus tier, Grade, Intake year, Graduation year, Org Exp, Study Abroad Exp, Source. Tiap pilihan menampilkan jumlah kandidat ("Student · 412") yang ikut menyesuaikan pencarian, pipeline, dan filter lain. Clear filters mengosongkan semuanya.
+- **Satu definisi** (`FACETS` di `lib/talent-pool/view.ts`) dipakai filter, profil kandidat, Analytics, dan segmen Email blast — jawaban Google Form (bahasa Indonesia, ejaan beragam) jadi satu pilihan bahasa Inggris: "Aktif berkuliah" → Student, "Sudah bekerja dan ingin career switch" → Working, career switch; S1/S2/D3/D4 → Bachelor's (S1)/Master's (S2)/Diploma (D3)/Applied bachelor's (D4); "TIER 1"/"X/Non Priority" → Tier 1/Non-priority; "Yes, as a leader/co-leader" → Leader; jawaban relocate/exchange (termasuk apostrof rusak "Iâ€™d") → Yes/No; IPK "3,62" atau "3.62" → band Grade (3.76–4.00 … Below 3.00; angka yang bukan skala 4 tidak masuk); kota dirapikan ("jakarta selatan" = "Jakarta Selatan"); tahun diambil 4 digitnya.
+- Profil & Analytics memakai nama yang sama: Grade (bukan GPA), Intake year, Graduation year, Org Exp, Study Abroad Exp, Willing to relocate (kartu Analytics baru), Education dalam bahasa Inggris.
+- Email blast: segmen custom memakai pilihan & aturan yang sama dengan filter Candidates; aturan "buyer" yang tadinya disalin di Email blast kini satu dengan Candidates.
+
+### Check
+
+- Unit `lib/talent-pool/view.test.mjs` +2 (jawaban form asli → pilihan Inggris untuk 8 facet; urutan & jumlah opsi; filter bergabung; pilihan kosong = tanpa filter).
+- Suite baru `p50.mjs` 22 (panel terlipat, 11 filter ada, opsi Inggris + jumlah, filter mempersempit & bergabung, tombol menunjukkan jumlah aktif, Clear filters, nama sama di profil & Analytics, HP 2 kolom). `talent.mjs` diperbarui (filter di panel, judul Grade).
+- Regresi penuh lolos: 36 suite modul (termasuk p50 22, talent 21), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 197, import 92, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi → `npm run vps:rebuild:frontend`.

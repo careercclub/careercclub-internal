@@ -4,21 +4,19 @@ import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useRef, useState } from "react";
 import { askText, confirmAction } from "./app-dialog";
 import s from "./email-blast.module.css";
-import { compareText } from "@/lib/text/sort";
 import { DateTimeInput } from "./date-input";
+import { facetOptions, filterCandidates, isBuyer } from "@/lib/talent-pool/view";
 
 type Template = { name: string; subject: string; headerTitle: string; headerSub: string; headerColor: string; body: string; ctaText: string; ctaUrl: string; footer: string };
 type Log = { subject: string; total: number; sent: number; failed: number; sentAt: string };
 type BlastTab = "compose" | "templates" | "history" | "settings";
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
-function isBuyer(row: ApiRecord) { return Boolean(row.buyer_match) || Boolean(text(row.produk_dibeli)); }
 // Saved on this device only. This view mounts after a click (never server-rendered), so reading storage while initialising state is safe.
 function readStore(key: string, fallback: string) { try { return typeof window === "undefined" ? fallback : localStorage.getItem(key) || fallback; } catch { return fallback; } }
 function readJson<T>(key: string): T[] { try { const value = JSON.parse(readStore(key, "[]")); return Array.isArray(value) ? value : []; } catch { return []; } }
 function writeStore(key: string, value: string | null) { try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* storage blocked: keep in memory */ } }
 function escapeHtml(value: string) { return value.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character); }
-function options(rows: ApiRecord[], field: string) { return [...new Set(rows.map((row) => text(row[field]).trim()).filter(Boolean))].sort(compareText); }
 
 
 export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
@@ -47,18 +45,17 @@ export function TalentPoolTools({ rows }: { rows: ApiRecord[] }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
 
-  const statusOptions = useMemo(() => options(rows, "status"), [rows]);
-  const sumberOptions = useMemo(() => options(rows, "sumber"), [rows]);
-  const tierOptions = useMemo(() => options(rows, "campus_tier"), [rows]);
+  // Same options and matching as the Candidates filters (lib/talent-pool/view.ts facets).
+  const statusOptions = useMemo(() => facetOptions(rows, "status").map(([value]) => value), [rows]);
+  const sumberOptions = useMemo(() => facetOptions(rows, "source").map(([value]) => value), [rows]);
+  const tierOptions = useMemo(() => facetOptions(rows, "tier").map(([value]) => value), [rows]);
 
   const recipients = useMemo(() => {
     let list = rows.filter((row) => text(row.email).includes("@"));
     if (segment === "beli") list = list.filter(isBuyer);
     else if (segment === "belum") list = list.filter((row) => !isBuyer(row));
     else if (segment === "custom") {
-      if (cStatus) list = list.filter((row) => text(row.status) === cStatus);
-      if (cSumber) list = list.filter((row) => text(row.sumber) === cSumber);
-      if (cTier) list = list.filter((row) => text(row.campus_tier) === cTier);
+      list = filterCandidates(list, { facets: { status: cStatus, source: cSumber, tier: cTier } });
     }
     return list;
   }, [rows, segment, cStatus, cSumber, cTier]);
