@@ -1,5 +1,6 @@
 "use client";
 
+import { ClaudeChip, ClaudeMark } from "./claude-mark";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -128,7 +129,7 @@ function PainPointsView({ rows, filter, setFilter, onEdit }: { rows: ApiRecord[]
                 <li className={s.quote} data-record-id={String(row.id)} key={String(row.id)}>
                   <button className={s.quoteMain} data-record-open onClick={() => onEdit(row)} type="button">
                     <i className={`ti ti-quote ${s.quoteMark}`} aria-hidden="true" />
-                    <span className={s.quoteText}>{text(row.komentar) || "No comment"}</span>
+                    <span className={s.quoteText}>{text(row.komentar) || "No comment"}<ClaudeMark at={row.added_at} by={row.added_via} verb="Added" /></span>
                   </button>
                   <div className={s.quoteFoot}>
                     <span className={s.source}><i className={`ti ${platformIcon(platform)}`} aria-hidden="true" /> {platform}{text(row.username) ? ` · @${text(row.username).replace(/^@/, "")}` : ""} · {monthLabel(row.bulan) || "—"}</span>
@@ -307,7 +308,7 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
     <Dialog onOpenChange={(open) => { if (!open) onClose(); }} open>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]" showCloseButton={false}>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <div className="min-w-0"><DialogTitle>{record ? "Edit pain point" : "Add pain point"}</DialogTitle><DialogDescription className="text-xs">Fields marked * are required.</DialogDescription></div>
+          <div className="min-w-0"><DialogTitle>{record ? "Edit pain point" : "Add pain point"}</DialogTitle><DialogDescription className="text-xs">Fields marked * are required.</DialogDescription>{record?.added_via ? <div className="mt-2"><ClaudeChip at={record.added_at} by={record.added_via} verb="Added" /></div> : null}</div>
           <button aria-label="Close" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground" onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
         </div>
         <div className="flex flex-col gap-3.5 overflow-y-auto p-5">

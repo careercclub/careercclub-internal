@@ -76,7 +76,7 @@ async function addChildren(tx: Sql, item: PlanItem, actor: string) {
     await tx`insert into mt_prospect_contacts (prospect_id, name, title, link, mt_status, source, position, added_via) values (${item.id!}, ${contact.name}, ${contact.title}, ${contact.link}, '', 'manual', ${1000 + position}, 'claude')`;
   }
   for (const [position, note] of item.addNotes.entries()) {
-    const details: Record<string, string> = { Date: note.date, Note: note.text, ...(note.program ? { Program: note.program } : {}), ...(note.source_url ? { Source: note.source_url } : {}), "Added by": actor };
+    const details: Record<string, string> = { Date: note.date, Note: note.text, ...(note.kind === "steps" ? { steps: note.text } : {}), ...(note.program ? { Program: note.program } : {}), ...(note.source_url ? { Source: note.source_url } : {}), "Added by": actor };
     await tx`insert into mt_prospect_research (prospect_id, kind, program, origin, ref_id, details, position) values (${item.id!}, ${note.kind}, ${note.program}, 'Claude', '', ${tx.json(details as never)}, ${1000 + position})`;
   }
 }

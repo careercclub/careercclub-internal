@@ -49,7 +49,8 @@ Header `Authorization: Bearer ccc_…`, body:
       "openings": { "2026": { "months": "Maret–April", "dates": "10 Mar – 5 Apr" } },
       "contacts": [{ "name": "Budi", "title": "HR Manager", "link": "https://linkedin.com/in/…" }],
       "updates": [{ "date": "2026-10-20", "text": "Poster MT 2026 terbit", "source_url": "https://…" }],
-      "requirements": [{ "program": "MT 2026", "text": "S1 semua jurusan, IPK ≥ 3.00" }]
+      "requirements": [{ "program": "MT 2026", "text": "S1 semua jurusan, IPK ≥ 3.00" }],
+      "selection_steps": [{ "program": "MT 2026", "text": "Administrasi → Psikotes → Interview HR → Interview User → MCU" }]
     }
   ]
 }
@@ -70,6 +71,16 @@ Rules:
   added by Claude also stay after an Excel upload. Companies that came from the Excel file are
   refreshed by the next upload (the file stays the source for its own rows).
 - Up to 200 companies per request.
+
+### Weekly MT research (prompt for Claude)
+
+> Every Monday: search the web (career pages, LinkedIn, Instagram, job boards) for Management
+> Trainee / ODP / graduate programmes in Indonesia opened or announced in the last 14 days. For
+> each company give brand, legal name, industry, programme name, the opening (year, months,
+> dates), HR contacts you can name, dated updates with the source link, requirements and
+> selection steps. Open internal.ccclub.id in Chrome (I am signed in), run a fetch to
+> `/api/agent/mt-prospects` with `mode: "preview"` (format: docs/claude-access.md), show me the
+> summary with every possible duplicate and conflict, and send `mode: "apply"` after I agree.
 
 ## Instagram & Content Evaluation
 
@@ -116,6 +127,40 @@ Rules:
 > `/api/agent/instagram` with `mode: "preview"` (format: docs/claude-access.md), show me the
 > summary, and send the same body with `mode: "apply"` after I agree.
 
-## Next modules
+## Customer Knowledge (pain points)
 
-Customer Knowledge (pain points) follows the same pattern.
+`GET /api/agent/customer-knowledge` returns the format **and the platforms and categories that
+exist** (use exactly those). `POST /api/agent/customer-knowledge`:
+
+```json
+{
+  "mode": "preview",
+  "pain_points": [
+    {
+      "comment": "Psikotes BUMN bikin stres, ga ada latihan yang mirip",
+      "platform": "TikTok",
+      "category": "Psikotes",
+      "month": "2026-10-03",
+      "username": "@budi",
+      "source_url": "https://www.tiktok.com/@…/video/…",
+      "labels": ["BUMN", "Psikotes"]
+    }
+  ]
+}
+```
+
+- `comment`, `platform`, `category` and `month` are required. Month may be 1–12, Okt / Oct, or
+  the comment's date. Up to 200 per request.
+- Platform and category must already exist in Customer Knowledge; otherwise the item is skipped
+  and the answer lists the allowed ones (ask the person to add a new one first).
+- The same comment (ignoring case, spaces and punctuation) on the same platform is not added
+  twice; for it only an empty username / source / notes is filled and missing labels are added.
+- New pain points show **Added by Claude**.
+
+### Weekly pain-point research (prompt for Claude)
+
+> Every Friday: collect 20–40 comments from Indonesian job seekers this week (Instagram, TikTok,
+> X, forums) about job hunting, MT programmes, psychotests and interviews, in their own words.
+> Get the platforms and categories from `GET /api/agent/customer-knowledge` on internal.ccclub.id
+> (in Chrome, I am signed in), classify each comment, send `mode: "preview"`, show me the
+> summary, and send `mode: "apply"` after I agree.

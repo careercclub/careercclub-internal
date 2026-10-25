@@ -24,6 +24,7 @@ const GUIDE = {
     notes: "string", contacts: "[{ name, title?, link? }] HR contacts",
     updates: "[{ text, date?: YYYY-MM-DD, source_url? }] dated research notes",
     requirements: "[{ text, program?, source_url? }]",
+    selection_steps: "[{ text, program?, source_url?, date? }] e.g. \"Administrasi → Psikotes → Interview HR → Interview User → MCU\"",
     match_id: "string, the company id from a possible_duplicate candidate, to update that company",
     as_new: "true to add as a new company although a similar name exists",
   },

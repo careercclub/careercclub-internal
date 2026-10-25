@@ -59,7 +59,7 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
   const claudeNotes = research?.filter((row) => row.origin === "Claude") || [];
   const updates = research?.filter((row) => row.kind === "update" && row.origin !== "Claude") || [];
   const requirements = research?.filter((row) => row.kind === "requirement" && row.origin !== "Claude") || [];
-  const steps = research?.filter((row) => row.kind === "steps") || [];
+  const steps = research?.filter((row) => row.kind === "steps" && row.origin !== "Claude") || [];
   const prediction = prospect.prediction;
 
   async function removeCompany() {
@@ -153,7 +153,7 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
                 <ul className={s.listBox}>
                   {[...claudeNotes].sort((a, b) => String(b.details.Date || "").localeCompare(String(a.details.Date || ""))).map((row) => (
                     <li className={s.claudeNote} key={row.id}>
-                      <span className={s.claudeNoteHead}><i aria-hidden="true" className="ti ti-sparkles" />{row.details.Date ? formatDay(row.details.Date) : "No date"}{row.kind === "requirement" ? <span className={s.tagMuted}>Requirement</span> : null}{row.program ? <span className={s.tagMuted}>{row.program}</span> : null}</span>
+                      <span className={s.claudeNoteHead}><i aria-hidden="true" className="ti ti-sparkles" />{row.details.Date ? formatDay(row.details.Date) : "No date"}{row.kind === "requirement" ? <span className={s.tagMuted}>Requirement</span> : row.kind === "steps" ? <span className={s.tagMuted}>Selection steps</span> : null}{row.program ? <span className={s.tagMuted}>{row.program}</span> : null}</span>
                       <p>{row.details.Note}</p>
                       <small>{row.details.Source ? <a href={row.details.Source} rel="noopener noreferrer" target="_blank">Source <i aria-hidden="true" className="ti ti-external-link" /></a> : null}{row.details.Source && row.details["Added by"] ? " · " : ""}{row.details["Added by"] || ""}</small>
                     </li>

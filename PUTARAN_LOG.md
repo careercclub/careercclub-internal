@@ -1558,3 +1558,29 @@ Permintaan user: Claude di akun lain menarik insight IG lewat Composio lalu mema
 ### Deploy
 
 Migrasi baru → `git pull origin refactor && npm run vps:rebuild`. Lalu (opsional) Settings → Claude access → Add key dengan modul Instagram & Content Evaluation; untuk jalur Chrome tidak perlu key.
+
+## Putaran 44 — Claude access: Customer Knowledge + tahapan seleksi Job Vacancy MT (25 Okt 2026)
+
+Permintaan user: lanjut Customer Knowledge lewat Claude, dan Job Vacancy MT juga. Tafsiran: Job Vacancy MT dilengkapi supaya hasil riset Claude bisa masuk utuh (termasuk tahapan seleksi) dan ada prompt riset rutin, sama seperti Instagram.
+
+### Do
+
+- **`/api/agent/customer-knowledge`** (modul Customer Knowledge di Settings → Claude access): `GET` menjelaskan format **dan daftar platform & kategori yang ada**; `POST {mode: "preview" | "apply", pain_points}` (maks. 200).
+- **Aturan gabung** (`lib/customer-knowledge/agent.ts`, satu tempat untuk preview & apply):
+  - wajib: comment, platform, category, month (1–12, Okt/Oct, atau tanggal komentar → disimpan "Okt" seperti form);
+  - platform & kategori harus yang sudah ada (ejaan modul dipakai); kalau tidak ada → dilewati dengan daftar yang boleh;
+  - komentar yang sama (abaikan huruf besar, spasi, tanda baca) di platform yang sama tidak masuk dua kali; untuk yang sudah ada hanya username/sumber/notes yang kosong diisi dan label yang belum ada ditambah. Tidak pernah menghapus atau menimpa tulisan tim.
+- Apply satu transaksi, tercatat di activity log. Label ditulis sesuai tipe kolom di database (jsonb / daftar teks / teks).
+- **Added by Claude**: kolom `added_via`/`added_at` (migrasi `029_customer_knowledge_claude.sql`); ikon ✦ di daftar pain point dan chip di Edit pain point (komponen bersama `claude-mark.tsx`, kini "Synced"/"Added").
+- **Job Vacancy MT**: Claude bisa mengirim `selection_steps` (tahapan seleksi) — masuk sebagai catatan Claude bertanda **Selection steps**.
+- `docs/claude-access.md`: format Customer Knowledge, `selection_steps`, prompt riset MT mingguan & riset pain point mingguan (lewat Chrome, preview → konfirmasi → apply).
+
+### Check
+
+- `tests/agent` 47 (PostgreSQL sungguhan, +11): MT selection steps; CK key modul lain → 401; GET panduan + daftar platform/kategori; preview 1 baru / 1 update / 1 tidak valid (dengan daftar yang boleh) dan tidak mengubah apa-apa; apply: ejaan modul, bulan "Okt", tanda Added by Claude; komentar sama tidak dobel, catatan tim tetap, username kosong diisi, label baru ditambah; apply ulang tidak dobel; activity log; label tersimpan juga di kolom daftar teks; Chrome di halaman app boleh.
+- Unit baru `lib/customer-knowledge/agent.test.mjs` 6. Suite baru `p44.mjs` 5 (modul di Settings, ✦ di daftar, chip di Edit pain point, HP).
+- Regresi penuh lolos: 30 suite modul (termasuk p44 5, p43 8), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 181 + 6 baru, import 58, search-db 19, agent-db 47, lint 0 error, build lolos.
+
+### Deploy
+
+Migrasi baru → `git pull origin refactor && npm run vps:rebuild`.

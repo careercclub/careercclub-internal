@@ -13,11 +13,17 @@ await sql.unsafe(migration("027_claude_access.sql"));
 await sql`create table activity_log (id bigserial primary key, user_name text, module text, action text, detail text, created_at timestamptz default now())`;
 const { POST, GET } = await import("./out/mt-route.mjs");
 const IG = await import("./out/ig-route.mjs");
-const { createAgentToken, revokeAgentToken, listAgentTokens, applyProspectImport, importContentEvaluations } = await import("./out/helpers.mjs");
+const { createAgentToken, revokeAgentToken, listAgentTokens, applyProspectImport, importContentEvaluations, closePostgresConnection } = await import("./out/helpers.mjs");
 // Content Evaluation & Instagram tables as in production (tests/imports/schema.sql), then migration 028.
 const importSchema = readFileSync(new URL("../imports/schema.sql", import.meta.url), "utf8");
 await sql.unsafe(importSchema.slice(importSchema.indexOf("create table content_evaluations"), importSchema.indexOf("create table free_class_eval")));
 await sql.unsafe(migration("028_instagram_claude_sync.sql"));
+// Customer Knowledge tables (labels as jsonb like production), then migration 029.
+await sql`create table pain_points (id uuid primary key default gen_random_uuid(), komentar text, platform text, kategori text, username text, bulan text, source_url text, notes text, labels jsonb default '[]', created_at timestamptz default now())`;
+await sql`create table pain_point_platforms (id uuid primary key default gen_random_uuid(), nama text)`;
+await sql`create table pain_point_categories (id uuid primary key default gen_random_uuid(), nama text)`;
+await sql.unsafe(migration("029_customer_knowledge_claude.sql"));
+const CK = await import("./out/ck-route.mjs");
 let pass = 0, fail = 0; const ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); c ? pass++ : fail++; };
 const call = async (body, key, method = "POST") => { const r = await (method === "POST" ? POST : GET)(new Request("http://x/api/agent/mt-prospects", { method, headers: key ? { authorization: `Bearer ${key}` } : {}, ...(method === "POST" ? { body: JSON.stringify(body) } : {}) })); return { status: r.status, body: await r.json() }; };
 
@@ -108,6 +114,48 @@ ok((await igCall({ mode: "preview", posts: Array.from({ length: 101 }, (_, i) =>
 globalThis.__session = { user: { id: "u1", name: "Tester" } };
 const igBrowser = await IG.POST(new Request("http://internal.test/api/agent/instagram", { method: "POST", headers: { host: "internal.test", origin: "http://internal.test" }, body: JSON.stringify({ mode: "preview", posts: [{ post_id: "5", reach: 1 }] }) }));
 ok(igBrowser.status === 200, "IG: Claude in Chrome on the app's page can preview with the session");
+globalThis.__session = null;
+
+// ── Job Vacancy MT: selection steps ──
+const mt2 = await createAgentToken({ name: "Riset MT 2", modules: ["job-vacancy-mt"], createdBy: "Admin" });
+r = await call({ mode: "apply", companies: [{ brand: "Pyridam Farma", selection_steps: [{ program: "Pyridam MT", text: "Administrasi → Psikotes → Interview HR → MCU", source_url: "https://example.com/steps" }] }] }, mt2.key);
+const [stepRow] = await sql`select kind, origin, details from mt_prospect_research where kind = 'steps'`;
+ok(r.status === 200 && stepRow && stepRow.origin === "Claude" && stepRow.details.steps.includes("Psikotes") && stepRow.details["Added by"] === "Claude (Riset MT 2)", "MT: selection steps are added as a Claude note");
+
+// ── Customer Knowledge ──
+await sql`insert into pain_point_platforms (nama) values ('Instagram'), ('TikTok'), ('X')`;
+await sql`insert into pain_point_categories (nama) values ('Karier'), ('Psikotes')`;
+await sql`insert into pain_points (komentar, platform, kategori, bulan, notes, labels) values ('Susah cari loker!!', 'Instagram', 'Karier', 'Okt', 'Ditulis tim', '["Fresh grad"]')`;
+const ck = await createAgentToken({ name: "Riset CK", modules: ["customer-knowledge"], createdBy: "Admin" });
+const ckCall = async (body, key = ck.key) => { const res = await CK.POST(new Request("http://x/api/agent/customer-knowledge", { method: "POST", headers: { authorization: `Bearer ${key}` }, body: JSON.stringify(body) })); return { status: res.status, body: await res.json() }; };
+ok((await ckCall({ mode: "preview", pain_points: [{ comment: "x" }] }, ig.key)).status === 401, "CK: a key for another module → 401");
+const guide = await (await CK.GET(new Request("http://x/api/agent/customer-knowledge", { headers: { authorization: `Bearer ${ck.key}` } }))).json();
+ok(guide.module === "Customer Knowledge" && guide.platforms.join() === "Instagram,TikTok,X" && guide.categories.join() === "Karier,Psikotes", "CK: GET explains the format and lists platforms and categories");
+const pains = [
+  { comment: "Psikotes BUMN bikin stres", platform: "tiktok", category: "psikotes", month: "2026-10-03", username: "@budi", source_url: "https://tiktok.com/@x/video/1", labels: ["BUMN"] },
+  { comment: "susah cari loker", platform: "Instagram", category: "Karier", month: 10, username: "rina", notes: "Dari Claude", labels: ["Fresh grad", "Loker"] },
+  { comment: "Gaji MT kecil", platform: "Facebook", category: "Karier", month: 10 },
+];
+r = await ckCall({ mode: "preview", pain_points: pains });
+ok(r.status === 200 && r.body.summary.added === 1 && r.body.summary.updated === 1 && r.body.summary.invalid === 1 && /Use one of/.test(r.body.items[2].errors[0]), `CK preview: 1 new, 1 update, 1 invalid with the allowed list (${JSON.stringify(r.body.summary)})`);
+ok((await sql`select count(*)::int as n from pain_points`)[0].n === 1, "CK preview changes nothing");
+r = await ckCall({ mode: "apply", pain_points: pains });
+const [fresh2] = await sql`select platform, kategori, bulan, username, labels, added_via, added_at from pain_points where komentar = 'Psikotes BUMN bikin stres'`;
+ok(r.status === 200 && fresh2 && fresh2.platform === "TikTok" && fresh2.kategori === "Psikotes" && fresh2.bulan === "Okt" && fresh2.labels[0] === "BUMN" && fresh2.added_via === "Claude (Riset CK)" && fresh2.added_at, "CK apply: new pain point in the module's words, marked Added by Claude");
+const [old2] = await sql`select kategori, username, notes, labels, added_via from pain_points where komentar = 'Susah cari loker!!'`;
+ok(old2.kategori === "Karier" && old2.username === "rina" && old2.notes === "Ditulis tim" && old2.labels.join() === "Fresh grad,Loker" && !old2.added_via, "CK apply: same comment not added twice — empty username filled, team notes kept, new label added");
+r = await ckCall({ mode: "apply", pain_points: pains });
+ok(r.body.summary.added === 0 && r.body.summary.updated === 0 && (await sql`select count(*)::int as n from pain_points`)[0].n === 2, "CK: applying again adds nothing twice");
+ok((await sql`select 1 from activity_log where module = 'Customer Knowledge' and user_name = 'Claude (Riset CK)'`).length === 2, "CK: every apply is in the activity log");
+await sql`alter table pain_points add column labels_list text[]`;
+await sql`update pain_points set labels_list = array(select jsonb_array_elements_text(labels))`;
+await sql`alter table pain_points drop column labels`;
+await sql`alter table pain_points rename column labels_list to labels`;
+await closePostgresConnection(); // the app's pooled statements were planned for the old column type
+r = await ckCall({ mode: "apply", pain_points: [{ comment: "Interview user susah", platform: "X", category: "Karier", month: "Nov", labels: ["Interview"] }] });
+ok(r.status === 200 && (await sql`select labels from pain_points where komentar = 'Interview user susah'`)[0].labels[0] === "Interview", "CK: labels saved also where the column is a text list");
+globalThis.__session = { user: { id: "u1", name: "Tester" } };
+ok((await CK.POST(new Request("http://internal.test/api/agent/customer-knowledge", { method: "POST", headers: { host: "internal.test", origin: "http://internal.test" }, body: JSON.stringify({ mode: "preview", pain_points: pains }) }))).status === 200, "CK: Claude in Chrome on the app's page can preview with the session");
 globalThis.__session = null;
 
 await sql.end();

@@ -11,4 +11,5 @@ const common = {
 };
 await build({ ...common, entryPoints: [`${R}/app/api/agent/mt-prospects/route.ts`], outfile: `${here}out/mt-route.mjs` });
 await build({ ...common, entryPoints: [`${R}/app/api/agent/instagram/route.ts`], outfile: `${here}out/ig-route.mjs` });
-await build({ ...common, stdin: { contents: 'export { createAgentToken, revokeAgentToken, listAgentTokens } from "@/lib/api/agent-tokens"; export { applyProspectImport } from "@/lib/api/mt-prospects"; export { importContentEvaluations } from "@/lib/api/content-evaluation";', resolveDir: R, loader: "ts" }, outfile: `${here}out/helpers.mjs` });
+await build({ ...common, entryPoints: [`${R}/app/api/agent/customer-knowledge/route.ts`], outfile: `${here}out/ck-route.mjs` });
+await build({ ...common, stdin: { contents: 'export { createAgentToken, revokeAgentToken, listAgentTokens } from "@/lib/api/agent-tokens"; export { applyProspectImport } from "@/lib/api/mt-prospects"; export { importContentEvaluations } from "@/lib/api/content-evaluation"; export { closePostgresConnection } from "@/lib/db/postgres";', resolveDir: R, loader: "ts" }, outfile: `${here}out/helpers.mjs` });

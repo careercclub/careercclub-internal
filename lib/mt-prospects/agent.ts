@@ -20,7 +20,7 @@ const STATUSES: ProspectStatus[] = ["active", "predicted", "older", "excluded"];
 const TEXT_FIELDS = ["legal_name", "industry", "program", "active_years", "notes"] as const;
 type TextField = (typeof TEXT_FIELDS)[number];
 
-export type AgentNote = { kind: "update" | "requirement"; date: string; text: string; program: string; source_url: string };
+export type AgentNote = { kind: "update" | "requirement" | "steps"; date: string; text: string; program: string; source_url: string };
 export type AgentContact = { name: string; title: string; link: string };
 export type AgentCompany = {
   brand: string; legal_name: string; industry: string; program: string; status: ProspectStatus | ""; active_years: string; notes: string;
@@ -77,13 +77,13 @@ export function readCompany(raw: unknown): { company: AgentCompany; errors: stri
     return { name: text(item.name, 120), title: text(item.title, 160), link: url(item.link) || text(item.link, 300) };
   }).filter((c) => c.name);
   const notesToAdd: AgentNote[] = [];
-  for (const [kind, list] of [["update", body.updates], ["requirement", body.requirements]] as const) {
+  for (const [kind, list] of [["update", body.updates], ["requirement", body.requirements], ["steps", body.selection_steps]] as const) {
     for (const n of (Array.isArray(list) ? list : []).slice(0, 30)) {
       const item: Record<string, unknown> = n && typeof n === "object" ? (n as Record<string, unknown>) : { text: n };
       const noteText = longText(item.text);
       const date = text(item.date, 10);
       if (!noteText) continue;
-      if (date && !isDate(date)) errors.push(`${kind}s: date "${date}" must be YYYY-MM-DD`);
+      if (date && !isDate(date)) errors.push(`${kind === "steps" ? "selection_steps" : `${kind}s`}: date "${date}" must be YYYY-MM-DD`);
       notesToAdd.push({ kind, date: isDate(date) ? date : "", text: noteText, program: text(item.program, 160), source_url: url(item.source_url) });
     }
   }
