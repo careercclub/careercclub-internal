@@ -66,6 +66,17 @@ export function parseFreeClassWorksheet(sheet: ExcelJS.Worksheet) {
   return rows;
 }
 
+/** The whole spreadsheet (every tab) as .xlsx: a "Publish to web → Entire document" link or a normal link. */
+export function googleSheetXlsxUrl(value: string) {
+  const url = new URL(value);
+  if (url.protocol !== "https:" || url.hostname !== "docs.google.com") throw new Error("Only HTTPS Google Sheets URLs are supported.");
+  const published = url.pathname.match(/^\/spreadsheets\/d\/e\/([a-zA-Z0-9-_]+)\/pub/);
+  if (published) return `https://docs.google.com/spreadsheets/d/e/${published[1]}/pub?output=xlsx`;
+  const match = url.pathname.match(/^\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!match) throw new Error("The Google Sheets URL is invalid.");
+  return `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=xlsx`;
+}
+
 export function googleSheetCsvUrl(value: string) {
   const url = new URL(value);
   if (url.protocol !== "https:" || url.hostname !== "docs.google.com") {

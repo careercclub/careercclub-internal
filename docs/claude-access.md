@@ -32,6 +32,30 @@ return await res.json();
 
 ## Job Vacancy MT
 
+**Recommended: the Google Sheet.** Keep the "CCC List MT" in a Google Sheet; the app reads it every
+hour (Job Vacancy MT → **Sync Google Sheet**, same tabs and rules as Import Excel). Claude edits
+the sheet with the Google Drive connector — no key, no Chrome. Rules for Claude:
+
+- Keep the tab names and the header row (row 1) exactly as they are: Aktif (MT 2026),
+  Pernah Buka (2025), Lama (2024 saja), Prediksi 2026, Kontak HR, Syarat Gabungan,
+  Update Tgl & Status, Tahapan Tambahan. Add rows; do not rename, reorder or delete columns.
+- One company per row in its status tab. HR contacts, requirements, dated updates and selection
+  steps go in their own tabs, naming the company by "Nama PT (legal)" and "Brand" exactly as in
+  the company tab.
+- Do not delete companies unless asked: a company removed from the sheet is removed from the app
+  at the next sync (if many disappear at once the sync pauses until someone checks).
+- With the sheet sync on, use the sheet only (not the API below), so every company has one home.
+
+> Weekly MT research (sheet): every Monday, search the web for Management Trainee / ODP /
+> graduate programmes in Indonesia opened or announced in the last 14 days. Update the
+> "CCC List MT" Google Sheet with the Google Drive tools following docs/claude-access.md: new
+> companies in "Aktif (MT 2026)", openings in the year columns, HR contacts in "Kontak HR",
+> dated news with the source link in "Update Tgl & Status", requirements in "Syarat Gabungan",
+> selection steps in "Tahapan Tambahan". Show me what you changed. The app picks it up within
+> an hour.
+
+### Without the sheet: the API
+
 `GET https://internal.ccclub.id/api/agent/mt-prospects` — returns this format as JSON.
 
 `POST https://internal.ccclub.id/api/agent/mt-prospects`
@@ -72,7 +96,7 @@ Rules:
   refreshed by the next upload (the file stays the source for its own rows).
 - Up to 200 companies per request.
 
-### Weekly MT research (prompt for Claude)
+### Weekly MT research through the API (prompt for Claude)
 
 > Every Monday: search the web (career pages, LinkedIn, Instagram, job boards) for Management
 > Trainee / ODP / graduate programmes in Indonesia opened or announced in the last 14 days. For

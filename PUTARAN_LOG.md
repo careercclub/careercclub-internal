@@ -1636,3 +1636,26 @@ Permintaan user: Talent Pool otomatis terisi dari Google Sheet (hasil Google For
 ### Deploy
 
 Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`). Lalu Talent Pool → Manage data → tempel link sheet → Start sync.
+
+## Putaran 47 — Job Vacancy MT sinkron otomatis dari Google Sheet (tiap jam) (25 Okt 2026)
+
+Permintaan user: Job Vacancy MT juga seperti Talent Pool — datanya di Google Sheets, Claude mengedit sheet-nya, web otomatis menarik dari sheet.
+
+### Do
+
+- **Job Vacancy MT → Sync Google Sheet** (tombol header, dialog dengan judul yang sama): tempel link sheet → **Start sync** → langsung sinkron, lalu tiap jam. Seluruh file (semua tab) ditarik sebagai .xlsx dan diproses **persis seperti Import Excel** (tab & kolom sama, aturan sama: sheet jadi sumber untuk perusahaannya; perusahaan & HR contact yang ditambah di app tetap; catatan Claude tetap). Header menampilkan "synced from Google Sheet 25 Oct, 10:00".
+- **Pengaman hapus massal**: kalau satu sinkron akan menghapus lebih dari 5 perusahaan atau seperlimanya (tab terhapus/terkosongkan tidak sengaja), sinkron **berhenti tanpa mengubah apa-apa**: status "Paused — needs a check", tombol **Apply anyway** (dengan konfirmasi). Sinkron yang tertahan tidak diulang otomatis sampai dicek; Sync now setelah sheet diperbaiki melanjutkannya.
+- Sheet belum dipublish / tab hilang → pesan jelas (cara publish "Entire document → Microsoft Excel", nama tab yang hilang), tanpa perubahan.
+- **Satu mekanisme untuk semua modul**: `lib/api/sheet-sync.ts` + `lib/sheet-sync/jobs.ts` (Talent Pool, Job Vacancy MT), satu komponen `sheet-sync-control.tsx`, satu set action `sheet-sync-actions.ts`, satu penjadwal (`lib/sheet-sync/scheduler.ts`, lewat `instrumentation.ts`). Talent Pool dipindah ke mekanisme ini tanpa perubahan perilaku.
+- Pembacaan workbook MT dipindah ke satu tempat (`lib/imports/mt-prospects-sheet.ts`), dipakai Import Excel dan sinkron. `googleSheetXlsxUrl` untuk link publish maupun link biasa.
+- `docs/claude-access.md`: cara Claude mengedit "CCC List MT" lewat Google Drive connector (nama tab & header tidak diubah, satu perusahaan satu baris, jangan hapus kecuali diminta) dan prompt riset MT mingguan versi sheet. Dengan sinkron sheet aktif, Claude pakai sheet saja (bukan API) supaya tiap perusahaan punya satu rumah.
+
+### Check
+
+- `tests/imports` 75 (+8 MT): seluruh sheet dibaca sebagai xlsx & diimport; HR contact masuk, tercatat "Google Sheet"; sheet yang akan menghapus 10 dari 15 perusahaan → berhenti, tidak ada perubahan; yang tertahan tidak diulang otomatis; Apply anyway menerapkan & perusahaan dari app tetap; sheet tidak dipublish → pesan cara publish; tab hilang disebut namanya; Stop sync → perusahaan tetap. Sinkron Talent Pool tetap lolos dengan mekanisme baru.
+- Suite baru `p47.mjs` 11 (judul dialog = tombol, wajib isi merah & fokus, Start sync kirim modul & link, status + hitungan, pause + Apply anyway dengan konfirmasi & force, catatan sumber data, Import Excel tetap, HP). `p46` diperbarui ke action bersama.
+- Regresi penuh lolos: 33 suite modul (termasuk p47 11, p46 11), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 194, import 75, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`). Lalu: upload "CCC List MT" ke Google Sheets → File → Share → Publish to web → **Entire document → Microsoft Excel (.xlsx)** → Job Vacancy MT → Sync Google Sheet → tempel link → Start sync.

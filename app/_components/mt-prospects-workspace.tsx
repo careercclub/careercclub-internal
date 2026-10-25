@@ -2,13 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import type { ImportInfo } from "@/lib/api/mt-prospects";
+import type { SheetSyncState } from "@/lib/api/sheet-sync";
 import {
   calendarMonth, displayName, expectedIn, industryCounts, initials, isPerson, latestOpening, linkHref, linkKind, matchesQuery, monthCounts,
   MONTHS, MONTHS_SHORT, openedIn, openIn, prospectSearchText, shortLegalName, sortByName, STATUS_HELP, STATUS_LABEL, STATUSES, yearsOf,
   type ContactRow, type ProspectRow, type ProspectStatus,
 } from "@/lib/mt-prospects/view";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CompanyForm, ImportDialog } from "./mt-prospects-forms";
+import { CompanyForm, ImportDialog, SheetSyncDialog } from "./mt-prospects-forms";
 import { ProspectDetail } from "./mt-prospects-detail";
 import s from "./mt-prospects.module.css";
 import { Pagination, usePagination } from "./ui-kit";
@@ -26,15 +27,16 @@ type View = "overview" | "companies" | "calendar" | "contacts";
 const NO_INDUSTRY = "__none__";
 const TAB_ALIASES: Record<string, View> = { overview: "overview", companies: "companies", company: "companies", calendar: "calendar", contacts: "contacts", hr: "contacts" };
 
-type Props = { prospects: ProspectRow[]; contacts: ContactRow[]; lastImport: ImportInfo; referenceDate: string; initialTab?: string };
+type Props = { prospects: ProspectRow[]; contacts: ContactRow[]; lastImport: ImportInfo; referenceDate: string; initialTab?: string; sheetSync?: SheetSyncState | null };
 
-export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenceDate, initialTab }: Props) {
+export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenceDate, initialTab, sheetSync = null }: Props) {
   const now = useMemo(() => new Date(referenceDate), [referenceDate]);
   const year = now.getFullYear();
   const [view, setView] = useState<View>(TAB_ALIASES[initialTab || ""] || "overview");
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ prospect: ProspectRow | null } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [companyFilter, setCompanyFilter] = useState<CompanyFilter>({ status: "active", industry: "", year: null, nonce: 0 });
   const [calendarMonthIndex, setCalendarMonthIndex] = useState(now.getMonth() + 1);
 
@@ -67,10 +69,11 @@ export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenc
           <h1>Job Vacancy MT</h1>
           <p>
             {prospects.length ? `${tracked.length} companies · ${activeCount} opening MT in ${year}` : "No MT list yet"}
-            {lastImport ? ` · data from ${lastImport.file_name}, ${new Date(lastImport.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+            {sheetSync?.lastRunAt && !sheetSync.lastError ? ` · synced from Google Sheet ${new Date(sheetSync.lastRunAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" })}` : lastImport ? ` · data from ${lastImport.file_name}, ${new Date(lastImport.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}
           </p>
         </div>
         <div className={s.headActions}>
+          <button className={s.ghostButton} onClick={() => setSyncing(true)} type="button"><i className={`ti ${sheetSync ? "ti-refresh" : "ti-table-share"}`} aria-hidden="true" /> Sync Google Sheet{sheetSync?.needsReview ? <span aria-label="needs a check" className={s.syncAlert} role="img" /> : null}</button>
           <button className={s.ghostButton} onClick={() => setImporting(true)} type="button"><i className="ti ti-file-spreadsheet" aria-hidden="true" /> Import Excel</button>
           <Button onClick={() => setEditing({ prospect: null })}><i className="ti ti-plus" aria-hidden="true" /> Add company</Button>
         </div>
@@ -99,6 +102,7 @@ export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenc
       {open ? <ProspectDetail contacts={contactsByProspect.get(open.id) || []} key={open.id} onClose={() => setOpenId(null)} onEdit={() => setEditing({ prospect: open })} prospect={open} year={year} /> : null}
       {editing ? <CompanyForm industries={[...new Set(prospects.map((row) => row.industry).filter(Boolean))].sort()} onClose={() => setEditing(null)} onSaved={(id) => { setEditing(null); if (id) setOpenId(id); }} prospect={editing.prospect} year={year} /> : null}
       {importing ? <ImportDialog onClose={() => setImporting(false)} /> : null}
+      {syncing ? <SheetSyncDialog onClose={() => setSyncing(false)} sync={sheetSync} /> : null}
     </div>
   );
 }
