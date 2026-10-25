@@ -1681,3 +1681,25 @@ Permintaan user: DM, komentar TikTok, dan reply Threads (diambil lewat Composio)
 ### Deploy
 
 Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`). Lalu buat sheet inbox, publish tab-nya sebagai CSV → Customer Knowledge → Sync Google Sheet → Start sync.
+
+## Putaran 49 — Competitor Intel & Instagram/Content Evaluation sinkron dari Google Sheet (25 Okt 2026)
+
+Permintaan user: workflow Competitor Intel sama seperti Customer Knowledge (Claude → Google Sheet → web), dan bagaimana untuk Instagram & Content Evaluation. Keputusan: pola yang sama untuk semua — Claude (scheduled, Composio) menulis ke sheet, web membaca tiap jam. Opsi lain untuk Instagram (web langsung ke Instagram API, butuh Meta developer app) dicatat untuk nanti.
+
+### Do
+
+- **Competitor Intel → Sync Google Sheet**: tab Competitors (satu baris per kompetitor, angka & "Checked on" diperbarui; baris ganda = log mingguan, yang terbaru menang, sel kosong tidak menghapus), Flags, Products. Diproses dengan aturan Claude access yang sama (kolom kosong diisi, perbedaan & possible duplicate **ditampilkan** dengan nomor baris, riwayat followers per tanggal "Checked on", harga bertanggal, tidak ada yang dihapus). "Rp 350.000" terbaca 350000. Kolom Match: "new" untuk brand lain dengan nama mirip.
+- **Content Evaluation → Sync Google Sheet** (Instagram insights): tab Posts (per Post ID, angka diperbarui di baris yang sama) dan Weekly (minggu → Senin). Aturan sama dengan Claude access (angka terbaru menang, catatan tim tidak berubah). Post ID yang tersimpan sebagai angka (digit hilang) ditolak dengan cara memperbaikinya. Sinkron juga memperbarui halaman Instagram.
+- **Satu bentuk di semua modul**: `SheetSyncDialog`, `SheetSyncButton` (titik merah kalau perlu dicek), `syncedLine` di header — dipakai MT, Customer Knowledge, Competitor Intel, Content Evaluation (Talent Pool di Manage data). Pembaca tab bersama `lib/imports/sheet-table.ts` (tab dicari dari nama, kolom dari header baris 1 dengan beberapa ejaan, tanggal dd/mm/yyyy atau ISO).
+- Batas 50 kompetitor per rencana kini hanya untuk API (sheet boleh lebih).
+- `docs/claude-access.md`: format sheet & prompt scheduled task untuk Instagram (harian) dan Competitor Intel (mingguan).
+
+### Check
+
+- `tests/imports` 92 (+11): CI — 1 baru, 1 update, possible duplicate dilewati; website kosong diisi, niche & threat tetap, followers terbaru; snapshot pakai Checked on + ads active; flag & harga bertanggal; peringatan possible duplicate, kompetitor tak dikenal di Flags, perbedaan; jam berikutnya tidak dobel; sheet tanpa tab Competitors → pesan, tidak ada yang dihapus. IG — 1 post baru, 1 update, 1 minggu, 1 dilewati; judul & catatan tim tetap, Reel + watch time; minggu di hari Senin; Post ID angka ditolak.
+- Suite baru `p49.mjs` 14 (dua modul: dialog bersama, wajib isi, Start sync kirim modul & link, status + daftar baris, Close, HP). `p47`, `p48`, `ci`, `mkt`, `ck`, `mt` tetap lolos.
+- Regresi penuh lolos: 35 suite modul (termasuk p49 14), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 195, import 92, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`).

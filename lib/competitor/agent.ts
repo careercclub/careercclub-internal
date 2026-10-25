@@ -118,7 +118,7 @@ const flagKey = (f: FlagPlan) => `${f.flag_type}|${f.flag_date}|${words(f.descri
 export function planCompetitors(raws: unknown[], existing: ExistingCompetitor[], today: string): CompetitorItem[] {
   const byId = new Map(existing.map((row) => [row.id, row]));
   const seen = new Set<string>();
-  return raws.slice(0, MAX_COMPETITORS).map((raw, index) => {
+  return raws.map((raw, index) => {
     const read = readCompetitor(raw, today);
     const blank: CompetitorItem = { index, name: read.name, action: "invalid", set: {}, platforms: [], followers: {}, followerChanges: [], snapshot: null, flags: [], products: [], conflicts: [], errors: [...read.errors] };
     if (read.errors.length) return blank;

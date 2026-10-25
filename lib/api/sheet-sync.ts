@@ -3,7 +3,12 @@ import { logActivity } from "@/lib/api/activity";
 import { applyProspectImport, previewProspectImport } from "@/lib/api/mt-prospects";
 import { listAppSettings, saveAppSetting } from "@/lib/api/settings";
 import { importTalentPoolRows } from "@/lib/api/talent-pool";
+import { applyCompetitors } from "@/lib/api/competitor-agent";
 import { applyPainPoints } from "@/lib/api/customer-knowledge-agent";
+import { applyInstagramSync } from "@/lib/api/instagram-agent";
+import { competitorRows } from "@/lib/imports/competitor-sheet";
+import { instagramRows } from "@/lib/imports/instagram-sheet";
+import { fetchGoogleWorkbook } from "@/lib/imports/sheet-table";
 import { fetchMtGoogleSheet, parseMtWorkbook } from "@/lib/imports/mt-prospects-sheet";
 import { painPointRows } from "@/lib/imports/pain-points-sheet";
 import { fetchGoogleSheet, SheetProblem, talentPoolRows } from "@/lib/imports/talent-pool-sheet";
@@ -19,6 +24,10 @@ import { SHEET_SYNC_JOBS, type SheetSyncJob } from "@/lib/sheet-sync/jobs";
 //   - Customer Knowledge: an inbox tab of comments / DMs / replies (filled by Claude from Composio).
 //     Same rules as Claude access: the same comment on the same platform is never added twice,
 //     platform and category must exist (rows that do not fit are skipped and listed), nothing removed.
+//   - Competitor Intel: tabs Competitors / Flags / Products. Same rules as Claude access (empty fields
+//     filled, differences listed, followers history, dated prices, nothing removed).
+//   - Instagram & Content Evaluation: tabs Posts / Weekly. Same rules as Claude access (matched by
+//     Post ID and week, newest numbers win, the team's notes untouched, nothing removed).
 
 export const SYNC_EVERY_MINUTES = 60;
 export type SyncResult = Record<string, number>;
@@ -42,17 +51,42 @@ export async function saveSheetSync(job: SheetSyncJob, value: SheetSyncState | n
   await saveAppSetting(settingKey(job), value ?? {});
 }
 
+/** The first few problems; the rest as a count. */
+function trim(warnings: string[]) {
+  return warnings.slice(0, 5).concat(warnings.length > 5 ? [`…and ${warnings.length - 5} more`] : []);
+}
+
 /** More than this many companies (or a fifth of them) gone in one sync needs a person to agree. */
 export function tooManyRemoved(removed: number, current: number) {
   return removed > Math.max(5, Math.floor(current / 5));
 }
 
 async function readAndApply(job: SheetSyncJob, url: string, actor: string, force: boolean): Promise<{ result: SyncResult; review?: string; warnings?: string[] }> {
+  if (job === "competitor-intel") {
+    const { competitors, warnings } = competitorRows(await fetchGoogleWorkbook(url));
+    const { items, summary } = await applyCompetitors(competitors, "Google Sheet");
+    const where = (index: number) => `Competitors row ${(competitors[index].__rows as number[]).join(", ")}`;
+    for (const item of items) {
+      if (item.action === "invalid") warnings.push(`${where(item.index)}: ${item.errors[0]}`);
+      else if (item.action === "possible_duplicate") warnings.push(`${where(item.index)}: “${item.name}” looks like ${item.candidates?.map((c) => `“${c.name}”`).join(" or ")} in the app. Use the same name, or write “new” in the Match column.`);
+      for (const conflict of [...item.conflicts, ...item.products.flatMap((p) => p.conflicts)]) warnings.push(`${where(item.index)}: ${conflict.field.replace(/_/g, " ")} differs from the app (kept “${conflict.current.slice(0, 40)}”).`);
+    }
+    return { result: { added: summary.added, updated: summary.updated, unchanged: summary.unchanged, skipped: summary.invalid + summary.possibleDuplicates }, warnings: trim(warnings) };
+  }
+  if (job === "instagram") {
+    const sheet = instagramRows(await fetchGoogleWorkbook(url));
+    const { posts, weeks, summary } = await applyInstagramSync(sheet.posts, sheet.weeks, "Google Sheet");
+    const warnings = [...sheet.warnings,
+      ...posts.map((item, i) => (item.action === "invalid" ? `${sheet.postsTab} row ${sheet.postRows[i]}: ${item.errors[0]}` : "")),
+      ...weeks.map((item, i) => (item.action === "invalid" ? `${sheet.weeksTab} row ${sheet.weekRows[i]}: ${item.errors[0]}` : "")),
+    ].filter(Boolean);
+    return { result: { added: summary.postsAdded, updated: summary.postsUpdated, unchanged: summary.postsUnchanged, weeks: summary.weeksAdded + summary.weeksUpdated, skipped: summary.postsInvalid + summary.weeksInvalid + sheet.warnings.length }, warnings: trim(warnings) };
+  }
   if (job === "customer-knowledge") {
     const rows = painPointRows(await fetchGoogleSheet(url));
     const { items, summary } = await applyPainPoints(rows, "Google Sheet");
     const warnings = items.map((item, index) => (item.action === "invalid" ? `Row ${rows[index].row}: ${item.errors[0]}` : "")).filter(Boolean);
-    return { result: { added: summary.added, updated: summary.updated, unchanged: summary.unchanged, skipped: summary.invalid }, warnings: warnings.slice(0, 5).concat(warnings.length > 5 ? [`…and ${warnings.length - 5} more rows`] : []) };
+    return { result: { added: summary.added, updated: summary.updated, unchanged: summary.unchanged, skipped: summary.invalid }, warnings: trim(warnings) };
   }
   if (job === "talent-pool") {
     const r = await importTalentPoolRows(talentPoolRows(await fetchGoogleSheet(url)));

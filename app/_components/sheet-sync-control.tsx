@@ -7,15 +7,17 @@ import { formatDay } from "@/lib/text/date";
 import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { confirmAction } from "./app-dialog";
 import s from "./page-kit.module.css";
 import { HelpTip } from "./ui-kit";
 
 // Google Sheet sync, the same control in every module that has one (Talent Pool, Job Vacancy MT,
-// Customer Knowledge):
+// Customer Knowledge, Competitor Intel, Content Evaluation):
 // paste the link once → Start sync (runs at once, then every hour) → Sync now / Stop sync.
 
-const LABELS: Array<[string, string]> = [["added", "new"], ["updated", "updated"], ["removed", "removed"], ["unchanged", "unchanged"], ["contacts", "HR contacts"], ["skipped", "skipped"]];
+const LABELS: Array<[string, string]> = [["added", "new"], ["updated", "updated"], ["removed", "removed"], ["unchanged", "unchanged"], ["contacts", "HR contacts"], ["weeks", "weeks"], ["skipped", "skipped"]];
 
 export function syncResultText(result: Record<string, number | undefined>) {
   return LABELS.filter(([key]) => key === "added" || key === "updated" || result[key]).map(([key, label]) => `${result[key] || 0} ${label}`).join(" · ");
@@ -85,4 +87,31 @@ export function SheetSyncControl({ job, sync: initial, title, help, placeholder,
       </div>
     </div>
   );
+}
+
+type DialogProps = Props & { description: string; note?: ReactNode; onClose: () => void };
+
+/** The "Sync Google Sheet" dialog, the same in every module (opened by the "Sync Google Sheet" button). */
+export function SheetSyncDialog({ description, note, onClose, ...control }: DialogProps) {
+  return (
+    <Dialog onOpenChange={(open) => { if (!open) onClose(); }} open>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[560px]">
+        <DialogHeader><DialogTitle>Sync Google Sheet</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader>
+        <SheetSyncControl {...control} />
+        {note ? <div className="flex gap-2 rounded-[12px] bg-[var(--surface-2)] px-3 py-2.5 text-[12px] leading-snug text-[var(--text-muted)]"><i aria-hidden="true" className="ti ti-info-circle mt-px" /><div>{note}</div></div> : null}
+        <DialogFooter sticky><Button onClick={onClose} type="button" variant="outline">Close</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** "· synced from Google Sheet 25 Oct, 10:00" for a page header, or "" when it never ran or failed. */
+export function syncedLine(sync: SheetSyncState | null) {
+  if (!sync?.lastRunAt || sync.lastError) return "";
+  return ` · synced from Google Sheet ${new Date(sync.lastRunAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" })}`;
+}
+
+/** The header button that opens the dialog. */
+export function SheetSyncButton({ sync, onClick, className }: { sync: SheetSyncState | null; onClick: () => void; className?: string }) {
+  return <button className={className} onClick={onClick} type="button"><i aria-hidden="true" className={`ti ${sync ? "ti-refresh" : "ti-table-share"}`} /> Sync Google Sheet{sync?.needsReview || sync?.lastError ? <span aria-label="needs a check" role="img" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--red)", display: "inline-block" }} /> : null}</button>;
 }

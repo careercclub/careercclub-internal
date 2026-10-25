@@ -2,8 +2,6 @@
 
 import { saveProspectAction, saveProspectContactAction } from "@/app/actions/mt-prospect-actions";
 import { Button } from "@/components/ui/button";
-import type { SheetSyncState } from "@/lib/api/sheet-sync";
-import { SheetSyncControl } from "./sheet-sync-control";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ImportSummary } from "@/lib/api/mt-prospects";
 import { MONTHS, MONTHS_SHORT, STATUS_HELP, STATUS_LABEL, STATUSES, type ContactRow, type ProspectRow, type ProspectStatus } from "@/lib/mt-prospects/view";
@@ -290,24 +288,3 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Job Vacancy MT ← the "CCC List MT" Google Sheet, every hour (same tabs and rules as Import Excel). */
-export function SheetSyncDialog({ sync, onClose }: { sync: SheetSyncState | null; onClose: () => void }) {
-  return (
-    <FormDialog
-      description="Keep the MT list in a Google Sheet (edited by the team or by Claude). The app reads it every hour, the same way as Import Excel."
-      footer={<Button onClick={onClose} type="button" variant="outline">Close</Button>}
-      onClose={onClose}
-      title="Sync Google Sheet"
-    >
-      <div className={s.form}>
-        <SheetSyncControl
-          help="In the sheet: File → Share → Publish to web → Entire document → Microsoft Excel (.xlsx) → copy the link. The sheet needs the same tabs as the Excel file (Aktif, Pernah Buka, Lama, Prediksi, Kontak HR, Syarat Gabungan, Update Tgl & Status, Tahapan Tambahan)."
-          job="mt-prospects" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=xlsx"
-          stopMessage="The list stops following the sheet. Companies already here stay."
-          sync={sync} title="Sync the MT list every hour"
-        />
-        <p className={s.sourceNote}><i className="ti ti-info-circle" aria-hidden="true" />The sheet is the source for its companies: edit them in the sheet. Companies and HR contacts added in the app stay. If one sync would remove many companies at once, it pauses until you check.</p>
-      </div>
-    </FormDialog>
-  );
-}

@@ -2,10 +2,10 @@
 
 import { ClaudeChip, ClaudeMark } from "./claude-mark";
 import type { SheetSyncState } from "@/lib/api/sheet-sync";
-import { SheetSyncControl } from "./sheet-sync-control";
+import { SheetSyncButton, SheetSyncDialog, syncedLine } from "./sheet-sync-control";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { distribution, filterPainPoints, labelsOf as labels, MONTH_OPTIONS, MONTH_VALUES, monthCounts, monthLabel, topKeywords, type PainFilter } from "@/lib/customer-knowledge/view";
 import { settingsHref } from "@/lib/records/links";
@@ -72,15 +72,24 @@ export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeCl
         <div>
           <span className={s.eyebrow}>Intelligence</span>
           <h1>Customer Knowledge</h1>
-          <p>{rows.length} pain points · {freeClassRows.length} Free Class responses{averageRating ? ` · ${averageRating.toFixed(2)}/5 average` : ""}{sheetSync?.lastRunAt && !sheetSync.lastError ? ` · synced from Google Sheet ${new Date(sheetSync.lastRunAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" })}` : ""}</p>
+          <p>{rows.length} pain points · {freeClassRows.length} Free Class responses{averageRating ? ` · ${averageRating.toFixed(2)}/5 average` : ""}{syncedLine(sheetSync)}</p>
         </div>
         <div className={s.headActions}>
-          <button className={s.ghostButton} onClick={() => setSyncing(true)} type="button"><i className={`ti ${sheetSync ? "ti-refresh" : "ti-table-share"}`} aria-hidden="true" /> Sync Google Sheet</button>
+          <SheetSyncButton className={s.ghostButton} onClick={() => setSyncing(true)} sync={sheetSync} />
           <Link className={s.ghostButton} href={settingsHref("customer-knowledge")}><i className="ti ti-settings" aria-hidden="true" /> Platforms &amp; categories</Link>
           <Button onClick={() => setModal({ record: null })}><i className="ti ti-plus" aria-hidden="true" /> Add pain point</Button>
         </div>
       </header>
-      {syncing ? <SheetSyncDialog onClose={() => setSyncing(false)} platforms={platforms.map((p) => text(p.nama)).filter(Boolean)} categories={categories.map((c) => text(c.nama)).filter(Boolean)} sync={sheetSync} /> : null}
+      {syncing ? (
+        <SheetSyncDialog
+          description="Comments, DMs and replies collected in a Google Sheet (by Claude through Composio, or by the team) come in here every hour."
+          help="One tab with the columns Date, Platform, Category, Comment, Username, Source link, Labels, Notes (row 1). In the sheet: File → Share → Publish to web → pick that tab → Comma-separated values → copy the link."
+          job="customer-knowledge" onClose={() => setSyncing(false)} placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&output=csv"
+          note={<>The same comment on the same platform is added once. Platform and category must be one of these — Platforms: {platforms.map((p) => text(p.nama)).filter(Boolean).join(", ") || "none yet"}. Categories: {categories.map((c) => text(c.nama)).filter(Boolean).join(", ") || "none yet"}. Rows that do not fit are skipped and listed here.</>}
+          stopMessage="New rows in the sheet will no longer come in by themselves. Pain points already here stay."
+          sync={sheetSync} title="Sync the inbox sheet every hour"
+        />
+      ) : null}
 
       <div className={s.segmented} role="tablist" aria-label="Customer Knowledge view">
         <button aria-selected={view === "pain"} className={view === "pain" ? s.segmentActive : s.segment} onClick={() => setView("pain")} role="tab" type="button">Pain points <span>{rows.length}</span></button>
@@ -478,21 +487,3 @@ function Distribution({ title, rows }: { title: string; rows: [string, number][]
   return <section className={s.panel} aria-label={title}><h2>{title}</h2>{rows.length ? <DistributionPie rows={rows} /> : <p className={s.emptySmall}>No data yet.</p>}</section>;
 }
 
-/** Customer Knowledge ← the "Customer Knowledge inbox" Google Sheet, every hour. */
-function SheetSyncDialog({ sync, platforms, categories, onClose }: { sync: SheetSyncState | null; platforms: string[]; categories: string[]; onClose: () => void }) {
-  return (
-    <Dialog onOpenChange={(open) => { if (!open) onClose(); }} open>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[560px]">
-        <DialogHeader><DialogTitle>Sync Google Sheet</DialogTitle><DialogDescription>Comments, DMs and replies collected in a Google Sheet (by Claude through Composio, or by the team) come in here every hour.</DialogDescription></DialogHeader>
-        <SheetSyncControl
-          help="One tab with the columns Date, Platform, Category, Comment, Username, Source link, Labels, Notes (row 1). In the sheet: File → Share → Publish to web → pick that tab → Comma-separated values → copy the link."
-          job="customer-knowledge" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&output=csv"
-          stopMessage="New rows in the sheet will no longer come in by themselves. Pain points already here stay."
-          sync={sync} title="Sync the inbox sheet every hour"
-        />
-        <p className="text-[12px] leading-snug text-[var(--text-muted)]">The same comment on the same platform is added once. Platform and category must be one of these — Platforms: {platforms.join(", ") || "none yet"}. Categories: {categories.join(", ") || "none yet"}. Rows that do not fit are skipped and listed here.</p>
-        <DialogFooter sticky><Button onClick={onClose} type="button" variant="outline">Close</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}

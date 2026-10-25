@@ -4,6 +4,8 @@
 .head h1 { margin: 2px 0 0; font-size: clamp(22px, 3vw, 27px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
 .head p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
 .head > button { min-height: 38px; padding: 0 15px; }
+.headActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.headActions > button { min-height: 38px; }
 .eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .danger { color: var(--red); }
 .muted { color: var(--text-muted); }

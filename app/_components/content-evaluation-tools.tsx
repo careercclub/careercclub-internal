@@ -15,6 +15,8 @@ import { guard } from "./safe-action";
 import c from "./content-evaluation.module.css";
 import s from "./page-kit.module.css";
 import { ClaudeChip, ClaudeMark } from "./claude-mark";
+import type { SheetSyncState } from "@/lib/api/sheet-sync";
+import { SheetSyncButton, SheetSyncDialog, syncedLine } from "./sheet-sync-control";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DateInput } from "./date-input";
@@ -44,7 +46,8 @@ function sortItems(items: Scored[], mode: SortMode) {
   return [...items].sort((a, b) => value(b) - value(a));
 }
 
-export function ContentEvaluationTools({ evaluations, buyers, buyerTotal }: { evaluations: ApiRecord[]; buyers: ApiRecord[]; /** All buyers across sources; `buyers` may hold only the Instagram Story ones. */ buyerTotal?: number }) {
+export function ContentEvaluationTools({ evaluations, buyers, buyerTotal, sheetSync = null }: { evaluations: ApiRecord[]; buyers: ApiRecord[]; /** All buyers across sources; `buyers` may hold only the Instagram Story ones. */ buyerTotal?: number; sheetSync?: SheetSyncState | null }) {
+  const [syncing, setSyncing] = useState(false);
   const router = useRouter();
   const [view, setView] = useState<View>("overview");
   const [range, setRange] = useState("0");
@@ -100,13 +103,24 @@ export function ContentEvaluationTools({ evaluations, buyers, buyerTotal }: { ev
         <div>
           <span className={s.eyebrow}>Marketing</span>
           <h1>Content Evaluation</h1>
-          <p>{scored.length} post{scored.length === 1 ? "" : "s"} scored{range === "0" ? "" : " in this range"} · average score {average}/100</p>
+          <p>{scored.length} post{scored.length === 1 ? "" : "s"} scored{range === "0" ? "" : " in this range"} · average score {average}/100{syncedLine(sheetSync)}</p>
         </div>
         <div className={s.headActions}>
+          <SheetSyncButton className={s.ghost} onClick={() => setSyncing(true)} sync={sheetSync} />
           <button className={s.ghost} onClick={() => setImportOpen(true)} type="button"><i className="ti ti-file-import" aria-hidden="true" /> Import Meta CSV</button>
           <button className={s.primary} onClick={() => setEditing(null)} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add evaluation</button>
         </div>
       </header>
+      {syncing ? (
+        <SheetSyncDialog
+          description="Post insights kept in a Google Sheet (by Claude from Composio every day, or by the team) come in here every hour. Weekly account numbers go to the Instagram page."
+          help="Tabs: Posts (Post ID, Date, Format, URL, Caption, Views, Reach, Likes, Comments, Saves, Shares, Follows, Profile visits, Link taps, Accounts engaged, Average watch time, Watch through rate, Duration) and Weekly (Week start, Followers, New followers, Reach, Views, Interactions, Link clicks, Profile visits). In the sheet: File → Share → Publish to web → Entire document → Microsoft Excel (.xlsx) → copy the link."
+          job="instagram" note="Posts are matched by Post ID (keep that column as Plain text), weeks by their Monday. Numbers from the sheet replace the old ones; topic, hook rating, CTA, what worked, needs improvement and action are never changed. Import Meta CSV keeps working on the same posts."
+          onClose={() => setSyncing(false)} placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=xlsx"
+          stopMessage="Content Evaluation stops following the sheet. Posts already here stay."
+          sync={sheetSync} title="Sync the Instagram insights sheet every hour"
+        />
+      ) : null}
 
       <div className={s.toolbar}>
         <div aria-label="Content evaluation views" className={s.segmented} role="tablist">

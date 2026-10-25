@@ -240,4 +240,3 @@
 .listBox > li { padding: 12px 14px; border-top: 1px solid var(--border); }
 .listBox > li:first-child { border-top: 0; }
 .listBox > .contact { padding: 10px 14px; }
-.syncAlert { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }

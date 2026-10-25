@@ -1,6 +1,8 @@
 "use client";
 
 import { ClaudeMark } from "./claude-mark";
+import type { SheetSyncState } from "@/lib/api/sheet-sync";
+import { SheetSyncButton, SheetSyncDialog, syncedLine } from "./sheet-sync-control";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -53,7 +55,8 @@ function ThreatChip({ threat }: { threat: Threat }) {
   return <span className={threat === "high" ? s.chipDanger : threat === "medium" ? s.chip : s.chipMuted}>{threat[0].toUpperCase() + threat.slice(1)} threat</span>;
 }
 
-export function CompetitorTools({ workspace }: { workspace: Workspace }) {
+export function CompetitorTools({ workspace, sheetSync = null }: { workspace: Workspace; sheetSync?: SheetSyncState | null }) {
+  const [syncing, setSyncing] = useState(false);
   const [view, setView] = useState<View>("landscape");
   const [editing, setEditing] = useState<{ record: ApiRecord | null } | null>(null);
   const summary = useMemo(() => competitorSummary(workspace.profiles, workspace.snapshots, workspace.flags), [workspace]);
@@ -71,10 +74,23 @@ export function CompetitorTools({ workspace }: { workspace: Workspace }) {
         <div>
           <span className={s.eyebrow}>Intelligence</span>
           <h1>Competitor Intel</h1>
-          <p>{summary.total} competitors · {summary.threat.high ? <b className={s.danger}>{summary.threat.high} high threat</b> : "none high threat"} · {summary.flags} flag{summary.flags === 1 ? "" : "s"} logged</p>
+          <p>{summary.total} competitors · {summary.threat.high ? <b className={s.danger}>{summary.threat.high} high threat</b> : "none high threat"} · {summary.flags} flag{summary.flags === 1 ? "" : "s"} logged{syncedLine(sheetSync)}</p>
         </div>
-        <Button onClick={() => setEditing({ record: null })}><i className="ti ti-plus" aria-hidden="true" /> Add competitor</Button>
+        <div className={s.headActions}>
+          <SheetSyncButton className={s.ghostButton} onClick={() => setSyncing(true)} sync={sheetSync} />
+          <Button onClick={() => setEditing({ record: null })}><i className="ti ti-plus" aria-hidden="true" /> Add competitor</Button>
+        </div>
       </header>
+      {syncing ? (
+        <SheetSyncDialog
+          description="Competitors, followers, news and prices kept in a Google Sheet (by Claude every week, or by the team) come in here every hour."
+          help="Tabs: Competitors (Competitor, Checked on, Category, Website, Platforms, Niche, Target audience, Threat level, Instagram followers, TikTok followers, YouTube followers, X followers, LinkedIn followers, Ads active, Notes, Match), Flags (Competitor, Date, Type, Description, Source link) and Products (Competitor, Product, Category, Price min, Price max, Price date, Features, Links, Description). In the sheet: File → Share → Publish to web → Entire document → Microsoft Excel (.xlsx) → copy the link."
+          job="competitor-intel" note="One row per competitor: update its numbers and “Checked on” date each time; the app keeps the follower history and dated prices. Existing competitors only get empty fields filled — differences are listed, not written. Nothing is removed from the app."
+          onClose={() => setSyncing(false)} placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=xlsx"
+          stopMessage="Competitor Intel stops following the sheet. Everything already here stays."
+          sync={sheetSync} title="Sync the competitor sheet every hour"
+        />
+      ) : null}
 
       <div className={s.segmented} role="tablist" aria-label="Competitor Intel view">
         {views.map(([id, label, count]) => <button aria-selected={view === id} className={view === id ? s.segmentActive : s.segment} key={id} onClick={() => setView(id)} role="tab" type="button">{label}{count !== null ? <span>{count}</span> : null}</button>)}

@@ -12,6 +12,11 @@ async function requireUser() {
   if (!session?.user) throw new Error("Sign in first.");
   return session.user.name || session.user.email || "CCC User";
 }
+/** Instagram fills Content Evaluation and the Instagram page's weekly numbers. */
+function revalidate(id: SheetSyncJob) {
+  revalidatePath(SHEET_SYNC_JOBS[id].path);
+  if (id === "instagram") revalidatePath("/instagram");
+}
 function checkJob(job: string): SheetSyncJob {
   if (!isSheetSyncJob(job)) throw new Error("Unknown module.");
   return job;
@@ -25,7 +30,7 @@ export async function startSheetSyncAction(job: string, url: string) {
   await saveSheetSync(id, { url: link, startedBy: actor, startedAt: new Date().toISOString() });
   await logActivity({ userName: actor, module: SHEET_SYNC_JOBS[id].module, action: "Start Google Sheet sync", detail: "Every hour", table: SHEET_SYNC_JOBS[id].table });
   const state = await runSheetSync(id, actor);
-  revalidatePath(SHEET_SYNC_JOBS[id].path);
+  revalidate(id);
   return state;
 }
 
@@ -33,7 +38,7 @@ export async function startSheetSyncAction(job: string, url: string) {
 export async function syncSheetNowAction(job: string, force = false) {
   const actor = await requireUser(); const id = checkJob(job);
   const state = await runSheetSync(id, actor, { force: force === true });
-  revalidatePath(SHEET_SYNC_JOBS[id].path);
+  revalidate(id);
   return state;
 }
 
@@ -43,6 +48,6 @@ export async function stopSheetSyncAction(job: string) {
   if (!(await getSheetSync(id))) return null;
   await saveSheetSync(id, null);
   await logActivity({ userName: actor, module: SHEET_SYNC_JOBS[id].module, action: "Stop Google Sheet sync", detail: "", table: SHEET_SYNC_JOBS[id].table });
-  revalidatePath(SHEET_SYNC_JOBS[id].path);
+  revalidate(id);
   return null;
 }

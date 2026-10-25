@@ -474,6 +474,67 @@ await test("Customer Knowledge: Google Sheet inbox sync — adds once, skips wha
   await S.stopSheetSyncAction("customer-knowledge");
 });
 
+const mig = (name) => (async () => (await import("node:fs")).readFileSync(new URL(`../../database/migrations/${name}`, import.meta.url), "utf8"))();
+async function book(tabs) { const wb = new ExcelJS.Workbook(); for (const [name, rows] of Object.entries(tabs)) { const ws = wb.addWorksheet(name); rows.forEach((row) => ws.addRow(row)); } return Buffer.from(await wb.xlsx.writeBuffer()); }
+
+await test("Competitor Intel: Google Sheet sync — competitors, flags, products; differences listed, nothing removed", async () => {
+  await sql`create table if not exists competitor_profiles (id uuid primary key default gen_random_uuid(), name text, category text, platforms jsonb default '[]', primary_url text, niche text, target_audience text, followers jsonb default '{}', threat_level text, logo_url text, notes text, created_at timestamptz default now())`;
+  await sql`create table if not exists competitor_snapshots (id uuid primary key default gen_random_uuid(), competitor_id uuid, snapshot_date date, threat_level text, followers jsonb default '{}', ads_active boolean default false, notes text)`;
+  await sql`create table if not exists competitor_flags (id uuid primary key default gen_random_uuid(), competitor_id uuid, flag_type text, flag_date date, description text)`;
+  await sql`create table if not exists competitor_products (id uuid primary key default gen_random_uuid(), competitor_id uuid, name text, category text, description text, price_min numeric, price_max numeric, status text, features jsonb default '[]', links jsonb default '[]', image_url text, image_urls jsonb default '[]', created_at timestamptz default now())`;
+  await sql`create table if not exists competitor_product_prices (id uuid primary key default gen_random_uuid(), product_id uuid, price_min numeric, price_max numeric, recorded_at date, notes text)`;
+  await sql.unsafe(await mig("030_competitor_claude.sql"));
+  await reset("competitor_profiles", "competitor_snapshots", "competitor_flags", "competitor_products", "competitor_product_prices");
+  await sql`insert into competitor_profiles (name, category, niche, threat_level, followers, platforms) values ('Kerjaku Academy', 'direct', 'MT test prep', 'medium', '{"Instagram": 50000}', '["Instagram"]')`;
+  const S = await import("./out/sheet-sync.mjs");
+  const C = ["Competitor", "Checked on", "Category", "Website", "Platforms", "Niche", "Target audience", "Threat level", "Instagram followers", "TikTok followers", "YouTube followers", "Ads active", "Notes", "Match"];
+  sheetResponse = { body: await book({
+    Competitors: [C, ["Kerjaku Academy", "2026-10-21", "direct", "https://kerjaku.id", "Instagram, TikTok", "Career coaching", "", "high", "52000", "9000", "", "yes", "", ""],
+      ["Lolos MT", "2026-10-21", "substitute", "", "Instagram", "", "Fresh grad, Jobseeker", "", "8000", "", "", "no", "", ""],
+      ["Kerjaku", "2026-10-21", "", "", "", "", "", "", "", "", "", "", "", ""]],
+    Flags: [["Competitor", "Date", "Type", "Description", "Source link"], ["Kerjaku Academy", "2026-10-24", "Price change", "Bootcamp naik jadi 350K", "https://kerjaku.id/bootcamp"], ["Brand Hilang", "2026-10-24", "Other", "x", ""]],
+    Products: [["Competitor", "Product", "Category", "Price min", "Price max", "Price date", "Features", "Links", "Description"], ["Kerjaku Academy", "Bootcamp MT", "Kelas", "Rp 350.000", "", "2026-10-24", "Psikotes, Interview", "", ""]],
+  }) };
+  let state = await S.startSheetSyncAction("competitor-intel", "https://docs.google.com/spreadsheets/d/e/2PACX-ci/pub?output=xlsx");
+  const [k] = await sql`select * from competitor_profiles where name = 'Kerjaku Academy'`;
+  ok(state?.lastResult?.added === 1 && state.lastResult.updated === 1 && state.lastResult.skipped === 1, "CI sync: 1 new, 1 updated, 1 possible duplicate skipped", JSON.stringify(state?.lastResult));
+  ok(k.primary_url === "https://kerjaku.id" && k.niche === "MT test prep" && k.threat_level === "medium" && k.followers.TikTok === 9000 && k.followers.Instagram === 52000, "CI sync: empty website filled, niche & threat kept, newest followers");
+  const [snap] = await sql`select to_char(snapshot_date, 'YYYY-MM-DD') d, ads_active from competitor_snapshots where competitor_id = ${k.id}`;
+  ok(snap?.d === "2026-10-21" && snap.ads_active === true, "CI sync: the snapshot uses the Checked on date and ads active");
+  ok((await sql`select count(*)::int n from competitor_flags`)[0].n === 1 && (await sql`select price_min::int p from competitor_product_prices`)[0]?.p === 350000, "CI sync: flag and dated price in (Rp 350.000 read as 350000)");
+  const w = state.lastWarnings.join(" | ");
+  ok(/looks like “Kerjaku Academy”/.test(w) && /Brand Hilang” is not on the Competitors tab/.test(w) && /niche differs from the app/.test(w), "CI sync: possible duplicate, unknown competitor in Flags and differences are listed", w);
+  state = await S.syncSheetNowAction("competitor-intel");
+  ok(state?.lastResult?.added === 0 && (await sql`select count(*)::int n from competitor_flags`)[0].n === 1 && (await sql`select count(*)::int n from competitor_product_prices`)[0].n === 1 && (await sql`select count(*)::int n from competitor_snapshots`)[0].n === 2, "CI sync: the next hour adds nothing twice", JSON.stringify(state?.lastResult));
+  sheetResponse = { body: await book({ Sheet1: [["a"]] }) };
+  state = await S.syncSheetNowAction("competitor-intel");
+  ok(/Competitors” tab/.test(state?.lastError || "") && (await sql`select count(*)::int n from competitor_profiles`)[0].n === 2, "CI sync: a sheet without the Competitors tab says so and nothing is removed", state?.lastError);
+  await S.stopSheetSyncAction("competitor-intel");
+});
+
+await test("Instagram: Google Sheet sync — posts by Post ID, weeks, Post ID saved as a number refused", async () => {
+  await sql.unsafe(await mig("028_instagram_claude_sync.sql"));
+  await reset("content_evaluations", "ig_snapshots");
+  await sql`insert into content_evaluations (post_id, judul, reach, win) values ('18034567890123401', 'Judul tim', 800, 'Hook kuat')`;
+  const S = await import("./out/sheet-sync.mjs");
+  const P = ["Post ID", "Date", "Format", "URL", "Caption", "Views", "Reach", "Likes", "Saves", "Shares", "Follows", "Average watch time"];
+  sheetResponse = { body: await book({
+    Posts: [P, ["18034567890123401", "2026-10-20", "Carousel", "https://www.instagram.com/p/AAA/", "Caption", "1200", "950", "61", "", "", "", ""],
+      ["18099999999999999", "2026-10-22", "VIDEO", "https://www.instagram.com/reel/BBB/", "Tips lolos MT", "12000", "5400", "320", "41", "27", "9", "7.5"],
+      [18011111111111111, "2026-10-23", "Reel", "", "", "1", "1", "", "", "", "", ""]],
+    Weekly: [["Week start", "Followers", "New followers", "Reach", "Views"], ["2026-10-22", "15210", "110", "9000", "21000"]],
+  }) };
+  const state = await S.startSheetSyncAction("instagram", "https://docs.google.com/spreadsheets/d/e/2PACX-ig/pub?output=xlsx");
+  const [old] = await sql`select judul, reach, win, synced_by from content_evaluations where post_id = '18034567890123401'`;
+  const [reel] = await sql`select format, views, watchtime from content_evaluations where post_id = '18099999999999999'`;
+  const [week] = await sql`select to_char(week_start, 'YYYY-MM-DD') w, followers_total from ig_snapshots`;
+  ok(state?.lastResult?.added === 1 && state.lastResult.updated === 1 && state.lastResult.weeks === 1 && state.lastResult.skipped === 1, "IG sync: 1 new post, 1 updated, 1 week, 1 skipped", JSON.stringify(state?.lastResult));
+  ok(old.reach == 950 && old.judul === "Judul tim" && old.win === "Hook kuat" && old.synced_by === "Google Sheet" && reel.format === "Reel" && reel.views == 12000 && reel.watchtime == 7.5, "IG sync: numbers in, the team's title and notes kept, Reel with watch time");
+  ok(week?.w === "2026-10-19" && week.followers_total === 15210, "IG sync: the week goes in on its Monday");
+  ok(/Posts row 4: Post ID was saved as a number/.test((state.lastWarnings || []).join(" ")), "IG sync: a Post ID typed as a number is refused with the fix", JSON.stringify(state.lastWarnings));
+  await S.stopSheetSyncAction("instagram");
+});
+
 console.log(results.join("\n"));
 console.log(`\nfunctional imports: ${pass} pass, ${fail} fail`);
 await sql.end();

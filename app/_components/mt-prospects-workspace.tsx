@@ -9,7 +9,8 @@ import {
   type ContactRow, type ProspectRow, type ProspectStatus,
 } from "@/lib/mt-prospects/view";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CompanyForm, ImportDialog, SheetSyncDialog } from "./mt-prospects-forms";
+import { CompanyForm, ImportDialog } from "./mt-prospects-forms";
+import { SheetSyncButton, SheetSyncDialog, syncedLine } from "./sheet-sync-control";
 import { ProspectDetail } from "./mt-prospects-detail";
 import s from "./mt-prospects.module.css";
 import { Pagination, usePagination } from "./ui-kit";
@@ -69,11 +70,11 @@ export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenc
           <h1>Job Vacancy MT</h1>
           <p>
             {prospects.length ? `${tracked.length} companies · ${activeCount} opening MT in ${year}` : "No MT list yet"}
-            {sheetSync?.lastRunAt && !sheetSync.lastError ? ` · synced from Google Sheet ${new Date(sheetSync.lastRunAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" })}` : lastImport ? ` · data from ${lastImport.file_name}, ${new Date(lastImport.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+            {syncedLine(sheetSync) || (lastImport ? ` · data from ${lastImport.file_name}, ${new Date(lastImport.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "")}
           </p>
         </div>
         <div className={s.headActions}>
-          <button className={s.ghostButton} onClick={() => setSyncing(true)} type="button"><i className={`ti ${sheetSync ? "ti-refresh" : "ti-table-share"}`} aria-hidden="true" /> Sync Google Sheet{sheetSync?.needsReview ? <span aria-label="needs a check" className={s.syncAlert} role="img" /> : null}</button>
+          <SheetSyncButton className={s.ghostButton} onClick={() => setSyncing(true)} sync={sheetSync} />
           <button className={s.ghostButton} onClick={() => setImporting(true)} type="button"><i className="ti ti-file-spreadsheet" aria-hidden="true" /> Import Excel</button>
           <Button onClick={() => setEditing({ prospect: null })}><i className="ti ti-plus" aria-hidden="true" /> Add company</Button>
         </div>
@@ -102,7 +103,16 @@ export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenc
       {open ? <ProspectDetail contacts={contactsByProspect.get(open.id) || []} key={open.id} onClose={() => setOpenId(null)} onEdit={() => setEditing({ prospect: open })} prospect={open} year={year} /> : null}
       {editing ? <CompanyForm industries={[...new Set(prospects.map((row) => row.industry).filter(Boolean))].sort()} onClose={() => setEditing(null)} onSaved={(id) => { setEditing(null); if (id) setOpenId(id); }} prospect={editing.prospect} year={year} /> : null}
       {importing ? <ImportDialog onClose={() => setImporting(false)} /> : null}
-      {syncing ? <SheetSyncDialog onClose={() => setSyncing(false)} sync={sheetSync} /> : null}
+      {syncing ? (
+        <SheetSyncDialog
+          description="Keep the MT list in a Google Sheet (edited by the team or by Claude). The app reads it every hour, the same way as Import Excel."
+          help="In the sheet: File → Share → Publish to web → Entire document → Microsoft Excel (.xlsx) → copy the link. The sheet needs the same tabs as the Excel file (Aktif, Pernah Buka, Lama, Prediksi, Kontak HR, Syarat Gabungan, Update Tgl & Status, Tahapan Tambahan)."
+          job="mt-prospects" note="The sheet is the source for its companies: edit them in the sheet. Companies and HR contacts added in the app stay. If one sync would remove many companies at once, it pauses until you check."
+          onClose={() => setSyncing(false)} placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=xlsx"
+          stopMessage="The list stops following the sheet. Companies already here stay."
+          sync={sheetSync} title="Sync the MT list every hour"
+        />
+      ) : null}
     </div>
   );
 }

@@ -108,6 +108,27 @@ Rules:
 
 ## Instagram & Content Evaluation
 
+**Recommended: the "Instagram insights" Google Sheet** — fully automatic, no Chrome. A scheduled
+Claude task reads the insights with Composio and writes them to the sheet (Composio Google
+Sheets); the app reads it every hour (Content Evaluation → **Sync Google Sheet**).
+
+- Tab **Posts**, row 1: `Post ID | Date | Format | URL | Caption | Views | Reach | Likes | Comments |
+  Saves | Shares | Follows | Profile visits | Link taps | Accounts engaged | Average watch time |
+  Watch through rate | Duration`. One row per post; **update the numbers in the same row** each day.
+  Format the Post ID column as **Plain text** (a long number loses digits; such rows are refused).
+- Tab **Weekly** (optional), row 1: `Week start | Followers | New followers | Reach | Views |
+  Interactions | Link clicks | Profile visits`. One row per week (any day of the week).
+- Same rules as below: newest numbers win, the team's notes are never changed, nothing removed.
+
+> Daily Instagram insights (scheduled task, with Composio): every morning, read our last 30
+> Instagram posts and their insights with Composio Instagram (views, reach, likes, comments,
+> saves, shares, follows, profile visits, link taps, accounts engaged; for Reels also average
+> watch time and duration) and last week's account numbers. In the "Instagram insights" Google
+> Sheet (Composio Google Sheets): update the row of each post by Post ID (Post ID as text) or add
+> a new row; put the week in the Weekly tab. Then tell me which posts changed the most.
+
+### Without the sheet: the API
+
 `GET /api/agent/instagram` returns the full format as JSON. `POST /api/agent/instagram`:
 
 ```json
@@ -216,6 +237,32 @@ exist** (use exactly those). `POST /api/agent/customer-knowledge`:
 > summary, and send `mode: "apply"` after I agree.
 
 ## Competitor Intel
+
+**Recommended: the "Competitor Intel" Google Sheet** — fully automatic. Claude (scheduled, with
+Composio / web search) updates the sheet; the app reads it every hour (Competitor Intel → **Sync
+Google Sheet**).
+
+- Tab **Competitors**, row 1: `Competitor | Checked on | Category | Website | Platforms | Niche |
+  Target audience | Threat level | Instagram followers | TikTok followers | YouTube followers |
+  X followers | LinkedIn followers | Ads active | Notes | Match`. One row per competitor: update its
+  numbers and "Checked on" each week — the app keeps the follower history. Category: direct,
+  indirect or substitute. Match: leave empty, or "new" for a different brand with a similar name.
+- Tab **Flags**, row 1: `Competitor | Date | Type | Description | Source link` — Type: New product,
+  Price change, New campaign or Other. One row per news item.
+- Tab **Products**, row 1: `Competitor | Product | Category | Price min | Price max | Price date |
+  Features | Links | Description`. Update the price and Price date when it changes — the app keeps
+  the old prices.
+- Same rules as below: existing competitors only get empty fields filled (differences are listed
+  in the app), threat level stays the team's call, nothing removed.
+
+> Weekly competitor check (scheduled task): every Wednesday, for each competitor on the
+> Competitors tab of the "Competitor Intel" Google Sheet (and any new career-prep brand you find),
+> check their website, Instagram, TikTok, YouTube and the Meta Ad Library. Update their row
+> (followers today, Ads active, Checked on = today), add a Flags row for each new product, price
+> change or campaign this week with the source link, and update Products when a price changes.
+> Use Composio Google Sheets. Then summarise what changed.
+
+### Without the sheet: the API
 
 `GET /api/agent/competitor-intel` returns the full format. `POST /api/agent/competitor-intel`:
 

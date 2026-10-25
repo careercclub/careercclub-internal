@@ -1,8 +1,7 @@
 import "server-only";
 import type ExcelJS from "exceljs";
-import { googleSheetXlsxUrl } from "@/lib/imports/free-class";
 import { SheetProblem } from "@/lib/imports/talent-pool-sheet";
-import { cellText, readWorkbook } from "@/lib/imports/workbook";
+import { cellText } from "@/lib/imports/workbook";
 import { parseProspectWorkbook, type SheetRows } from "@/lib/mt-prospects/parse";
 
 // Reading the "CCC List MT" workbook, shared by Import Excel (upload) and the hourly Google Sheet
@@ -36,15 +35,5 @@ export function parseMtWorkbook(workbook: ExcelJS.Workbook) {
   return parsed;
 }
 
-/** Downloads the whole Google Sheet (every tab) as .xlsx. */
-export async function fetchMtGoogleSheet(sheetUrl: string) {
-  let xlsxUrl: string;
-  try { xlsxUrl = googleSheetXlsxUrl(sheetUrl); } catch (error) { throw new SheetProblem(error instanceof Error ? error.message : "The Google Sheets URL is invalid."); }
-  const response = await fetch(xlsxUrl, { cache: "no-store", signal: AbortSignal.timeout(30_000) });
-  if (!response.ok) throw new SheetProblem(`Google Sheets returned HTTP ${response.status}. Check that the sheet is still published.`);
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > 15 * 1024 * 1024) throw new SheetProblem("The Google Sheet is larger than 15 MB.");
-  // An .xlsx is a zip ("PK"); anything else is Google's sign-in or error page.
-  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) throw new SheetProblem("Google returned a web page instead of the sheet. Publish the whole sheet first: File → Share → Publish to web → Entire document → Microsoft Excel (.xlsx), then paste that link. Or set the sheet to “Anyone with the link can view”.");
-  return readWorkbook(bytes, "google-sheet.xlsx");
-}
+/** Downloads the whole Google Sheet (every tab) as .xlsx (shared with the other sheet syncs). */
+export { fetchGoogleWorkbook as fetchMtGoogleSheet } from "@/lib/imports/sheet-table";
