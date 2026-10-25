@@ -14,14 +14,17 @@ import { confirmAction, notifyError } from "./app-dialog";
 import { guard, submitTo } from "./safe-action";
 import s from "./settings-workspace.module.css";
 import { HelpTip } from "./ui-kit";
+import { ClaudeAccess } from "./claude-access";
+import type { AgentTokenRow } from "@/lib/api/agent-tokens";
 
 type Page = { slug: string; title: string; section: string; path: string; icon: string };
 type SafeUser = Pick<AuthUserRecord, "id" | "email" | "name" | "role" | "is_active" | "created_at">;
 
-const WORKSPACE = new Set<SettingsSectionId>(["menu", "users"]);
+const WORKSPACE = new Set<SettingsSectionId>(["menu", "users", "claude"]);
 const SECTION_META: Record<SettingsSectionId, { icon: string; description: string }> = {
   menu: { icon: "ti-layout-sidebar", description: "Choose which modules the sidebar shows and what they are called." },
   users: { icon: "ti-users", description: "Who can sign in, and what each person is allowed to change." },
+  claude: { icon: "ti-sparkles", description: "Keys that let Claude add and update data from research — always previewed first, never deleting." },
   tickets: { icon: "ti-ticket", description: "Divisions, people and request types used by Tickets, and who receives ticket emails." },
   "customer-knowledge": { icon: "ti-message-circle", description: "Platforms and categories offered when logging a pain point." },
   "product-classes": { icon: "ti-tag", description: "Classifications used to group products and CRM buyers." },
@@ -204,6 +207,7 @@ export function SettingsWorkspace({
   ctaOptions,
   isAdmin,
   users,
+  agentTokens = [],
   initialTab,
   initialSection,
 }: {
@@ -220,6 +224,8 @@ export function SettingsWorkspace({
   ctaOptions: ApiRecord[];
   isAdmin: boolean;
   users: SafeUser[];
+  /** null: the agent_tokens table is not there yet (migration 027 not run). */
+  agentTokens?: AgentTokenRow[] | null;
   initialTab?: string;
   initialSection?: string;
 }) {
@@ -347,6 +353,7 @@ export function SettingsWorkspace({
           {tab === "product-classes" ? <RecordManager definitionKey="product_klasifikasi" rows={klasifikasi} /> : null}
           {tab === "carousel-ctas" ? <RecordManager definitionKey="carousel_cta_options" rows={ctaOptions} /> : null}
           {tab === "users" && isAdmin ? <UserManagement users={users} /> : null}
+          {tab === "claude" && isAdmin ? <ClaudeAccess tokens={agentTokens} /> : null}
         </section>
       </div>
     </div>

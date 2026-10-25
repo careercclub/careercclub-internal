@@ -20,8 +20,10 @@ export type ProspectRow = {
   notes: string;
   exclusion_reason: string;
   source: "import" | "manual";
+  /** "claude" when added through Claude access (Settings → Claude access). */
+  added_via?: string | null;
 };
-export type ContactRow = { id: string; prospect_id: string; name: string; title: string; link: string; mt_status: string; source: "import" | "manual" };
+export type ContactRow = { id: string; prospect_id: string; name: string; title: string; link: string; mt_status: string; source: "import" | "manual"; added_via?: string | null };
 
 export const STATUSES: ProspectStatus[] = ["active", "predicted", "older", "excluded"];
 export const STATUS_LABEL: Record<ProspectStatus, string> = { active: "Active", predicted: "Predicted", older: "Older", excluded: "Excluded" };

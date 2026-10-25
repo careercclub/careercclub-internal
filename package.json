@@ -16,7 +16,8 @@
     "test:imports": "node tests/imports/build.mjs && node tests/imports/run.mjs",
     "vps:rebuild": "bash scripts/vps-rebuild-full.sh",
     "vps:rebuild:frontend": "bash scripts/vps-rebuild-frontend.sh",
-    "test:search": "node tests/search/build.mjs && node tests/search/run.mjs"
+    "test:search": "node tests/search/build.mjs && node tests/search/run.mjs",
+    "test:agent": "node tests/agent/build.mjs && node tests/agent/run.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

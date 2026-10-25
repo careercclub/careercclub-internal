@@ -28,7 +28,7 @@ export type ProspectInput = {
 };
 export type ContactInput = { name: string; title: string; link: string };
 
-const PROSPECT_FIELDS = "id, legal_name, brand, status, industry, program, active_years, total_openings, usual_months, openings, prediction, notes, exclusion_reason, source";
+const PROSPECT_FIELDS = "id, legal_name, brand, status, industry, program, active_years, total_openings, usual_months, openings, prediction, notes, exclusion_reason, source, added_via";
 
 export function listProspects() {
   return withPostgres(async (sql) => {
@@ -39,7 +39,7 @@ export function listProspects() {
 
 export function listProspectContacts() {
   return withPostgres(async (sql) => {
-    const rows = await sql<ContactRow[]>`select id, prospect_id, name, title, link, mt_status, source from mt_prospect_contacts order by prospect_id, position, lower(name)`;
+    const rows = await sql<ContactRow[]>`select id, prospect_id, name, title, link, mt_status, source, added_via from mt_prospect_contacts order by prospect_id, position, lower(name)`;
     return rows.map((row) => ({ ...row, id: String(row.id), prospect_id: String(row.prospect_id) }));
   });
 }
@@ -134,7 +134,8 @@ export function applyProspectImport(parsed: ParseResult, meta: { fileName: strin
           prediction = excluded.prediction, notes = excluded.notes, exclusion_reason = excluded.exclusion_reason, source = 'import', imported_at = now(), updated_at = now()`;
     }
     await tx`delete from mt_prospect_contacts where source = 'import'`;
-    await tx`delete from mt_prospect_research`;
+    // Research notes added through Claude access are not in the workbook and stay.
+    await tx`delete from mt_prospect_research where origin is distinct from 'Claude'`;
     if (parsed.contacts.length) {
       const contacts = parsed.contacts.map((item) => ({ import_key: item.importKey, name: item.name, title: item.title, link: item.link, mt_status: item.mtStatus, position: item.position }));
       await tx`

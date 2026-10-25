@@ -14,6 +14,7 @@ import { confirmAction, notify } from "./app-dialog";
 import { ContactForm } from "./mt-prospects-forms";
 import s from "./mt-prospects.module.css";
 import { guard } from "./safe-action";
+import { formatDay } from "@/lib/text/date";
 
 const REQUIREMENT_FIELDS: Array<[string, string]> = [
   ["roles", "Roles"], ["education", "Education"], ["gpa", "GPA"], ["majors", "Majors"], ["placement", "Placement"], ["requirements", "Other requirements"],
@@ -54,8 +55,10 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
   const years = Object.keys(prospect.openings || {}).sort().reverse();
   const people = contacts.filter(isPerson);
   const inboxes = contacts.filter((contact) => !isPerson(contact));
-  const updates = research?.filter((row) => row.kind === "update") || [];
-  const requirements = research?.filter((row) => row.kind === "requirement") || [];
+  // Notes Claude added (Settings → Claude access) have their own shape: date, note, source.
+  const claudeNotes = research?.filter((row) => row.origin === "Claude") || [];
+  const updates = research?.filter((row) => row.kind === "update" && row.origin !== "Claude") || [];
+  const requirements = research?.filter((row) => row.kind === "requirement" && row.origin !== "Claude") || [];
   const steps = research?.filter((row) => row.kind === "steps") || [];
   const prediction = prospect.prediction;
 
@@ -83,6 +86,7 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
               <DialogTitle className="text-lg font-extrabold leading-tight">{name}</DialogTitle>
               <DialogDescription className="mt-1 text-[13px]">{[shortLegalName(prospect.legal_name), prospect.industry].filter(Boolean).join(" · ") || "Company"}</DialogDescription>
             </div>
+            {prospect.added_via === "claude" ? <span className={s.claudeChip}><i aria-hidden="true" className="ti ti-sparkles" />Added by Claude</span> : null}
             <span className={s.status} data-status={prospect.status} title={STATUS_HELP[prospect.status]}>{STATUS_LABEL[prospect.status]}</span>
             <button aria-label="Close" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground" onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
           </div>
@@ -128,7 +132,7 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
                     return (
                       <li className={s.contact} key={contact.id}>
                         <span className={s.avatar} aria-hidden="true">{person ? initials(contact.name) : <i className="ti ti-mail" />}</span>
-                        <span className={s.rowText}><b>{person ? contact.name : "Recruitment inbox"}</b><small>{person ? contact.title || "—" : contact.link}</small></span>
+                        <span className={s.rowText}><b>{person ? contact.name : "Recruitment inbox"}{contact.added_via === "claude" ? <span className={s.claudeMark} title="Added by Claude"><i aria-hidden="true" className="ti ti-sparkles" /><span className="sr-only">Added by Claude</span></span> : null}</b><small>{person ? contact.title || "—" : contact.link}</small></span>
                         <span className={s.contactActions}>
                           {href ? <a aria-label={kind === "email" ? `Email ${contact.name}` : `Open ${contact.name} on LinkedIn`} className={s.iconLink} href={href} rel="noopener noreferrer" target="_blank"><i className={`ti ${kind === "email" ? "ti-mail" : kind === "linkedin" ? "ti-brand-linkedin" : "ti-external-link"}`} aria-hidden="true" /></a> : null}
                           <button aria-label={`Edit contact ${contact.name}`} className={s.iconButton} onClick={() => setContactForm({ contact })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
@@ -143,6 +147,20 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
 
             {research === null && !failed ? <p className={s.loading}>Loading requirements and updates…</p> : null}
             {failed ? <p className={s.panelNote}>Requirements and updates could not be loaded. Close and open the company again.</p> : null}
+
+            {claudeNotes.length ? (
+              <Section title={`Research notes from Claude (${claudeNotes.length})`}>
+                <ul className={`${s.contactList} ${s.box}`}>
+                  {[...claudeNotes].sort((a, b) => String(b.details.Date || "").localeCompare(String(a.details.Date || ""))).map((row) => (
+                    <li className={s.claudeNote} key={row.id}>
+                      <span className={s.claudeNoteHead}><i aria-hidden="true" className="ti ti-sparkles" />{row.details.Date ? formatDay(row.details.Date) : "No date"}{row.kind === "requirement" ? <span className={s.tagMuted}>Requirement</span> : null}{row.program ? <span className={s.tagMuted}>{row.program}</span> : null}</span>
+                      <p>{row.details.Note}</p>
+                      <small>{row.details.Source ? <a href={row.details.Source} rel="noopener noreferrer" target="_blank">Source <i aria-hidden="true" className="ti ti-external-link" /></a> : null}{row.details.Source && row.details["Added by"] ? " · " : ""}{row.details["Added by"] || ""}</small>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            ) : null}
 
             {updates.length ? (
               <Section title={`Dates & status updates (${updates.length})`}>

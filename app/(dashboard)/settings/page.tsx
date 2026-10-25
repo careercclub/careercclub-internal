@@ -2,6 +2,7 @@ import { enhancedNavSections } from "@/app/(dashboard)/_data/navigation-all";
 import { SettingsWorkspace } from "@/app/_components/settings-workspace";
 import { auth } from "@/auth";
 import { listSafeAuthUsers } from "@/lib/api/auth-users";
+import { listAgentTokens } from "@/lib/api/agent-tokens";
 import { listCarouselCtas } from "@/lib/api/content-planning";
 import { listPainPointCategories, listPainPointPlatforms } from "@/lib/api/customer-knowledge";
 import { listEventLinkTemplates } from "@/lib/api/program";
@@ -14,7 +15,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
   const session = await auth();
   const isAdmin = session?.user.role?.toLowerCase() === "admin";
-  const [settings, masterProduk, divisions, people, types, platforms, categories, linkTemplates, klasifikasi, ctaOptions, users] = await Promise.all([
+  const [settings, masterProduk, divisions, people, types, platforms, categories, linkTemplates, klasifikasi, ctaOptions, users, agentTokens] = await Promise.all([
     listAppSettings(),
     listMasterProducts(),
     listTicketDivisions(),
@@ -26,6 +27,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     listProductClassifications(),
     listCarouselCtas(),
     isAdmin ? listSafeAuthUsers() : Promise.resolve([]),
+    // null when migration 027 has not run yet: the panel says so instead of failing the page.
+    isAdmin ? listAgentTokens().catch(() => null) : Promise.resolve([]),
   ]);
   const pages = enhancedNavSections.flatMap((section) => section.pages.map((page) => ({
     slug: page.slug,
@@ -49,6 +52,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       settings={settings}
       types={types}
       users={users}
+      agentTokens={agentTokens}
       initialTab={first(query.tab)}
       initialSection={first(query.section)}
       // A sidebar link to another section remounts with that section open.

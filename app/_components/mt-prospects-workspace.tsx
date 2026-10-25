@@ -271,7 +271,7 @@ function CompaniesView({ prospects, contactsByProspect, filter, currentYear, onO
                 <li className={s.row} data-record-id={row.id} key={row.id}>
                   <button className={s.rowMain} onClick={() => onOpen(row.id)} type="button">
                     <span className={s.logo} aria-hidden="true">{initials(displayName(row))}</span>
-                    <span className={s.rowText}><b>{displayName(row)}</b><small>{shortLegalName(row.legal_name) || "—"}</small></span>
+                    <span className={s.rowText}><b>{displayName(row)}{row.added_via === "claude" ? <span className={s.claudeMark} title="Added by Claude"><i aria-hidden="true" className="ti ti-sparkles" /><span className="sr-only">Added by Claude</span></span> : null}</b><small>{shortLegalName(row.legal_name) || "—"}</small></span>
                     <span className={s.rowText}><b className={s.soft}>{row.program.split("\n")[0] || "—"}</b><small>{row.industry || "No industry"}</small></span>
                     <span className={s.rowText}><b className={s.soft}>{latestOpening(row) || "No date yet"}</b><small>{contacts ? `${contacts} HR contact${contacts === 1 ? "" : "s"}` : "No HR contact"}</small></span>
                     {status ? <span aria-hidden="true" /> : <span className={s.status} data-status={row.status}>{STATUS_LABEL[row.status]}</span>}

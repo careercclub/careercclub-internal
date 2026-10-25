@@ -1479,3 +1479,28 @@ Usulan user: app sudah punya API AI (Anthropic, dipakai "Add with AI"), jadi pak
 ### Deploy
 
 Isi `ANTHROPIC_SEARCH_MODEL` di env VPS bila model default tidak tersedia di akun Anthropic. Kalau Putaran 39 belum di-deploy: `npm run vps:rebuild` (migrasi 026); kalau sudah: `npm run vps:rebuild:frontend`.
+
+## Putaran 41 — Claude access: Claude bisa langsung memasukkan riset ke app (mulai dari Job Vacancy MT) (25 Okt 2026)
+
+Permintaan user: Job Vacancy MT, Customer Knowledge, Instagram & Content Evaluation di-update langsung dari Claude (drop hasil riset / hasil crawling) tanpa import manual. Rencana yang disetujui: (1) "Claude API" di app dengan Preview → Apply, (2) Instagram sinkron otomatis, (3) nanti connector. Putaran ini: fondasi + **Job Vacancy MT**.
+
+### Do
+
+- **Settings → Claude access** (admin): **Add key** (nama + modul wajib, ditandai merah & fokus) → key `ccc_…` tampil **sekali** dengan **Copy key**; daftar key menampilkan awalan, modul, siapa/kapan dibuat, terakhir dipakai; **Revoke key** (konfirmasi) menghentikan seketika. Disimpan hanya hash SHA-256 (`agent_tokens`, migrasi `027_claude_access.sql`). Key hanya untuk modul yang dipilih, bisa menambah & mengubah, tidak bisa menghapus.
+- **`/api/agent/mt-prospects`**: `GET` menjelaskan format ke Claude; `POST {mode: "preview" | "apply", companies}`. Boleh dengan key (`Authorization: Bearer`) atau sesi login (Claude in Chrome). Satu transaksi; rencana dihitung ulang di dalam transaksi.
+- **Aturan gabung** (`lib/mt-prospects/agent.ts`, satu tempat untuk preview & apply): cocok nama seperti import Excel; perusahaan baru → perusahaan app (`added_via = 'claude'`, aman dari upload Excel); perusahaan lama → hanya kolom **kosong** diisi, nilai berbeda dilaporkan sebagai *conflict* dan tidak ditulis; tahun pembukaan, HR contact & catatan yang belum ada ditambah, duplikat dilewati; nama mirip → *possible duplicate*, dilewati sampai `match_id` / `as_new`. Tidak pernah menghapus.
+- Catatan riset Claude = baris research `origin = 'Claude'` (tanggal, catatan, sumber, "Added by"); upload Excel kini **tidak** menghapusnya.
+- **Job Vacancy MT**: ikon ✦ "Added by Claude" di daftar perusahaan & HR contact, chip **Added by Claude** di detail, bagian **Research notes from Claude** (tanggal, catatan, link sumber, nama key).
+- Setiap apply tercatat di activity log dengan nama key ("Claude (Riset MT)").
+- `docs/claude-access.md`: cara pakai untuk Claude di chat mana pun.
+
+### Check
+
+- `tests/agent` 19 (PostgreSQL sungguhan, migrasi 025 + 027): hanya hash disimpan; tanpa key/sesi → 401; key modul lain → 401; GET panduan; preview tidak mengubah apa-apa; apply mengisi yang kosong saja, 2025 tetap & 2026 ditambah, perusahaan baru bertanda Claude, duplikat tidak masuk, catatan bertanda nama key, apply ulang tidak menggandakan, upload Excel berikutnya mempertahankan catatan & perusahaan Claude, sesi browser boleh, key dicabut langsung berhenti, terakhir dipakai tercatat, activity log.
+- Unit baru: `lib/agent/token-format.test.mjs` 2, `lib/mt-prospects/agent.test.mjs` 4. Suite baru `p41.mjs` 19 (Settings → Claude access, key sekali tampil, wajib isi, revoke dengan konfirmasi, HP; tanda Claude di Job Vacancy MT).
+- Regresi kini juga menjalankan tes database: import, search, Claude access.
+- Regresi penuh lolos: 27 suite modul (termasuk p41 19), navigasi 33 (+ non-admin tidak melihat Claude access), search 46, RecordManager 946, Design Assets 49, audit popup, unit 175, import 58, search-db 19, agent-db 19, lint 0 error, build lolos.
+
+### Deploy
+
+Migrasi baru → `git pull origin refactor && npm run vps:rebuild`. Lalu Settings → Claude access → Add key (Job Vacancy MT) dan kirim key ke Claude di chat.

@@ -51,3 +51,4 @@ memory.md
 .dev.vars
 tests/imports/out/
 tests/search/out/
+tests/agent/out/

@@ -98,7 +98,7 @@ export function normalizeName(value: string) {
     .trim().replace(/\s+/g, " ");
 }
 
-function nameVariants(value: string) {
+export function nameVariants(value: string) {
   const text = String(value || "");
   const withoutBrackets = text.replace(/\([^)]*\)/g, " ");
   const variants = new Set([normalizeName(text), normalizeName(withoutBrackets)]);
