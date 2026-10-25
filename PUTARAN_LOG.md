@@ -1612,3 +1612,27 @@ Permintaan user: Competitor Intel juga bisa diisi dari Claude.
 ### Deploy
 
 Migrasi baru → `git pull origin refactor && npm run vps:rebuild`.
+
+## Putaran 46 — Talent Pool sinkron otomatis dari Google Sheet (tiap jam) (25 Okt 2026)
+
+Permintaan user: Talent Pool otomatis terisi dari Google Sheet (hasil Google Form) — lewat Claude, "atau ada workflow yang lebih simpel?". Dipilih yang lebih simpel: **web sendiri yang membaca sheet tiap jam**, tanpa Claude, tanpa Chrome harus nyala.
+
+### Do
+
+- **Talent Pool → Manage data → "Sync a Google Sheet every hour"**: tempel link sheet → **Start sync** (langsung sinkron pertama kali, lalu tiap jam). Status: "Every hour · Google Sheet · tab …", "Last sync 25 Oct 2026, 10:00 · 12 new · 3 updated · 730 unchanged" atau pesan masalahnya (merah). Tombol **Sync now** dan **Stop sync** (konfirmasi; orang yang sudah masuk tetap ada). Link wajib (ditandai merah & fokus); hanya link Google Sheet.
+- Import sheet sekali-pakai diganti oleh sinkron ini (satu cara untuk satu hal); **Import file** (CSV/XLSX) tetap.
+- **Penjadwal**: `instrumentation.ts` (dijalankan sekali saat server Next start, hanya di server Node/VPS) → cek tiap 10 menit, sinkron maks. sekali sejam (waktu terakhir disimpan di `app_settings`, jadi restart tidak mengulang). Satu sinkron sekaligus (klik Sync now saat jadwal jalan menunggu yang sedang jalan). `BACKGROUND_JOBS=off` untuk menghentikan sementara.
+- **Perbaikan aturan import (berlaku juga untuk Import file)**: sebelumnya import ulang menimpa semua kolom, termasuk menjadi kosong — pipeline yang diisi tim bisa hilang. Sekarang: dicocokkan pakai email; sel kosong di sheet **tidak pernah** mengosongkan data; kolom yang tidak ada di sheet tidak disentuh; email ganda di sheet → baris terakhir (terbaru) menang; tidak ada yang dihapus. Hasil import kini menghitung new / updated / unchanged.
+- Pembacaan sheet dipindah ke satu tempat (`lib/imports/talent-pool-sheet.ts`), dipakai Import file dan sinkron.
+- Dicek dengan sheet asli user (tanpa menampilkan data pribadi): 745 baris, 727 email unik, semua kolom penting terbaca.
+- Sinkron yang menambah/mengubah orang tercatat di activity log ("Google Sheet sync").
+
+### Check
+
+- `tests/imports` 67 (+8): import ulang tidak mengosongkan & pipeline tim tetap, hitungan new/updated/unchanged; sinkron: Start sync langsung import, tidak jalan lagi dalam sejam, sejam kemudian jawaban baru masuk & data tim tetap, sheet tidak dipublish → pesan jelas tanpa perubahan, activity log, Stop sync menghentikan & orang tetap, hanya link Google Sheet.
+- Suite baru `p46.mjs` 11 (wajib isi merah & fokus, Start sync, status + jam Jakarta, Sync now + pesan masalah, Stop sync dengan konfirmasi, Import file tetap, HP).
+- Regresi penuh lolos: 32 suite modul (termasuk p46 11; polish diperbarui untuk Import file), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 194, import 67, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`). Lalu Talent Pool → Manage data → tempel link sheet → Start sync.

@@ -19,6 +19,7 @@ const ok = (c, m, extra = "") => { results.push(`${c ? "PASS" : "FAIL"} ${m}${!c
 // ---------- helpers ----------
 const routes = {};
 async function route(name) { routes[name] ||= await import(`${OUT}${name}.mjs`); return routes[name]; }
+async function assertRejects(fn, message) { try { await fn(); ok(false, message); } catch { ok(true, message); } }
 let sheetResponse = null; const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, init) => {
   if (String(url).startsWith("https://docs.google.com/")) { globalThis.__lastSheetUrl = String(url); return sheetResponse ? new Response(sheetResponse.body, { status: sheetResponse.status || 200 }) : new Response("not found", { status: 404 }); }
@@ -79,6 +80,14 @@ await test("talent: re-import updates, no duplicates; email case-insensitive", a
   const n = (await sql`select count(*)::int c from talent_pool`)[0].c;
   const p = (await sql`select nama from talent_pool where email = 'peserta0@example.com'`)[0];
   ok(r.status === 200 && n === 5 && p?.nama === "Peserta Nol", "talent re-import: 5 rows, name updated", `${n} rows, ${p?.nama}`);
+});
+await test("talent: re-import never clears what the team added; unchanged rows are not counted", async () => {
+  await sql`update talent_pool set pipeline = 'Screening', feedback = 'Catatan tim' where email = 'peserta1@example.com'`;
+  const rows = tpRows(5); rows[1][6] = ""; // "Kamu tau CCC darimana?" left empty this time
+  const r = await post("talent-pool", { file: file("talent.xlsx", await xlsx([banner(5), TP_HEADERS, ...rows])) });
+  const p = (await sql`select pipeline, feedback, sumber from talent_pool where email = 'peserta1@example.com'`)[0];
+  ok(r.status === 200 && p.pipeline === "Screening" && p.sumber === "Instagram", "talent re-import: an empty cell keeps the stored value; pipeline untouched", JSON.stringify(p));
+  ok(r.json?.added === 0 && r.json?.updated === 2 && r.json?.unchanged === 3, "talent re-import: 0 new, 2 updated (name back; form feedback replaces the edit), 3 unchanged", JSON.stringify(r.json));
 });
 await test("talent: CSV exported from Google Sheets (UTF-8, banner)", async () => {
   await reset("talent_pool");
@@ -373,6 +382,31 @@ await test("free class: CSV with BOM", async () => {
   await reset("free_class_eval");
   const r = await post("free-class", { file: file("fc.csv", csv([FC_HEADERS, fcRow(1)], { bom: true })) });
   ok(r.status === 200 && r.json?.imported === 1, "free class csv+BOM: 1 imported", JSON.stringify(r));
+});
+
+await test("talent: Google Sheet sync — start, hourly, never clears, stop", async () => {
+  await sql`create table if not exists app_settings (id uuid primary key default gen_random_uuid(), key text not null unique, value jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now())`;
+  await sql`create table if not exists activity_log (id bigserial primary key, user_name text, module text, action text, detail text, created_at timestamptz default now())`;
+  await reset("talent_pool");
+  const S = await import("./out/talent-sync.mjs");
+  const url = "https://docs.google.com/spreadsheets/d/e/2PACX-test/pub?gid=156606020&single=true&output=csv";
+  sheetResponse = { body: csv([banner(3), TP_HEADERS, ...tpRows(3)]).toString("utf8") };
+  let state = await S.startTalentSheetSyncAction(url);
+  ok(state?.url === url && state.lastResult?.added === 3 && !state.lastError && (await sql`select count(*)::int c from talent_pool`)[0].c === 3, "sync: Start sync saves the link and imports at once", JSON.stringify(state));
+  ok(await S.runTalentSheetSyncIfDue() === null, "sync: not run again within the hour");
+  await sql`update talent_pool set pipeline = 'Interview' where email = 'peserta2@example.com'`;
+  const later = tpRows(5); later[2][6] = "";
+  sheetResponse = { body: csv([banner(5), TP_HEADERS, ...later]).toString("utf8") };
+  state = await S.runTalentSheetSyncIfDue(Date.now() + 61 * 60_000);
+  const p2 = (await sql`select pipeline, sumber from talent_pool where email = 'peserta2@example.com'`)[0];
+  ok(state?.lastResult?.added === 2 && state.lastResult.unchanged === 3 && p2.pipeline === "Interview" && p2.sumber === "Instagram", "sync: an hour later new answers come in; team pipeline and stored values stay", JSON.stringify({ r: state?.lastResult, p2 }));
+  sheetResponse = { body: "<!doctype html><html>sign in</html>" };
+  state = await S.syncTalentSheetNowAction();
+  ok(/Publish to web/.test(state?.lastError || "") && (await sql`select count(*)::int c from talent_pool`)[0].c === 5, "sync: an unpublished sheet shows why and changes nothing", state?.lastError);
+  ok((await sql`select action from activity_log where module = 'Talent Pool'`).some((row) => row.action === "Google Sheet sync"), "sync: runs that add or update people are in the activity log");
+  await S.stopTalentSheetSyncAction();
+  ok(await S.getTalentSheetSync() === null && await S.runTalentSheetSyncIfDue(Date.now() + 999 * 60_000) === null && (await sql`select count(*)::int c from talent_pool`)[0].c === 5, "sync: Stop sync ends it; people stay");
+  await assertRejects(() => S.startTalentSheetSyncAction("https://example.com/sheet.csv"), "sync: only Google Sheet links are accepted");
 });
 
 console.log(results.join("\n"));

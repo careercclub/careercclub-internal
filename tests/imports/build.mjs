@@ -12,3 +12,4 @@ const common = {
 for (const name of ["talent-pool", "crm", "content-evaluation", "instagram", "mt-prospects", "free-class"]) {
   await build({ ...common, entryPoints: [`${R}/app/api/${name}/import/route.ts`], outfile: `${here}out/${name}.mjs` });
 }
+await build({ ...common, stdin: { contents: 'export * from "@/app/actions/talent-pool-actions"; export { runTalentSheetSyncIfDue, getTalentSheetSync } from "@/lib/api/talent-pool-sync";', resolveDir: R, loader: "ts" }, outfile: `${here}out/talent-sync.mjs` });

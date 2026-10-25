@@ -50,44 +50,40 @@ export function listTalentPoolWithBuyerMatches() {
   });
 }
 
+/** Columns the sheet fills. Matched by email; a cell left empty in the sheet never clears what is
+ * stored (so a re-import or the hourly sync keeps what the team added), and columns the sheet does
+ * not have (pipeline, …) are never touched. Rows that are not in the sheet stay. */
+const SHEET_COLUMNS = [
+  "nama", "wa", "status", "sumber", "domisili", "universitas", "campus_tier", "fakultas", "pendidikan", "ipk", "angkatan", "tahun_lulus",
+  "organisasi", "exchange", "relocate", "topik_minat", "target_mt", "posisi_mt", "pipeline", "produk_dibeli", "kepuasan", "membantu", "nps",
+  "feedback", "kode_voucher", "linkedin",
+] as const;
+
 export function importTalentPoolRows(rows: Array<Record<string, string | number | null>>) {
   return withPostgres(async (sql) => sql.begin(async (tx) => {
-    let imported = 0;
+    let added = 0;
+    let updated = 0;
     let skipped = 0;
+    // The same email twice in the sheet: the later (newer) row wins, filled cells only.
+    const byEmail = new Map<string, Record<string, string>>();
     for (const row of rows) {
       const email = String(row.email || "").trim().toLowerCase();
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { skipped += 1; continue; }
-      await tx`
-        insert into talent_pool (
-          nama, email, wa, status, sumber, domisili, universitas, campus_tier,
-          fakultas, pendidikan, ipk, angkatan, tahun_lulus, organisasi, exchange,
-          relocate, topik_minat, target_mt, posisi_mt, pipeline, produk_dibeli,
-          kepuasan, membantu, nps, feedback, kode_voucher, linkedin
-        ) values (
-          ${String(row.nama || "")}, ${email}, ${String(row.wa || "")}, ${String(row.status || "")},
-          ${String(row.sumber || "")}, ${String(row.domisili || "")}, ${String(row.universitas || "")},
-          ${String(row.campus_tier || "")}, ${String(row.fakultas || "")}, ${String(row.pendidikan || "")},
-          ${String(row.ipk || "")}, ${String(row.angkatan || "")}, ${String(row.tahun_lulus || "")},
-          ${String(row.organisasi || "")}, ${String(row.exchange || "")}, ${String(row.relocate || "")},
-          ${String(row.topik_minat || "")}, ${String(row.target_mt || "")}, ${String(row.posisi_mt || "")},
-          ${String(row.pipeline || "")}, ${String(row.produk_dibeli || "")}, ${String(row.kepuasan || "")},
-          ${String(row.membantu || "")}, ${String(row.nps || "")}, ${String(row.feedback || "")},
-          ${String(row.kode_voucher || "")}, ${String(row.linkedin || "")}
-        )
-        on conflict (email) do update set
-          nama = excluded.nama, wa = excluded.wa, status = excluded.status, sumber = excluded.sumber,
-          domisili = excluded.domisili, universitas = excluded.universitas, campus_tier = excluded.campus_tier,
-          fakultas = excluded.fakultas, pendidikan = excluded.pendidikan, ipk = excluded.ipk,
-          angkatan = excluded.angkatan, tahun_lulus = excluded.tahun_lulus, organisasi = excluded.organisasi,
-          exchange = excluded.exchange, relocate = excluded.relocate, topik_minat = excluded.topik_minat,
-          target_mt = excluded.target_mt,
-          posisi_mt = excluded.posisi_mt, pipeline = excluded.pipeline,
-          produk_dibeli = excluded.produk_dibeli, kepuasan = excluded.kepuasan,
-          membantu = excluded.membantu, nps = excluded.nps, feedback = excluded.feedback,
-          kode_voucher = excluded.kode_voucher, linkedin = excluded.linkedin
-      `;
-      imported += 1;
+      const values = byEmail.get(email) || {};
+      for (const column of SHEET_COLUMNS) { const value = String(row[column] ?? "").trim(); if (value) values[column] = value; }
+      byEmail.set(email, values);
     }
-    return { imported, skipped };
+    for (const [email, values] of byEmail) {
+      const record = Object.fromEntries(SHEET_COLUMNS.map((column) => [column, values[column] || ""]));
+      const [result] = await tx<Array<{ inserted: boolean; changed: boolean }>>`
+        insert into talent_pool ${tx({ email, ...record })}
+        on conflict (email) do update set
+          ${tx.unsafe(SHEET_COLUMNS.map((column) => `${column} = coalesce(nullif(excluded.${column}, ''), talent_pool.${column})`).join(", "))},
+          updated_at = case when (${tx.unsafe(SHEET_COLUMNS.map((column) => `talent_pool.${column}`).join(", "))}) is distinct from (${tx.unsafe(SHEET_COLUMNS.map((column) => `coalesce(nullif(excluded.${column}, ''), talent_pool.${column})`).join(", "))}) then now() else talent_pool.updated_at end
+        returning (xmax = 0) as inserted, updated_at >= now() as changed`;
+      if (result.inserted) added += 1; else if (result.changed) updated += 1;
+    }
+    const imported = added + updated;
+    return { imported, added, updated, unchanged: byEmail.size - added - updated, skipped };
   }));
 }

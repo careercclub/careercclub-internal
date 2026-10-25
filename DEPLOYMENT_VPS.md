@@ -32,6 +32,8 @@ ANTHROPIC_API_KEY=
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 # Ask AI in search (Ctrl+K): a small, fast model; only the typed question is sent.
 ANTHROPIC_SEARCH_MODEL=claude-haiku-5-5
+# Background jobs (Talent Pool ← Google Sheet every hour) run inside the web container. Set to off to pause them.
+BACKGROUND_JOBS=on
 
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
