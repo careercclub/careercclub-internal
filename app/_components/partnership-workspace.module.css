@@ -87,10 +87,10 @@
 .dealGridFields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
 .dealGridFields label, .dealField { min-width: 0; display: grid; gap: 4px; }
 .dealGridFields span, .dealField span { color: var(--text-muted); font-size: 12px; font-weight: 600; }
-.dealGridFields select, .dealGridFields input, .dealField textarea { width: 100%; min-height: 32px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13px; outline: none; }
+.dealGridFields select, .dealGridFields input, .dealField textarea { width: 100%; min-height: 38px; padding: 8px 12px; border: 1px solid var(--border-md); border-radius: 10px; background: var(--white); color: var(--text); font: inherit; font-size: 13px; outline: none; }
 .dealField textarea { resize: vertical; line-height: 1.5; }
 .dealTitle:hover, .dealTitle:focus { border-color: var(--border-md); }
-.dealGridFields select:focus, .dealGridFields input:focus, .dealField textarea:focus, .dealTitle:focus, .inlineText:focus, .inlineNote:focus, .inlineSelect:focus, .inlineDate:focus { border-color: var(--purple-mid); background: var(--white); }
+.dealGridFields select:focus, .dealGridFields input:focus, .dealField textarea:focus, .dealTitle:focus, .inlineText:focus, .inlineNote:focus, .inlineSelect:focus, .inlineDate:focus { border-color: var(--purple-mid); background: var(--white); box-shadow: 0 0 0 3px var(--purple-light); }
 
 /* Outreach timeline */
 .dayGroup h3 { margin: 4px 0 8px; color: var(--text-muted); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }

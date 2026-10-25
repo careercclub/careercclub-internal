@@ -19,6 +19,7 @@ import { AssigneeField, personName } from "./assignee-field";
 import styles from "../record-manager.module.css";
 import { confirmAction } from "./app-dialog";
 import { DateInput } from "./date-input";
+import { HeaderAction } from "./header-action";
 import { isCalendarTicket } from "@/lib/tickets/calendar";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -96,8 +97,10 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Ticket details</DialogTitle>
-          {ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}
+          <div className="flex items-start justify-between gap-3 pr-9">
+            <div className="grid gap-1"><DialogTitle>Ticket details</DialogTitle>{ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}</div>
+            <HeaderAction disabled={busy} icon="ti-copy" label="Duplicate ticket" onClick={duplicate} />
+          </div>
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label>Ticket title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
@@ -114,12 +117,9 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
         <DialogFooter sticky className="flex-row flex-wrap justify-between gap-2 sm:justify-between">
+          <Button disabled={busy} onClick={remove} type="button" variant="danger"><i aria-hidden="true" className="ti ti-trash" /> Delete ticket</Button>
           <div className="flex gap-2">
-            <Button aria-label="Duplicate ticket" title="Duplicate ticket" type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i aria-hidden="true" className="ti ti-copy" /><span className="hidden sm:inline">Duplicate</span></Button>
-            <Button aria-label="Delete ticket" title="Delete ticket" type="button" variant="outline" size="sm" className="border-[var(--red)] text-[var(--red)] hover:bg-[var(--red-bg)]" onClick={remove} disabled={busy}><i aria-hidden="true" className="ti ti-trash" /><span className="hidden sm:inline">Delete</span></Button>
-          </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save ticket"}</Button>
           </div>
         </DialogFooter>
@@ -145,7 +145,7 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> Edit task</DialogTitle>
+          <DialogTitle>Edit task</DialogTitle>
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="calendar-task-title">Task title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="calendar-task-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
@@ -163,7 +163,7 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
         <DialogFooter sticky className="sm:justify-end">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <Button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save task"}</Button>
         </DialogFooter>
       </DialogContent>

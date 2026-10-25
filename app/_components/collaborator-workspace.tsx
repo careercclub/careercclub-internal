@@ -183,7 +183,7 @@ function ProfileDialog({ row, close }: { row: ApiRecord; close: () => void }) {
           <label className={`${s.field} ${g.wide}`}><span>Notes</span><textarea className={s.input} defaultValue={String(row.catatan || "")} name="catatan" rows={2} /></label>
         </form>
         <DialogFooter sticky>
-          <Button disabled={saving} onClick={close} type="button" variant="ghost">Cancel</Button>
+          <Button disabled={saving} onClick={close} type="button" variant="outline">Cancel</Button>
           <Button disabled={saving} form={formId} type="submit">{saving ? "Saving…" : "Save profile"}</Button>
         </DialogFooter>
       </DialogContent>

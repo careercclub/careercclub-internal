@@ -98,7 +98,7 @@ export function CompanyForm({ prospect, industries, year, onClose, onSaved }: { 
   return (
     <FormDialog
       description={isNew ? "Fields marked * are required." : prospect?.source === "import" ? "From the Excel file — the next upload replaces edits made here." : "Added in the app · fields marked * are required."}
-      footer={<><Button onClick={onClose} size="sm" type="button" variant="outline">Cancel</Button><Button disabled={saving} form={`${id}-form`} size="sm" type="submit"><i aria-hidden="true" className={`ti ${isNew ? "ti-plus" : "ti-check"}`} /> {saving ? "Saving…" : label}</Button></>}
+      footer={<><Button onClick={onClose} type="button" variant="outline">Cancel</Button><Button disabled={saving} form={`${id}-form`} type="submit">{saving ? "Saving…" : label}</Button></>}
       onClose={onClose}
       title={isNew ? "Add company" : `Edit ${prospect?.brand || prospect?.legal_name || "company"}`}
       width={640}
@@ -184,7 +184,7 @@ export function ContactForm({ prospectId, companyName, contact, onClose }: { pro
   return (
     <FormDialog
       description={contact?.source === "import" ? `${companyName} · from the Excel file — the next upload replaces edits made here.` : `${companyName} · fields marked * are required.`}
-      footer={<><Button onClick={onClose} size="sm" type="button" variant="outline">Cancel</Button><Button disabled={saving} form={`${id}-form`} size="sm" type="submit"><i aria-hidden="true" className={`ti ${isNew ? "ti-plus" : "ti-check"}`} /> {saving ? "Saving…" : isNew ? "Add contact" : "Save contact"}</Button></>}
+      footer={<><Button onClick={onClose} type="button" variant="outline">Cancel</Button><Button disabled={saving} form={`${id}-form`} type="submit">{saving ? "Saving…" : isNew ? "Add contact" : "Save contact"}</Button></>}
       onClose={onClose}
       title={isNew ? "Add contact" : `Edit ${contact?.name || "contact"}`}
     >
@@ -248,7 +248,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   return (
     <FormDialog
       description="Upload the “CCC List MT” workbook. You see what changes before anything is saved."
-      footer={<><Button onClick={onClose} size="sm" type="button" variant="outline">Cancel</Button><Button disabled={!summary || Boolean(busy)} onClick={apply} size="sm" type="button"><i aria-hidden="true" className="ti ti-file-spreadsheet" /> {busy === "importing" ? "Importing…" : "Import Excel"}</Button></>}
+      footer={<><Button onClick={onClose} type="button" variant="outline">Cancel</Button><Button disabled={!summary || Boolean(busy)} onClick={apply} size="sm" type="button"><i aria-hidden="true" className="ti ti-file-spreadsheet" /> {busy === "importing" ? "Importing…" : "Import Excel"}</Button></>}
       onClose={onClose}
       title="Import Excel"
     >

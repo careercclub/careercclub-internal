@@ -300,14 +300,14 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
     });
   }
 
-  const inputClass = "w-full rounded-[var(--radius)] border border-[var(--border-md)] bg-[var(--bg)] px-3 py-2 text-[13px] outline-none focus:border-[var(--purple-accent)]";
-  const labelClass = "mb-1 block text-xs font-medium text-foreground";
+  const inputClass = "min-h-[38px] w-full rounded-[10px] border border-[var(--border-md)] bg-[var(--white)] px-3 py-2 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-hint)] focus:border-[var(--purple-mid)] focus:ring-[3px] focus:ring-[var(--purple-light)]";
+  const labelClass = "mb-1.5 block text-[13px] font-semibold leading-tight text-[var(--text)]";
 
   return (
     <Dialog onOpenChange={(open) => { if (!open) onClose(); }} open>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]" showCloseButton={false}>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <div className="min-w-0"><DialogTitle className="text-base font-bold">{record ? "Edit pain point" : "Add pain point"}</DialogTitle><DialogDescription className="text-xs">Fields marked * are required.</DialogDescription></div>
+          <div className="min-w-0"><DialogTitle>{record ? "Edit pain point" : "Add pain point"}</DialogTitle><DialogDescription className="text-xs">Fields marked * are required.</DialogDescription></div>
           <button aria-label="Close" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground" onClick={onClose} type="button"><i aria-hidden="true" className="ti ti-x" /></button>
         </div>
         <div className="flex flex-col gap-3.5 overflow-y-auto p-5">
@@ -327,8 +327,8 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
           <div><span className={labelClass}>Labels</span><LabelPicker allLabels={allLabels} onChange={setSelectedLabels} selected={selectedLabels} /></div>
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-          <Button onClick={onClose} size="sm" type="button" variant="outline">Cancel</Button>
-          <Button disabled={pending} onClick={save} size="sm" type="button"><i aria-hidden="true" className="ti ti-check" /> {pending ? "Saving…" : "Save pain point"}</Button>
+          <Button onClick={onClose} type="button" variant="outline">Cancel</Button>
+          <Button disabled={pending} onClick={save} type="button">{pending ? "Saving…" : (record ? "Save pain point" : "Add pain point")}</Button>
         </div>
       </DialogContent>
     </Dialog>

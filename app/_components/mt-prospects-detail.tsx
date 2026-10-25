@@ -126,7 +126,7 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
 
             <Section action={<button className={s.ghostButton} onClick={() => setContactForm({ contact: null })} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add contact</button>} title={`HR contacts (${people.length})`}>
               {contacts.length ? (
-                <ul className={`${s.contactList} ${s.box}`}>
+                <ul className={s.listBox}>
                   {[...people, ...inboxes].map((contact) => {
                     const href = linkHref(contact.link); const kind = linkKind(contact.link); const person = isPerson(contact);
                     return (
@@ -150,7 +150,7 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
 
             {claudeNotes.length ? (
               <Section title={`Research notes from Claude (${claudeNotes.length})`}>
-                <ul className={`${s.contactList} ${s.box}`}>
+                <ul className={s.listBox}>
                   {[...claudeNotes].sort((a, b) => String(b.details.Date || "").localeCompare(String(a.details.Date || ""))).map((row) => (
                     <li className={s.claudeNote} key={row.id}>
                       <span className={s.claudeNoteHead}><i aria-hidden="true" className="ti ti-sparkles" />{row.details.Date ? formatDay(row.details.Date) : "No date"}{row.kind === "requirement" ? <span className={s.tagMuted}>Requirement</span> : null}{row.program ? <span className={s.tagMuted}>{row.program}</span> : null}</span>
@@ -211,8 +211,8 @@ export function ProspectDetail({ prospect, contacts, year, onClose, onEdit }: { 
           </div>
 
           <div className="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
-            <Button className="text-[var(--red)] hover:text-[var(--red)]" disabled={busy} onClick={removeCompany} size="sm" type="button" variant="ghost"><i aria-hidden="true" className="ti ti-trash" /> Delete company</Button>
-            <Button onClick={onEdit} size="sm" type="button"><i aria-hidden="true" className="ti ti-pencil" /> Edit company</Button>
+            <Button disabled={busy} onClick={removeCompany} type="button" variant="danger"><i aria-hidden="true" className="ti ti-trash" /> Delete company</Button>
+            <Button onClick={onEdit} type="button"><i aria-hidden="true" className="ti ti-pencil" /> Edit company</Button>
           </div>
         </DialogContent>
       </Dialog>

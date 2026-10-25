@@ -406,7 +406,7 @@ function ImportDialog({ close, done }: { close: () => void; done: (message: stri
           </label>
           {error ? <p className={s.danger} role="alert">{error}</p> : null}
         </form>
-        <DialogFooter sticky><Button onClick={close} type="button" variant="ghost">Cancel</Button><Button disabled={busy || !file} form="ce-import" type="submit">{busy ? "Importing…" : "Import Meta CSV"}</Button></DialogFooter>
+        <DialogFooter sticky><Button onClick={close} type="button" variant="outline">Cancel</Button><Button disabled={busy || !file} form="ce-import" type="submit">{busy ? "Importing…" : "Import Meta CSV"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -483,9 +483,9 @@ function EvaluationEditor({ record, save, remove, close }: { record: ApiRecord |
           </fieldset>
         </form>
         <DialogFooter sticky>
-          {record ? <Button className="mr-auto" onClick={remove} type="button" variant="destructive"><i className="ti ti-trash" aria-hidden="true" /> Delete evaluation</Button> : null}
-          <Button onClick={close} type="button" variant="ghost">Cancel</Button>
-          <Button disabled={pending} form={formId} type="submit">{pending ? "Saving…" : "Save evaluation"}</Button>
+          {record ? <Button className="mr-auto" onClick={remove} type="button" variant="danger"><i className="ti ti-trash" aria-hidden="true" /> Delete evaluation</Button> : null}
+          <Button onClick={close} type="button" variant="outline">Cancel</Button>
+          <Button disabled={pending} form={formId} type="submit">{pending ? "Saving…" : (record ? "Save evaluation" : "Add evaluation")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

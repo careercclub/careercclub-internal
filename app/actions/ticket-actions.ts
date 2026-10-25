@@ -3,7 +3,8 @@
 import { auth } from "@/auth";
 import { normalizeNotificationRoles, publishTicketNotification } from "@/lib/api/notifications";
 import { deleteTicketWithLinkedTask, synchronizeTicketToTask } from "@/lib/api/program";
-import { appendTicketComment, appendTicketFile, appendTicketLink, duplicateTicket, getTicket, insertTicket, updateTicket } from "@/lib/api/tickets";
+import { appendTicketComment, appendTicketFile, appendTicketLink, removeTicketLink,
+  duplicateTicket, getTicket, insertTicket, updateTicket } from "@/lib/api/tickets";
 import { revalidatePath } from "next/cache";
 
 async function requireUser() {
@@ -53,6 +54,14 @@ export async function addTicketLinkAction(id: string, formData: FormData) {
   const url = String(formData.get("url") || "").trim();
   try { new URL(url); } catch { throw new Error("A valid URL is required."); }
   await appendTicketLink(id, { label, url });
+  refresh();
+}
+
+export async function removeTicketLinkAction(id: string, index: number, url: string) {
+  await requireUser();
+  if (!Number.isInteger(index) || index < 0) throw new Error("Unknown link.");
+  const ticket = await removeTicketLink(id, index, url);
+  if (!ticket) throw new Error("That link was already changed. Close and open the ticket again.");
   refresh();
 }
 

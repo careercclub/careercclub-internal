@@ -2,7 +2,7 @@
 
 import { revertWith } from "./safe-action";
 
-import { addTicketLinkAction, changeTicketStatusAction, createTicketAction, deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
+import { addTicketLinkAction, changeTicketStatusAction, createTicketAction, deleteTicketAction, duplicateTicketAction, removeTicketLinkAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import { settingsHref } from "@/lib/records/links";
 import { confirmAction } from "./app-dialog";
 import { DateInput } from "./date-input";
 import { isAssignedTo } from "@/lib/tickets/visibility";
+import { HeaderAction } from "./header-action";
+import { LinksField, type LinkItem } from "./links-field";
 
 const PRIORITIES = ["High", "Med", "Low"];
 
@@ -41,24 +43,25 @@ function arr(value: unknown): Record<string, unknown>[] {
 function calendarAdded(row: ApiRecord) { return row.gcal_added === true || row.gcal_added === "true"; }
 
 
+/** Small round action next to a popup title (secondary actions; the footer keeps delete | cancel, save). */
 function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { people: ApiRecord[]; divisions: ApiRecord[]; types: ApiRecord[]; onClose: () => void; onCreated: (row: ApiRecord) => void }) {
   const [form, setForm] = useState({ title: "", description: "", priority: "Med", divisionId: "", typeId: "", dueDate: "" });
   const [assignees, setAssignees] = useState<string[]>([]);
-  const [linkUrl, setLinkUrl] = useState("");
+  const [links, setLinks] = useState<LinkItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit() {
     if (!form.title.trim()) { setError("Ticket title is required."); document.getElementById("create-ticket-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
-      const row = await createTicketAction({ title: form.title, description: form.description, status: "Todo", priority: form.priority, divisionId: form.divisionId || null, typeId: form.typeId || null, dueDate: form.dueDate || null, assignedToIds: assignees, links: linkUrl.trim() ? [{ label: "Link", url: linkUrl.trim() }] : [] });
+      const row = await createTicketAction({ title: form.title, description: form.description, status: "Todo", priority: form.priority, divisionId: form.divisionId || null, typeId: form.typeId || null, dueDate: form.dueDate || null, assignedToIds: assignees, links: links.map((link) => ({ label: "Link", url: String(link.url) })) });
       onCreated(row);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not create the ticket."); setBusy(false); }
   }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Add ticket</DialogTitle><DialogDescription>Send a request to a division or a specific person.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Add ticket</DialogTitle><DialogDescription>Send a request to a division or a specific person.</DialogDescription></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="create-ticket-title">Ticket title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="create-ticket-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. CCA flyer design" /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
@@ -71,10 +74,10 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
             <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
-          <div className="grid gap-1.5"><Label>Link <span className="font-normal text-muted-foreground">(optional)</span></Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /></div>
+          <LinksField label="Attachments & links" links={links} onAdd={(url) => setLinks((list) => [...list, { label: "Link", url }])} onRemove={(index) => setLinks((list) => list.filter((_, at) => at !== index))} optional />
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Add ticket"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Add ticket"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -84,7 +87,6 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
   const [form, setForm] = useState({ title: text(ticket.title), description: text(ticket.description), status: text(ticket.status) || "Todo", priority: text(ticket.priority) || "Med", dueDate: text(ticket.due_date).slice(0, 10) });
   const [divisionId, setDivisionId] = useState(text(ticket.divisi_id));
   const [assignees, setAssignees] = useState<string[]>(Array.isArray(ticket.assigned_to_ids) ? ticket.assigned_to_ids.map(String) : []);
-  const [linkUrl, setLinkUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const links = arr(ticket.links);
@@ -97,17 +99,30 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
       onSaved({ ...ticket, ...updated });
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); } finally { setBusy(false); }
   }
-  async function addLink() {
-    const url = linkUrl.trim(); if (!url) return;
+  async function addLink(url: string) {
     setBusy(true); setError("");
-    try { const fd = new FormData(); fd.set("url", url); fd.set("label", "Link"); await addTicketLinkAction(String(ticket.id), fd); onSaved({ ...ticket, links: [...links, { label: "Link", url }] }); setLinkUrl(""); } catch (e) { setError(e instanceof Error ? e.message : "Could not add the link."); } finally { setBusy(false); }
+    try { const fd = new FormData(); fd.set("url", url); fd.set("label", "Link"); await addTicketLinkAction(String(ticket.id), fd); onSaved({ ...ticket, links: [...links, { label: "Link", url }] }); } catch (e) { setError(e instanceof Error ? e.message : "Could not add the link."); throw e; } finally { setBusy(false); }
+  }
+  async function removeLink(index: number) {
+    const url = text(links[index]?.url);
+    setBusy(true); setError("");
+    try { await removeTicketLinkAction(String(ticket.id), index, url); onSaved({ ...ticket, links: links.filter((_, at) => at !== index) }); } catch (e) { setError(e instanceof Error ? e.message : "Could not remove the link."); } finally { setBusy(false); }
   }
   async function remove() { if (!(await confirmAction({ title: "Delete this ticket?", message: "This cannot be undone.", confirmLabel: "Delete ticket", danger: true }))) return; setBusy(true); setError(""); try { await deleteTicketAction(String(ticket.id)); onDeleted(String(ticket.id)); } catch (e) { setError(e instanceof Error ? e.message : "Could not delete."); setBusy(false); } }
   async function duplicate() { setBusy(true); setError(""); try { const row = await duplicateTicketAction(String(ticket.id)); onDuplicated(row); onClose(); } catch (e) { setError(e instanceof Error ? e.message : "Could not duplicate."); setBusy(false); } }
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-ticket" /> Ticket details</DialogTitle>{ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}</DialogHeader>
+        <DialogHeader>
+          <div className="flex items-start justify-between gap-3 pr-9">
+            <div className="grid gap-1"><DialogTitle>Ticket details</DialogTitle>{ticket.ticket_no ? <DialogDescription>#{text(ticket.ticket_no)}</DialogDescription> : null}</div>
+            {/* Less-used actions sit by the title, so the footer keeps one row: delete | cancel, save. */}
+            <div className="flex shrink-0 gap-1.5">
+              <HeaderAction active={synced} disabled={busy} icon={synced ? "ti-calendar-check" : "ti-calendar-plus"} label={synced ? "Re-sync Google Calendar" : "Add to Google Calendar"} onClick={onCalendar} />
+              <HeaderAction disabled={busy} icon="ti-copy" label="Duplicate ticket" onClick={duplicate} />
+            </div>
+          </div>
+        </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="edit-ticket-title">Ticket title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="edit-ticket-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
@@ -120,16 +135,12 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
             <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
-          <div className="grid gap-1.5">
-            <Label>Attachments &amp; links</Label>
-            {links.map((link, index) => <a key={index} href={text(link.url)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-primary underline truncate"><i className="ti ti-link" /> {text(link.label) || text(link.url)}</a>)}
-            <div className="flex gap-2"><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /><Button type="button" variant="outline" size="sm" onClick={addLink} disabled={busy || !linkUrl.trim()}>Add link</Button></div>
-          </div>
+          <LinksField busy={busy} label="Attachments & links" links={links as LinkItem[]} onAdd={addLink} onRemove={removeLink} />
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter sticky className="flex-row flex-wrap justify-between gap-2 sm:justify-between">
-          <div className="flex gap-1.5"><Button aria-label={synced ? "Re-sync Google Calendar" : "Add to Google Calendar"} title={synced ? "Re-sync Google Calendar" : "Add to Google Calendar"} type="button" variant="outline" size="sm" onClick={onCalendar} disabled={busy} style={synced ? { background: "var(--green)", borderColor: "var(--green)", color: "#fff" } : undefined}><i aria-hidden="true" className={`ti ti-calendar-${synced ? "check" : "plus"}`} /><span className="hidden sm:inline">{synced ? "Re-sync Calendar" : "Google Calendar"}</span></Button><Button aria-label="Duplicate ticket" title="Duplicate ticket" type="button" variant="outline" size="sm" onClick={duplicate} disabled={busy}><i aria-hidden="true" className="ti ti-copy" /><span className="hidden sm:inline">Duplicate</span></Button><Button aria-label="Delete ticket" title="Delete ticket" type="button" variant="outline" size="sm" className="border-[var(--red)] text-[var(--red)] hover:bg-[var(--red-bg)]" onClick={remove} disabled={busy}><i aria-hidden="true" className="ti ti-trash" /><span className="hidden sm:inline">Delete</span></Button></div>
-          <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save ticket"}</Button></div>
+        <DialogFooter sticky className="flex-row items-center justify-between gap-2 sm:justify-between">
+          <Button disabled={busy} onClick={remove} type="button" variant="danger"><i aria-hidden="true" className="ti ti-trash" /> Delete ticket</Button>
+          <div className="flex gap-2"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save ticket"}</Button></div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -318,7 +318,7 @@ function AddProductDialog({ onClose }: { onClose: () => void }) {
           <label className={s.field}><span>Landing page URL</span><input className={s.input} name="link" placeholder="https://…" /></label>
           <label className={s.field}><span>Description</span><textarea className={s.input} name="deskripsi" rows={3} /></label>
         </form>
-        <DialogFooter sticky><Button onClick={onClose} type="button" variant="ghost">Cancel</Button><Button disabled={pending} form="add-product" type="submit">Save product</Button></DialogFooter>
+        <DialogFooter sticky><Button onClick={onClose} type="button" variant="outline">Cancel</Button><Button disabled={pending} form="add-product" type="submit">Save product</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );

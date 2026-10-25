@@ -465,7 +465,7 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
               <div className={styles.confirmDelete} role="alertdialog" aria-label="Confirm delete content">
                 <span>Delete this content? This cannot be undone.</span>
                 <Button disabled={busy} onClick={() => setConfirmDelete(false)} ref={cancelDelete} size="sm" type="button" variant="outline">Cancel</Button>
-                <Button disabled={busy} onClick={removeSelected} size="sm" type="button" variant="destructive">{busy ? "Deleting..." : "Yes, delete content"}</Button>
+                <Button disabled={busy} onClick={removeSelected} size="sm" type="button" variant="destructive">{busy ? "Deleting…" : "Yes, delete content"}</Button>
               </div>
             ) : (
               <div className={styles.previewActions}>

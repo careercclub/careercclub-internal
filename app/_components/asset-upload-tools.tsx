@@ -122,8 +122,8 @@ function UploadDialog({ mode, noun, categories, close }: { mode: "design" | "con
           {error ? <p className={`${g.fieldError} ${g.wide}`} role="alert">{error}</p> : null}
         </form>
         <DialogFooter sticky>
-          <Button disabled={busy} onClick={close} type="button" variant="ghost">Cancel</Button>
-          <Button disabled={busy} form={formId} type="submit">{busy ? "Uploading…" : `Save ${noun}`}</Button>
+          <Button disabled={busy} onClick={close} type="button" variant="outline">Cancel</Button>
+          <Button disabled={busy} form={formId} type="submit">{busy ? "Uploading…" : `Upload ${noun}`}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -432,7 +432,7 @@ function CarouselModal({ state, ctas, people, planned, onClose }: { state: Carou
         {plan ? <button className={s.dangerSm} onClick={remove} type="button"><i className="ti ti-trash" aria-hidden="true" /> Delete carousel plan</button> : null}
         <span className={s.spacer} />
         <button className={s.ghostSm} onClick={onClose} type="button">Cancel</button>
-        <button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save carousel plan</button>
+        <button className={s.primarySm} disabled={pending} onClick={save} type="button">{pending ? "Saving…" : plan ? "Save carousel plan" : "Add carousel plan"}</button>
       </>}
     >
       <Field label="Title" required><input aria-invalid={req.invalid || undefined} autoFocus className={req.invalid ? s.inputInvalid : s.input} onChange={(event) => { setJudul(event.target.value); req.clear(); }} placeholder="Carousel content title…" id={req.id} value={judul} /></Field>
@@ -448,7 +448,7 @@ function CarouselModal({ state, ctas, people, planned, onClose }: { state: Carou
                 {ctas.map((option) => <option key={text(option.id)} value={text(option.label)}>{text(option.label)}</option>)}
                 {cta && !ctas.some((option) => text(option.label) === cta) ? <option value={cta}>{cta}</option> : null}
               </select>
-              <button className={s.ghostSm} onClick={addCta} type="button">New CTA</button>
+              <button className={s.ghostSm} onClick={addCta} type="button">Add CTA</button>
             </span>
           </Field>
           <Field label="Assignee"><select className={s.input} onChange={(event) => setAssignee(event.target.value)} value={assignee}><option value="">No assignee</option>{people.map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}</option>)}</select></Field>
@@ -547,7 +547,7 @@ function StoryDateModal({ preDate, presetItems, planned, onClose }: { preDate?: 
       footer={<>
         <span className={s.spacer} />
         <button className={s.ghostSm} onClick={onClose} type="button">Cancel</button>
-        <button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save story date</button>
+        <button className={s.primarySm} disabled={pending} onClick={save} type="button">Save story date</button>
       </>}
     >
       <div className={s.formSplit}>
@@ -653,7 +653,7 @@ function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void
   }
   return (
     <Modal onClose={onClose} title={`${kol ? "Edit" : "Add"} KOL`}
-      footer={<><span className={s.spacer} /><button className={s.ghostSm} onClick={onClose} type="button">Cancel</button><button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save KOL</button></>}
+      footer={<><span className={s.spacer} /><button className={s.ghostSm} onClick={onClose} type="button">Cancel</button><button className={s.primarySm} disabled={pending} onClick={save} type="button">{pending ? "Saving…" : kol ? "Save KOL" : "Add KOL"}</button></>}
     >
       <div className={s.formGrid}>
         <Field label="Name" required><input aria-invalid={req.invalid || undefined} autoFocus className={req.invalid ? s.inputInvalid : s.input} onChange={(event) => { set({ nama: event.target.value }); req.clear(); }} id={req.id} value={text(form.nama)} /></Field>
@@ -746,7 +746,7 @@ function MtModal({ story, onClose }: { story: ApiRecord | null; onClose: () => v
   }
   return (
     <Modal onClose={onClose} title={`${story ? "Edit" : "Add"} MT story`}
-      footer={<><span className={s.spacer} /><button className={s.ghostSm} onClick={onClose} type="button">Cancel</button><button className={s.primarySm} disabled={pending} onClick={save} type="button"><i className="ti ti-check" aria-hidden="true" /> Save MT story</button></>}
+      footer={<><span className={s.spacer} /><button className={s.ghostSm} onClick={onClose} type="button">Cancel</button><button className={s.primarySm} disabled={pending} onClick={save} type="button">{pending ? "Saving…" : story ? "Save MT story" : "Add MT story"}</button></>}
     >
       <div className={s.formGrid}>
         <Field label="Name" required><input aria-invalid={req.invalid || undefined} autoFocus className={req.invalid ? s.inputInvalid : s.input} onChange={(event) => { set({ nama: event.target.value }); req.clear(); }} id={req.id} value={text(form.nama)} /></Field>

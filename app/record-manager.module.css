@@ -160,8 +160,8 @@
 .createPanel summary { display: flex; align-items: center; gap: 7px; padding: 9px 12px; cursor: pointer; color: var(--purple-dark); font-size: 12px; font-weight: 800; list-style: none; }
 .createPanel[open] summary { border-bottom: 1px solid var(--border); }
 .formGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; padding: 12px; }
-.field { display: grid; gap: 5px; color: var(--text); font-size: 12px; font-weight: 500; }
-.field input, .field select, .field textarea { width: 100%; min-height: 32px; padding: 7px 9px; border: 1px solid var(--border-md); border-radius: var(--radius); color: var(--text); background: var(--white); font-size: 12px; text-transform: none; }
+.field { display: grid; gap: 5px; color: var(--text); font-size: 13px; font-weight: 600; }
+.field input, .field select, .field textarea { width: 100%; min-height: 38px; padding: 8px 12px; border: 1px solid var(--border-md); border-radius: var(--radius); color: var(--text); background: var(--white); font-size: 12px; text-transform: none; }
 .field select[multiple] { min-height: 77px; }
 .field textarea { resize: vertical; }
 .uploadField { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }

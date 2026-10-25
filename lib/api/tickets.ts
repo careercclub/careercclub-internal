@@ -126,6 +126,19 @@ export function appendTicketLink(id: string, link: { label: string; url: string 
   });
 }
 
+/** Removes the link at `index` only if it is still the one shown (url match), so two people removing at once cannot drop the wrong link. */
+export function removeTicketLink(id: string, index: number, url: string) {
+  return withPostgres(async (sql) => {
+    const [ticket] = await sql<TicketRecord[]>`
+      update tickets
+      set links = (coalesce(links, '[]'::jsonb) - ${index}::int)
+      where id = ${id} and coalesce(links, '[]'::jsonb) -> ${index}::int ->> 'url' = ${url}
+      returning *
+    `;
+    return ticket || null;
+  });
+}
+
 export function duplicateTicket(id: string) {
   return withPostgres(async (sql) => sql.begin(async (tx) => {
     const [source] = await tx<TicketRecord[]>`select * from tickets where id = ${id}`;

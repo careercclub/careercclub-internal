@@ -294,7 +294,7 @@ function ProfileModal({ profile, onClose }: { profile: ApiRecord | null; onClose
           <label className={s.field}><span>Logo (URL or file key)</span><input className={s.input} onChange={(e) => setLogoUrl(e.target.value)} placeholder="design-assets/… or https://…" value={logoUrl} /></label>
           <label className={s.field}><span>Notes</span><textarea className={s.input} onChange={(e) => setNotes(e.target.value)} placeholder="General observations…" rows={3} value={notes} /></label>
         </div>
-        <DialogFooter sticky><Button onClick={onClose} type="button" variant="ghost">Cancel</Button><Button disabled={pending} onClick={save} type="button">{pending ? "Saving…" : "Save competitor"}</Button></DialogFooter>
+        <DialogFooter sticky><Button onClick={onClose} type="button" variant="outline">Cancel</Button><Button disabled={pending} onClick={save} type="button">{pending ? "Saving…" : (profile ? "Save competitor" : "Add competitor")}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );

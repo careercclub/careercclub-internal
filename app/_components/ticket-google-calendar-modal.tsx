@@ -219,7 +219,7 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
         </div>
 
         <DialogFooter sticky className="sm:justify-end">
-          <Button disabled={busy} onClick={onClose} type="button" variant="ghost">Cancel</Button>
+          <Button disabled={busy} onClick={onClose} type="button" variant="outline">Cancel</Button>
           <Button disabled={busy || !configurationLoaded || !clientId} onClick={submit} type="button">
             <i className="ti ti-calendar-plus" aria-hidden="true" />
             {busy ? "Connecting…" : synced ? "Re-sync Google Calendar" : "Add to Google Calendar"}

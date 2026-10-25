@@ -178,14 +178,14 @@
 .modalSm { width: min(380px, 100%); }
 .modalMd { width: min(720px, 100%); }
 .modalHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 17px; border-bottom: 1px solid var(--border); }
-.modalTitle { font-size: 15px; font-weight: 800; }
+.modalTitle { font-size: 17px; font-weight: 700; }
 .modalBody { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding: 15px 17px; }
 .modalFooter { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 17px; border-top: 1px solid var(--border); background: var(--white); }
 .field { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-.fieldLabel { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.fieldLabel { color: var(--text); font-size: 13px; font-weight: 600; }
 .req { color: var(--red); }
 .optional { font-weight: 500; }
-.input, .inputInvalid, .textarea { width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--text); font: inherit; font-size: 13px; outline: none; }
+.input, .inputInvalid, .textarea { width: 100%; min-height: 38px; padding: 8px 12px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--text); font: inherit; font-size: 13px; outline: none; }
 .textarea { min-height: 65px; resize: vertical; line-height: 1.5; }
 .input:focus, .textarea:focus { border-color: var(--purple-mid); box-shadow: 0 0 0 3px var(--purple-light); }
 .inputInvalid { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
@@ -222,3 +222,6 @@
   .ai { border-radius: 20px; }
   .ai > button { width: 100%; }
 }
+
+/* Popup footer buttons match every other popup (Putaran 42): 36 px, pill. */
+.modalFooter .primarySm, .modalFooter .ghostSm { min-height: 36px; padding: 0 16px; border-radius: 999px; font-weight: 700; }

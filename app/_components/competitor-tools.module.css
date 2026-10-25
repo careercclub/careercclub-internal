@@ -94,11 +94,11 @@
 /* Form */
 .form { display: flex; flex-direction: column; gap: 12px; }
 .field { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-.field > span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.field > span { color: var(--text); font-size: 13px; font-weight: 600; }
 .subField { display: grid; gap: 3px; }
 .subField small { color: var(--text-muted); font-size: 12px; }
 .req { color: var(--red); }
-.input, .inputInvalid { width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--text); font: inherit; font-size: 13px; outline: none; }
+.input, .inputInvalid { width: 100%; min-height: 38px; padding: 8px 12px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--text); font: inherit; font-size: 13px; outline: none; }
 textarea.input { resize: vertical; line-height: 1.5; }
 .input:focus { border-color: var(--purple-mid); box-shadow: 0 0 0 3px var(--purple-light); }
 .inputInvalid { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }

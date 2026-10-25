@@ -1504,3 +1504,28 @@ Permintaan user: Job Vacancy MT, Customer Knowledge, Instagram & Content Evaluat
 ### Deploy
 
 Migrasi baru → `git pull origin refactor && npm run vps:rebuild`. Lalu Settings → Claude access → Add key (Job Vacancy MT) dan kirim key ke Claude di chat.
+
+## Putaran 42 — Popup & form rapi di semua modul (25 Okt 2026)
+
+Permintaan user (3 screenshot): popup masih bisa diimprove, isian attach link terlalu kecil, daftar catatan riset Claude kurang rapi; perbaiki pola yang sama di semua modul.
+
+### Do
+
+- **Standar popup satu untuk semua** (primitif `components/ui` + CSS modul): judul 17 px tebal tanpa ikon, label 13 px semibold, input/select/textarea tinggi 38 px, latar putih (bukan abu), fokus garis biru + ring tipis, isian salah garis merah.
+- **Footer satu baris**: kiri **Delete {object}** (teks merah, tanpa kotak — varian tombol baru `danger`), kanan **Cancel** (outline) + tombol simpan. Dipakai di Ticket details (Tickets & Dashboard), Job Vacancy MT, Content Evaluation, Program task. "Delete" tanpa objek di Program → **Delete task**.
+- **Aksi jarang ke header** (`app/_components/header-action.tsx`, dipakai bersama): Ticket details punya ikon bulat **Add to / Re-sync Google Calendar** dan **Duplicate ticket** di samping judul, footer jadi lega.
+- **Isian link baru** (`app/_components/links-field.tsx`, satu komponen): input penuh 38 px "Paste a link (Drive, Figma, Canva…)", tombol **Add link**, Enter juga menambah, `https://` ditambah otomatis, alamat yang bukan link ditolak dengan pesan; daftar link tampil sebagai baris (ikon situs, nama situs, path, buka, hapus). Di Ticket details bernama **Attachments & links** dan link bisa dihapus (`removeTicketLinkAction`, hanya kalau link di posisi itu masih sama). Add ticket kini juga bisa langsung menambah link.
+- **Job Vacancy MT detail**: Research notes from Claude & HR contacts jadi daftar kartu putih bergaris pemisah; kotak Programme/When it opened putih; tombol footer ukuran normal.
+- **Label tombol sesuai kamus** (pembuka = simpan): dialog "Add X" kini disimpan dengan **Add X** (partner, competitor, pain point, evaluation, carousel plan, KOL, MT story); mode edit tetap **Save X**. Upload design asset/content reference disimpan dengan **Upload …**. Semua Cancel kini outline; "Deleting..." → "Deleting…".
+- Form Partnership & Customer Knowledge: input putih 38 px & label 13 px (sebelumnya abu dan kecil).
+
+### Check
+
+- Suite baru `p42.mjs` 19: ikon Calendar/Duplicate di header, footer satu baris (Delete kiri, Cancel + Save kanan), Cancel outline, input link ≥36 px, link salah ditolak dengan pesan, Enter menambah link & tampil di daftar, Dashboard ticket sama dengan Tickets, 4 modul "Add X" → judul & simpan "Add X", input putih, HP muat layar, mode gelap.
+- Suite lama diperbarui untuk label baru (lib, mkt, ci, cp, ck, partner, dialogs).
+- Screenshot ulang 15 popup (terang) dicek manual.
+- Regresi penuh lolos: 28 suite modul (termasuk p42 19), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 175, import 58, search-db 19, agent-db 19, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 026/027 belum: `npm run vps:rebuild`).

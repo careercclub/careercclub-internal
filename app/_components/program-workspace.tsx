@@ -62,7 +62,7 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-calendar-event" /> {editing ? "Edit event" : "Add event"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{editing ? "Edit event" : "Add event"}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="event-name">Event name <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.nama.trim()} id="event-name" required value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} placeholder="e.g. Free Class: insider tips to pass MT selection" /></div>
           <div className="grid gap-1.5"><Label>Program type</Label><Select value={form.jenisProgram || "none"} onValueChange={(v) => setForm({ ...form, jenisProgram: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select program type" /></SelectTrigger><SelectContent><SelectItem value="none">Select program type</SelectItem>{JENIS.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select></div>
@@ -78,7 +78,7 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
           <div className="grid gap-1.5"><Label>Target participants</Label><Input type="number" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : editing ? "Save event" : "Add event"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : editing ? "Save event" : "Add event"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -102,7 +102,7 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-checklist" /> {editing ? "Edit task" : "New task"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{editing ? "Edit task" : "Add task"}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="task-title">Task title <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="task-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Promo flyer & poster design" /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detail brief, requirement, dll…" /></div>
@@ -118,8 +118,8 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
         <DialogFooter sticky className="flex-row flex-wrap justify-between gap-2 sm:justify-between">
-          <div>{editing ? <Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy}><i className="ti ti-trash" /> Delete</Button> : null}</div>
-          <div className="flex gap-2"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Save task"}</Button></div>
+          <div>{editing ? <Button type="button" variant="danger" onClick={remove} disabled={busy}><i aria-hidden="true" className="ti ti-trash" /> Delete task</Button> : null}</div>
+          <div className="flex gap-2"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : editing ? "Save task" : "Add task"}</Button></div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -140,13 +140,13 @@ function AddLinkModal({ eventId, onClose, onSaved }: { eventId: string; onClose:
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-link" /> Add link</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Add link</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label htmlFor="event-link-label">Label <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !label.trim()} id="event-link-label" required value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Slido link" /></div>
           <div className="grid gap-1.5"><Label htmlFor="event-link-url">URL <span className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !url.trim()} id="event-link-url" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Add link"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Add link"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -208,7 +208,7 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><i className="ti ti-brand-google" /> Add to Google Calendar</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Add to Google Calendar</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5"><Label>Event title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
@@ -219,7 +219,7 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
           {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar is not set up for this app yet.</p> : null}
           {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
         </div>
-        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy || !configurationLoaded || !clientId}>{busy ? "Connecting…" : "Add event"}</Button></DialogFooter>
+        <DialogFooter sticky className="sm:justify-end"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="button" onClick={submit} disabled={busy || !configurationLoaded || !clientId}>{busy ? "Connecting…" : "Add event"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );

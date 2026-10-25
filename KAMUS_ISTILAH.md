@@ -22,6 +22,7 @@ Cek ulang tiap putaran dengan `labels.mjs` (harvest label) sebelum rilis.
 Aturan tambahan:
 - Tombol pembuka form = tombol simpannya. Contoh: "Add ticket" membuka dialog "Add ticket" dan disimpan dengan "Add ticket"; "Add to Google Calendar" → "Add to Google Calendar" (sesudah sinkron: "Re-sync Google Calendar").
 - Judul dialog/panel import = label tombol pembukanya ("Import Meta CSV").
+- Dialog bikin baru: judul "Add X" → simpan "Add X"; dialog ubah: judul "Edit X" → simpan "Save X". Upload file: "Upload X" → "Upload X".
 - Kirim aset ke Content Library: "Add to library" di tombol dan judul dialog.
 
 ## Uang (`lib/text/money.ts`)
@@ -69,3 +70,10 @@ Telat: **3d late**, **4mo late**, **1y+ late** — satu fungsi `lateLabel` (`lib
 - Warna selalu lewat token (`var(--text)`, `var(--white)` = permukaan kartu, `var(--bg)`, `var(--purple-mid)`, `var(--red)`, `var(--green)`/`--amber`/`--blue` + `-bg`). Jangan tulis `#fff`, `#1554c0`, `bg-white`, `text-white` langsung.
 - Teks di atas isian biru/merah: `var(--on-accent)`. Panel besar berwarna (kartu program, hero Instagram/Customer Knowledge): `var(--hero)` / `var(--hero-deep)` dengan teks `var(--on-hero)`.
 - Pengecualian yang disengaja: preview & template email (tampil seperti email asli, selalu terang), foto/overlay hitam (teks putih), ikon Google.
+
+## Popup (standar Putaran 42)
+
+- Judul 17 px tebal, tanpa ikon. Label 13 px semibold. Input/select/textarea 38 px, latar putih (`var(--white)`), bukan abu.
+- Footer satu baris: kiri **Delete {object}** (`variant="danger"`, teks merah tanpa kotak), kanan **Cancel** (`variant="outline"`) + tombol simpan.
+- Aksi yang jarang (Duplicate, Google Calendar) = ikon bulat di header (`HeaderAction`), bukan tombol footer.
+- Link selalu lewat `LinksField` (input penuh + "Add link", daftar baris dengan buka & hapus).
