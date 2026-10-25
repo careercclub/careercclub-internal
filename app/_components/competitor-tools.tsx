@@ -1,5 +1,6 @@
 "use client";
 
+import { ClaudeMark } from "./claude-mark";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -116,7 +117,7 @@ function Landscape({ workspace, summary, onEdit }: { workspace: Workspace; summa
                     return (
                       <li key={id}>
                         <button className={s.card} data-record-id={id} onClick={() => onEdit(row)} type="button">
-                          <span className={s.cardTop}><CompetitorLogo profile={row} size={36} /><span className={s.cardName}><b>{text(row.name)}</b><small>{CATEGORY_LABEL[text(row.category)] || "No category"}{text(row.niche) ? ` · ${text(row.niche)}` : ""}</small></span></span>
+                          <span className={s.cardTop}><CompetitorLogo profile={row} size={36} /><span className={s.cardName}><b>{text(row.name)}<ClaudeMark at={row.added_at} by={row.added_via} verb="Added" /></b><small>{CATEGORY_LABEL[text(row.category)] || "No category"}{text(row.niche) ? ` · ${text(row.niche)}` : ""}</small></span></span>
                           <span className={s.cardFoot}>
                             {fol ? <span><i className={`ti ${PLATFORM_ICON[fol[0]] || "ti-users"}`} aria-hidden="true" /> {fmtN(fol[1])}</span> : <span className={s.muted}>No follower data</span>}
                             {flagCount ? <span className={s.flag}><i className="ti ti-flag" aria-hidden="true" /> {flagCount}</span> : null}
@@ -166,7 +167,7 @@ function Directory({ workspace, onEdit }: { workspace: Workspace; onEdit: (recor
               <li className={s.profile} data-record-id={String(row.id)} key={String(row.id)}>
                 <div className={s.profileHead}>
                   <CompetitorLogo profile={row} size={44} />
-                  <div className={s.cardName}><b>{text(row.name)}</b>{url ? <a href={url} rel="noreferrer" target="_blank">{domain(url)}</a> : <small>{CATEGORY_LABEL[text(row.category)] || "No category"}</small>}</div>
+                  <div className={s.cardName}><b>{text(row.name)}<ClaudeMark at={row.added_at} by={row.added_via} verb="Added" /></b>{url ? <a href={url} rel="noreferrer" target="_blank">{domain(url)}</a> : <small>{CATEGORY_LABEL[text(row.category)] || "No category"}</small>}</div>
                   <ThreatChip threat={threatOf(row, snapshots)} />
                 </div>
                 <dl className={s.facts}>
@@ -214,7 +215,7 @@ function Pricing({ workspace }: { workspace: Workspace }) {
                   return (
                     <li key={String(product.id)}>
                       {owner ? <CompetitorLogo profile={owner} size={28} /> : <span aria-label="Unknown brand" className={s.logo} role="img" style={{ width: 28, height: 28, fontSize: 14 }}><i className="ti ti-building-store" aria-hidden="true" /></span>}
-                      <span className={s.cardName}><b>{text(product.nama) || text(product.name) || "—"}</b><small>{text(owner?.name) || "No competitor"}</small></span>
+                      <span className={s.cardName}><b>{text(product.nama) || text(product.name) || "—"}<ClaudeMark at={product.added_at} by={product.added_via} verb="Added" /></b><small>{text(owner?.name) || "No competitor"}</small></span>
                       <span className={s.priceValue}>{price ? formatRupiah(price) : "—"}</span>
                       {group.max > group.min && price ? <span className={s.priceBar} aria-hidden="true"><i style={{ width: `${Math.max(6, ((price - group.min) / (group.max - group.min)) * 100)}%` }} /></span> : null}
                     </li>

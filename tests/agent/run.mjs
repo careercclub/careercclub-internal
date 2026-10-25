@@ -24,6 +24,14 @@ await sql`create table pain_point_platforms (id uuid primary key default gen_ran
 await sql`create table pain_point_categories (id uuid primary key default gen_random_uuid(), nama text)`;
 await sql.unsafe(migration("029_customer_knowledge_claude.sql"));
 const CK = await import("./out/ck-route.mjs");
+// Competitor Intel tables (JSON columns as jsonb like production), then migration 030.
+await sql`create table competitor_profiles (id uuid primary key default gen_random_uuid(), name text, category text, platforms jsonb default '[]', primary_url text, niche text, target_audience text, followers jsonb default '{}', threat_level text, logo_url text, notes text, created_at timestamptz default now())`;
+await sql`create table competitor_snapshots (id uuid primary key default gen_random_uuid(), competitor_id uuid, snapshot_date date, threat_level text, followers jsonb default '{}', ads_active boolean default false, notes text)`;
+await sql`create table competitor_flags (id uuid primary key default gen_random_uuid(), competitor_id uuid, flag_type text, flag_date date, description text)`;
+await sql`create table competitor_products (id uuid primary key default gen_random_uuid(), competitor_id uuid, name text, category text, description text, price_min numeric, price_max numeric, status text, features jsonb default '[]', links jsonb default '[]', image_url text, image_urls jsonb default '[]', created_at timestamptz default now())`;
+await sql`create table competitor_product_prices (id uuid primary key default gen_random_uuid(), product_id uuid, price_min numeric, price_max numeric, recorded_at date, notes text)`;
+await sql.unsafe(migration("030_competitor_claude.sql"));
+const CI = await import("./out/ci-route.mjs");
 let pass = 0, fail = 0; const ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); c ? pass++ : fail++; };
 const call = async (body, key, method = "POST") => { const r = await (method === "POST" ? POST : GET)(new Request("http://x/api/agent/mt-prospects", { method, headers: key ? { authorization: `Bearer ${key}` } : {}, ...(method === "POST" ? { body: JSON.stringify(body) } : {}) })); return { status: r.status, body: await r.json() }; };
 
@@ -156,6 +164,51 @@ r = await ckCall({ mode: "apply", pain_points: [{ comment: "Interview user susah
 ok(r.status === 200 && (await sql`select labels from pain_points where komentar = 'Interview user susah'`)[0].labels[0] === "Interview", "CK: labels saved also where the column is a text list");
 globalThis.__session = { user: { id: "u1", name: "Tester" } };
 ok((await CK.POST(new Request("http://internal.test/api/agent/customer-knowledge", { method: "POST", headers: { host: "internal.test", origin: "http://internal.test" }, body: JSON.stringify({ mode: "preview", pain_points: pains }) }))).status === 200, "CK: Claude in Chrome on the app's page can preview with the session");
+globalThis.__session = null;
+
+// ── Competitor Intel ──
+const [kerjaku] = await sql`insert into competitor_profiles (name, category, platforms, niche, threat_level, notes, followers) values ('Kerjaku Academy', 'direct', '["Instagram"]', 'MT test prep', 'medium', 'Ditulis tim', '{"Instagram": 50000}') returning id`;
+await sql`insert into competitor_flags (competitor_id, flag_type, flag_date, description) values (${kerjaku.id}, 'new_campaign', '2026-10-02', 'Promo 10.10')`;
+const [boot] = await sql`insert into competitor_products (competitor_id, name, category, price_min, price_max, features) values (${kerjaku.id}, 'Bootcamp MT', 'Kelas', 300000, 300000, '["Psikotes"]') returning id`;
+await sql`insert into competitor_product_prices (product_id, price_min, price_max, recorded_at) values (${boot.id}, 300000, 300000, '2026-10-01')`;
+const ci = await createAgentToken({ name: "Riset kompetitor", modules: ["competitor-intel"], createdBy: "Admin" });
+const ciCall = async (body, key = ci.key) => { const res = await CI.POST(new Request("http://x/api/agent/competitor-intel", { method: "POST", headers: { authorization: `Bearer ${key}` }, body: JSON.stringify(body) })); return { status: res.status, body: await res.json() }; };
+ok((await ciCall({ mode: "preview", competitors: [{ name: "X" }] }, ck.key)).status === 401, "CI: a key for another module → 401");
+ok((await (await CI.GET(new Request("http://x/api/agent/competitor-intel", { headers: { authorization: `Bearer ${ci.key}` } }))).json()).module === "Competitor Intel", "CI: GET explains the format");
+const comps = [
+  { name: "kerjaku academy", primary_url: "https://kerjaku.id", niche: "Career coaching", threat_level: "high", followers: { Instagram: 52000, TikTok: 9000 }, ads_active: true,
+    flags: [{ type: "new_campaign", date: "2026-10-02", description: "promo 10.10" }, { type: "price_change", date: "2026-10-24", description: "Bootcamp naik jadi 350K", source_url: "https://kerjaku.id/bootcamp" }],
+    products: [{ name: "bootcamp mt", price_min: 350000, price_date: "2026-10-24", features: ["Interview"] }, { name: "Kelas Psikotes", category: "Kelas", price: 150000 }] },
+  { name: "Lolos MT", category: "substitute", platforms: ["Instagram"], followers: { Instagram: 8000 }, products: [{ name: "Tryout BUMN", price: 99000 }] },
+  { name: "Kerjaku" },
+];
+r = await ciCall({ mode: "preview", competitors: comps });
+const cs = r.body.summary;
+ok(r.status === 200 && cs.added === 1 && cs.updated === 1 && cs.possibleDuplicates === 1 && cs.flagsAdded === 1 && cs.productsAdded === 2 && cs.productsUpdated === 1 && cs.pricesAdded === 3, `CI preview: 1 new, 1 update, 1 possible duplicate, 1 new flag, 2 new products, 1 new price on an old product (${JSON.stringify(cs)})`);
+ok(r.body.items[0].conflicts.map((c) => c.field).join() === "niche,threat_level", "CI preview: different niche and threat are conflicts, not written");
+ok((await sql`select count(*)::int as n from competitor_profiles`)[0].n === 1, "CI preview changes nothing");
+r = await ciCall({ mode: "apply", competitors: comps });
+const [k] = await sql`select * from competitor_profiles where id = ${kerjaku.id}`;
+ok(r.status === 200 && k.primary_url === "https://kerjaku.id" && k.niche === "MT test prep" && k.threat_level === "medium" && k.notes === "Ditulis tim", "CI apply: empty URL filled; niche, threat and team notes kept");
+ok(k.followers.Instagram === 52000 && k.followers.TikTok === 9000 && k.platforms.join() === "Instagram,TikTok", "CI apply: newest followers per platform, platform added");
+const snaps2 = await sql`select followers, ads_active from competitor_snapshots where competitor_id = ${kerjaku.id}`;
+ok(snaps2.length === 1 && snaps2[0].followers.TikTok === 9000 && snaps2[0].ads_active === true, "CI apply: today's snapshot keeps the follower history and ads active");
+const flags2 = await sql`select flag_type, description, added_via from competitor_flags where competitor_id = ${kerjaku.id} order by flag_date`;
+ok(flags2.length === 2 && flags2[1].flag_type === "price_change" && flags2[1].description.includes("https://kerjaku.id/bootcamp") && flags2[1].added_via === "Claude (Riset kompetitor)", "CI apply: known flag skipped, new flag added with its source, marked Added by Claude");
+const bootPrices = await sql`select price_min::int as p, to_char(recorded_at, 'YYYY-MM-DD') as d from competitor_product_prices where product_id = ${boot.id} order by recorded_at`;
+const [boot2] = await sql`select price_min::int as p, features from competitor_products where id = ${boot.id}`;
+ok(bootPrices.map((x) => `${x.d}:${x.p}`).join() === "2026-10-01:300000,2026-10-24:350000" && boot2.p === 300000 && boot2.features.join() === "Psikotes,Interview", "CI apply: new price kept as a dated price, old price stays, feature added");
+const [psi] = await sql`select category, price_min::int as p, added_via from competitor_products where name = 'Kelas Psikotes'`;
+ok(psi && psi.category === "Kelas" && psi.p === 150000 && psi.added_via === "Claude (Riset kompetitor)", "CI apply: new product with price, marked Added by Claude");
+const [lolos] = await sql`select category, added_via from competitor_profiles where name = 'Lolos MT'`;
+ok(lolos && lolos.category === "substitusi" && lolos.added_via === "Claude (Riset kompetitor)" && (await sql`select count(*)::int as n from competitor_profiles where name = 'Kerjaku'`)[0].n === 0, "CI apply: new competitor added (substitute), possible duplicate not added");
+r = await ciCall({ mode: "apply", competitors: comps });
+ok(r.body.summary.added === 0 && r.body.summary.flagsAdded === 0 && r.body.summary.productsAdded === 0 && r.body.summary.pricesAdded === 0 && (await sql`select count(*)::int as n from competitor_snapshots`)[0].n === 2, `CI: applying again adds nothing twice (${JSON.stringify(r.body.summary)})`);
+r = await ciCall({ mode: "apply", competitors: [{ name: "Kerjaku", match_id: String(kerjaku.id), notes: "x" }, { name: "Kerjaku Pro", as_new: true }] });
+ok(r.body.summary.updated === 0 && r.body.summary.unchanged === 1 && r.body.summary.added === 1, "CI: match_id updates that competitor (filled notes stay), as_new adds a new one");
+ok((await sql`select 1 from activity_log where module = 'Competitor Intel'`).length === 3, "CI: every apply is in the activity log");
+globalThis.__session = { user: { id: "u1", name: "Tester" } };
+ok((await CI.POST(new Request("http://internal.test/api/agent/competitor-intel", { method: "POST", headers: { host: "internal.test", origin: "http://internal.test" }, body: JSON.stringify({ mode: "preview", competitors: comps }) }))).status === 200, "CI: Claude in Chrome on the app's page can preview with the session");
 globalThis.__session = null;
 
 await sql.end();

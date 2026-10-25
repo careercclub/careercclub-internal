@@ -101,7 +101,8 @@ const display = (row: { brand: string; legal_name: string }) => row.brand || row
 const variantsOf = (row: { brand: string; legal_name: string }) => new Set([...nameVariants(row.brand), ...nameVariants(row.legal_name)]);
 
 /** Similar but not the same name: one typo-level difference, or one name inside the other. */
-function similar(a: string, b: string) {
+/** A close but different name (one inside the other, or 1–2 letters off). Shared with Competitor Intel. */
+export function similar(a: string, b: string) {
   if (!a || !b || a === b) return false;
   if (Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a))) return true;
   return Math.min(a.length, b.length) >= 5 && editDistance(a, b, 2) <= 2;

@@ -4,6 +4,7 @@ export const AGENT_MODULES = [
   { id: "job-vacancy-mt", label: "Job Vacancy MT" },
   { id: "instagram", label: "Instagram & Content Evaluation" },
   { id: "customer-knowledge", label: "Customer Knowledge" },
+  { id: "competitor-intel", label: "Competitor Intel" },
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number]["id"];
 

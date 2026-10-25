@@ -1584,3 +1584,31 @@ Permintaan user: lanjut Customer Knowledge lewat Claude, dan Job Vacancy MT juga
 ### Deploy
 
 Migrasi baru → `git pull origin refactor && npm run vps:rebuild`.
+
+## Putaran 45 — Claude access: Competitor Intel (25 Okt 2026)
+
+Permintaan user: Competitor Intel juga bisa diisi dari Claude.
+
+### Do
+
+- **`/api/agent/competitor-intel`** (modul Competitor Intel di Settings → Claude access): `GET` menjelaskan format; `POST {mode: "preview" | "apply", competitors}` (maks. 50). Satu kompetitor bisa membawa profil, followers hari ini, iklan aktif, flags, dan produk + harga.
+- **Aturan gabung** (`lib/competitor/agent.ts`, satu tempat untuk preview & apply):
+  - kompetitor dicocokkan pakai nama (huruf besar, PT, tanda baca diabaikan); nama mirip → *possible duplicate*, dilewati sampai `match_id` / `as_new` (pemeriksa kemiripan yang sama dengan Job Vacancy MT);
+  - kompetitor lama: hanya kolom **kosong** diisi; nilai beda (niche, threat level, catatan…) dilaporkan sebagai *conflict* dan tidak ditulis. Threat level tetap keputusan tim;
+  - followers: angka terbaru per platform menang, dan tiap hari disimpan sebagai snapshot (riwayat followers, iklan aktif); hari yang sama hanya diperbarui kalau angkanya berubah;
+  - platform, fitur, link hanya ditambah. Flags masuk sekali (tipe + tanggal + deskripsi sama = flag sama), link sumber ikut di deskripsi;
+  - produk dicocokkan pakai nama per kompetitor; harga baru disimpan sebagai harga bertanggal, harga lama tetap. Tidak pernah menghapus.
+- Apply satu transaksi, tercatat di activity log. Kolom daftar/JSON ditulis sesuai tipenya di database.
+- **Added by Claude**: kolom `added_via`/`added_at` di kompetitor & produk, `added_via` di flags (migrasi `030_competitor_claude.sql`); ikon ✦ di Threat landscape, kartu Competitors, dan Products & pricing.
+- **Perbaikan**: papan Products & pricing membaca `price_min` (kolom yang dipakai tabel); sebelumnya hanya membaca nama lama `price`/`harga`, jadi harga yang diisi lewat form tampil "—". Grup tanpa kategori: "Lainnya" → **Other** (UI bahasa Inggris).
+- `docs/claude-access.md`: format Competitor Intel dan prompt cek kompetitor mingguan.
+
+### Check
+
+- `tests/agent` 63 (PostgreSQL sungguhan, +16): key modul lain → 401; GET panduan; preview 1 baru / 1 update / 1 possible duplicate / 1 flag baru / 2 produk baru / harga baru, conflict niche & threat, tidak mengubah apa-apa; apply: URL kosong diisi, niche/threat/catatan tim tetap; followers terbaru + platform baru; snapshot hari ini dengan iklan aktif; flag lama dilewati, flag baru dengan sumber & tanda Claude; harga baru bertanggal, harga lama tetap, fitur ditambah; produk & kompetitor baru bertanda Claude; possible duplicate tidak masuk; apply ulang tidak dobel; `match_id` & `as_new`; activity log; Chrome di halaman app boleh.
+- Unit baru `lib/competitor/agent.test.mjs` 6; `view.test.mjs` +1 (harga dari `price_min`). Suite baru `p45.mjs` 7.
+- Regresi penuh lolos: 31 suite modul (termasuk p45 7), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 188 + 6 baru, import 58, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Migrasi baru → `git pull origin refactor && npm run vps:rebuild`.

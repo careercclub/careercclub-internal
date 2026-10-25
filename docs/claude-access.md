@@ -164,3 +164,48 @@ exist** (use exactly those). `POST /api/agent/customer-knowledge`:
 > Get the platforms and categories from `GET /api/agent/customer-knowledge` on internal.ccclub.id
 > (in Chrome, I am signed in), classify each comment, send `mode: "preview"`, show me the
 > summary, and send `mode: "apply"` after I agree.
+
+## Competitor Intel
+
+`GET /api/agent/competitor-intel` returns the full format. `POST /api/agent/competitor-intel`:
+
+```json
+{
+  "mode": "preview",
+  "competitors": [
+    {
+      "name": "Kerjaku Academy",
+      "category": "direct",
+      "primary_url": "https://kerjaku.id",
+      "platforms": ["Instagram", "TikTok"],
+      "niche": "MT test prep",
+      "target_audience": ["Fresh grad", "Jobseeker"],
+      "followers": { "Instagram": 52000, "TikTok": 9000 },
+      "ads_active": true,
+      "flags": [{ "type": "price_change", "date": "2026-10-24", "description": "Bootcamp naik jadi 350K", "source_url": "https://…" }],
+      "products": [{ "name": "Bootcamp MT", "category": "Kelas", "price_min": 350000, "price_date": "2026-10-24", "features": ["Psikotes", "Interview"], "links": ["https://…"] }]
+    }
+  ]
+}
+```
+
+- Up to 50 competitors per request. `category`: direct, indirect or substitute. Flag `type`:
+  new_product, price_change, new_campaign or other.
+- Competitors are matched by name; a close but different name is a `possible_duplicate`
+  (send `match_id` or `as_new`, like Job Vacancy MT).
+- An existing competitor only gets its **empty** fields filled; a different value (niche,
+  threat level, notes…) is a conflict and is not written. Threat level is the team's call.
+- Followers: the newest number per platform wins, and each day keeps a snapshot (follower
+  history). Platforms, features and links are only added.
+- Flags are added once. Products are matched by name per competitor; a new price is kept as a
+  dated price and the old prices stay.
+- New competitors and products show **Added by Claude**.
+
+### Weekly competitor check (prompt for Claude)
+
+> Every Wednesday: for each competitor in Competitor Intel (and any new career-prep brand you
+> find), check their website, Instagram, TikTok, YouTube and the Meta Ad Library: follower
+> counts today, whether ads are running, new products or classes, price changes and new
+> campaigns this week (with the source link). Open internal.ccclub.id in Chrome (I am signed
+> in), run a fetch to `/api/agent/competitor-intel` with `mode: "preview"`, show me the summary
+> with every possible duplicate and conflict, and send `mode: "apply"` after I agree.

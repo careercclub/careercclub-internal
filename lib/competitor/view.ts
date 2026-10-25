@@ -63,10 +63,12 @@ export function competitorSummary(rows: Row[], snapshots: Row[], flags: Row[]) {
 export function priceBoard(products: Row[], prices: Row[]) {
   const latest = (product: Row) => {
     const rows = prices.filter((p) => text(p.product_id) === text(product.id)).sort((a, b) => text(b.recorded_at).localeCompare(text(a.recorded_at)));
-    return Number(rows[0] ? rows[0].price ?? rows[0].harga : product.harga ?? 0) || 0;
+    // The tables keep price_min / price_max; price and harga are older names.
+    const row = rows[0] || product;
+    return Number(row.price_min ?? row.price ?? row.harga ?? 0) || 0;
   };
   const groups = new Map<string, Array<{ product: Row; price: number }>>();
-  products.forEach((product) => { const key = text(product.kategori) || text(product.category) || "Lainnya"; groups.set(key, [...(groups.get(key) || []), { product, price: latest(product) }]); });
+  products.forEach((product) => { const key = text(product.kategori) || text(product.category) || "Other"; groups.set(key, [...(groups.get(key) || []), { product, price: latest(product) }]); });
   return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([category, items]) => {
     const sorted = [...items].sort((a, b) => (a.price || Infinity) - (b.price || Infinity));
     const priced = sorted.filter((i) => i.price > 0).map((i) => i.price);
