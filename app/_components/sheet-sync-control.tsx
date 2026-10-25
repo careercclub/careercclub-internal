@@ -11,10 +11,11 @@ import { confirmAction } from "./app-dialog";
 import s from "./page-kit.module.css";
 import { HelpTip } from "./ui-kit";
 
-// Google Sheet sync, the same control in every module that has one (Talent Pool, Job Vacancy MT):
+// Google Sheet sync, the same control in every module that has one (Talent Pool, Job Vacancy MT,
+// Customer Knowledge):
 // paste the link once → Start sync (runs at once, then every hour) → Sync now / Stop sync.
 
-const LABELS: Array<[string, string]> = [["added", "new"], ["updated", "updated"], ["removed", "removed"], ["unchanged", "unchanged"], ["contacts", "HR contacts"], ["skipped", "skipped (no valid email)"]];
+const LABELS: Array<[string, string]> = [["added", "new"], ["updated", "updated"], ["removed", "removed"], ["unchanged", "unchanged"], ["contacts", "HR contacts"], ["skipped", "skipped"]];
 
 export function syncResultText(result: Record<string, number | undefined>) {
   return LABELS.filter(([key]) => key === "added" || key === "updated" || result[key]).map(([key, label]) => `${result[key] || 0} ${label}`).join(" · ");
@@ -72,6 +73,7 @@ export function SheetSyncControl({ job, sync: initial, title, help, placeholder,
       <div aria-label="Google Sheet sync status" role="group" style={{ display: "grid", gap: 4, padding: "12px 14px", border: `1px solid ${sync.needsReview ? "var(--red)" : "var(--border)"}`, borderRadius: 14, background: "var(--white)" }}>
         <b style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><i aria-hidden="true" className="ti ti-refresh" style={{ color: "var(--purple-mid)" }} />{sync.needsReview ? "Paused — needs a check" : "Every hour"} · <a href={sync.url} rel="noreferrer" target="_blank">{sheetLabel(sync.url)}</a></b>
         {sync.lastRunAt ? <small style={{ color: sync.lastError ? "var(--red)" : "var(--text-muted)", fontSize: 12 }}>Last sync {when(sync.lastRunAt)} · {sync.lastError ? sync.lastError : syncResultText(sync.lastResult || {})}</small> : <small style={{ color: "var(--text-muted)", fontSize: 12 }}>Not synced yet</small>}
+        {sync.lastWarnings?.length && !sync.lastError ? <ul aria-label="Skipped rows" style={{ margin: "4px 0 0", paddingLeft: 18, color: "var(--text-muted)", fontSize: 12 }}>{sync.lastWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : null}
         {error ? <small className={s.danger} role="alert">{error}</small> : null}
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

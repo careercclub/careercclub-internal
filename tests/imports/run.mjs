@@ -438,6 +438,42 @@ await test("MT: Google Sheet sync — whole sheet as xlsx, same as Import Excel,
   ok(await S.getSheetSync("mt-prospects") === null && (await sql`select count(*)::int n from mt_prospects`)[0].n === 6, "MT sync: Stop sync ends it; companies stay");
 });
 
+await test("Customer Knowledge: Google Sheet inbox sync — adds once, skips what does not fit, never removes", async () => {
+  await sql`create table if not exists pain_points (id uuid primary key default gen_random_uuid(), komentar text, platform text, kategori text, username text, bulan text, source_url text, notes text, labels jsonb default '[]', created_at timestamptz default now())`;
+  await sql`create table if not exists pain_point_platforms (id uuid primary key default gen_random_uuid(), nama text)`;
+  await sql`create table if not exists pain_point_categories (id uuid primary key default gen_random_uuid(), nama text)`;
+  await sql.unsafe((await import("node:fs")).readFileSync(new URL("../../database/migrations/029_customer_knowledge_claude.sql", import.meta.url), "utf8"));
+  await reset("pain_points", "pain_point_platforms", "pain_point_categories");
+  await sql`insert into pain_point_platforms (nama) values ('Instagram'), ('TikTok'), ('Threads')`;
+  await sql`insert into pain_point_categories (nama) values ('General Question'), ('Assessment Test Phase'), ('Interview Phase')`;
+  await sql`insert into pain_points (komentar, platform, kategori, bulan, notes) values ('Psikotes BUMN susah banget!!', 'TikTok', 'Assessment Test Phase', 'Okt', 'Catatan tim')`;
+  const S = await import("./out/sheet-sync.mjs");
+  const HEAD = ["Date", "Platform", "Category", "Comment", "Username", "Source link", "Labels", "Notes"];
+  sheetResponse = { body: csv([HEAD,
+    ["2026-10-20", "tiktok", "assessment test phase", "psikotes bumn susah banget", "budi", "https://www.tiktok.com/@ccc/video/1", "BUMN, Psikotes", ""],
+    ["2026-10-21", "Instagram", "Interview Phase", "Interview user biasanya ditanya apa ya kak?", "", "", "DM", "From DM"],
+    ["2026-10-22", "Threads", "General Question", "MT itu kontraknya berapa lama?", "rina", "https://www.threads.net/@ccc/post/x", "", ""],
+    ["2026-10-22", "Facebook", "General Question", "Ada kelas weekend?", "", "", "", ""],
+    ["2026-10-23", "Instagram", "Gaji", "Gaji MT berapa?", "", "", "", ""],
+    ["", "Instagram", "General Question", "", "", "", "", ""],
+  ]).toString("utf8") };
+  let state = await S.startSheetSyncAction("customer-knowledge", "https://docs.google.com/spreadsheets/d/e/2PACX-ck/pub?gid=1&single=true&output=csv");
+  const rows = await sql`select komentar, platform, kategori, bulan, username, source_url, notes, labels, added_via from pain_points order by created_at`;
+  ok(state?.lastResult?.added === 2 && state.lastResult.updated === 1 && state.lastResult.skipped === 2 && rows.length === 3, "CK sync: 2 new, 1 known comment updated, 2 rows skipped", JSON.stringify(state?.lastResult));
+  const known = rows.find((r) => r.komentar === "Psikotes BUMN susah banget!!");
+  ok(known.notes === "Catatan tim" && known.username === "budi" && known.labels.join() === "BUMN,Psikotes", "CK sync: the known comment keeps the team's notes and gets the empty username and labels");
+  const dm = rows.find((r) => r.platform === "Instagram");
+  ok(dm && dm.kategori === "Interview Phase" && dm.bulan === "Okt" && dm.labels[0] === "DM" && dm.added_via === "Google Sheet", "CK sync: a DM row lands with its category, month and label, marked as from the Google Sheet");
+  ok(state.lastWarnings?.length === 2 && /Row 5: platform "Facebook"/.test(state.lastWarnings[0]) && /Row 6: category "Gaji"/.test(state.lastWarnings[1]), "CK sync: skipped rows are listed with their row number and why", JSON.stringify(state.lastWarnings));
+  sheetResponse = { body: csv([HEAD, ["2026-10-22", "Threads", "General Question", "MT itu kontraknya berapa lama?", "rina", "", "", ""]]).toString("utf8") };
+  state = await S.syncSheetNowAction("customer-knowledge");
+  ok(state?.lastResult?.added === 0 && (await sql`select count(*)::int n from pain_points`)[0].n === 3, "CK sync: rows gone from the sheet stay in the app; nothing twice");
+  sheetResponse = { body: csv([["Tanggal", "Pesan"], ["2026-10-22", "x"]]).toString("utf8") };
+  state = await S.syncSheetNowAction("customer-knowledge");
+  ok(/Comment.*Platform/.test(state?.lastError || ""), "CK sync: a sheet without the columns says which ones", state?.lastError);
+  await S.stopSheetSyncAction("customer-knowledge");
+});
+
 console.log(results.join("\n"));
 console.log(`\nfunctional imports: ${pass} pass, ${fail} fail`);
 await sql.end();

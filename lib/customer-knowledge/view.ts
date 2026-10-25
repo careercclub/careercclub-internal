@@ -31,7 +31,18 @@ export function monthCounts(rows: Row[]) {
   return counts;
 }
 
-const STOPWORDS = new Set(["yang", "dan", "di", "ke", "dari", "itu", "ini", "gak", "ga", "gue", "aku", "kak", "dong", "sih", "ya", "aja", "bgt", "banget", "kali", "udah", "mau", "bisa", "ada", "untuk", "dengan", "juga", "lebih", "tapi", "kalau", "karena", "gimana", "setelah", "pas", "waktu", "deh", "loh", "nih"]);
+// Words that carry no topic: Indonesian (formal, chat spelling, question words) and English.
+// The cloud should show what people ask about ("psikotes", "interview user"), not "atau" or "gimana".
+const STOPWORDS = new Set([
+  "yang", "dan", "di", "ke", "dari", "itu", "ini", "gak", "ga", "gk", "nggak", "ngga", "enggak", "engga", "tidak", "tdk", "bukan", "gue", "gua", "gw", "aku", "saya", "kamu", "lu", "lo", "kami", "kita", "mereka", "dia", "beliau", "nya", "kalian", "anda",
+  "kak", "kakak", "ka", "min", "admin", "mimin", "bang", "bro", "sis", "mas", "mba", "mbak", "gaes", "guys", "halo", "hai", "hallo", "permisi", "terima", "kasih", "makasih", "thanks", "thank", "thx", "mohon", "tolong", "maaf",
+  "dong", "sih", "ya", "yaa", "yah", "iya", "iyaa", "aja", "saja", "bgt", "banget", "kali", "udah", "sudah", "sdh", "dah", "belum", "blm", "masih", "lagi", "mau", "ingin", "pengen", "pingin", "bisa", "boleh", "ada", "punya",
+  "untuk", "utk", "buat", "dengan", "dgn", "sama", "juga", "jg", "lebih", "tapi", "tp", "tetapi", "namun", "kalau", "kalo", "klo", "kl", "jika", "jadi", "jd", "karena", "krn", "soalnya", "biar", "agar", "supaya", "sebagai", "seperti", "kayak", "kaya", "kyk",
+  "atau", "atw", "apa", "apakah", "kah", "gimana", "bagaimana", "gmn", "kenapa", "mengapa", "knp", "siapa", "kapan", "dimana", "mana", "berapa", "brp", "yg", "pun", "kan", "kok", "lah", "tuh", "nih", "deh", "loh", "lho", "dll", "dsb",
+  "akan", "bakal", "harus", "hrs", "perlu", "biasanya", "biasa", "gini", "gitu", "begini", "begitu", "gt", "setelah", "sebelum", "pas", "waktu", "saat", "ketika", "sampai", "sampe", "terus", "trus", "lalu", "kemudian", "nanti", "sekarang", "tadi", "abis", "habis",
+  "pada", "dalam", "oleh", "bagi", "para", "hal", "sangat", "paling", "semua", "setiap", "tiap", "banyak", "sedikit", "satu", "orang", "sini", "situ", "sana", "baru", "emang", "memang", "dapat", "dapet", "bikin", "kasih", "tau", "tahu",
+  "the", "and", "for", "you", "your", "what", "how", "are", "was", "with", "this", "that", "can", "does", "have", "has", "but", "not", "any", "about", "from", "will", "would", "should", "there", "they", "them", "just",
+]);
 const KEEP_SHORT = new Set(["mt", "hr", "hrd", "cv", "fgd", "oa", "ip"]);
 
 /** Words and two-word phrases counted once per comment; a phrase must appear in at least two comments. */

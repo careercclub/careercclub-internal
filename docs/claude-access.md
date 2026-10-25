@@ -153,6 +153,32 @@ Rules:
 
 ## Customer Knowledge (pain points)
 
+**Recommended: the inbox Google Sheet** — fully automatic, no Chrome. A scheduled Claude task reads
+DMs, TikTok comments and Threads replies with Composio and appends rows to the "Customer
+Knowledge inbox" Google Sheet (also with Composio's Google Sheets tools); the app reads that sheet
+every hour (Customer Knowledge → **Sync Google Sheet**).
+
+Inbox sheet, one tab, row 1: `Date | Platform | Category | Comment | Username | Source link | Labels | Notes`
+
+- Platform and Category must be exactly one of those in Customer Knowledge (the Sync Google Sheet
+  dialog lists them). Rows that do not fit are skipped and listed in the app with their row number.
+- Date: the date of the comment (YYYY-MM-DD). Labels: comma-separated (e.g. `DM, BUMN`).
+- The same comment on the same platform is added once, so appending a comment twice is harmless.
+- DMs are private: write only the question in the customer's words — no phone numbers, emails
+  or other personal details; leave Username empty for DMs. Add the label `DM`.
+
+> Daily Customer Knowledge (scheduled task, with Composio): every morning, collect what people
+> asked us in the last 24 hours — Instagram DMs (Composio Instagram: list conversations and
+> messages), comments on our TikTok videos (Composio Apify TikTok comments scraper, our latest
+> 10 videos) and replies to our Threads posts. Skip greetings, spam and our own replies. For each
+> message, pick the Platform and Category from this list: <paste from the Sync Google Sheet
+> dialog>, and 1–3 short labels. Append one row per message to the "Customer Knowledge inbox"
+> Google Sheet (Date, Platform, Category, Comment, Username, Source link, Labels, Notes) with
+> Composio Google Sheets. For DMs: no username or personal details, label DM. Then tell me how
+> many rows you added per platform.
+
+### Without the sheet: the API
+
 `GET /api/agent/customer-knowledge` returns the format **and the platforms and categories that
 exist** (use exactly those). `POST /api/agent/customer-knowledge`:
 

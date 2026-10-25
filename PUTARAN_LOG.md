@@ -1659,3 +1659,25 @@ Permintaan user: Job Vacancy MT juga seperti Talent Pool — datanya di Google S
 ### Deploy
 
 Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`). Lalu: upload "CCC List MT" ke Google Sheets → File → Share → Publish to web → **Entire document → Microsoft Excel (.xlsx)** → Job Vacancy MT → Sync Google Sheet → tempel link → Start sync.
+
+## Putaran 48 — Customer Knowledge: inbox Google Sheet tiap jam + "Words people repeat" tanpa kata pengisi (25 Okt 2026)
+
+Permintaan user: DM, komentar TikTok, dan reply Threads (diambil lewat Composio) masuk otomatis ke Customer Knowledge — tempat user melihat kata yang sering muncul, kategori, dan platform.
+
+### Do
+
+- **Customer Knowledge → Sync Google Sheet**: satu tab "inbox" (`Date | Platform | Category | Comment | Username | Source link | Labels | Notes`, kolom dicari pakai nama) dibaca tiap jam lewat mekanisme sinkron bersama (Talent Pool, MT). Aturan sama dengan Claude access: komentar yang sama di platform yang sama masuk sekali; untuk yang sudah ada hanya kolom kosong diisi & label baru ditambah; platform & kategori harus yang ada (dialog menampilkan daftarnya); baris yang tidak cocok **dilewati dan ditampilkan** dengan nomor baris & alasannya; tidak ada yang dihapus. Baris dari sheet bertanda "Added by Google Sheet".
+- Jalur paling otomatis: scheduled task Claude + Composio membaca DM IG / komentar TikTok / reply Threads lalu menambah baris ke sheet (juga lewat Composio) — tanpa Chrome, tanpa key. Prompt harian di `docs/claude-access.md` (termasuk aturan privasi DM: hanya pertanyaannya, tanpa nomor/email/username, label DM).
+- Dicek di Composio (25 Okt 2026): komentar TikTok bisa lewat Apify (sudah terhubung); DM Instagram ada tool-nya (butuh akun Business/Creator, Instagram belum terhubung); Threads resmi hanya "reply saya", reply orang ke post kemungkinan lewat scraper — perlu dicek; Google Sheets ada (belum terhubung).
+- **Words people repeat**: daftar kata pengisi diperluas (bahasa Indonesia baku & chat, kata tanya, Inggris) — "atau", "apakah", "biasanya", "buat", "dimana", "harus", "kah", "kayak", "akan", "apa", "gini", "soalnya" tidak muncul lagi; kata bermakna seperti "psikotes", "soal", "interview" tetap.
+- Status sinkron (komponen bersama) kini bisa menampilkan daftar baris yang dilewati; label "skipped" umum untuk semua modul.
+
+### Check
+
+- `tests/imports` 81 (+6): 2 baru, 1 komentar lama diperbarui, 2 dilewati; komentar lama menyimpan catatan tim dan mendapat username & label; baris DM masuk dengan kategori, bulan, label; baris dilewati tercantum dengan nomor & alasan; baris yang hilang dari sheet tetap di app & tidak dobel; sheet tanpa kolom yang diperlukan → pesan jelas.
+- Unit `view.test.mjs` +1 (kata pengisi tersaring, "psikotes"/"soal" tetap). Suite baru `p48.mjs` 8. `ck.mjs` tetap lolos.
+- Regresi penuh lolos: 34 suite modul (termasuk p48 8), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 195 (aturan konsistensi menangkap footer dialog yang belum sticky — diperbaiki), import 81, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi baru → `npm run vps:rebuild:frontend` (kalau 028–030 belum: `npm run vps:rebuild`). Lalu buat sheet inbox, publish tab-nya sebagai CSV → Customer Knowledge → Sync Google Sheet → Start sync.
