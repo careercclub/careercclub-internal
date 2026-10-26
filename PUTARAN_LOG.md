@@ -1724,3 +1724,28 @@ Permintaan user: filter Talent Pool lebih lengkap — status, domisili, willing 
 ### Deploy
 
 Tanpa migrasi → `npm run vps:rebuild:frontend`.
+
+## Putaran 51 — File MT dari openpyxl/Claude terbaca; "Belum terkonfirmasi" bukan nama (26 Okt 2026)
+
+Permintaan user: cek apakah `CCC_List_MT_Fokus_Aktif_6.xlsx` (yang akan dipakai sebagai Google Sheet Job Vacancy MT) harus dibenerin formatnya dulu.
+
+### Temuan
+
+- **Bug web (diperbaiki)**: file itu tidak bisa dibaca sama sekali — ExcelJS crash karena komentar sel ditulis dengan path absolut (`/xl/comments/comment1.xml`, gaya openpyxl, dipakai juga oleh Claude saat membuat .xlsx). Import Excel akan menampilkan "The file could not be read".
+- Setelah perbaikan, file terbaca dengan pembaca yang sama seperti web: **473 perusahaan** (Aktif 359, Pernah Buka 77, Lama 34, Dikeluarkan 3 dari tab "Dikeluarkan dari Aktif (arsip)"), **2.428 HR contact**, 654 syarat, 557 update, 260 tahapan seleksi. Tab "(arsip)" lain, "Ringkasan Industri", "Cakupan Industri" diabaikan.
+- Isi yang sebaiknya dirapikan di sheet (tidak wajib): 9 perusahaan dengan Brand "Belum terkonfirmasi" (kini ditangani web, lihat Do); "PT Sany Perkasa" dan "PT SANY Perkasa" dua baris di Aktif (kemungkinan perusahaan yang sama); 1 baris "Update Tgl & Status" (baris 46) yang kolom Brand-nya berisi nama program ASIATOP; 20 baris riset tanpa Brand dilewati; 10 perusahaan tanpa bulan buka; 3 perusahaan Dikeluarkan tanpa industry. Brand sama di dua tab berbeda (KB Bank, Wuling, InJourney) = program berbeda, tampil sebagai dua kartu.
+
+### Do
+
+- `readWorkbook`: kalau ExcelJS gagal, file dibaca ulang tanpa komentar sel/notes (tidak pernah diimport) — berlaku untuk semua import .xlsx dan sinkron Google Sheet. `jszip` jadi dependensi langsung (sudah ada lewat ExcelJS; lockfile hanya +1 baris).
+- Nama perusahaan: Brand atau Nama PT berisi penanda seperti "Belum terkonfirmasi", "-", "n/a", "TBD" tidak dipakai sebagai nama — web memakai nama lainnya (mis. "Forisa Nusapersada"). Berlaku juga untuk data yang sudah ada di database.
+- **Satu "hari ini" per halaman** (ditemukan regresi saat tanggal berganti ke 26 Okt): Program menghitung "telat" di header dari waktu acuan halaman, tapi chip merah di tugas dari jam komputer; kalender Dashboard juga. Sekarang keduanya memakai waktu acuan halaman (tanggal lokal). Data contoh tes tidak lagi bergantung pada tanggal hari ini.
+
+### Check
+
+- `tests/imports` 93 (+1): file bergaya openpyxl dengan komentar sel terbaca (tes dipastikan memicu crash lama). Unit `lib/mt-prospects/view.test.mjs` +1.
+- Regresi penuh lolos: 36 suite modul (program 21 setelah perbaikan "hari ini"), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 198, import 93, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi → `npm run vps:rebuild:frontend` (dependensi tidak berubah versi; `npm ci` tetap sama).

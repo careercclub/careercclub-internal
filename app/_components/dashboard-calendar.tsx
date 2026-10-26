@@ -204,7 +204,7 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
     return map;
   }, [events, taskRows, ticketRows]);
 
-  const todayKey = localIso(new Date());
+  const todayKey = localIso(new Date(referenceDate)); // the same "today" as the month shown
 
   function reschedule(kind: string, id: string, date: string) {
     if (kind === "ticket") {

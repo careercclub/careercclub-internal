@@ -46,8 +46,13 @@ export function shortLegalName(value: string) {
 }
 
 /** The name people know: the brand, else the legal name without "PT … Tbk". */
+/** "Belum terkonfirmasi", "-", "n/a" in the sheet mean "not known yet", not a name. */
+export const placeholderName = (value: string) => /^(belum terkonfirmasi|tidak diketahui|unknown|n\/?a|tbd)\b|^[-—–\s]+$/i.test(value.trim());
+
 export function displayName(prospect: Pick<ProspectRow, "brand" | "legal_name">) {
-  return prospect.brand.trim() || shortLegalName(prospect.legal_name) || "Unnamed company";
+  const brand = placeholderName(prospect.brand) ? "" : prospect.brand.trim();
+  const legal = placeholderName(prospect.legal_name) ? "" : prospect.legal_name;
+  return brand || shortLegalName(legal) || "Unnamed company";
 }
 
 export function sortByName<T extends Pick<ProspectRow, "brand" | "legal_name">>(rows: T[]) {

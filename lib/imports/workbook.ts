@@ -1,5 +1,6 @@
 import "server-only";
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 import { Readable } from "node:stream";
 import { decodeText, detectDelimiter, stripSepLine } from "./csv-text";
 
@@ -13,8 +14,44 @@ import { decodeText, detectDelimiter, stripSepLine } from "./csv-text";
 export async function readWorkbook(bytes: Uint8Array, fileName: string) {
   const workbook = new ExcelJS.Workbook();
   if (/\.csv$/i.test(fileName) || /\.txt$/i.test(fileName)) await readCsvInto(workbook, decodeText(bytes));
-  else await workbook.xlsx.load(Buffer.from(bytes) as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+  else {
+    try {
+      await workbook.xlsx.load(Buffer.from(bytes) as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+    } catch (error) {
+      // Files written by openpyxl (and some other tools) point at cell comments with an absolute
+      // path ("/xl/comments/comment1.xml"), which ExcelJS cannot follow and crashes on. Comments are
+      // never imported, so read the file again without them.
+      const cleaned = await withoutCellComments(bytes);
+      if (!cleaned) throw error;
+      const retry = new ExcelJS.Workbook();
+      await retry.xlsx.load(cleaned as unknown as Parameters<typeof retry.xlsx.load>[0]);
+      return retry;
+    }
+  }
   return workbook;
+}
+
+/** The same .xlsx without cell comments (notes); null when it has none to remove. */
+export async function withoutCellComments(bytes: Uint8Array) {
+  const zip = await JSZip.loadAsync(bytes);
+  let changed = false;
+  for (const path of Object.keys(zip.files)) {
+    if (/^xl\/worksheets\/_rels\/.+\.rels$/.test(path)) {
+      const xml = await zip.file(path)!.async("string");
+      const next = xml.replace(/<Relationship\b[^>]*Type="[^"]*\/(comments|vmlDrawing)"[^>]*\/>/g, "");
+      if (next !== xml) { zip.file(path, next); changed = true; }
+    } else if (/^xl\/worksheets\/[^/]+\.xml$/.test(path)) {
+      const xml = await zip.file(path)!.async("string");
+      const next = xml.replace(/<legacyDrawing\b[^>]*\/>/g, "");
+      if (next !== xml) { zip.file(path, next); changed = true; }
+    } else if (/^xl\/(comments|drawings\/commentsDrawing|threadedComments)/.test(path)) {
+      zip.remove(path); changed = true;
+    }
+  }
+  if (!changed) return null;
+  const types = await zip.file("[Content_Types].xml")?.async("string");
+  if (types) zip.file("[Content_Types].xml", types.replace(/<Override\b[^>]*PartName="\/xl\/(comments|drawings\/commentsDrawing|threadedComments)[^"]*"[^>]*\/>/g, ""));
+  return zip.generateAsync({ type: "nodebuffer" });
 }
 
 export async function readCsvText(text: string) {

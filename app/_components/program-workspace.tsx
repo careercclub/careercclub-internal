@@ -249,7 +249,9 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
 
   const personMap = useMemo(() => new Map(people.map((person) => [String(person.id), person])), [people]);
   const divisionMap = useMemo(() => new Map(divisions.map((division) => [String(division.id), division])), [divisions]);
-  const overdue = taskRows.filter((task) => task.status !== "Done" && task.due_date && dateKey(task.due_date) < referenceDate.slice(0, 10)).length;
+  // One "today" for the whole page: the page's reference time, as a local date.
+  const today = localIso(new Date(referenceDate));
+  const overdue = taskRows.filter((task) => task.status !== "Done" && task.due_date && dateKey(task.due_date) < today).length;
   const selected = eventsState.find((event) => String(event.id) === selectedEvent) || null;
   const jenisOptions = useMemo(() => [...new Set(eventsState.map((event) => text(event.jenis_program)).filter(Boolean))], [eventsState]);
   // The server returns events newest-first, but creating or editing one appends to
@@ -291,7 +293,6 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
     } catch (e) { setLinkError(e instanceof Error ? e.message : "Could not delete the link."); }
   }
 
-  const today = localIso(new Date());
   const upcomingEvents = sortedEvents.filter((event) => !["Done", "Cancelled"].includes(text(event.status))).filter(matchesFilters)
     // Soonest first for what is coming; undated last.
     .sort((a, b) => (dateKey(a.tanggal) || "9999").localeCompare(dateKey(b.tanggal) || "9999"));

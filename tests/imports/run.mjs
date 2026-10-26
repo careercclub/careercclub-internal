@@ -535,6 +535,22 @@ await test("Instagram: Google Sheet sync — posts by Post ID, weeks, Post ID sa
   await S.stopSheetSyncAction("instagram");
 });
 
+await test("mt list: a file written by openpyxl with cell comments (absolute comment paths) is read", async () => {
+  await mtReset();
+  const JSZip = (await import("jszip")).default;
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await fullBook());
+  wb.getWorksheet("Aktif (MT 2026)").getCell("A2").note = "Dicek ulang Okt 2026";
+  const zip = await JSZip.loadAsync(Buffer.from(await wb.xlsx.writeBuffer()));
+  // openpyxl writes Target="/xl/comments/comment1.xml"; ExcelJS crashed on that.
+  for (const path of Object.keys(zip.files).filter((p) => /worksheets\/_rels\/.*\.rels$/.test(p))) {
+    const xml = await zip.file(path).async("string");
+    zip.file(path, xml.replace(/Target="\.\.\/(comments\d*\.xml)"/g, 'Target="/xl/$1"').replace(/Target="\.\.\/drawings\/(vmlDrawing\d*\.vml)"/g, 'Target="/xl/drawings/$1"'));
+  }
+  const bytes = await zip.generateAsync({ type: "nodebuffer" });
+  const r = await post("mt-prospects", { file: file("CCC_List_MT_openpyxl.xlsx", bytes), mode: "preview" });
+  ok(r.status === 200 && r.json?.summary?.companies?.added === 5, "openpyxl-style comments: file read, companies counted", JSON.stringify(r).slice(0, 200));
+});
+
 console.log(results.join("\n"));
 console.log(`\nfunctional imports: ${pass} pass, ${fail} fail`);
 await sql.end();
