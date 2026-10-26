@@ -97,6 +97,8 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
     try {
       const updated = await updateTicketDetailsAction(String(ticket.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assignedToIds: assignees, divisionId: divisionId || null, typeId: ticket.type_id ?? null, cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc) });
       onSaved({ ...ticket, ...updated });
+      // Save ticket closes the popup, like every other save (adding or removing a link keeps it open).
+      onClose();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); } finally { setBusy(false); }
   }
   async function addLink(url: string) {

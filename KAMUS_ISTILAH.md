@@ -77,3 +77,4 @@ Telat: **3d late**, **4mo late**, **1y+ late** — satu fungsi `lateLabel` (`lib
 - Footer satu baris: kiri **Delete {object}** (`variant="danger"`, teks merah tanpa kotak), kanan **Cancel** (`variant="outline"`) + tombol simpan.
 - Aksi yang jarang (Duplicate, Google Calendar) = ikon bulat di header (`HeaderAction`), bukan tombol footer.
 - Link selalu lewat `LinksField` (input penuh + "Add link", daftar baris dengan buka & hapus).
+- Simpan berhasil → popup/form **menutup** (edit yang dibuka dari detail kembali ke detail itu). Simpan gagal → popup tetap terbuka dengan isian dan pesan errornya. Aksi kecil di dalam popup (Add link, hapus link, Add contact) tidak menutup popup. Dicek otomatis oleh `p52.mjs`.

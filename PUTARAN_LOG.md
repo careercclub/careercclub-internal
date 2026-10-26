@@ -1749,3 +1749,26 @@ Permintaan user: cek apakah `CCC_List_MT_Fokus_Aktif_6.xlsx` (yang akan dipakai 
 ### Deploy
 
 Tanpa migrasi → `npm run vps:rebuild:frontend` (dependensi tidak berubah versi; `npm ci` tetap sama).
+
+## Putaran 52 — Save ticket menutup popup (dan cek yang sama di semua modul) (26 Okt 2026)
+
+Laporan user (screenshot prod): Ticket details → Save ticket → tersimpan, tapi popup tetap terbuka. Minta evaluasi bagian seperti ini di semua modul.
+
+### Temuan
+
+- Bug lama di **Tickets → Ticket details**: simpan memakai `onSaved` yang juga dipakai Add link / hapus link (yang memang harus tetap terbuka), sehingga Save ticket tidak pernah menutup popup. Dashboard → Ticket details sudah benar.
+- Penyisiran semua handler simpan di semua popup (pemindaian kode + cek manual): Dashboard (ticket, task), Program (event, task, link), Job Vacancy MT (company — kembali ke detail perusahaan, sengaja), Content Evaluation (edit, Import Meta CSV), Design Assets (Add to library), Content Planning, Competitor Intel, Customer Knowledge, Partnership — semua menutup setelah berhasil. Yang tetap terbuka memang sengaja (Add link, hapus link/contact, Start sync).
+
+### Do
+
+- Ticket details: Save ticket berhasil → popup menutup. Gagal → tetap terbuka dengan isian & pesan error. Add link / hapus link tetap membuat popup terbuka.
+- Standar dicatat di `KAMUS_ISTILAH.md` (bagian Popup).
+
+### Check
+
+- Suite baru `p52.mjs` 20: Save menutup form di Tickets, Dashboard, Competitor Intel, Customer Knowledge, Content Evaluation, Job Vacancy MT (kembali ke detail); Add link tetap terbuka; simpan gagal tetap terbuka dengan ketikan. Dipastikan **gagal** dengan kode lama dan lolos dengan perbaikan.
+- Regresi penuh lolos: 37 suite modul (termasuk p52 20, tickets 23), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 198, import 93, search-db 19, agent-db 63, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi → `npm run vps:rebuild:frontend`.
