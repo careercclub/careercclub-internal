@@ -1,6 +1,6 @@
 "use client";
 
-import { createManagedRecord } from "@/app/actions/record-actions";
+import { createManagedRecord } from "@/app/_actions/record-actions";
 import { notify, notifyError } from "@/app/_components/app-dialog";
 import type { RecordDefinitionKey } from "@/lib/records/catalog";
 import { useRouter } from "next/navigation";

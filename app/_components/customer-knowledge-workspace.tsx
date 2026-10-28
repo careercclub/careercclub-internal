@@ -3,7 +3,7 @@
 import { ClaudeChip, ClaudeMark } from "./claude-mark";
 import type { SheetSyncState } from "@/lib/api/sheet-sync";
 import { SheetSyncButton, SheetSyncDialog, syncedLine } from "./sheet-sync-control";
-import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
+import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ApiRecord } from "@/lib/api/_crud";

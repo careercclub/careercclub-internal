@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
 import {
@@ -69,6 +71,7 @@ function cleanContact(raw: Record<string, unknown>): ContactInput {
 }
 
 export async function saveProspectAction(prospectId: string | null, raw: Record<string, unknown>) {
+  return expected(async () => {
   const name = await actor();
   const input = cleanProspect(raw);
   const label = input.brand || input.legal_name;
@@ -82,35 +85,44 @@ export async function saveProspectAction(prospectId: string | null, raw: Record<
   await logActivity({ userName: name, module: MODULE, action: "Tambah", detail: label, table: "mt_prospects" });
   refresh();
   return { id: created };
+  });
 }
 
 export async function deleteProspectAction(prospectId: string) {
+  return expected(async () => {
   const name = await actor();
   const target = id(prospectId);
   const label = await getProspectName(target);
   await deleteProspect(target);
   await logActivity({ userName: name, module: MODULE, action: "Hapus", detail: label, table: "mt_prospects" });
   refresh();
+  });
 }
 
 export async function saveProspectContactAction(prospectId: string, contactId: string | null, raw: Record<string, unknown>) {
+  return expected(async () => {
   const name = await actor();
   const input = cleanContact(raw);
   if (contactId) await updateProspectContact(id(contactId), input);
   else await createProspectContact(id(prospectId), input);
   await logActivity({ userName: name, module: MODULE, action: contactId ? "Update" : "Tambah", detail: `Contact ${input.name} · ${await getProspectName(id(prospectId))}`, table: "mt_prospect_contacts" });
   refresh();
+  });
 }
 
 export async function deleteProspectContactAction(contactId: string, contactName: string) {
+  return expected(async () => {
   const name = await actor();
   await deleteProspectContact(id(contactId));
   await logActivity({ userName: name, module: MODULE, action: "Hapus", detail: `Contact ${text(contactName, 120)}`, table: "mt_prospect_contacts" });
   refresh();
+  });
 }
 
 /** Requirements, status updates and selection steps for one company, loaded when its detail opens. */
 export async function loadProspectResearchAction(prospectId: string) {
+  return expected(async () => {
   await actor();
   return listProspectResearch(id(prospectId));
+  });
 }

@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { createProductAsset, createProductBenefit, createProductBundle, createProductFeature, createProductFeatureLink, createProductFeedback, createProductPainPoint, createProductPassionPoint, createSubProduct, createSubProductLink, deleteProductAsset, deleteProductBenefit, deleteProductBundle, deleteProductFeature, deleteProductFeatureLink, deleteProductFeedback, deleteProductPainPoint, deleteProductPassionPoint, deleteSubProduct, deleteSubProductLink } from "@/lib/api/products";
 import { revalidatePath } from "next/cache";
@@ -9,6 +11,7 @@ async function requireUser() { if (!(await auth())?.user) throw new Error("Unaut
 const value = (data: FormData, key: string) => String(data.get(key) || "").trim();
 
 export async function createProductKnowledgeAction(kind: Kind, productId: string, data: FormData) {
+  return expected(async () => {
   await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(productId)) throw new Error("Invalid product.");
   if (kind === "pain") await createProductPainPoint({ product_id: productId, nama: value(data,"nama"), text: value(data,"text") });
@@ -22,9 +25,11 @@ export async function createProductKnowledgeAction(kind: Kind, productId: string
   if (kind === "feedback") await createProductFeedback({ product_id: productId, tipe: value(data,"tipe") || "Improvement", isi: value(data,"text"), tanggal: value(data,"tanggal") });
   if (kind === "bundle") await createProductBundle({ bundle_id: productId, item_id: value(data,"parent_id") });
   revalidatePath("/products");
+  });
 }
 
 export async function deleteProductKnowledgeAction(kind: Kind, id: string) {
+  return expected(async () => {
   await requireUser();
   if (kind === "pain") await deleteProductPainPoint(id); if (kind === "passion") await deleteProductPassionPoint(id);
   if (kind === "benefit") await deleteProductBenefit(id); if (kind === "feature") await deleteProductFeature(id);
@@ -32,4 +37,5 @@ export async function deleteProductKnowledgeAction(kind: Kind, id: string) {
   if (kind === "subLink") await deleteSubProductLink(id); if (kind === "asset") await deleteProductAsset(id);
   if (kind === "feedback") await deleteProductFeedback(id); if (kind === "bundle") await deleteProductBundle(id);
   revalidatePath("/products");
+  });
 }

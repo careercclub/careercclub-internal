@@ -3,7 +3,7 @@
 import { ClaudeMark } from "./claude-mark";
 import { submitTo } from "./safe-action";
 
-import { saveInstagramBaselineAction } from "@/app/actions/instagram-actions";
+import { saveInstagramBaselineAction } from "@/app/_actions/instagram-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { compact, day, followersSeries, num } from "@/lib/marketing/view";
 import { useRouter } from "next/navigation";

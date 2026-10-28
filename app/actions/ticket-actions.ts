@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { normalizeNotificationRoles, publishTicketNotification } from "@/lib/api/notifications";
 import { deleteTicketWithLinkedTask, synchronizeTicketToTask } from "@/lib/api/program";
@@ -29,6 +31,7 @@ function refresh() {
 }
 
 export async function changeTicketStatusAction(id: string, status: string) {
+  return expected(async () => {
   const user = await requireUser();
   if (!["Todo", "In Progress", "Done"].includes(status)) throw new Error("Invalid ticket status.");
   const ticket = await updateTicket(id, { status });
@@ -36,9 +39,11 @@ export async function changeTicketStatusAction(id: string, status: string) {
   if (ticket.related_task_id) await synchronizeTicketToTask(id);
   await notify(ticket, user, `${user.name || user.email} moved the ticket to ${status}.`);
   refresh();
+  });
 }
 
 export async function addTicketCommentAction(id: string, formData: FormData) {
+  return expected(async () => {
   const user = await requireUser();
   const text = String(formData.get("comment") || "").trim().slice(0, 5000);
   if (!text) throw new Error("Comment cannot be empty.");
@@ -46,40 +51,50 @@ export async function addTicketCommentAction(id: string, formData: FormData) {
   if (!ticket) throw new Error("Ticket not found.");
   await notify(ticket, user, `${user.name || user.email} added a comment.`);
   refresh();
+  });
 }
 
 export async function addTicketLinkAction(id: string, formData: FormData) {
+  return expected(async () => {
   await requireUser();
   const label = String(formData.get("label") || "Link").trim().slice(0, 100);
   const url = String(formData.get("url") || "").trim();
   try { new URL(url); } catch { throw new Error("A valid URL is required."); }
   await appendTicketLink(id, { label, url });
   refresh();
+  });
 }
 
 export async function removeTicketLinkAction(id: string, index: number, url: string) {
+  return expected(async () => {
   await requireUser();
   if (!Number.isInteger(index) || index < 0) throw new Error("Unknown link.");
   const ticket = await removeTicketLink(id, index, url);
   if (!ticket) throw new Error("That link was already changed. Close and open the ticket again.");
   refresh();
+  });
 }
 
 export async function attachTicketFileAction(id: string, file: { name: string; key: string; type: string; size: number }) {
+  return expected(async () => {
   await requireUser();
   if (!file.key.startsWith("task-attachments/") || file.name.length > 255 || file.size > 10 * 1024 * 1024) throw new Error("Invalid attachment.");
   await appendTicketFile(id, file);
   refresh();
+  });
 }
 
 export async function duplicateTicketAction(id: string) {
+  return expected(async () => {
   await requireUser();
   const created = await duplicateTicket(id);
   refresh();
   return created;
+  });
 }
 
 export async function updateTicketDetailsAction(id: string, input: Record<string, unknown>) {
+  return expected(async () => {
   const user = await requireUser();
   const status = String(input.status || "Todo"); const priority = String(input.priority || "Med");
   if (!["Todo", "In Progress", "Done"].includes(status)) throw new Error("Invalid ticket status.");
@@ -92,15 +107,19 @@ export async function updateTicketDetailsAction(id: string, input: Record<string
   await notify(ticket, user, `${user.name || user.email} updated the ticket details.`);
   refresh();
   return ticket;
+  });
 }
 
 export async function deleteTicketAction(id: string) {
+  return expected(async () => {
   await requireUser();
   await deleteTicketWithLinkedTask(id);
   refresh();
+  });
 }
 
 export async function createTicketAction(input: Record<string, unknown>) {
+  return expected(async () => {
   const user = await requireUser();
   const title = String(input.title || "").trim();
   if (!title) throw new Error("Ticket title is required.");
@@ -127,4 +146,5 @@ export async function createTicketAction(input: Record<string, unknown>) {
   await publishTicketNotification({ ticketId: String(ticket.id), actorUserId: user.id, actorName, eventType: "created", title: `New ticket: ${title}`, message: `${actorName} created this ticket.`, targetRoles: roles(ticket) });
   refresh();
   return ticket;
+  });
 }

@@ -1,10 +1,13 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { saveAppSetting } from "@/lib/api/settings";
 import { revalidatePath } from "next/cache";
 
 export async function saveMenuVisibilityAction(formData: FormData) {
+  return expected(async () => {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") throw new Error("Admin access required.");
   const all = formData.getAll("all_slug").map(String);
@@ -12,9 +15,11 @@ export async function saveMenuVisibilityAction(formData: FormData) {
   await saveAppSetting("menu_visibility", { hiddenSlugs: all.filter((slug) => !visible.has(slug)) });
   revalidatePath("/", "layout");
   revalidatePath("/settings");
+  });
 }
 
 export async function saveMenuLabelsAction(formData: FormData) {
+  return expected(async () => {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") throw new Error("Admin access required.");
   const allSections = formData.getAll("all_section").map(String);
@@ -30,9 +35,11 @@ export async function saveMenuLabelsAction(formData: FormData) {
   await saveAppSetting("menu_labels", { sections, items });
   revalidatePath("/", "layout");
   revalidatePath("/settings");
+  });
 }
 
 export async function saveCompetitorIntelListsAction(formData: FormData) {
+  return expected(async () => {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") throw new Error("Admin access required.");
   const categories = formData.getAll("category").map(String).map((value) => value.trim()).filter(Boolean);
@@ -40,4 +47,5 @@ export async function saveCompetitorIntelListsAction(formData: FormData) {
   await saveAppSetting("ci_product_categories", categories);
   await saveAppSetting("ci_target_audience", targetAudience);
   revalidatePath("/settings");
+  });
 }

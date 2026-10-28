@@ -4,7 +4,7 @@ import {
   createContentLibraryAssetAction,
   deleteContentLibraryAssetAction,
   updateContentLibraryAssetAction,
-} from "@/app/actions/asset-actions";
+} from "@/app/_actions/asset-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

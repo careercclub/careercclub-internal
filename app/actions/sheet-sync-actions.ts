@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
 import { getSheetSync, runSheetSync, saveSheetSync } from "@/lib/api/sheet-sync";
@@ -24,6 +26,7 @@ function checkJob(job: string): SheetSyncJob {
 
 /** Saves the sheet link and syncs it at once; from then on every hour. */
 export async function startSheetSyncAction(job: string, url: string) {
+  return expected(async () => {
   const actor = await requireUser(); const id = checkJob(job);
   const link = String(url || "").trim();
   try { googleSheetCsvUrl(link); } catch { throw new Error("Paste the Google Sheet link (docs.google.com/spreadsheets/…)."); }
@@ -32,22 +35,27 @@ export async function startSheetSyncAction(job: string, url: string) {
   const state = await runSheetSync(id, actor);
   revalidate(id);
   return state;
+  });
 }
 
 /** Sync now. `force` is "Apply anyway" after a sync stopped because many rows would be removed. */
 export async function syncSheetNowAction(job: string, force = false) {
+  return expected(async () => {
   const actor = await requireUser(); const id = checkJob(job);
   const state = await runSheetSync(id, actor, { force: force === true });
   revalidate(id);
   return state;
+  });
 }
 
 /** Stops the hourly sync. What was already brought in stays. */
 export async function stopSheetSyncAction(job: string) {
+  return expected(async () => {
   const actor = await requireUser(); const id = checkJob(job);
   if (!(await getSheetSync(id))) return null;
   await saveSheetSync(id, null);
   await logActivity({ userName: actor, module: SHEET_SYNC_JOBS[id].module, action: "Stop Google Sheet sync", detail: "", table: SHEET_SYNC_JOBS[id].table });
   revalidate(id);
   return null;
+  });
 }

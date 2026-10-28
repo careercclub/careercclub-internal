@@ -564,3 +564,6 @@ fieldset.checkList > legend { padding: 0 4px; color: var(--text-muted); font-siz
 @media (prefers-reduced-motion: reduce) { .storageLoading { animation: none; } }
 /* In the edit dialog the Save button stays on screen while the form scrolls. */
 .editDialogBody .recordForm > .formActions { position: sticky; z-index: 2; bottom: -12px; margin: 0 -6px; padding: 8px 17px; border-top: 1px solid var(--border); background: var(--white); }
+.choiceNew { display: flex; gap: 8px; align-items: center; }
+.choiceNew input { flex: 1; min-width: 0; }
+.choiceBack { flex: none; min-height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--purple-dark); font-size: 12px; font-weight: 700; cursor: pointer; }

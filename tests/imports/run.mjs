@@ -406,7 +406,8 @@ await test("talent: Google Sheet sync — start, hourly, never clears, stop", as
   ok((await sql`select action from activity_log where module = 'Talent Pool'`).some((row) => row.action === "Google Sheet sync"), "sync: runs that add or update people are in the activity log");
   await S.stopSheetSyncAction("talent-pool");
   ok(await S.getSheetSync("talent-pool") === null && (await S.runDueSheetSyncs(Date.now() + 999 * 60_000)).length === 0 && (await sql`select count(*)::int c from talent_pool`)[0].c === 5, "sync: Stop sync ends it; people stay");
-  await assertRejects(() => S.startSheetSyncAction("talent-pool", "https://example.com/sheet.csv"), "sync: only Google Sheet links are accepted");
+  const refused = await S.startSheetSyncAction("talent-pool", "https://example.com/sheet.csv");
+  ok(/Google Sheet link/.test(refused?.__actionError || ""), "sync: only Google Sheet links are accepted (the reason comes back as a value)", JSON.stringify(refused));
 });
 
 await test("MT: Google Sheet sync — whole sheet as xlsx, same as Import Excel, pauses on mass removal", async () => {

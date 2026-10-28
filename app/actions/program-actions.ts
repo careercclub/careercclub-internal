@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { createEventRundownItem, createProgramEvent, createProgramTask, deleteEventRundownItem, deleteTaskWithLinkedTicket, duplicateProgramEvent, repairTaskTicketLinks, updateEventRundownItem, updateProgramEvent } from "@/lib/api/program";
 import { synchronizeTaskToTicket } from "@/lib/api/program";
@@ -14,6 +16,7 @@ async function requireUser() {
 }
 
 export async function duplicateProgramAction(formData: FormData) {
+  return expected(async () => {
   await requireUser();
   const eventId = String(formData.get("event_id") || "").trim();
   const name = String(formData.get("name") || "").trim();
@@ -25,17 +28,21 @@ export async function duplicateProgramAction(formData: FormData) {
   await duplicateProgramEvent({ eventId, name, date, taskIds: taskIds.length ? taskIds : undefined });
   revalidatePath("/program");
   revalidatePath("/program/tasks");
+  });
 }
 
 export async function repairProgramTicketLinksAction() {
+  return expected(async () => {
   const user = await requireUser();
   await repairTaskTicketLinks(user.id);
   revalidatePath("/program/tasks");
   revalidatePath("/tickets");
   revalidatePath("/dashboard");
+  });
 }
 
 export async function updateProgramTaskWorkflowAction(id: string, input: { status?: string; dueDate?: string }) {
+  return expected(async () => {
   const user = await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid task.");
   if (input.status && !["Todo", "On Progress", "Done"].includes(input.status)) throw new Error("Invalid task status.");
@@ -59,9 +66,11 @@ export async function updateProgramTaskWorkflowAction(id: string, input: { statu
   }));
   await synchronizeTaskToTicket(id, user.id);
   revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  });
 }
 
 export async function updateTaskDetailsAction(id: string, input: { title: string; description?: string; status?: string; priority?: string; phase?: string; dueDate?: string | null; assigneeIds?: string[] }) {
+  return expected(async () => {
   const user = await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid task.");
   const title = input.title.trim();
@@ -96,9 +105,11 @@ export async function updateTaskDetailsAction(id: string, input: { title: string
   }));
   await synchronizeTaskToTicket(id, user.id);
   revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  });
 }
 
 export async function createEventAction(input: Record<string, unknown>) {
+  return expected(async () => {
   await requireUser();
   const nama = String(input.nama || "").trim();
   if (!nama) throw new Error("Program name is required.");
@@ -120,9 +131,11 @@ export async function createEventAction(input: Record<string, unknown>) {
   });
   revalidatePath("/program"); revalidatePath("/dashboard");
   return event;
+  });
 }
 
 export async function createTaskAction(input: Record<string, unknown>) {
+  return expected(async () => {
   const user = await requireUser();
   const title = String(input.title || "").trim();
   if (!title) throw new Error("Task title is required.");
@@ -144,9 +157,11 @@ export async function createTaskAction(input: Record<string, unknown>) {
   await synchronizeTaskToTicket(String(task.id), user.id);
   revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
   return task;
+  });
 }
 
 export async function updateEventAction(id: string, input: Record<string, unknown>) {
+  return expected(async () => {
   await requireUser();
   if (!id) throw new Error("Invalid event.");
   const nama = String(input.nama || "").trim();
@@ -170,16 +185,20 @@ export async function updateEventAction(id: string, input: Record<string, unknow
   if (!event) throw new Error("Program event not found.");
   revalidatePath("/program"); revalidatePath("/dashboard");
   return event;
+  });
 }
 
 export async function deleteTaskAction(id: string) {
+  return expected(async () => {
   await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid task.");
   await deleteTaskWithLinkedTicket(id);
   revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  });
 }
 
 export async function addEventLinkAction(eventId: string, input: { label: string; url: string }) {
+  return expected(async () => {
   await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(eventId)) throw new Error("Invalid event.");
   const label = input.label.trim();
@@ -197,9 +216,11 @@ export async function addEventLinkAction(eventId: string, input: { label: string
   if (!event) throw new Error("Program event not found.");
   revalidatePath("/program");
   return event;
+  });
 }
 
 export async function deleteEventLinkAction(eventId: string, index: number) {
+  return expected(async () => {
   await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(eventId)) throw new Error("Invalid event.");
   const event = await withPostgres(async (sql) => {
@@ -214,6 +235,7 @@ export async function deleteEventLinkAction(eventId: string, index: number) {
   if (!event) throw new Error("Program event not found.");
   revalidatePath("/program");
   return event;
+  });
 }
 
 // The rundown renders in two places — its own page and the event detail on /program —
@@ -224,12 +246,15 @@ function refreshRundown() {
 }
 
 export async function createRundownRowAction(eventId: string, order: number) {
+  return expected(async () => {
   await requireUser();
   await createEventRundownItem({ event_id: eventId, durasi: 0, activity: "New activity", keterangan: "", link: "", cue_mc: "", urutan: order });
   refreshRundown();
+  });
 }
 
 export async function saveRundownRowAction(id: string, formData: FormData) {
+  return expected(async () => {
   await requireUser();
   const duration = Number(formData.get("durasi") || 0);
   await updateEventRundownItem(id, {
@@ -240,16 +265,21 @@ export async function saveRundownRowAction(id: string, formData: FormData) {
     cue_mc: String(formData.get("cue_mc") || "").trim(),
   });
   refreshRundown();
+  });
 }
 
 export async function deleteRundownRowAction(id: string) {
+  return expected(async () => {
   await requireUser();
   await deleteEventRundownItem(id);
   refreshRundown();
+  });
 }
 
 export async function moveRundownRowAction(id: string, targetId: string, idOrder: number, targetOrder: number) {
+  return expected(async () => {
   await requireUser();
   await Promise.all([updateEventRundownItem(id, { urutan: targetOrder }), updateEventRundownItem(targetId, { urutan: idOrder })]);
   refreshRundown();
+  });
 }

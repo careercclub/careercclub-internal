@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { accessCheck, auth } from "@/auth";
 import { createInternalUser, resetInternalUserPassword, updateInternalUserAccess } from "@/lib/api/auth-users";
 import { revalidatePath } from "next/cache";
@@ -17,6 +19,7 @@ function password(value: FormDataEntryValue | null) {
 }
 
 export async function createUserAction(formData: FormData) {
+  return expected(async () => {
   await requireAdmin();
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const name = String(formData.get("name") || "").trim();
@@ -24,9 +27,11 @@ export async function createUserAction(formData: FormData) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !name || !/^[a-z][a-z0-9_-]{1,30}$/.test(role)) throw new Error("Valid name, email, and role are required.");
   await createInternalUser({ email, name, role, password: password(formData.get("password")) });
   revalidatePath("/settings");
+  });
 }
 
 export async function updateUserAccessAction(id: string, formData: FormData) {
+  return expected(async () => {
   const admin = await requireAdmin();
   const role = String(formData.get("role") || "member").trim().toLowerCase();
   if (!/^[a-z][a-z0-9_-]{1,30}$/.test(role)) throw new Error("Invalid role.");
@@ -38,4 +43,5 @@ export async function updateUserAccessAction(id: string, formData: FormData) {
   const newPassword = String(formData.get("password") || "");
   if (newPassword) await resetInternalUserPassword(id, password(newPassword));
   revalidatePath("/settings");
+  });
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { createProductKnowledgeAction, deleteProductKnowledgeAction } from "@/app/actions/product-knowledge-actions";
-import { createManagedRecord } from "@/app/actions/record-actions";
-import { duplicateProductAction } from "@/app/actions/product-actions";
+import { createProductKnowledgeAction, deleteProductKnowledgeAction } from "@/app/_actions/product-knowledge-actions";
+import { createManagedRecord } from "@/app/_actions/record-actions";
+import { duplicateProductAction } from "@/app/_actions/product-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApiRecord } from "@/lib/api/_crud";

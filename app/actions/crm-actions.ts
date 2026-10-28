@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
 import { withPostgres } from "@/lib/db/postgres";
@@ -12,6 +14,7 @@ function validIds(ids: string[]) {
 }
 
 export async function bulkUpdateCrmBuyers(ids: string[], operation: "status" | "talent" | "delete", value?: string) {
+  return expected(async () => {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
   const selected = validIds(ids);
@@ -29,4 +32,5 @@ export async function bulkUpdateCrmBuyers(ids: string[], operation: "status" | "
   await logActivity({ userName: session.user.name || session.user.email || "CCC User", module: "CRM", action: operation === "delete" ? "Hapus" : "Update", detail: `${selected.length} buyer records`, table: "buyers" });
   revalidatePath("/crm");
   revalidatePath("/dashboard");
+  });
 }

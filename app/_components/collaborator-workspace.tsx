@@ -1,6 +1,6 @@
 "use client";
 
-import { saveCollaboratorDetailsAction, updateCollaboratorPhotoAction } from "@/app/actions/collaborator-actions";
+import { saveCollaboratorDetailsAction, updateCollaboratorPhotoAction } from "@/app/_actions/collaborator-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApiRecord } from "@/lib/api/_crud";

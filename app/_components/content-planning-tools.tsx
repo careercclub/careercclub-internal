@@ -1,5 +1,6 @@
 "use client";
 
+import { isBlocked, pickablePeople } from "@/lib/tickets/people";
 import {
   addContentLinkAction,
   addStoryItemAction,
@@ -27,7 +28,7 @@ import {
   type CarouselPlanInput,
   type KolInput,
   type MtStoryInput,
-} from "@/app/actions/content-planning-actions";
+} from "@/app/_actions/content-planning-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { byDay, dayKey, fmtFollowers, groupByWeek, iso, monthCells, MONTHS, shortDay, weekdayDay, weekStart, WEEKDAYS } from "@/lib/content-planning/view";
 import { useEffect, useId, useMemo, useState, useTransition, type ReactNode } from "react";
@@ -451,7 +452,7 @@ function CarouselModal({ state, ctas, people, planned, onClose }: { state: Carou
               <button className={s.ghostSm} onClick={addCta} type="button">Add CTA</button>
             </span>
           </Field>
-          <Field label="Assignee"><select className={s.input} onChange={(event) => setAssignee(event.target.value)} value={assignee}><option value="">No assignee</option>{people.map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}</option>)}</select></Field>
+          <Field label="Assignee"><select className={s.input} onChange={(event) => setAssignee(event.target.value)} value={assignee}><option value="">No assignee</option>{pickablePeople(people, assignee ? [assignee] : []).map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}{isBlocked(person) ? " · blocked" : ""}</option>)}</select></Field>
         </div>
       </div>
       <Field label="Brief link" optional><input className={s.input} onChange={(event) => setLinkBrief(event.target.value)} placeholder="https://docs.google.com/…" value={linkBrief} /></Field>

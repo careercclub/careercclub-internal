@@ -1,6 +1,6 @@
 "use client";
 
-import { createManagedRecord } from "@/app/actions/record-actions";
+import { createManagedRecord } from "@/app/_actions/record-actions";
 import type { RecordDefinitionKey } from "@/lib/records/catalog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

@@ -1772,3 +1772,39 @@ Laporan user (screenshot prod): Ticket details → Save ticket → tersimpan, ta
 ### Deploy
 
 Tanpa migrasi → `npm run vps:rebuild:frontend`.
+
+## Putaran 53 — Pesan error asli dari server, Category jadi dropdown, akun Blocked tidak bisa di-assign (28 Okt 2026)
+
+Laporan user (screenshot prod): (1) Resources → Add resource → toast "An error occurred in the Server Components render…", dan Category seharusnya dropdown; (2) user yang sudah di-Block di Users & roles masih muncul di pilihan Assignee. Minta evaluasi masalah sejenis di web.
+
+### Temuan
+
+- **Masalah sistemik**: di produksi Next.js menyembunyikan pesan error yang di-*throw* server action. Semua 85 action kita memakai `throw new Error("…")`, jadi setiap kegagalan (validasi, kolom wajib di database, belum login) tampil sebagai kalimat teknis yang sama, dan orang tidak tahu apa yang salah. Dokumentasi Next: error yang memang bisa terjadi harus dikembalikan sebagai **nilai**.
+- Resources: Type (`tipe`) ada di "More fields" dan dikirim kosong; database kemungkinan mewajibkannya, dan pesannya tertutup oleh masalah di atas.
+- Daftar orang (Assignee, undangan Google Calendar, Assignee Content Planning) tidak tahu status akun. Teks Indonesia "tanpa akun", "Hapus assignee" juga masih tersisa di pemilih assignee.
+
+### Do
+
+- **Semua server action** (85, di 20 file) kini menjalankan isinya lewat `expected()` (`lib/actions/expected.ts`): kegagalan kembali sebagai `{ __actionError: "kalimat" }`. Redirect/notFound tetap jalan.
+  - Error database diterjemahkan dengan label form (`lib/actions/messages.ts`): kolom wajib kosong → "Type is required."; duplikat → "This already exists (email: …)"; aturan/format/terlalu panjang → kalimatnya masing-masing.
+  - Bug tak terduga → dicatat di log server, orang melihat "Something went wrong on the server, so nothing was saved…".
+- **Browser**: komponen client memanggil action lewat `app/_actions/*` (dibuat otomatis, `unwrapAction`), yang mengubah nilai gagal jadi Error dengan pesan aslinya, sehingga semua `try/catch`, `guard`, dan `notifyError` yang ada langsung menampilkan pesan yang benar. `notifyError` juga mengenali kalimat produksi dan menggantinya dengan pesan yang jelas.
+- Users & roles: Add user / Save user kini menampilkan berhasil/gagal (sebelumnya form diam). Komponen lama yang tidak dipakai (`program-workflow-tools.tsx`) dihapus.
+- **Isian "pilih atau tambah baru"** di form umum (RecordManager): dropdown berisi nilai yang sudah dipakai + "+ New …" untuk mengetik yang baru. Dipakai di 19 field: Category Resources, Design Assets, Partner, Org Partner, Competitor, produk kompetitor; Program type; Source/Status/Industry/Payment status CRM; Classification produk; Status/Source/Campus tier Talent Pool; Status Collaborators; Source tiket.
+- Resources: Type default **link** (form dan server: field dengan `defaultValue` diisi saat ditambah).
+- **Akun Blocked**: `listTicketPeople` menandai orang `blocked` kalau akun login-nya Blocked (cocok lewat akun tertaut, atau email untuk orang tanpa akun). Satu aturan `lib/tickets/people.ts`:
+  - pemilih Assignee (Tickets, Dashboard, Program), Content Planning, undangan Google Calendar tidak menawarkan mereka;
+  - "Select all" hanya menghitung yang bisa login;
+  - orang yang sudah ter-assign tetap terlihat dengan tanda "· blocked" supaya bisa dilepas.
+- Teks pemilih assignee jadi bahasa Inggris ("· no account", "Remove {nama}").
+
+### Check
+
+- `tests/agent` 68 (+5): orang ditandai blocked lewat akun tertaut & lewat email (beda huruf besar/spasi), yang lain tidak; Resource tanpa Type → "link" dan tersimpan; database menolak Category kosong → action mengembalikan "Category is required." (bukan throw); pembungkus browser mengubahnya jadi Error dengan pesan itu; belum login → "Unauthorized".
+- Unit baru: `lib/actions/wrappers.test.mjs` 4 (semua action lewat `expected`, semua punya pembungkus, tidak ada komponen yang import action langsung, terjemahan error database), `lib/tickets/people.test.mjs` 1.
+- Suite baru `p53.mjs` 9 (Category dropdown + New, fokus, Type link, pesan server asli tampil & form tetap terbuka, tidak pernah kalimat produksi, kategori terkirim; Assignee tanpa akun Blocked, Select all (2)).
+- Regresi penuh lolos: 38 suite modul (termasuk p53 9), navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 198 + 5 baru, import 93 (1 tes disesuaikan: alasan penolakan kini dikembalikan sebagai nilai), search-db 19, agent-db 68, lint 0 error, build lolos.
+
+### Deploy
+
+Tanpa migrasi → `npm run vps:rebuild:frontend`. Setelah itu, kalau Add resource masih gagal, pesannya sekarang menyebut kolom yang bermasalah.

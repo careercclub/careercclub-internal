@@ -1,5 +1,6 @@
 "use client";
 
+import { isBlocked } from "@/lib/tickets/people";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -62,12 +63,13 @@ export function TicketGoogleCalendarModal({ ticket, people, onClose, onSynced }:
   const requesterId = text(ticket.requester_id || ticket.requesterId);
   const automaticGuests = people.filter((person) => {
     const id = String(person.id);
-    return Boolean(person.email) && (assigneeIds.has(id) || id === requesterId);
+    // A blocked account is not invited.
+    return Boolean(person.email) && !isBlocked(person) && (assigneeIds.has(id) || id === requesterId);
   });
   const automaticEmails = new Set(automaticGuests.map((person) => text(person.email).toLowerCase()));
   const additionalPeople = people.filter((person) => {
     const email = text(person.email).toLowerCase();
-    return email && !automaticEmails.has(email);
+    return email && !isBlocked(person) && !automaticEmails.has(email);
   });
 
   const { run, busy, message, clientId, configurationLoaded } = useGoogleCalendarAction((result) => {

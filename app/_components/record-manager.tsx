@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { recordDefinitions, type ManagedField, type RecordDefinitionKey } from "@/lib/records/catalog";
 import { ITEM_NOUN, addTag, asTagList, displayLabel, fieldKind, planForm, plural } from "@/lib/records/form-plan";
-import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
+import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
 import { R2UploadField } from "./r2-upload-field";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
@@ -127,7 +127,32 @@ function TagEditor({ field, value }: { field: ManagedField; value?: unknown }) {
   );
 }
 
-function Field({ definitionKey, field, value, options, optionsState }: { definitionKey: string; field: ManagedField; value?: unknown; options?: readonly string[]; optionsState: OptionsState }) {
+/** Pick a value already used in this list, or choose "New …" and type one. */
+function ChoiceField({ field, value, choices, caption }: { field: ManagedField; value?: unknown; choices: readonly string[]; caption: ReactNode }) {
+  const current = value === null || value === undefined ? "" : String(value);
+  const list = current && !choices.includes(current) ? [current, ...choices] : choices;
+  const [typing, setTyping] = useState(!list.length);
+  const noun = singular(displayLabel(field.label)).toLowerCase();
+  return (
+    <label className={styles.field}>
+      {caption}
+      {typing ? (
+        <span className={styles.choiceNew}>
+          <input autoFocus={list.length > 0} defaultValue="" name={field.name} placeholder={`New ${noun}`} required={field.required} type="text" />
+          {list.length ? <button className={styles.choiceBack} onClick={() => setTyping(false)} type="button">Choose from list</button> : null}
+        </span>
+      ) : (
+        <select defaultValue={current} name={field.name} onChange={(event) => { if (event.target.value === "__new__") setTyping(true); }} required={field.required}>
+          <option value="">{`Select ${noun}…`}</option>
+          {list.map((option) => <option key={option} value={option}>{option}</option>)}
+          <option value="__new__">{`+ New ${noun}…`}</option>
+        </select>
+      )}
+    </label>
+  );
+}
+
+function Field({ definitionKey, field, value, options, optionsState, choices }: { definitionKey: string; field: ManagedField; value?: unknown; options?: readonly string[]; optionsState: OptionsState; choices?: readonly string[] }) {
   const kind = fieldKind(definitionKey, field);
   const label = displayLabel(field.label);
   const caption = <span>{label}{field.required ? <b className={styles.requiredMark}> required</b> : null}</span>;
@@ -154,6 +179,10 @@ function Field({ definitionKey, field, value, options, optionsState }: { definit
     );
   }
 
+  if (field.choices === "existing" && !field.options?.length) {
+    return <ChoiceField caption={caption} choices={choices || []} field={field} value={value} />;
+  }
+
   if (kind === "tags" && asTagList(value) !== null) {
     return <div className={`${styles.field} ${styles.wideField}`}>{caption}<TagEditor field={field} value={value} /></div>;
   }
@@ -169,7 +198,7 @@ function Field({ definitionKey, field, value, options, optionsState }: { definit
     );
   }
 
-  const common = { name: field.name, required: field.required, defaultValue: inputValue(value, field), placeholder: field.placeholder };
+  const common = { name: field.name, required: field.required, defaultValue: value === undefined && field.defaultValue ? field.defaultValue : inputValue(value, field), placeholder: field.placeholder };
   const wide = field.type === "textarea" || field.type === "json";
   return (
     <label className={`${styles.field} ${wide ? styles.wideField : ""}`}>
@@ -182,11 +211,11 @@ function Field({ definitionKey, field, value, options, optionsState }: { definit
 }
 
 /** One form layout for add and edit: required first, optional folded, advanced folded, system hidden. */
-function RecordForm({ definitionKey, row, fieldOptions, optionsState, submitLabel, action }: { definitionKey: RecordDefinitionKey; row?: ApiRecord; fieldOptions: Record<string, readonly string[]>; optionsState: OptionsState; submitLabel: string; action: (formData: FormData) => void }) {
+function RecordForm({ definitionKey, row, fieldOptions, fieldChoices = {}, optionsState, submitLabel, action }: { definitionKey: RecordDefinitionKey; row?: ApiRecord; fieldOptions: Record<string, readonly string[]>; fieldChoices?: Record<string, readonly string[]>; optionsState: OptionsState; submitLabel: string; action: (formData: FormData) => void }) {
   const definition = recordDefinitions[definitionKey];
   const plan = planForm(definitionKey, definition.fields as readonly ManagedField[]);
   const filled = (fields: ManagedField[]) => fields.filter((field) => { const value = row?.[field.name]; return value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && !value.length); }).length;
-  const render = (field: ManagedField) => <Field definitionKey={definitionKey} field={field} key={field.name} optionsState={optionsState} options={fieldOptions[field.name]} value={row?.[field.name]} />;
+  const render = (field: ManagedField) => <Field choices={fieldChoices[field.name]} definitionKey={definitionKey} field={field} key={field.name} optionsState={optionsState} options={fieldOptions[field.name]} value={row?.[field.name]} />;
   return (
     // onSubmit rather than a form action: a form action clears every field when it runs,
     // so a failed save would throw away what was typed.
@@ -234,6 +263,8 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
   const editingRow = editingId ? rows.find((row) => String(row.id) === editingId) : undefined;
   const definition = recordDefinitions[definitionKey];
   const noun = ITEM_NOUN[definitionKey] || "record";
+  // Values already used in this list, for "choose or add new" fields (Category, Source, Status…).
+  const fieldChoices = useMemo(() => Object.fromEntries((definition.fields as readonly ManagedField[]).filter((field) => field.choices === "existing").map((field) => [field.name, [...new Set([...(fieldOptions[field.name] || []), ...rows.map((row) => row[field.name]).filter((v) => typeof v === "string" && v.trim()).map((v) => String(v).trim())])].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }))])), [definition, rows, fieldOptions]);
   const fields = definition.fields as readonly ManagedField[];
   const searchable = rows.length > PAGE_SIZE;
   const shown = useMemo(() => {
@@ -317,7 +348,7 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
               <DialogDescription>{definition.title} · fields marked * are required</DialogDescription>
             </DialogHeader>
             <div className={styles.editDialogBody}>
-              <RecordForm action={async (formData: FormData) => { try { await createManagedRecord(definitionKey, formData); setAdding(false); notify(`${noun.charAt(0).toUpperCase()}${noun.slice(1)} added.`); } catch (error) { notifyError(error, `Could not add the ${noun}.`); } }} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} submitLabel={`Add ${noun}`} />
+              <RecordForm fieldChoices={fieldChoices} action={async (formData: FormData) => { try { await createManagedRecord(definitionKey, formData); setAdding(false); notify(`${noun.charAt(0).toUpperCase()}${noun.slice(1)} added.`); } catch (error) { notifyError(error, `Could not add the ${noun}.`); } }} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} submitLabel={`Add ${noun}`} />
             </div>
           </DialogContent>
         ) : null}
@@ -347,7 +378,7 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
               <DialogDescription>{definition.title}</DialogDescription>
             </DialogHeader>
             <div className={styles.editDialogBody}>
-              <RecordForm action={async (formData: FormData) => { try { await updateManagedRecord(definitionKey, String(editingRow.id), formData); setEditingId(""); } catch (error) { notifyError(error, `Could not save the ${noun}.`); } }} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} row={editingRow} submitLabel={`Save ${noun}`} />
+              <RecordForm fieldChoices={fieldChoices} action={async (formData: FormData) => { try { await updateManagedRecord(definitionKey, String(editingRow.id), formData); setEditingId(""); } catch (error) { notifyError(error, `Could not save the ${noun}.`); } }} definitionKey={definitionKey} fieldOptions={fieldOptions} optionsState={optionsState} row={editingRow} submitLabel={`Save ${noun}`} />
               <DeleteRecord definitionKey={definitionKey} id={String(editingRow.id)} noun={noun} />
             </div>
           </DialogContent>

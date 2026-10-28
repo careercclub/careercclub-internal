@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { updateRow } from "@/lib/db/query";
 import { revalidatePath } from "next/cache";
@@ -11,10 +13,12 @@ const pipelines = {
 } as const;
 
 export async function movePipelineRecord(table: keyof typeof pipelines, id: string, status: string) {
+  return expected(async () => {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
   const pipeline = pipelines[table];
   if (!pipeline.statuses.some((item) => item === status)) throw new Error("Invalid pipeline status.");
   await updateRow(table, id, { [pipeline.column]: status });
   revalidatePath(pipeline.path);
+  });
 }

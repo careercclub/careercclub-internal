@@ -1,6 +1,6 @@
 "use client";
 
-import { createAgentKeyAction, revokeAgentKeyAction } from "@/app/actions/agent-actions";
+import { createAgentKeyAction, revokeAgentKeyAction } from "@/app/_actions/agent-actions";
 import type { AgentTokenRow } from "@/lib/api/agent-tokens";
 import { AGENT_MODULES } from "@/lib/agent/modules";
 import { formatDay } from "@/lib/text/date";

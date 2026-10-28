@@ -1,6 +1,6 @@
 "use client";
 
-import { duplicateProductAction } from "@/app/actions/product-actions";
+import { duplicateProductAction } from "@/app/_actions/product-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useState } from "react";
 import styles from "../record-manager.module.css";

@@ -1,5 +1,7 @@
 "use client";
 
+import { MASKED_ERROR } from "@/lib/actions/result";
+
 // One confirm, one text prompt and one notice for the whole app, replacing the browser's
 // window.confirm / window.prompt / window.alert (which block the page, cannot be styled,
 // and can be silenced by the browser — after which a Delete button just does nothing).
@@ -47,7 +49,9 @@ export function notify(message: string, tone: Notice["tone"] = "info") {
 
 /** For catch blocks: the server's message when there is one, otherwise the fallback. */
 export function notifyError(error: unknown, fallback: string) {
-  notify(error instanceof Error && error.message ? error.message : fallback, "error");
+  // Production replaces an escaped server error with a technical sentence; say what failed instead.
+  const message = error instanceof Error && error.message && !MASKED_ERROR.test(error.message) ? error.message : `${fallback} Try again; if it keeps happening, tell the admin.`;
+  notify(message, "error");
 }
 
 function subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; }

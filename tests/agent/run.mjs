@@ -13,7 +13,7 @@ await sql.unsafe(migration("027_claude_access.sql"));
 await sql`create table activity_log (id bigserial primary key, user_name text, module text, action text, detail text, created_at timestamptz default now())`;
 const { POST, GET } = await import("./out/mt-route.mjs");
 const IG = await import("./out/ig-route.mjs");
-const { createAgentToken, revokeAgentToken, listAgentTokens, applyProspectImport, importContentEvaluations, closePostgresConnection } = await import("./out/helpers.mjs");
+const { createAgentToken, revokeAgentToken, listAgentTokens, applyProspectImport, importContentEvaluations, closePostgresConnection, listTicketPeople } = await import("./out/helpers.mjs");
 // Content Evaluation & Instagram tables as in production (tests/imports/schema.sql), then migration 028.
 const importSchema = readFileSync(new URL("../imports/schema.sql", import.meta.url), "utf8");
 await sql.unsafe(importSchema.slice(importSchema.indexOf("create table content_evaluations"), importSchema.indexOf("create table free_class_eval")));
@@ -210,6 +210,34 @@ ok((await sql`select 1 from activity_log where module = 'Competitor Intel'`).len
 globalThis.__session = { user: { id: "u1", name: "Tester" } };
 ok((await CI.POST(new Request("http://internal.test/api/agent/competitor-intel", { method: "POST", headers: { host: "internal.test", origin: "http://internal.test" }, body: JSON.stringify({ mode: "preview", competitors: comps }) }))).status === 200, "CI: Claude in Chrome on the app's page can preview with the session");
 globalThis.__session = null;
+
+// ── Blocked accounts are marked on ticket people (pickers hide them) ──
+await sql`create table if not exists auth_users (id uuid primary key default gen_random_uuid(), email text, name text, role text, password_hash text, is_active boolean default true, created_at timestamptz default now())`;
+await sql`create table if not exists tkt_people (id uuid primary key default gen_random_uuid(), nama text, email text, divisi_id uuid, level text, auth_user_id uuid)`;
+const [ariel] = await sql`insert into auth_users (email, name, is_active) values ('arielmischaa@gmail.com', 'ariel', false) returning id`;
+const [rina] = await sql`insert into auth_users (email, name, is_active) values ('rina@x.id', 'Rina', true) returning id`;
+await sql`insert into auth_users (email, name, is_active) values ('achbarfalah14@gmail.com', 'falah', false)`;
+await sql`insert into tkt_people (nama, email, auth_user_id) values ('ariel', 'arielmischaa@gmail.com', ${ariel.id}), ('Rina', 'rina@x.id', ${rina.id}), ('Falah Akbar', ' AchbarFalah14@gmail.com', null), ('Tamu', 'tamu@x.id', null)`;
+const peopleRows = await listTicketPeople();
+const flag = Object.fromEntries(peopleRows.map((row) => [row.nama, row.blocked]));
+ok(flag.ariel === true && flag["Falah Akbar"] === true && flag.Rina === false && flag.Tamu === false, `people: blocked by linked account or by email; others not (${JSON.stringify(flag)})`);
+
+// ── Server action failures reach the person (production hides thrown messages) ──
+const { createManagedRecord, createManagedRecordClient } = await import("./out/records.mjs");
+await sql`create table if not exists resources (id uuid primary key default gen_random_uuid(), tipe text not null, kategori text not null, nama text not null, url text, email text, username text, password text, notes text, urutan integer, created_at timestamptz default now())`;
+globalThis.__session = { user: { id: "u1", name: "Tester", role: "admin" } };
+const form = (fields) => { const fd = new FormData(); for (const [k, v] of Object.entries(fields)) fd.set(k, v); return fd; };
+let actionResult = await createManagedRecord("resources", form({ kategori: "Account", nama: "Github" }));
+const [gh] = await sql`select tipe from resources where nama = 'Github'`;
+ok(actionResult === undefined && gh?.tipe === "link", "resources: Type left empty becomes \"link\" and the resource is added");
+actionResult = await createManagedRecord("resources", form({ nama: "Tanpa kategori" }));
+ok(actionResult && actionResult.__actionError === "Category is required.", `a database rule comes back as a sentence, not a thrown error (${JSON.stringify(actionResult)})`);
+let thrown = "";
+try { await createManagedRecordClient("resources", form({ nama: "Tanpa kategori" })); } catch (error) { thrown = error.message; }
+ok(thrown === "Category is required.", "the browser wrapper turns it into an Error with that message");
+globalThis.__session = null;
+actionResult = await createManagedRecord("resources", form({ kategori: "Account", nama: "X" }));
+ok(actionResult && actionResult.__actionError === "Unauthorized", "signed out: the message comes back too");
 
 await sql.end();
 console.log(`\n${pass} pass, ${fail} fail`); process.exit(fail ? 1 : 0);

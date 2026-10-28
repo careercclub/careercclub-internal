@@ -1,7 +1,7 @@
 "use client";
 
-import { loadContentEvaluationAction } from "@/app/actions/content-evaluation-actions";
-import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
+import { loadContentEvaluationAction } from "@/app/_actions/content-evaluation-actions";
+import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { evaluateContentEvaluation, type ContentEvaluationResult } from "@/lib/analytics/content";

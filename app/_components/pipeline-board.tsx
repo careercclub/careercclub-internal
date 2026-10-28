@@ -1,6 +1,6 @@
 "use client";
 
-import { movePipelineRecord } from "@/app/actions/pipeline-actions";
+import { movePipelineRecord } from "@/app/_actions/pipeline-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useMemo, useState, useTransition } from "react";
 import styles from "../record-manager.module.css";

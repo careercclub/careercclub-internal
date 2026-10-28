@@ -1,6 +1,6 @@
 "use client";
 
-import { reorderResourcesAction } from "@/app/actions/resource-actions";
+import { reorderResourcesAction } from "@/app/_actions/resource-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { filterResources, groupResources, hostOf, hrefOf, isCredential, moveResource, plural, sortResources } from "@/lib/library/view";
 import type { ReactNode } from "react";

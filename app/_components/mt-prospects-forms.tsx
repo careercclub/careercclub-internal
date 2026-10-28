@@ -1,6 +1,6 @@
 "use client";
 
-import { saveProspectAction, saveProspectContactAction } from "@/app/actions/mt-prospect-actions";
+import { saveProspectAction, saveProspectContactAction } from "@/app/_actions/mt-prospect-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ImportSummary } from "@/lib/api/mt-prospects";

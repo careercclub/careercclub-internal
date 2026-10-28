@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ApiRecord } from "@/lib/api/_crud";
+import { isBlocked, pickablePeople } from "@/lib/tickets/people";
 
 function text(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
@@ -30,8 +31,10 @@ export function AssigneeField({ people, value, onChange, label = "Assignee" }: {
   onChange: (ids: string[]) => void;
   label?: string;
 }) {
-  const available = people.filter((person) => !value.includes(String(person.id)));
-  const allIds = people.map((person) => String(person.id));
+  // Blocked accounts (Settings → Users & roles) are not offered; one already assigned stays listed.
+  const offered = pickablePeople(people);
+  const available = offered.filter((person) => !value.includes(String(person.id)));
+  const allIds = [...new Set([...value, ...offered.map((person) => String(person.id))])];
 
   return (
     <div className="grid gap-1.5">
@@ -40,7 +43,7 @@ export function AssigneeField({ people, value, onChange, label = "Assignee" }: {
         <div className="flex gap-2">
           {available.length ? (
             <button type="button" onClick={() => onChange(allIds)} className="text-xs text-primary underline underline-offset-2">
-              Select all ({people.length})
+              Select all ({offered.length})
             </button>
           ) : null}
           {value.length ? (
@@ -53,9 +56,10 @@ export function AssigneeField({ people, value, onChange, label = "Assignee" }: {
 
       <div className="flex flex-wrap gap-1.5">
         {value.length ? value.map((id) => (
-          <Badge key={id} variant="secondary" className="gap-1 pr-1">
+          <Badge key={id} variant="secondary" className="gap-1 pr-1" title={isBlocked(people.find((person) => String(person.id) === id)) ? "This account is blocked" : undefined}>
             {personName(people, id)}
-            <button type="button" onClick={() => onChange(value.filter((current) => current !== id))} className="rounded-full px-1 leading-none hover:bg-black/10" aria-label="Hapus assignee">×</button>
+            {isBlocked(people.find((person) => String(person.id) === id)) ? <span className="text-[var(--red)]">· blocked</span> : null}
+            <button type="button" onClick={() => onChange(value.filter((current) => current !== id))} className="rounded-full px-1 leading-none hover:bg-black/10" aria-label={`Remove ${personName(people, id)}`}>×</button>
           </Badge>
         )) : <span className="text-xs text-muted-foreground">No assignee yet</span>}
       </div>
@@ -67,7 +71,7 @@ export function AssigneeField({ people, value, onChange, label = "Assignee" }: {
             {available.map((person) => (
               <SelectItem key={String(person.id)} value={String(person.id)}>
                 {text(person.nama) || text(person.name) || text(person.email)}
-                {hasAccount(person) ? "" : " · tanpa akun"}
+                {hasAccount(person) ? "" : " · no account"}
               </SelectItem>
             ))}
           </SelectContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContentLibraryAssetAction, createDesignAssetAction } from "@/app/actions/asset-actions";
+import { createContentLibraryAssetAction, createDesignAssetAction } from "@/app/_actions/asset-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";

@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
 import { createAgentToken, revokeAgentToken } from "@/lib/api/agent-tokens";
@@ -14,6 +16,7 @@ async function requireAdmin() {
 
 /** Makes a Claude access key. The key is returned once, to show it; only its hash is kept. */
 export async function createAgentKeyAction(input: { name: string; modules: string[] }) {
+  return expected(async () => {
   const admin = await requireAdmin();
   const name = String(input.name || "").trim().slice(0, 60);
   const modules = [...new Set((input.modules || []).filter(isAgentModule))];
@@ -23,12 +26,15 @@ export async function createAgentKeyAction(input: { name: string; modules: strin
   await logActivity({ userName: admin, module: "Settings", action: "Add Claude access key", detail: `${name} · ${modules.join(", ")}` });
   revalidatePath("/settings");
   return created;
+  });
 }
 
 export async function revokeAgentKeyAction(id: string, name: string) {
+  return expected(async () => {
   const admin = await requireAdmin();
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Unknown key.");
   await revokeAgentToken(id);
   await logActivity({ userName: admin, module: "Settings", action: "Revoke Claude access key", detail: name.slice(0, 60) });
   revalidatePath("/settings");
+  });
 }

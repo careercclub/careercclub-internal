@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteProspectAction, deleteProspectContactAction, loadProspectResearchAction } from "@/app/actions/mt-prospect-actions";
+import { deleteProspectAction, deleteProspectContactAction, loadProspectResearchAction } from "@/app/_actions/mt-prospect-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ResearchRow } from "@/lib/api/mt-prospects";

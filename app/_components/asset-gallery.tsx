@@ -1,6 +1,6 @@
 "use client";
 
-import { sendDesignAssetToLibraryAction } from "@/app/actions/asset-actions";
+import { sendDesignAssetToLibraryAction } from "@/app/_actions/asset-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApiRecord } from "@/lib/api/_crud";

@@ -2,7 +2,7 @@
 
 import { guard, submitTo } from "./safe-action";
 
-import { setMetaAdsDecisionAction, syncMetaAdsAction } from "@/app/actions/meta-ads-actions";
+import { setMetaAdsDecisionAction, syncMetaAdsAction } from "@/app/_actions/meta-ads-actions";
 import { scoreAdsCandidate } from "@/lib/analytics/content";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { compact, decisionOf, DECISIONS, type Decision } from "@/lib/marketing/view";

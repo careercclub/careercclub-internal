@@ -1,5 +1,7 @@
 "use server";
 
+import { expected } from "@/lib/actions/expected";
+
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
 import { normalizeNotificationRoles, publishTicketNotification } from "@/lib/api/notifications";
@@ -93,10 +95,13 @@ async function notifyTicket(input: Parameters<typeof publishTicketNotification>[
 }
 
 export async function createManagedRecord(key: string, formData: FormData) {
+  return expected(async () => {
   const user = await requireUser();
   const definition = getDefinition(key);
   requireMutationRole(definition, user);
   const values = getValues(key, formData);
+  // A field left empty gets its default when the row is added (e.g. a resource is a "link").
+  for (const field of definition.fields) if (field.defaultValue !== undefined && (values[field.name] === null || values[field.name] === undefined)) values[field.name] = field.defaultValue;
 
   if (key === "tickets" && !normalizeNotificationRoles(values.notification_roles).length) {
     values.notification_roles = [user.role?.trim().toLowerCase() || "admin"];
@@ -133,14 +138,18 @@ export async function createManagedRecord(key: string, formData: FormData) {
 
   revalidatePath(definition.path);
   revalidatePath("/dashboard");
+  });
 }
 
 export async function updateManagedRecord(key: string, id: string, formData: FormData) {
+  return expected(async () => {
   const user = await requireUser();
   const definition = getDefinition(key);
   requireMutationRole(definition, user);
   const previous = key === "tickets" ? await getRowById<ManagedRecord>(definition.table, id) : null;
   const values = getValues(key, formData);
+  // A field left empty gets its default when the row is added (e.g. a resource is a "link").
+  for (const field of definition.fields) if (field.defaultValue !== undefined && (values[field.name] === null || values[field.name] === undefined)) values[field.name] = field.defaultValue;
 
   if (key === "tickets" && !normalizeNotificationRoles(values.notification_roles).length) {
     values.notification_roles = getTicketRoles(previous, user.role);
@@ -185,9 +194,11 @@ export async function updateManagedRecord(key: string, id: string, formData: For
 
   revalidatePath(definition.path);
   revalidatePath("/dashboard");
+  });
 }
 
 export async function deleteManagedRecord(key: string, id: string) {
+  return expected(async () => {
   const user = await requireUser();
   const definition = getDefinition(key);
   requireMutationRole(definition, user);
@@ -224,4 +235,5 @@ export async function deleteManagedRecord(key: string, id: string) {
 
   revalidatePath(definition.path);
   revalidatePath("/dashboard");
+  });
 }

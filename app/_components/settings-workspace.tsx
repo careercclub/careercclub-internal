@@ -1,7 +1,7 @@
 "use client";
 
-import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/actions/record-actions";
-import { saveCompetitorIntelListsAction, saveMenuLabelsAction, saveMenuVisibilityAction } from "@/app/actions/settings-actions";
+import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
+import { saveCompetitorIntelListsAction, saveMenuLabelsAction, saveMenuVisibilityAction } from "@/app/_actions/settings-actions";
 import { RecordManager } from "@/app/_components/record-manager";
 import { UserManagement } from "@/app/_components/user-management";
 import { Button } from "@/components/ui/button";

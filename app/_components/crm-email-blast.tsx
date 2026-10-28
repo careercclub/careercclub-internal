@@ -1,6 +1,6 @@
 "use client";
 
-import { bulkUpdateCrmBuyers } from "@/app/actions/crm-actions";
+import { bulkUpdateCrmBuyers } from "@/app/_actions/crm-actions";
 import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";

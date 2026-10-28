@@ -1,6 +1,6 @@
 "use client";
 
-import { bulkUpdateCrmBuyers } from "@/app/actions/crm-actions";
+import { bulkUpdateCrmBuyers } from "@/app/_actions/crm-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
 import { crmSummary, CRM_STATUSES, filterCustomers, FUNNEL, funnelStage, groupCustomers, inTalentPool, rupiah, statusLabel, type CrmFilter, type Customer } from "@/lib/crm/view";

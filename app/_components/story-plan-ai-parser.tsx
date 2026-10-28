@@ -1,6 +1,6 @@
 "use client";
 
-import { createStoryPlanFromTextAction } from "@/app/actions/content-planning-actions";
+import { createStoryPlanFromTextAction } from "@/app/_actions/content-planning-actions";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styles from "../record-manager.module.css";

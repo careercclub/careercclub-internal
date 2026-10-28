@@ -41,7 +41,22 @@ export const createTicketDivision = divisions.create;
 export const updateTicketDivision = divisions.update;
 export const deleteTicketDivision = divisions.remove;
 
-export const listTicketPeople = people.list;
+/**
+ * Ticket people, each marked `blocked` when their sign-in account is Blocked (Settings → Users &
+ * roles). Matched by the linked account, or by email for a person without one. Pickers hide
+ * blocked people (lib/tickets/people.ts); their names still show on old tickets.
+ */
+export function listTicketPeople() {
+  return withPostgres((sql) => sql<TicketPersonRecord[]>`
+    select p.*, exists (
+      select 1 from auth_users u
+      where u.is_active is false
+        and (u.id::text = p.auth_user_id::text
+          or (p.auth_user_id is null and lower(btrim(u.email)) = lower(btrim(p.email))))
+    ) as blocked
+    from tkt_people p
+    order by p.nama asc`);
+}
 export const createTicketPerson = people.create;
 export const updateTicketPerson = people.update;
 export const deleteTicketPerson = people.remove;

@@ -1,6 +1,6 @@
 "use client";
 
-import { startSheetSyncAction, stopSheetSyncAction, syncSheetNowAction } from "@/app/actions/sheet-sync-actions";
+import { startSheetSyncAction, stopSheetSyncAction, syncSheetNowAction } from "@/app/_actions/sheet-sync-actions";
 import type { SheetSyncState } from "@/lib/api/sheet-sync";
 import type { SheetSyncJob } from "@/lib/sheet-sync/jobs";
 import { formatDay } from "@/lib/text/date";

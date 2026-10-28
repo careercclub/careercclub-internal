@@ -2,9 +2,9 @@
 
 import { revertWith } from "./safe-action";
 
-import { rescheduleTicketAction } from "@/app/actions/dashboard-actions";
-import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/actions/program-actions";
-import { deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
+import { rescheduleTicketAction } from "@/app/_actions/dashboard-actions";
+import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/_actions/program-actions";
+import { deleteTicketAction, duplicateTicketAction, updateTicketDetailsAction } from "@/app/_actions/ticket-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

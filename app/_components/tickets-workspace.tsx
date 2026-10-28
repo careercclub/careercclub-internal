@@ -2,7 +2,7 @@
 
 import { revertWith } from "./safe-action";
 
-import { addTicketLinkAction, changeTicketStatusAction, createTicketAction, deleteTicketAction, duplicateTicketAction, removeTicketLinkAction, updateTicketDetailsAction } from "@/app/actions/ticket-actions";
+import { addTicketLinkAction, changeTicketStatusAction, createTicketAction, deleteTicketAction, duplicateTicketAction, removeTicketLinkAction, updateTicketDetailsAction } from "@/app/_actions/ticket-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
