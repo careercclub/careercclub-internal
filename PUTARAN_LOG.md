@@ -1808,3 +1808,40 @@ Laporan user (screenshot prod): (1) Resources → Add resource → toast "An err
 ### Deploy
 
 Tanpa migrasi → `npm run vps:rebuild:frontend`. Setelah itu, kalau Add resource masih gagal, pesannya sekarang menyebut kolom yang bermasalah.
+
+## Putaran 54 — Baca data terakhir saat offline (Tahap 1, read-only) (28 Okt 2026)
+
+Permintaan user: saat offline tetap bisa membuka dan melihat data terakhir, dengan penanda offline; nanti juga bisa edit lalu tersinkron saat online. Setelah dibahas risikonya (bentrok data, data basi, keamanan perangkat), user setuju: **Tahap 1 read-only dulu**, Tahap 2 edit offline untuk aksi sederhana.
+
+### Temuan
+
+- Service worker lama sengaja tidak pernah menyimpan halaman yang butuh login: offline selalu jatuh ke halaman "You're offline".
+- Pindah halaman di dalam app tidak melewati service worker sebagai navigasi, jadi halaman itu harus diminta disimpan dari browser.
+- Server action yang dipanggil saat offline gagal dengan error jaringan teknis.
+
+### Do
+
+- `public/sw.js`: salinan terakhir tiap halaman yang dibuka saat online (cache `ccc-pages-v1`).
+  - Online selalu ambil dari server dulu; salinan hanya dipakai kalau server tidak terjangkau.
+  - Tidak pernah disimpan: Resources (password), Settings (user & kunci Claude), sign-in, `/api`.
+  - Salinan kedaluwarsa setelah 7 hari. Dihapus saat Sign out dan setiap kali server mengarahkan ke `/sign-in` (sesi habis / akun Blocked).
+  - Salinan diberi tanda waktu simpan (`meta ccc-offline-snapshot`).
+  - Halaman yang dibuka di dalam app diminta disimpan dari browser, paling sering sekali per 10 menit per halaman.
+- Bar **Offline** di atas konten (`app/_components/offline-status.tsx`): "Showing the copy saved 27 Oct 2026, 09:05." atau "Showing what was already loaded.", plus "Changes can’t be saved until you’re back online." Saat online lagi, halaman salinan otomatis dimuat ulang dari server.
+- Simpan saat offline (semua action lewat `unwrapAction`): tidak dikirim, pesan "You’re offline, so this was not saved. Try again when you’re back online.", form tetap terbuka dengan isiannya.
+- Halaman `/offline` kini menjelaskan bahwa halaman itu belum pernah dibuka di perangkat ini dalam 7 hari terakhir.
+- Kamus: istilah **saved copy** dan kalimat offline. DEPLOYMENT_VPS: catatan service worker.
+
+### Check
+
+- Tes service worker asli di Chromium (`sw.test.mjs`) 10: salinan tampil saat offline + tanda waktu; query lain jatuh ke salinan halaman yang sama; Resources tidak pernah disimpan; halaman yang belum dibuka → halaman offline; online → halaman live; simpan via pesan: /content tersimpan, /settings tidak; redirect ke /sign-in menghapus semua salinan; sesudah itu offline tidak ada yang bisa dibaca; salinan kedaluwarsa tidak ditampilkan.
+- Suite baru `p54.mjs` 13: bar muncul/hilang mengikuti koneksi; simpan tiket saat offline tidak terkirim & pesan jelas, form tetap terbuka; halaman live tidak di-reload, halaman salinan di-reload saat online; waktu simpan tampil; HP terang & gelap muat tanpa scroll samping, kontras 16.4:1 dan 14.4:1.
+- Regresi penuh lolos: 39 suite modul (termasuk p54 13), service worker 10, navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 203, import 93, search-db 19, agent-db 68, lint 0 error (1 temuan lint di komponen baru diperbaiki lalu suite terkait diulang), build lolos.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild:frontend` (tanpa migrasi). Service worker baru aktif saat app dibuka berikutnya; halaman mulai tersimpan sejak itu.
+
+### Berikutnya (Tahap 2)
+
+Edit offline untuk aksi sederhana (status/detail tiket, centang task, komentar): antrean di perangkat, penanda "pending", cek bentrok lewat `updated_at`, daftar "needs check" untuk perubahan yang ditolak.

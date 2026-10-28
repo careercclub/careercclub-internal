@@ -1,5 +1,6 @@
 "use client";
 
+import { forgetSavedPages, OfflineStatus } from "@/app/_components/offline-status";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -115,7 +116,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
             <strong>{displayName}</strong>
             <span>{user.role || "member"}</span>
           </div>
-          <button className={styles.signOutButton} type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Sign out</button>
+          <button className={styles.signOutButton} type="button" onClick={() => { forgetSavedPages(); void signOut({ callbackUrl: "/sign-in" }); }}>Sign out</button>
         </div>
 
         <div className={styles.brand}>
@@ -189,7 +190,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
               <button
                 className={styles.signOutButton}
                 type="button"
-                onClick={() => signOut({ callbackUrl: "/sign-in" })}
+                onClick={() => { forgetSavedPages(); void signOut({ callbackUrl: "/sign-in" }); }}
               >
                 Sign out
               </button>
@@ -197,7 +198,7 @@ export function AppShell({ children, hiddenSlugs = [], navBadges = {}, monthLabe
           </div>
         </header>
 
-        <div className={styles.content} id="mainContent">{children}</div>
+        <div className={styles.content} id="mainContent"><Suspense fallback={null}><OfflineStatus /></Suspense>{children}</div>
       </section>
 
       <nav className={styles.bottomNav} aria-label="Mobile navigation">

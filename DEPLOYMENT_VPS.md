@@ -159,6 +159,10 @@ curl -fsS https://internal.ccclub.id/api/health
 curl -I https://internal.ccclub.id/sign-in
 ```
 
+## Offline reading (service worker)
+
+`public/sw.js` keeps the last copy of each page a signed-in person opened (cache `ccc-pages-v1`, 7 days) so it can be read offline. Resources, Settings, sign-in and `/api` are never kept. Saved pages are deleted on Sign out and whenever the server sends the browser to `/sign-in` (session ended or account Blocked). When changing what a page may show, keep personal secrets out of cached routes or add the route to `NEVER_CACHED` in `public/sw.js`; bump `PAGE_CACHE` to drop every saved copy on the next visit.
+
 ## Updating
 
 ```bash

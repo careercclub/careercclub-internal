@@ -25,6 +25,12 @@ Aturan tambahan:
 - Dialog bikin baru: judul "Add X" → simpan "Add X"; dialog ubah: judul "Edit X" → simpan "Save X". Upload file: "Upload X" → "Upload X".
 - Kirim aset ke Content Library: "Add to library" di tombol dan judul dialog.
 
+## Offline
+
+- **Offline**: label bar saat tidak ada internet. Isi: "Showing the copy saved {tanggal}, {jam}." atau "Showing what was already loaded.", lalu "Changes can’t be saved until you’re back online."
+- Simpan saat offline: "You’re offline, so this was not saved. Try again when you’re back online."
+- Pakai **saved copy** (jangan cache, snapshot, data lama).
+
 ## Uang (`lib/text/money.ts`)
 
 | Tempat | Format | Fungsi |

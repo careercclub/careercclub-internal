@@ -1,6 +1,12 @@
 const STATIC_CACHE = "ccc-static-v2";
+// Last copy of each page the signed-in person opened, to read when offline (Putaran 54).
+const PAGE_CACHE = "ccc-pages-v1";
 const OFFLINE_URL = "/offline";
 const PRECACHE_URLS = [OFFLINE_URL, "/favicon.ico", "/pwa-icon/192"];
+const PAGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+// Never kept on the device: passwords (Resources), users & Claude keys (Settings), sign-in.
+const NEVER_CACHED = [/^\/resources(\/|$)/, /^\/settings(\/|$)/, /^\/sign-in(\/|$)/, /^\/offline(\/|$)/, /^\/api\//];
+const CACHED_AT = "x-ccc-cached-at";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS)));
@@ -10,10 +16,76 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE && key !== PAGE_CACHE).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });
+
+/** Sign out, a blocked account or a new sign-in: the saved pages of the last person go. */
+function forgetPages() {
+  return caches.delete(PAGE_CACHE);
+}
+
+const REFRESH_EVERY_MS = 10 * 60 * 1000;
+
+/** A page opened inside the app (no browser navigation) is fetched once more here and saved. */
+async function refreshPage(href) {
+  const url = new URL(href);
+  if (url.origin !== self.location.origin || !cacheable(url)) return;
+  const cache = await caches.open(PAGE_CACHE);
+  const old = await cache.match(pageKey(url));
+  const at = old ? Date.parse(old.headers.get(CACHED_AT) || "") : 0;
+  if (at && Date.now() - at < REFRESH_EVERY_MS) return;
+  const response = await fetch(url.href, { credentials: "include", headers: { accept: "text/html" } });
+  if (/^\/sign-in(\/|$)/.test(new URL(response.url || url.href).pathname)) return forgetPages();
+  if (response.ok && !response.redirected && (response.headers.get("content-type") || "").includes("text/html")) await savePage(url, response);
+}
+
+self.addEventListener("message", (event) => {
+  if (!event.data) return;
+  if (event.data.type === "ccc-forget-pages") event.waitUntil(forgetPages());
+  if (event.data.type === "ccc-save-page" && typeof event.data.url === "string") event.waitUntil(refreshPage(event.data.url).catch(() => undefined));
+});
+
+const pageKey = (url) => `${url.origin}${url.pathname}${url.search}`;
+const cacheable = (url) => !NEVER_CACHED.some((pattern) => pattern.test(url.pathname));
+
+async function savePage(url, response) {
+  const body = await response.clone().text();
+  const headers = new Headers({ "content-type": response.headers.get("content-type") || "text/html; charset=utf-8", [CACHED_AT]: new Date().toISOString() });
+  const cache = await caches.open(PAGE_CACHE);
+  await cache.put(pageKey(url), new Response(body, { status: 200, headers }));
+}
+
+/** The saved copy, marked so the page shows "Offline · data from …"; null when none or too old. */
+async function savedPage(url) {
+  const cache = await caches.open(PAGE_CACHE);
+  const saved = (await cache.match(pageKey(url))) || (await cache.match(`${url.origin}${url.pathname}`));
+  if (!saved) return null;
+  const cachedAt = saved.headers.get(CACHED_AT) || "";
+  if (!cachedAt || Date.now() - Date.parse(cachedAt) > PAGE_MAX_AGE_MS) return null;
+  const html = await saved.text();
+  const marker = `<meta name="ccc-offline-snapshot" content="${cachedAt}">`;
+  const marked = html.includes("<head>") ? html.replace("<head>", `<head>${marker}`) : marker + html;
+  return new Response(marked, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+}
+
+async function navigate(request) {
+  const url = new URL(request.url);
+  try {
+    const response = await fetch(request);
+    const finalPath = new URL(response.url || request.url).pathname;
+    if (/^\/sign-in(\/|$)/.test(finalPath) || /^\/sign-in(\/|$)/.test(url.pathname)) await forgetPages();
+    else if (response.ok && response.type === "basic" && !response.redirected && cacheable(url) && (response.headers.get("content-type") || "").includes("text/html")) await savePage(url, response);
+    return response;
+  } catch (error) {
+    if (cacheable(url)) {
+      const saved = await savedPage(url);
+      if (saved) return saved;
+    }
+    return (await caches.match(OFFLINE_URL)) || Response.error();
+  }
+}
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
@@ -24,7 +96,7 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/") || url.pathname === "/sw.js") return;
 
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(navigate(request));
     return;
   }
 

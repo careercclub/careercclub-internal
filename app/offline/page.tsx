@@ -7,7 +7,7 @@ export default function OfflinePage() {
       <section className={styles.panel}>
         <span>CCC Internal</span>
         <h1>You are offline</h1>
-        <p>Reconnect to load current tickets and operational data. Authenticated pages are never served from a stale cache.</p>
+        <p>This page has not been opened on this device in the last 7 days, so there is no saved copy to show. Pages you open while online can be read offline; Resources and Settings are never saved on the device.</p>
         <Link href="/dashboard">Try again</Link>
       </section>
     </main>
