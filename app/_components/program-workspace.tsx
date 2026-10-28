@@ -2,6 +2,7 @@
 
 import { revertWith } from "./safe-action";
 
+import { saveOrQueue } from "@/lib/offline/queue";
 import { addEventLinkAction, createEventAction, createTaskAction, deleteEventLinkAction, deleteTaskAction, updateEventAction, updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/_actions/program-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -94,7 +95,7 @@ function TaskFormModal({ projectId, task, people, onClose, onSaved, onDeleted }:
     if (!form.title.trim()) { setError("Task title is required."); document.getElementById("task-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
-      if (editing && task) { await updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees }); onSaved({ ...task, ...form, due_date: form.dueDate, assignee_ids: assignees }); }
+      if (editing && task) { await saveOrQueue({ kind: "task", id: String(task.id), label: form.title, before: task, after: { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || null, due_date: form.dueDate || null, assignee_ids: assignees } }, () => updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees })); onSaved({ ...task, ...form, due_date: form.dueDate, assignee_ids: assignees }); }
       else { const row = await createTaskAction({ projectId, title: form.title, description: form.description, phase: form.phase, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assigneeIds: assignees }); onSaved(row); }
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save the task."); setBusy(false); }
   }
@@ -282,7 +283,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
 
   function progressOf(eventId: string) { const related = taskRows.filter((task) => String(task.project_id) === eventId); const done = related.filter((task) => task.status === "Done").length; return { done, total: related.length, pct: related.length ? Math.round((done / related.length) * 100) : 0 }; }
   function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; const person = ids.length ? personMap.get(ids[0]) : null; if (!person) return { name: "—", div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
-  function toggleTask(task: ApiRecord) { const next = task.status === "Done" ? "Todo" : "Done"; const before = taskRows; setTaskRows((current) => current.map((row) => String(row.id) === String(task.id) ? { ...row, status: next } : row)); void updateProgramTaskWorkflowAction(String(task.id), { status: next }).catch(revertWith(() => setTaskRows(before), "Could not change the task status.")); }
+  function toggleTask(task: ApiRecord) { const next = task.status === "Done" ? "Todo" : "Done"; const before = taskRows; setTaskRows((current) => current.map((row) => String(row.id) === String(task.id) ? { ...row, status: next } : row)); void saveOrQueue({ kind: "task", id: String(task.id), label: text(task.title), before: task, after: { status: next } }, () => updateProgramTaskWorkflowAction(String(task.id), { status: next })).catch(revertWith(() => setTaskRows(before), "Could not change the task status.")); }
   async function deleteLink(eventId: string, index: number) {
     if (!(await confirmAction({ title: "Delete this link?", confirmLabel: "Delete link", danger: true }))) return;
     setLinkError("");

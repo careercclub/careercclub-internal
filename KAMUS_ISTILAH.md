@@ -30,6 +30,9 @@ Aturan tambahan:
 - **Offline**: label bar saat tidak ada internet. Isi: "Showing the copy saved {tanggal}, {jam}." atau "Showing what was already loaded.", lalu "Changes can’t be saved until you’re back online."
 - Simpan saat offline: "You’re offline, so this was not saved. Try again when you’re back online."
 - Pakai **saved copy** (jangan cache, snapshot, data lama).
+- Perubahan tiket/task saat offline: "{n} changes waiting to sync" (offline), "Syncing {n} changes…" (online), "{n} change needs a check" + tombol **Review changes** (judul dialog sama).
+- Di dialog Review changes: **Keep my change** (simpan punya saya di atas yang sekarang) dan **Discard my change** (buang dari perangkat). Jangan pakai Override, Force, Revert.
+- Bar offline: "Ticket and task changes wait on this device; anything else needs a connection."
 
 ## Uang (`lib/text/money.ts`)
 

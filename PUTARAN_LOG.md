@@ -1845,3 +1845,40 @@ Permintaan user: saat offline tetap bisa membuka dan melihat data terakhir, deng
 ### Berikutnya (Tahap 2)
 
 Edit offline untuk aksi sederhana (status/detail tiket, centang task, komentar): antrean di perangkat, penanda "pending", cek bentrok lewat `updated_at`, daftar "needs check" untuk perubahan yang ditolak.
+
+## Putaran 55 — Edit tiket & task saat offline, sinkron saat online lagi (Tahap 2) (28 Okt 2026)
+
+Lanjutan Tahap 1 (Putaran 54), sesuai persetujuan user: edit offline hanya untuk aksi sederhana, dengan penanda pending, cek bentrok, dan daftar yang perlu dicek.
+
+### Temuan
+
+- Tabel `tickets`/`tasks` di produksi tidak dijamin punya `updated_at` (tidak ada di schema-expectations), jadi cek bentrok tidak bisa pakai waktu ubah tanpa migrasi.
+- Belum ada isian komentar tiket di app (action-nya ada, tidak dipakai di layar), jadi komentar tidak masuk tahap ini.
+- Form detail tiket mengirim semua kolom sekaligus; kalau di-replay mentah, edit orang lain di kolom lain bisa tertimpa.
+
+### Do
+
+- **Yang bisa menunggu koneksi** (7 titik simpan): Mark ticket done/Reopen, Save ticket (Tickets & Dashboard), geser deadline tiket/task di kalender Dashboard, Mark task done/Reopen (Program), Save task (Program & Dashboard). Hal lain tetap: "You’re offline, so this was not saved…".
+- **Aturan di satu tempat** (`lib/offline/fields.ts`, dipakai browser & server): yang disimpan hanya kolom yang benar-benar diubah, beserta nilai yang dilihat sebelumnya. Saat dikirim, per kolom:
+  - nilai di database sudah sama dengan pilihan → dianggap sudah (aman kalau terkirim dua kali);
+  - masih sama dengan yang dilihat → disimpan;
+  - sudah diubah orang lain → **needs a check**, tidak ada yang ditimpa.
+  - Kolom yang tidak diubah memakai nilai database sekarang, jadi edit orang lain (mis. Priority, CC) tetap.
+- **Server** (`applyOfflineChangeAction`): cek login, cek kolom yang diizinkan, lalu menyimpan lewat action yang sama dengan simpan online (aturan status, notifikasi, sinkron tiket↔task sama).
+- **Browser** (`lib/offline/queue.ts`): antrean di IndexedDB perangkat, dikirim urut dari yang terlama saat online lagi (dan dicoba ulang tiap 30 detik kalau server belum menjawab). Dua perubahan ke item yang sama digabung; kalau dikembalikan ke semula, tidak ada yang dikirim. Perubahan baru untuk item yang masih menunggu ikut antre di belakangnya.
+- **Bar** di atas konten: "1 change waiting to sync" (offline), "Syncing 1 change…" (online), "1 change needs a check" + **Review changes**. Dialog menampilkan item, alasan, "Yours: … · Now: …", tombol **Keep my change** / **Discard my change**. Item yang sudah dihapus hanya bisa di-discard.
+- **Sign out** menghapus perubahan yang belum terkirim dari perangkat (selain salinan halaman).
+- Kamus & DEPLOYMENT_VPS diperbarui.
+
+### Check
+
+- Unit `lib/offline/fields.test.mjs` 6: cara baca kolom (tanggal, daftar orang), hanya kolom yang berubah, penggabungan, apply/sudah/bentrok.
+- `tests/agent` 77 (+9, Postgres asli): status tersimpan; terkirim dua kali bukan bentrok; detail tersimpan dengan Priority & CC orang lain tetap; bentrok tidak menimpa; Keep my change menyimpan; tiket terhapus dilaporkan; aturan status sama dengan simpan online; kolom di luar daftar ditolak; belum login ditolak.
+- Suite baru `p55.mjs` 22: tiket & task offline tidak terkirim tapi tampil berubah; penanda pending; done lalu reopen = tidak ada yang dikirim; Save ticket offline menutup popup dan judul baru tampil; online lagi: terkirim urut tanpa menimpa, bar hilang; bentrok → Review changes (Yours/Now) → Keep my change; task terhapus → hanya Discard; HP tanpa scroll samping; Sign out mengosongkan antrean.
+- Ditemukan & diperbaiki saat regresi: (1) halaman salinan yang tampil saat browser bilang "online" tapi server tidak menjawab akan reload terus-menerus → sekarang reload hanya saat koneksi baru kembali (tes baru di p54, jadi 14); (2) action baru belum mengikuti pola `expected(async () => {` yang dicek unit test → disesuaikan; (3) sinkron tidak boleh mulai ulang tiap render → tidak lagi bergantung pada objek router.
+- Belum diuji: jalur task di Postgres asli (lewat action task yang sama, sudah diuji di suite program), dan halaman salinan offline belum menampilkan perubahan yang masih antre (bar menyebut jumlahnya).
+- Regresi penuh lolos: 40 suite modul (p54 14, p55 22), service worker 10, navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 209, import 93, search-db 19, agent-db 77, lint 0 error, build lolos.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild:frontend` (tanpa migrasi).

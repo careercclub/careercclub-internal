@@ -239,5 +239,37 @@ globalThis.__session = null;
 actionResult = await createManagedRecord("resources", form({ kategori: "Account", nama: "X" }));
 ok(actionResult && actionResult.__actionError === "Unauthorized", "signed out: the message comes back too");
 
+// ── Changes made offline reach the server (Putaran 55) ──
+await sql.unsafe(migration("004_ticket_notifications_and_pwa.sql")).catch(async () => { await sql`create table if not exists ticket_notifications (id uuid primary key default gen_random_uuid(), ticket_id uuid, actor_user_id text, actor_name text, event_type text, title text, message text, target_roles text[], created_at timestamptz default now())`; });
+await sql`create table if not exists tickets (id uuid primary key default gen_random_uuid(), ticket_no text, title text, description text, status text default 'Todo', priority text default 'Med', type_id uuid, divisi_id uuid, assigned_to_id uuid, assigned_to_ids uuid[] default '{}', requester_id uuid, due_date date, cc text[] default '{}', links jsonb default '[]', files jsonb default '[]', komentar jsonb default '[]', notification_roles text[] default '{admin}', source text, gcal_added boolean default false, related_task_id uuid, created_at timestamptz default now())`;
+const { applyOfflineChangeAction } = await import("./out/offline.mjs");
+globalThis.__session = { user: { id: "u1", name: "Tester", role: "admin" } };
+const [tk] = await sql`insert into tickets (title, status, priority, due_date, cc) values ('Cetak banner', 'Todo', 'Med', '2026-10-30', '{a@x.id}') returning id`;
+let replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: { status: "Todo" }, after: { status: "Done" } });
+let [tkNow] = await sql`select status, priority from tickets where id = ${tk.id}`;
+ok(replay?.result === "applied" && tkNow.status === "Done", `offline: status change applied (${JSON.stringify(replay)})`);
+replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: { status: "Todo" }, after: { status: "Done" } });
+ok(replay?.result === "already", "offline: the same change sent twice is not a conflict");
+await sql`update tickets set priority = 'High' where id = ${tk.id}`;
+replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: { title: "Cetak banner", due_date: "2026-10-30" }, after: { title: "Cetak banner A1", due_date: "2026-11-02" } });
+[tkNow] = await sql`select title, priority, status, to_char(due_date, 'YYYY-MM-DD') as due, cc from tickets where id = ${tk.id}`;
+ok(replay?.result === "applied" && tkNow.title === "Cetak banner A1" && tkNow.due === "2026-11-02" && tkNow.priority === "High" && tkNow.status === "Done" && tkNow.cc.join() === "a@x.id", `offline: details applied, another person's Priority and CC kept (${JSON.stringify(tkNow)})`);
+await sql`update tickets set status = 'In Progress' where id = ${tk.id}`;
+replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: { status: "Done" }, after: { status: "Todo" } });
+[tkNow] = await sql`select status from tickets where id = ${tk.id}`;
+ok(replay?.result === "conflict" && replay.conflicts[0].now === "In Progress" && tkNow.status === "In Progress", "offline: someone changed the same field → conflict, nothing overwritten");
+replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: { status: "Done" }, after: { status: "Todo" } }, true);
+[tkNow] = await sql`select status from tickets where id = ${tk.id}`;
+ok(replay?.result === "applied" && tkNow.status === "Todo", "offline: Keep my change saves over it");
+replay = await applyOfflineChangeAction({ kind: "ticket", id: "00000000-0000-4000-8000-000000000000", before: { status: "Todo" }, after: { status: "Done" } });
+ok(replay?.result === "missing", "offline: a deleted ticket is reported, not an error");
+replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: { status: "Todo" }, after: { status: "Nope" } });
+ok(replay?.__actionError === "Invalid ticket status.", `offline: the same rules as an online save (${JSON.stringify(replay)})`);
+replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: {}, after: { cc: "evil@x.id" } });
+ok(replay?.__actionError === "This change cannot be saved offline.", "offline: only the listed fields can be sent");
+globalThis.__session = null;
+replay = await applyOfflineChangeAction({ kind: "ticket", id: tk.id, before: { status: "Todo" }, after: { status: "Done" } });
+ok(replay?.__actionError === "Unauthorized", "offline: signed out → nothing saved");
+
 await sql.end();
 console.log(`\n${pass} pass, ${fail} fail`); process.exit(fail ? 1 : 0);

@@ -2,6 +2,7 @@
 
 import { revertWith } from "./safe-action";
 
+import { saveOrQueue } from "@/lib/offline/queue";
 import { addTicketLinkAction, changeTicketStatusAction, createTicketAction, deleteTicketAction, duplicateTicketAction, removeTicketLinkAction, updateTicketDetailsAction } from "@/app/_actions/ticket-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -95,8 +96,9 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
     if (!form.title.trim()) { setError("Ticket title is required."); document.getElementById("edit-ticket-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
-      const updated = await updateTicketDetailsAction(String(ticket.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assignedToIds: assignees, divisionId: divisionId || null, typeId: ticket.type_id ?? null, cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc) });
-      onSaved({ ...ticket, ...updated });
+      const after = { title: form.title, description: form.description, status: form.status, priority: form.priority, due_date: form.dueDate || null, assigned_to_ids: assignees, divisi_id: divisionId || null };
+      const updated = await saveOrQueue({ kind: "ticket", id: String(ticket.id), label: form.title, before: ticket, after }, () => updateTicketDetailsAction(String(ticket.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, dueDate: form.dueDate || null, assignedToIds: assignees, divisionId: divisionId || null, typeId: ticket.type_id ?? null, cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc) }));
+      onSaved({ ...ticket, ...(updated === "queued" ? after : updated) });
       // Save ticket closes the popup, like every other save (adding or removing a link keeps it open).
       onClose();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); } finally { setBusy(false); }
@@ -212,7 +214,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, meId = null, 
     const next = row.status === "Done" ? "Todo" : "Done";
     const before = items;
     setItems((current) => current.map((item) => String(item.id) === String(row.id) ? { ...item, status: next } : item));
-    await changeTicketStatusAction(String(row.id), next).catch(revertWith(() => setItems(before), "Could not change the ticket status."));
+    await saveOrQueue({ kind: "ticket", id: String(row.id), label: text(row.title), before: row, after: { status: next } }, () => changeTicketStatusAction(String(row.id), next)).catch(revertWith(() => setItems(before), "Could not change the ticket status."));
   }
 
   return (

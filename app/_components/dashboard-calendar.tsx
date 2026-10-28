@@ -1,6 +1,7 @@
 "use client";
 
 import { revertWith } from "./safe-action";
+import { saveOrQueue } from "@/lib/offline/queue";
 
 import { rescheduleTicketAction } from "@/app/_actions/dashboard-actions";
 import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "@/app/_actions/program-actions";
@@ -76,11 +77,12 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
   async function save() {
     setBusy(true); setError("");
     try {
-      await updateTicketDetailsAction(String(ticket.id), {
+      const after = { title: form.title, description: form.description, status: form.status, priority: form.priority, due_date: form.dueDate || null, assigned_to_ids: assignees, divisi_id: divisionId || null };
+      await saveOrQueue({ kind: "ticket", id: String(ticket.id), label: form.title, before: ticket, after }, () => updateTicketDetailsAction(String(ticket.id), {
         title: form.title, description: form.description, status: form.status, priority: form.priority, dueDate: form.dueDate || null,
         assignedToIds: assignees, divisionId: divisionId || null, typeId: ticket.type_id ?? null,
         cc: Array.isArray(ticket.cc) ? ticket.cc.join(",") : text(ticket.cc),
-      });
+      }));
       onSaved({ ...ticket, ...form, due_date: form.dueDate, divisi_id: divisionId, assigned_to_ids: assignees });
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); setBusy(false); }
   }
@@ -137,7 +139,8 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
     if (!form.title.trim()) { setError("Task title is required."); document.getElementById("calendar-task-title")?.focus(); return; }
     setBusy(true); setError("");
     try {
-      await updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees });
+      const after = { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || null, due_date: form.dueDate || null, assignee_ids: assignees };
+      await saveOrQueue({ kind: "task", id: String(task.id), label: form.title, before: task, after }, () => updateTaskDetailsAction(String(task.id), { title: form.title, description: form.description, status: form.status, priority: form.priority, phase: form.phase || undefined, dueDate: form.dueDate || null, assigneeIds: assignees }));
       onSaved({ ...task, ...form, due_date: form.dueDate, assignee_ids: assignees });
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save."); setBusy(false); }
   }
@@ -210,11 +213,13 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
     if (kind === "ticket") {
       const before = ticketRows;
       setTicketRows((rows) => rows.map((row) => (String(row.id) === id ? { ...row, due_date: date } : row)));
-      startTransition(async () => { await rescheduleTicketAction(id, date).catch(revertWith(() => setTicketRows(before), "Could not move the ticket.")); });
+      const row: Record<string, unknown> = before.find((item) => String(item.id) === id) || {};
+      startTransition(async () => { await saveOrQueue({ kind: "ticket", id, label: text(row.title), before: row, after: { due_date: date } }, () => rescheduleTicketAction(id, date)).catch(revertWith(() => setTicketRows(before), "Could not move the ticket.")); });
     } else if (kind === "task") {
       const before = taskRows;
       setTaskRows((rows) => rows.map((row) => (String(row.id) === id ? { ...row, due_date: date } : row)));
-      startTransition(async () => { await updateProgramTaskWorkflowAction(id, { dueDate: date }).catch(revertWith(() => setTaskRows(before), "Could not move the task.")); });
+      const row: Record<string, unknown> = before.find((item) => String(item.id) === id) || {};
+      startTransition(async () => { await saveOrQueue({ kind: "task", id, label: text(row.title), before: row, after: { due_date: date } }, () => updateProgramTaskWorkflowAction(id, { dueDate: date })).catch(revertWith(() => setTaskRows(before), "Could not move the task.")); });
     }
   }
 
