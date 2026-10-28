@@ -94,7 +94,7 @@ export const TICKET_SETUP_SECTIONS = [
   { id: "divisions", label: "Divisions" },
   { id: "people", label: "People" },
   { id: "types", label: "Request types" },
-  { id: "flow", label: "Status & email" },
+  { id: "flow", label: "Status & notifications" },
 ] as const;
 
 export type TicketSetupSectionId = (typeof TICKET_SETUP_SECTIONS)[number]["id"];

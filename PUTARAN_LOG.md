@@ -1882,3 +1882,82 @@ Lanjutan Tahap 1 (Putaran 54), sesuai persetujuan user: edit offline hanya untuk
 ### Deploy
 
 `git pull origin refactor && npm run vps:rebuild:frontend` (tanpa migrasi).
+
+## Putaran 56 — Audit integritas data: tidak ada lagi data yatim (28 Okt 2026)
+
+Permintaan user: evaluasi seluruh UX supaya tidak ada error atau data yang tidak sinkron, contohnya user sudah dihapus tapi masih ada di assignee. Nama evaluasinya: **audit integritas data** (referential integrity / data yatim), bagian dari audit alur data (traceability) di prinsip build.
+
+### Temuan (3 audit paralel, temuan berat dicek ulang)
+
+- **Hapus tidak pernah mengecek siapa yang masih memakai** (`deleteManagedRecord` → `deleteRow`). Contoh: People, Division, dan Type yang dihapus meninggalkan id mati di tiket dan task. Assignee lalu tampil sebagai uuid atau "No assignee" palsu, dan tiketnya hilang dari board non-admin.
+- **Foreign key cascade dari migrasi 001/013 tidak pernah jalan di produksi** (tabel sudah ada dari dump Supabase). Anak-anak tertinggal saat induknya dihapus:
+  - deal/outreach partner;
+  - transaksi CRM;
+  - fitur/benefit/bundle produk;
+  - produk/harga/snapshot kompetitor;
+  - rundown event.
+- **Pesan konfirmasi salah**: Partnership bilang "Its deals are deleted too" (padahal tidak). Kompetitor tidak menyebut flag yang ikut hilang.
+- **Dropdown form umum kehilangan nilai lama** (mis. status task "Blocked"): save menyimpan kosong, lalu sinkron membuka lagi tiket tertautnya. Format Content Evaluation yang tidak dikenal tersimpan jadi "Carousel". Platform/kategori pain point lama tampil sebagai pilihan pertama.
+- **Sinkron task → tiket** menimpa Division/Type tiket jadi kosong kalau assignee task sudah dihapus.
+- **Akun Blocked** masih bisa diundang dari kalender task Program dan masih bisa dipilih di form umum (/program/tasks).
+- **Assignee carousel** di luar division Marketing tampil "No assignee".
+- **Panel Settings "Who gets ticket emails" keliru**: tidak ada email tiket; notifikasi dikirim per role pembuat tiket.
+
+### Do
+
+- **Satu aturan hapus** (`lib/records/delete-rules.ts` + `lib/records/delete.ts`), dipakai semua jalur hapus (form umum, CRM bulk, product knowledge, story date):
+  - *usedBy*: hapus ditolak selama masih dipakai, dengan pesan di mana. Berlaku untuk:
+    - person di tiket, task, dan carousel;
+    - division di tiket, person, dan type;
+    - type di tiket;
+    - platform/kategori pain point (dicocokkan lewat nama, huruf besar/kecil diabaikan);
+    - produk yang ada di bundle.
+  - Person yang punya akun login diarahkan ke Block.
+  - *children*: anak-anak ikut terhapus dalam satu transaksi (termasuk cucu, mis. shortlink fitur). Konfirmasi menyebut jumlah aslinya (`describeDeleteAction`, `confirmDelete`). Event juga menghapus rundown-nya.
+- **Dropdown selalu menyimpan nilai sekarang** (`lib/forms/options.ts` `withCurrent`), ditandai "(not in list)". Dipakai di:
+  - semua select form umum;
+  - format Content Evaluation;
+  - platform/kategori pain point;
+  - Content Library (pindahan dari helper lokal).
+- **"Removed person"** untuk id yang tidak menunjuk siapa pun: chip assignee, avatar tiket, task Program, Dashboard, dan carousel (`personLabel`).
+- `invitablePeople`: undangan kalender task Program tidak lagi menyertakan akun Blocked (sama dengan kalender tiket).
+- Pilihan People di form umum menyembunyikan akun Blocked (satu query `BLOCKED_PERSON_SQL` dipakai bersama).
+- Carousel: daftar pilihan tetap Marketing, tapi orang yang sudah terpilih selalu tampil.
+- Sinkron task → tiket hanya mengisi Division/Type/Requester kalau orang dan division-nya masih ada; kalau tidak, nilai tiket tetap.
+- Settings: tab "Status & notifications" dan panel "Division members" dengan penjelasan yang benar; orang Blocked ditandai.
+- `database/checks/orphans.sql`: hitungan data yatim di produksi (read-only, hanya angka).
+
+### Butuh keputusan user (hak lihat tiket, tidak diubah)
+
+- A. `requester_id` tidak pernah diisi saat tiket dibuat, sehingga staff yang membuat tiket untuk orang lain tidak bisa melihatnya lagi.
+- B. Lead tanpa division bisa melihat tiket semua orang yang juga tanpa division.
+- C. User baru tidak otomatis masuk People tiket, sehingga board-nya kosong dan dia tidak bisa di-assign.
+- D. Notifikasi tiket dikirim ke role pembuat tiket, bukan ke assignee-nya.
+
+### Nice-to-have (belum)
+
+- Rename daftar master ikut mengganti data.
+- Tab Settings yang tidak dipakai (Menu labels, Competitor lists).
+- Kolom board pipeline untuk stage lama.
+- Partnership tier/status lama.
+- Bersihkan data yatim di produksi + pasang foreign key (setelah hasil `orphans.sql`).
+
+### Check
+
+- Unit `lib/records/delete-rules.test.mjs` 5: teks konfirmasi/penolakan, aturan wajib ada, dropdown simpan nilai lama, Removed person, undangan tanpa Blocked.
+- `tests/agent` 92 (+15, Postgres asli):
+  - person di 2 tiket + 1 task ditolak dengan pesan itu (juga lewat action Settings);
+  - person dengan akun → Block;
+  - person tidak dipakai terhapus;
+  - division dengan anggota ditolak, division kosong boleh;
+  - platform dipakai (beda huruf/spasi) ditolak;
+  - konfirmasi partner "2 deals and 1 outreach log", dan semuanya ikut terhapus;
+  - produk di bundle ditolak; bundle terhapus bersama item-nya; produk lalu terhapus bersama fitur dan shortlink;
+  - hapus massal CRM ikut menghapus deal.
+- Suite baru `p56.mjs` 8: Settings → People ditolak tanpa tombol hapus; konfirmasi partner dengan jumlah asli; pain point menyimpan platform lama; Removed person di Tickets & Program. `set.mjs` disesuaikan dengan nama tab baru.
+- Ditemukan saat regresi: komponen hapus harus tahan balasan kosong (suite RecordManager), dan tes konsistensi label kini juga mengecek semua `confirmDelete` ("Delete {object}").
+- Regresi penuh lolos: 41 suite modul (p56 8), service worker 10, navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 214, import 93, search-db 19, agent-db 92, lint 0 error, build lolos.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild:frontend` (tanpa migrasi). Lalu jalankan `database/checks/orphans.sql` di VPS dan kirim angkanya.

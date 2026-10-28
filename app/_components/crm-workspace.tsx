@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDelete } from "./confirm-delete";
 import { bulkUpdateCrmBuyers } from "@/app/_actions/crm-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
@@ -63,7 +64,7 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
 
   async function mutate(operation: "status" | "talent" | "delete", value?: string) {
     if (!selectedIds.length) return;
-    if (operation === "delete" && !(await confirmAction({ title: `Delete ${selectedIds.length} transaction${selectedIds.length === 1 ? "" : "s"}?`, message: "This cannot be undone.", confirmLabel: selectedIds.length === 1 ? "Delete transaction" : "Delete transactions", danger: true }))) return;
+    if (operation === "delete" && !(await confirmDelete({ recordKey: "buyers", ids: selectedIds, title: `Delete ${selectedIds.length} transaction${selectedIds.length === 1 ? "" : "s"}?`, confirmLabel: selectedIds.length === 1 ? "Delete transaction" : "Delete transactions" }))) return;
     startTransition(async () => {
       try { await bulkUpdateCrmBuyers(selectedIds, operation, value); setSelected([]); setBulkStatus(""); setBulkPool(""); setMessage("CRM records updated."); router.refresh(); }
       catch (error) { setMessage(error instanceof Error ? error.message : "Update failed."); }

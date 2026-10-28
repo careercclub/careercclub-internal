@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDelete } from "./confirm-delete";
 import { createProductKnowledgeAction, deleteProductKnowledgeAction } from "@/app/_actions/product-knowledge-actions";
 import { createManagedRecord } from "@/app/_actions/record-actions";
 import { duplicateProductAction } from "@/app/_actions/product-actions";
@@ -190,7 +191,11 @@ function KnowledgeCard({ kind, title, one, icon, rows, productId, workspace }: {
   const [pending, start] = useTransition();
   const ownParents = kind === "feature" ? workspace.features.filter((row) => String(row.product_id) === productId) : kind === "subProduct" ? workspace.subProducts.filter((row) => String(row.product_id) === productId) : [];
   async function remove(row: ApiRecord) {
-    if (!(await confirmAction({ title: `Delete this ${one}?`, message: "It is removed from the product knowledge base. This cannot be undone.", confirmLabel: "Delete item", danger: true }))) return;
+    const table = kind === "feature" ? "product_features" : kind === "subProduct" ? "sub_products" : "";
+    const ok = table
+      ? await confirmDelete({ recordKey: table, ids: [String(row.id)], title: `Delete this ${one}?`, confirmLabel: "Delete item", message: "It is removed from the product knowledge base." })
+      : await confirmAction({ title: `Delete this ${one}?`, message: "It is removed from the product knowledge base. This cannot be undone.", confirmLabel: "Delete item", danger: true });
+    if (!ok) return;
     start(() => guard(async () => { await deleteProductKnowledgeAction(kind, String(row.id)); }, "Could not delete the item."));
   }
   const linksOf = (row: ApiRecord) => kind === "feature" ? workspace.featureLinks.filter((l) => String(l.feature_id) === String(row.id)) : kind === "subProduct" ? workspace.subProductLinks.filter((l) => String(l.sub_product_id) === String(row.id)) : [];

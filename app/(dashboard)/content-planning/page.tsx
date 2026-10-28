@@ -35,7 +35,8 @@ export default async function ContentPlanningPage() {
       ctas={ctas}
       kols={kols}
       mtStories={mtStories}
-      people={assignees}
+      people={people}
+      assigneeIds={assignees.map((person) => String(person.id))}
     />
   );
 }

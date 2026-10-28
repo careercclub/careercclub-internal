@@ -1,6 +1,7 @@
 "use server";
 
 import { expected } from "@/lib/actions/expected";
+import { deleteWithDependents, describeDelete } from "@/lib/records/delete";
 
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
@@ -12,7 +13,7 @@ import {
   synchronizeTaskToTicket,
   synchronizeTicketToTask,
 } from "@/lib/api/program";
-import { deleteRow, getRowById, insertRow, updateRow } from "@/lib/db/query";
+import { getRowById, insertRow, updateRow } from "@/lib/db/query";
 import { isRecordDefinitionKey, recordDefinitions, type ManagedField, type RecordDefinition } from "@/lib/records/catalog";
 import { revalidatePath } from "next/cache";
 
@@ -197,6 +198,16 @@ export async function updateManagedRecord(key: string, id: string, formData: For
   });
 }
 
+/** What a delete would do, for its confirm message: refused (still used) or what goes with it. */
+export async function describeDeleteAction(key: string, ids: string[]) {
+  return expected(async () => {
+  const user = await requireUser();
+  const definition = getDefinition(key);
+  requireMutationRole(definition, user);
+  return describeDelete(definition.table, ids.map(String));
+  });
+}
+
 export async function deleteManagedRecord(key: string, id: string) {
   return expected(async () => {
   const user = await requireUser();
@@ -210,7 +221,7 @@ export async function deleteManagedRecord(key: string, id: string) {
   } else if (key === "events") {
     await deleteProgramEventWithWorkflow(id);
   } else {
-    await deleteRow(definition.table, id);
+    await deleteWithDependents(definition.table, [id]);
   }
 
   if (key === "tickets" && previous) {

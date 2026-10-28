@@ -1,5 +1,6 @@
 "use client";
 
+import { optionLabel, withCurrent } from "@/lib/forms/options";
 import { ClaudeChip, ClaudeMark } from "./claude-mark";
 import type { SheetSyncState } from "@/lib/api/sheet-sync";
 import { SheetSyncButton, SheetSyncDialog, syncedLine } from "./sheet-sync-control";
@@ -335,9 +336,9 @@ function PainPointModal({ record, platforms, categories, allLabels, onClose }: {
           ) : null}
           <label className="block"><span className={labelClass}>Comment or discussion <span aria-hidden="true" className="text-[var(--red)]">*</span></span><textarea aria-invalid={commentInvalid || undefined} required className={commentInvalid ? `${inputClass} border-[var(--red)] ring-2 ring-[var(--red-bg)]` : inputClass} onChange={(event) => { setKomentar(event.target.value); if (commentInvalid) setCommentInvalid(false); }} placeholder="Paste a comment from TikTok, IG, X…" ref={commentRef} rows={3} value={komentar} /></label>
           <div className="grid grid-cols-3 gap-2.5">
-            <label className="block"><span className={labelClass}>Platform <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setPlatform(event.target.value)} value={platform}>{platformNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className="block"><span className={labelClass}>Platform <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setPlatform(event.target.value)} value={platform}>{withCurrent(platformNames, record?.platform).map((value) => <option key={value} value={value}>{optionLabel(platformNames, value)}</option>)}</select></label>
             <label className="block"><span className={labelClass}>Month <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setBulan(event.target.value)} value={bulan}>{MONTH_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></label>
-            <label className="block"><span className={labelClass}>Category <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setKategori(event.target.value)} value={kategori}>{categoryNames.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className="block"><span className={labelClass}>Category <span aria-hidden="true" className="text-[var(--red)]">*</span></span><select className={inputClass} onChange={(event) => setKategori(event.target.value)} value={kategori}>{withCurrent(categoryNames, record?.kategori).map((value) => <option key={value} value={value}>{optionLabel(categoryNames, value)}</option>)}</select></label>
           </div>
           <div><span className={labelClass}>Labels</span><LabelPicker allLabels={allLabels} onChange={setSelectedLabels} selected={selectedLabels} /></div>
         </div>

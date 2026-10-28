@@ -4,15 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ApiRecord } from "@/lib/api/_crud";
-import { isBlocked, pickablePeople } from "@/lib/tickets/people";
+import { isBlocked, personLabel, pickablePeople } from "@/lib/tickets/people";
 
 function text(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
 }
 
 export function personName(people: ApiRecord[], id: string) {
-  const person = people.find((row) => String(row.id) === id);
-  return person ? text(person.nama) || text(person.name) || text(person.email) || id : id;
+  return personLabel(people, id);
 }
 
 // A person row without auth_user_id is not an application account — they can still

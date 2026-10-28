@@ -6,4 +6,5 @@ import { unwrapAction } from "@/lib/actions/unwrap";
 
 export const createManagedRecord = unwrapAction(server.createManagedRecord);
 export const updateManagedRecord = unwrapAction(server.updateManagedRecord);
+export const describeDeleteAction = unwrapAction(server.describeDeleteAction);
 export const deleteManagedRecord = unwrapAction(server.deleteManagedRecord);

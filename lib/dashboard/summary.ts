@@ -114,7 +114,8 @@ function dueLabel(due: string, today: string) {
 export function summarizeDashboard(input: { tickets: Row[]; tasks: Row[]; events: Row[]; people: Row[] }, referenceIso: string): DashboardSummary {
   const today = dateKey(referenceIso.length > 10 ? new Date(referenceIso) : referenceIso);
   const people = new Map(input.people.map((row) => [String(row.id), { id: String(row.id), name: text(row.nama) || text(row.name) || "Unknown", initials: initials(row.nama || row.name) }]));
-  const person = (id: unknown) => (id ? people.get(String(id)) : undefined);
+  // An id that points at nobody (person deleted) is shown as "Removed person", not as unassigned.
+  const person = (id: unknown) => (id ? people.get(String(id)) || { id: String(id), name: "Removed person", initials: "?" } : undefined);
   const events = new Map(input.events.map((row) => [String(row.id), row]));
   const week = weekKeys(today);
   const monthKey = today.slice(0, 7);

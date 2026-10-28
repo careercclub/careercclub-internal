@@ -1,4 +1,5 @@
 import "server-only";
+import type postgres from "postgres";
 import { createTableApi, type ApiRecord } from "./_crud";
 import { withPostgres } from "@/lib/db/postgres";
 import { findTicketPerson, TICKET_VISIBILITY_COLUMNS, ticketVisibility, type TicketViewer } from "@/lib/tickets/visibility";
@@ -48,14 +49,19 @@ export const deleteTicketDivision = divisions.remove;
  */
 export function listTicketPeople() {
   return withPostgres((sql) => sql<TicketPersonRecord[]>`
-    select p.*, exists (
+    select p.*, ${BLOCKED_PERSON_SQL(sql)} as blocked
+    from tkt_people p
+    order by p.nama asc`);
+}
+
+/** The one "is this person's account Blocked" test (`p` = tkt_people), for every list of people. */
+export function BLOCKED_PERSON_SQL(sql: postgres.Sql | postgres.TransactionSql) {
+  return sql`exists (
       select 1 from auth_users u
       where u.is_active is false
         and (u.id::text = p.auth_user_id::text
           or (p.auth_user_id is null and lower(btrim(u.email)) = lower(btrim(p.email))))
-    ) as blocked
-    from tkt_people p
-    order by p.nama asc`);
+    )`;
 }
 export const createTicketPerson = people.create;
 export const updateTicketPerson = people.update;

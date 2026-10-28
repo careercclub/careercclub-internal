@@ -1,12 +1,13 @@
 "use client";
 
+import { optionLabel, withCurrent } from "@/lib/forms/options";
 import Link from "next/link";
 import type { ApiRecord } from "@/lib/api/_crud";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { recordDefinitions, type ManagedField, type RecordDefinitionKey } from "@/lib/records/catalog";
 import { ITEM_NOUN, addTag, asTagList, displayLabel, fieldKind, planForm, plural } from "@/lib/records/form-plan";
-import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
+import { createManagedRecord, deleteManagedRecord, describeDeleteAction, updateManagedRecord } from "@/app/_actions/record-actions";
 import { R2UploadField } from "./r2-upload-field";
 import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
@@ -204,7 +205,7 @@ function Field({ definitionKey, field, value, options, optionsState, choices }: 
     <label className={`${styles.field} ${wide ? styles.wideField : ""}`}>
       {caption}
       {field.storageArea ? <R2UploadField area={field.storageArea} defaultValue={String(common.defaultValue)} name={field.name} /> : wide ? <textarea {...common} rows={field.type === "json" ? 5 : 3} spellCheck={field.type !== "json"} /> : field.type === "select" ? (
-        <select {...common}><option value="">{`Select ${singular(label)}…`}</option>{(options || field.options)?.map((option) => <option key={option}>{option}</option>)}</select>
+        <select {...common}><option value="">{`Select ${singular(label)}…`}</option>{withCurrent(options || field.options || [], common.defaultValue).map((option) => <option key={option} value={option}>{optionLabel(options || field.options || [], option)}</option>)}</select>
       ) : field.type === "date" ? <DateInput {...common} /> : field.type === "time" ? <TimeInput {...common} /> : field.type === "money" ? <MoneyInput {...common} /> : <input {...common} type={field.type === "number" ? "number" : "text"} />}
     </label>
   );
@@ -241,16 +242,30 @@ function RecordForm({ definitionKey, row, fieldOptions, fieldChoices = {}, optio
 }
 
 function DeleteRecord({ definitionKey, id, noun }: { definitionKey: RecordDefinitionKey; id: string; noun: string }) {
-  const [confirming, setConfirming] = useState(false);
+  // Asks the server first (lib/records/delete-rules.ts): refused while still used, or what goes with it.
+  const [info, setInfo] = useState<{ blocked: string; also: string } | null>(null);
+  const [checking, setChecking] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
-  useEffect(() => { if (confirming) cancel.current?.focus(); }, [confirming]);
-  if (!confirming) {
-    return <div className={styles.formActions}><button className={styles.dangerButton} onClick={() => setConfirming(true)} type="button">Delete {noun}</button></div>;
+  useEffect(() => { if (info) cancel.current?.focus(); }, [info]);
+  async function ask() {
+    setChecking(true);
+    try { const reply = await describeDeleteAction(definitionKey, [id]); setInfo({ blocked: reply?.blocked || "", also: reply?.also || "" }); } catch (error) { notifyError(error, `Could not check what deleting this ${noun} affects.`); } finally { setChecking(false); }
+  }
+  if (!info) {
+    return <div className={styles.formActions}><button className={styles.dangerButton} disabled={checking} onClick={() => void ask()} type="button">{checking ? "Checking…" : `Delete ${noun}`}</button></div>;
+  }
+  if (info.blocked) {
+    return (
+      <div className={styles.confirmDelete} role="alertdialog" aria-label={`Can’t delete ${noun}`}>
+        <span>Can’t delete this {noun}. {info.blocked}</span>
+        <button className={styles.secondaryButton} onClick={() => setInfo(null)} ref={cancel} type="button"><span>OK</span></button>
+      </div>
+    );
   }
   return (
     <form className={styles.confirmDelete} onSubmit={(event) => { event.preventDefault(); void guard(() => deleteManagedRecord(definitionKey, id), `Could not delete the ${noun}.`); }} role="alertdialog" aria-label={`Confirm delete ${noun}`}>
-      <span>Delete this {noun}? This cannot be undone.</span>
-      <button className={styles.secondaryButton} onClick={() => setConfirming(false)} ref={cancel} type="button"><span>Cancel</span></button>
+      <span>Delete this {noun}? {info.also ? `${info.also} ` : ""}This cannot be undone.</span>
+      <button className={styles.secondaryButton} onClick={() => setInfo(null)} ref={cancel} type="button"><span>Cancel</span></button>
       <button className={styles.dangerButton} type="submit">Yes, delete {noun}</button>
     </form>
   );

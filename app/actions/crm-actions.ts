@@ -1,6 +1,7 @@
 "use server";
 
 import { expected } from "@/lib/actions/expected";
+import { deleteWithDependents } from "@/lib/records/delete";
 
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
@@ -26,7 +27,7 @@ export async function bulkUpdateCrmBuyers(ids: string[], operation: "status" | "
     } else if (operation === "talent") {
       await tx`update buyers set talent_pool = ${value !== "no"} where id = any(${selected}::uuid[])`;
     } else {
-      await tx`delete from buyers where id = any(${selected}::uuid[])`;
+      await deleteWithDependents("buyers", selected, tx);
     }
   }));
   await logActivity({ userName: session.user.name || session.user.email || "CCC User", module: "CRM", action: operation === "delete" ? "Hapus" : "Update", detail: `${selected.length} buyer records`, table: "buyers" });

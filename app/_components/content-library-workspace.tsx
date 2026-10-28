@@ -1,5 +1,6 @@
 "use client";
 
+import { withCurrent } from "@/lib/forms/options";
 import {
   createContentLibraryAssetAction,
   deleteContentLibraryAssetAction,
@@ -481,11 +482,6 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
   );
 }
 
-/** Keeps a legacy value (e.g. an old platform name) selectable when editing. */
-function withCurrent(options: string[], current: unknown) {
-  const value = text(current);
-  return value && !options.includes(value) ? [...options, value] : options;
-}
 
 function ContentPreview({ row, imageIndex, setImageIndex, onClose, children }: { row: ApiRecord; imageIndex: number; setImageIndex: (value: number) => void; onClose: () => void; children: ReactNode }) {
   const images = rowImages(row.storage_paths);

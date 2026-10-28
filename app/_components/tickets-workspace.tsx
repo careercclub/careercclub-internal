@@ -1,5 +1,6 @@
 "use client";
 
+import { REMOVED_PERSON } from "@/lib/tickets/people";
 import { revertWith } from "./safe-action";
 
 import { saveOrQueue } from "@/lib/offline/queue";
@@ -207,8 +208,9 @@ export function TicketsWorkspace({ rows, people, divisions, types, meId = null, 
 
   function firstAssignee(row: ApiRecord) {
     const ids = Array.isArray(row.assigned_to_ids) ? row.assigned_to_ids.map(String) : row.assigned_to_id ? [String(row.assigned_to_id)] : [];
-    const person = ids.length ? personMap.get(ids[0]) : null;
-    return person ? text(person.nama) || text(person.email) : "—";
+    if (!ids.length) return "—";
+    const person = personMap.get(ids[0]);
+    return person ? text(person.nama) || text(person.email) : REMOVED_PERSON;
   }
   async function toggleDone(row: ApiRecord) {
     const next = row.status === "Done" ? "Todo" : "Done";

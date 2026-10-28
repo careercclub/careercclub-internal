@@ -1,6 +1,7 @@
 "use server";
 
 import { expected } from "@/lib/actions/expected";
+import { deleteWithDependents } from "@/lib/records/delete";
 
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
@@ -17,7 +18,6 @@ import {
   deleteCarouselPlanLink,
   deleteKol,
   deleteMtStory,
-  deleteStoryPlanDate,
   deleteStoryPlanItem,
   deleteStoryPlanLink,
   listStoryPlanItems,
@@ -243,9 +243,7 @@ export async function createStoryDateAction(input: { tanggal: string; items: str
 export async function deleteStoryDateAction(id: string) {
   return expected(async () => {
   await actor();
-  const items = await listStoryPlanItems({ eq: { date_id: id } });
-  await Promise.all(items.map((item) => deleteStoryPlanItem(String(item.id))));
-  await deleteStoryPlanDate(id);
+  await deleteWithDependents("story_plan_dates", [id]);
   refresh();
   });
 }

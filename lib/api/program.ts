@@ -122,7 +122,12 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
     if (primaryAssignee) {
       [person] = await tx<WorkflowRecord[]>`select * from tkt_people where id = ${primaryAssignee} limit 1`;
     }
-    const divisionId = text(person?.divisi_id) || null;
+    // Only a division that still exists (a deleted one would leave the ticket pointing at nothing).
+    let divisionId: string | null = null;
+    if (person?.divisi_id) {
+      const [division] = await tx<WorkflowRecord[]>`select id from tkt_divisi where id = ${person.divisi_id} limit 1`;
+      divisionId = division ? String(division.id) : null;
+    }
     let requestType: WorkflowRecord | undefined;
     if (divisionId) {
       [requestType] = await tx<WorkflowRecord[]>`select * from tkt_types where divisi_id = ${divisionId} order by lower(nama) limit 1`;
@@ -136,7 +141,8 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
       const [requesterPerson] = await tx<WorkflowRecord[]>`select id from tkt_people where id = ${requesterId} limit 1`;
       validRequester = requesterPerson ? String(requesterPerson.id) : null;
     }
-    const resolvedRequester = validRequester || primaryAssignee;
+    // The assignee only counts when that person still exists.
+    const resolvedRequester = validRequester || (person ? primaryAssignee : null);
 
     const eventName = text(task.event_name);
     const eventInfo = eventName
@@ -163,11 +169,11 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
             description = ${ticketDescription},
             status = ${ticketStatus},
             priority = ${ticketPriority},
-            type_id = ${requestType?.id || null},
-            divisi_id = ${divisionId},
+            type_id = coalesce(${requestType?.id || null}, type_id),
+            divisi_id = coalesce(${divisionId}, divisi_id),
             assigned_to_id = ${primaryAssignee},
             assigned_to_ids = ${ticketAssignees}::uuid[],
-            requester_id = ${resolvedRequester},
+            requester_id = coalesce(${resolvedRequester}, requester_id),
             due_date = ${task.due_date || null},
             related_task_id = ${task.id},
             source = 'Webinar Project'
@@ -345,6 +351,8 @@ export function deleteProgramEventWithWorkflow(eventId: string) {
       `;
       await tx`delete from tasks where id = any(${taskIds}::uuid[])`;
     }
+    // The rundown belongs to the event (production has no foreign key for it).
+    await tx`delete from event_rundown where event_id = ${eventId}`;
     const result = await tx`delete from events where id = ${eventId}`;
     return (result.count || 0) > 0;
   }));

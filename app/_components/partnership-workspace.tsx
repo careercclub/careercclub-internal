@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDelete } from "./confirm-delete";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -177,7 +178,7 @@ function PartnersView({ rows, tableKey, aiPanel, activity, entityLabel, onEdit }
   const { pageItems, page, setPage, totalPages } = usePagination(filtered, 20);
 
   async function remove(row: ApiRecord) {
-    if (!(await confirmAction({ title: `Delete ${text(row.name) || `this ${entityLabel}`}?`, message: "Its deals are deleted too. This cannot be undone.", confirmLabel: entityLabel === "partner" ? "Delete partner" : "Delete organization", danger: true }))) return;
+    if (!(await confirmDelete({ recordKey: tableKey, ids: [String(row.id)], title: `Delete ${text(row.name) || `this ${entityLabel}`}?`, confirmLabel: entityLabel === "partner" ? "Delete partner" : "Delete organization" }))) return;
     start(() => guard(async () => { await deleteManagedRecord(tableKey, String(row.id)); }, "Could not delete the partner."));
   }
   function exportCsv() {

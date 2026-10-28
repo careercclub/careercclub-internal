@@ -34,6 +34,14 @@ Aturan tambahan:
 - Di dialog Review changes: **Keep my change** (simpan punya saya di atas yang sekarang) dan **Discard my change** (buang dari perangkat). Jangan pakai Override, Force, Revert.
 - Bar offline: "Ticket and task changes wait on this device; anything else needs a connection."
 
+## Hapus & data yang saling terkait (`lib/records/delete-rules.ts`)
+
+- Masih dipakai: "Can’t delete this {object}. Still used by 4 tickets and 1 task. Change them first, then delete it." (tombol **OK**, tanpa tombol hapus).
+- Ikut terhapus: konfirmasi menyebut jumlah asli, "Also deletes 2 deals and 1 outreach log. This cannot be undone." Jangan menulis tebakan seperti "Its deals are deleted too".
+- Orang yang punya akun login tidak dihapus: "This person can sign in. Block the account in Users & roles instead; their tickets stay assigned."
+- Id orang yang sudah terhapus: **Removed person** (jangan tampilkan uuid, "Unknown", atau "No assignee").
+- Nilai lama yang tidak ada lagi di daftar pilihan: "{nilai} (not in list)", tetap terpilih.
+
 ## Uang (`lib/text/money.ts`)
 
 | Tempat | Format | Fungsi |

@@ -1,5 +1,7 @@
 "use client";
 
+import { isBlocked } from "@/lib/tickets/people";
+import { confirmDelete } from "./confirm-delete";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
 import { saveCompetitorIntelListsAction, saveMenuLabelsAction, saveMenuVisibilityAction } from "@/app/_actions/settings-actions";
 import { RecordManager } from "@/app/_components/record-manager";
@@ -25,7 +27,7 @@ const SECTION_META: Record<SettingsSectionId, { icon: string; description: strin
   menu: { icon: "ti-layout-sidebar", description: "Choose which modules the sidebar shows and what they are called." },
   users: { icon: "ti-users", description: "Who can sign in, and what each person is allowed to change." },
   claude: { icon: "ti-sparkles", description: "Keys that let Claude add and update data from research — always previewed first, never deleting." },
-  tickets: { icon: "ti-ticket", description: "Divisions, people and request types used by Tickets, and who receives ticket emails." },
+  tickets: { icon: "ti-ticket", description: "Divisions, people and request types used by Tickets, and how ticket status and notifications work." },
   "customer-knowledge": { icon: "ti-message-circle", description: "Platforms and categories offered when logging a pain point." },
   "product-classes": { icon: "ti-tag", description: "Classifications used to group products and CRM buyers." },
   "product-mapping": { icon: "ti-arrows-exchange", description: "Turns product names imported from Lynkid into the internal classifications." },
@@ -44,7 +46,7 @@ function CustomerKnowledgeMasterPanel({ platforms, categories }: { platforms: Ap
   const [pending, start] = useTransition();
   async function remove(kind: "pain_point_platforms" | "pain_point_categories", row: ApiRecord) {
     const what = kind === "pain_point_platforms" ? "platform" : "category";
-    if (!(await confirmAction({ title: `Delete ${what} "${String(row.nama)}"?`, message: "Pain points that use it keep the name; it just won't be offered when adding new ones.", confirmLabel: kind === "pain_point_platforms" ? "Delete platform" : "Delete category", danger: true }))) return;
+    if (!(await confirmDelete({ recordKey: kind, ids: [String(row.id)], title: `Delete ${what} "${String(row.nama)}"?`, confirmLabel: kind === "pain_point_platforms" ? "Delete platform" : "Delete category" }))) return;
     start(() => guard(async () => { await deleteManagedRecord(kind, String(row.id)); }, "Could not delete it from the list."));
   }
   return (
@@ -136,8 +138,8 @@ function TicketStatusEmailPanel({ divisions, people }: { divisions: ApiRecord[];
         <ol className={s.flow}>{["Todo", "In Progress", "Done"].map((step, index) => <li key={step}><span>{index + 1}</span>{step}</li>)}</ol>
       </section>
       <section aria-labelledby="set-email" className={s.card}>
-        <h3 id="set-email">Who gets ticket emails</h3>
-        <p className={s.hint}>Ticket notifications go to the Lead and Staff of the division involved.</p>
+        <h3 id="set-email">Division members</h3>
+        <p className={s.hint}>Ticket notifications (in the app and on the phone) go to accounts with the same role as the person who made the ticket; there are no ticket emails. Blocked accounts get nothing.</p>
         <div className={s.divisionGrid}>
           {divisions.map((division) => {
             const divisionId = String(division.id);
@@ -148,7 +150,7 @@ function TicketStatusEmailPanel({ divisions, people }: { divisions: ApiRecord[];
               <div className={s.division} key={divisionId}>
                 <b>{String(division.nama)}</b>
                 {[["Lead", leads], ["Staff", staff]].map(([label, list]) => (list as ApiRecord[]).length ? (
-                  <div key={label as string}><small>{label as string}</small><ul>{(list as ApiRecord[]).map((person) => <li key={String(person.id)}><span className={s.avatar} aria-hidden="true">{String(person.nama || "?").slice(0, 1).toUpperCase()}</span><span>{String(person.nama)}<em>{String(person.email)}</em></span></li>)}</ul></div>
+                  <div key={label as string}><small>{label as string}</small><ul>{(list as ApiRecord[]).map((person) => <li key={String(person.id)}><span className={s.avatar} aria-hidden="true">{String(person.nama || "?").slice(0, 1).toUpperCase()}</span><span>{String(person.nama)}{isBlocked(person) ? <span className="text-[var(--red)]"> · blocked</span> : null}<em>{String(person.email)}</em></span></li>)}</ul></div>
                 ) : null)}
                 {!members.length ? <p className={s.hint}>No members yet.</p> : null}
               </div>

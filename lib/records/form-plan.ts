@@ -14,10 +14,11 @@ import type { ManagedField } from "./catalog";
  */
 export type FieldKind = "reference" | "references" | "tags" | "advanced" | "system" | "plain";
 
-export type ReferenceSource = { table: string; label: readonly string[]; orderBy?: string; guard?: "tickets" };
+export type ReferenceSource = { table: string; label: readonly string[]; orderBy?: string; guard?: "tickets" | "people" };
 
 const PRODUCTS: ReferenceSource = { table: "products", label: ["nama"], orderBy: "nama" };
-const PEOPLE: ReferenceSource = { table: "tkt_people", label: ["nama"], orderBy: "nama" };
+// Blocked accounts are not offered (lib/tickets/people.ts); one already chosen stays as "Current selection".
+const PEOPLE: ReferenceSource = { table: "tkt_people", label: ["nama"], orderBy: "nama", guard: "people" };
 const DIVISIONS: ReferenceSource = { table: "tkt_divisi", label: ["nama"], orderBy: "nama" };
 const EVENTS: ReferenceSource = { table: "events", label: ["nama", "tanggal"], orderBy: "tanggal" };
 

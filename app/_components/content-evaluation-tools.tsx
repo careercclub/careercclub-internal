@@ -1,5 +1,7 @@
 "use client";
 
+import { optionLabel, withCurrent } from "@/lib/forms/options";
+import { confirmDelete } from "./confirm-delete";
 import { loadContentEvaluationAction } from "@/app/_actions/content-evaluation-actions";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,9 @@ import { usePagination } from "./ui-kit";
 import { useRecordFocus } from "./use-record-focus";
 import { DateInput } from "./date-input";
 import { monthLabel, SeriesBarChart } from "./charts";
+
+// Content Evaluation formats (an older value stays selectable when editing).
+const FORMAT_OPTIONS = ["Carousel", "Feed Photo", "Reel", "Story"];
 
 // Content Evaluation in the IJIS layout. Same records (content_evaluations), same scoring
 // (evaluateContentEvaluation), same import endpoint; the stored "action" values stay
@@ -87,7 +92,7 @@ export function ContentEvaluationTools({ evaluations, buyers, buyerTotal, sheetS
     router.refresh();
   }
   async function removeEvaluation() {
-    if (!editing?.id || !(await confirmAction({ title: "Delete this evaluation?", message: "This cannot be undone.", confirmLabel: "Delete evaluation", danger: true }))) return;
+    if (!editing?.id || !(await confirmDelete({ recordKey: "content_evaluations", ids: [String(editing.id)], title: "Delete this evaluation?", confirmLabel: "Delete evaluation" }))) return;
     const id = String(editing.id);
     await guard(async () => {
       await deleteManagedRecord("content_evaluations", id);
@@ -472,7 +477,7 @@ function EvaluationEditor({ record, save, remove, close }: { record: ApiRecord |
           <fieldset><legend>Content</legend>
             <div className={c.formGrid}>
               <Field label="Title" required><input className={s.input} defaultValue={value("judul")} name="judul" required /></Field>
-              <Field label="Format"><select className={s.input} name="format" onChange={(e) => setFormat(e.target.value)} value={format}><option>Carousel</option><option>Feed Photo</option><option>Reel</option><option>Story</option></select></Field>
+              <Field label="Format"><select className={s.input} name="format" onChange={(e) => setFormat(e.target.value)} value={format}>{withCurrent(FORMAT_OPTIONS, record?.format).map((option) => <option key={option} value={option}>{optionLabel(FORMAT_OPTIONS, option)}</option>)}</select></Field>
               <Field label="Publish date"><DateInput className={s.input} defaultValue={day(record?.tanggal)} name="tanggal"  /></Field>
               <Field label="Topic"><input className={s.input} defaultValue={value("topik")} name="topik" /></Field>
               <Field label="Post URL"><input className={s.input} defaultValue={value("url")} name="url" placeholder="https://" type="url" /></Field>

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDelete } from "./confirm-delete";
 import { ClaudeMark } from "./claude-mark";
 import type { SheetSyncState } from "@/lib/api/sheet-sync";
 import { SheetSyncButton, SheetSyncDialog, syncedLine } from "./sheet-sync-control";
@@ -162,7 +163,7 @@ function Directory({ workspace, onEdit }: { workspace: Workspace; onEdit: (recor
   const set = (patch: CompetitorFilter) => setFilter((current) => ({ ...current, ...patch }));
   const filtersOn = Boolean(filter.query || filter.category || filter.threat || filter.audience);
   async function remove(row: ApiRecord) {
-    if (!(await confirmAction({ title: `Delete ${text(row.name) || "this competitor"}?`, message: "Its products, prices and snapshots stay, but lose their competitor. This cannot be undone.", confirmLabel: "Delete competitor", danger: true }))) return;
+    if (!(await confirmDelete({ recordKey: "competitor_profiles", ids: [String(row.id)], title: `Delete ${text(row.name) || "this competitor"}?`, confirmLabel: "Delete competitor" }))) return;
     start(() => guard(async () => { await deleteManagedRecord("competitor_profiles", String(row.id)); }, "Could not delete the competitor."));
   }
   return (

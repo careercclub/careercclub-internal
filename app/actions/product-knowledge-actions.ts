@@ -1,11 +1,13 @@
 "use server";
 
 import { expected } from "@/lib/actions/expected";
+import { deleteWithDependents } from "@/lib/records/delete";
 
 import { auth } from "@/auth";
-import { createProductAsset, createProductBenefit, createProductBundle, createProductFeature, createProductFeatureLink, createProductFeedback, createProductPainPoint, createProductPassionPoint, createSubProduct, createSubProductLink, deleteProductAsset, deleteProductBenefit, deleteProductBundle, deleteProductFeature, deleteProductFeatureLink, deleteProductFeedback, deleteProductPainPoint, deleteProductPassionPoint, deleteSubProduct, deleteSubProductLink } from "@/lib/api/products";
+import { createProductAsset, createProductBenefit, createProductBundle, createProductFeature, createProductFeatureLink, createProductFeedback, createProductPainPoint, createProductPassionPoint, createSubProduct, createSubProductLink } from "@/lib/api/products";
 import { revalidatePath } from "next/cache";
 
+const KIND_TABLE: Record<string, string> = { pain: "product_pain_points", passion: "product_passion_points", benefit: "product_benefits", feature: "product_features", featureLink: "product_feature_links", subProduct: "sub_products", subLink: "sub_product_links", asset: "product_assets", feedback: "product_feedbacks", bundle: "product_bundles" };
 type Kind = "pain" | "passion" | "benefit" | "feature" | "featureLink" | "subProduct" | "subLink" | "asset" | "feedback" | "bundle";
 async function requireUser() { if (!(await auth())?.user) throw new Error("Unauthorized"); }
 const value = (data: FormData, key: string) => String(data.get(key) || "").trim();
@@ -31,11 +33,10 @@ export async function createProductKnowledgeAction(kind: Kind, productId: string
 export async function deleteProductKnowledgeAction(kind: Kind, id: string) {
   return expected(async () => {
   await requireUser();
-  if (kind === "pain") await deleteProductPainPoint(id); if (kind === "passion") await deleteProductPassionPoint(id);
-  if (kind === "benefit") await deleteProductBenefit(id); if (kind === "feature") await deleteProductFeature(id);
-  if (kind === "featureLink") await deleteProductFeatureLink(id); if (kind === "subProduct") await deleteSubProduct(id);
-  if (kind === "subLink") await deleteSubProductLink(id); if (kind === "asset") await deleteProductAsset(id);
-  if (kind === "feedback") await deleteProductFeedback(id); if (kind === "bundle") await deleteProductBundle(id);
+  // Shortlinks of a feature or sub-product go with it (lib/records/delete-rules.ts).
+  const table = KIND_TABLE[kind];
+  if (!table) throw new Error("Unknown item.");
+  await deleteWithDependents(table, [id]);
   revalidatePath("/products");
   });
 }

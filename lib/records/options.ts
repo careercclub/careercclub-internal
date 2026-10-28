@@ -1,4 +1,5 @@
 import "server-only";
+import { BLOCKED_PERSON_SQL } from "@/lib/api/tickets";
 import { withPostgres } from "@/lib/db/postgres";
 import { assertIdentifier, assertTableName, type TableName } from "@/lib/db/tables";
 import { TICKET_VISIBILITY_COLUMNS, ticketVisibility, type TicketViewer } from "@/lib/tickets/visibility";
@@ -40,6 +41,11 @@ export async function getReferenceOptions(definitionKey: string, viewer: TicketV
           limit ${OPTION_LIMIT}
         `;
         let visible = [...rows];
+        if (source.guard === "people") {
+          const blocked = await sql<Array<{ id: string }>>`select p.id::text as id from tkt_people p where ${BLOCKED_PERSON_SQL(sql)}`;
+          const hidden = new Set(blocked.map((row) => row.id));
+          visible = visible.filter((row) => !hidden.has(String(row.id)));
+        }
         if (source.guard === "tickets") {
           const people = await sql<Record<string, unknown>[]>`select * from "tkt_people"`;
           visible = visible.filter(ticketVisibility(viewer, [...people]));

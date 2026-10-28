@@ -1,6 +1,6 @@
 "use client";
 
-import { isBlocked, pickablePeople } from "@/lib/tickets/people";
+import { isBlocked, pickablePeople, REMOVED_PERSON } from "@/lib/tickets/people";
 import {
   addContentLinkAction,
   addStoryItemAction,
@@ -58,7 +58,9 @@ type ContentPlanningProps = {
   ctas: ApiRecord[];
   kols: ApiRecord[];
   mtStories: ApiRecord[];
+  /** Everyone (names on rows); `assigneeIds` are the ones offered as carousel assignee. */
   people: ApiRecord[];
+  assigneeIds?: string[];
 };
 
 export function ContentPlanningTools(props: ContentPlanningProps) {
@@ -86,7 +88,7 @@ export function ContentPlanningTools(props: ContentPlanningProps) {
         {views.map(([id, label, count]) => <button aria-selected={view === id} className={view === id ? s.segmentActive : s.segment} key={id} onClick={() => setView(id)} role="tab" type="button">{label} <span>{count}</span></button>)}
       </div>
 
-      {view === "carousel" ? <CarouselView adding={adding === "carousel"} carousels={props.carousels} ctas={props.ctas} links={props.carouselLinks} onAdded={() => setAdding(null)} people={props.people} /> : null}
+      {view === "carousel" ? <CarouselView adding={adding === "carousel"} carousels={props.carousels} ctas={props.ctas} links={props.carouselLinks} onAdded={() => setAdding(null)} assigneeIds={props.assigneeIds} people={props.people} /> : null}
       {view === "story" ? <StoryView adding={adding === "story"} dates={props.dates} items={props.stories} links={props.storyLinks} onAdded={() => setAdding(null)} /> : null}
       {view === "kol" ? <KolView adding={adding === "kol"} kols={props.kols} onAdded={() => setAdding(null)} /> : null}
       {view === "mt" ? <MtView adding={adding === "mt"} onAdded={() => setAdding(null)} stories={props.mtStories} /> : null}
@@ -302,7 +304,7 @@ function AiBar({ kind, onParsed }: { kind: "carousel" | "story"; onParsed: (data
 /* ══════════════ CAROUSELS ══════════════ */
 type CarouselModalState = { plan: ApiRecord | null; preset: Partial<CarouselPlanInput> & { tanggal_posting?: string } };
 
-function CarouselView({ carousels, ctas, links, people, adding, onAdded }: { carousels: ApiRecord[]; ctas: ApiRecord[]; links: ApiRecord[]; people: ApiRecord[]; adding: boolean; onAdded: () => void }) {
+function CarouselView({ carousels, ctas, links, people, assigneeIds, adding, onAdded }: { carousels: ApiRecord[]; ctas: ApiRecord[]; links: ApiRecord[]; people: ApiRecord[]; assigneeIds?: string[]; adding: boolean; onAdded: () => void }) {
   const [modal, setModal] = useState<CarouselModalState | null>(null);
   const [dateModal, setDateModal] = useState<ApiRecord | null>(null);
   const [pending, start] = useTransition();
@@ -344,7 +346,7 @@ function CarouselView({ carousels, ctas, links, people, adding, onAdded }: { car
                         </span>
                         <span className={s.rowLinks}><CarouselLinkCell kind="brief" plan={plan} /><CarouselLinkCell kind="referensi" plan={plan} /></span>
                       </div>
-                      {assignee ? <span className={s.person} title={text(assignee.nama)}>{initials(text(assignee.nama))}</span> : <span aria-label="No assignee" className={s.personEmpty} role="img" title="No assignee"><i className="ti ti-user" aria-hidden="true" /></span>}
+                      {assignee ? <span className={s.person} title={text(assignee.nama)}>{initials(text(assignee.nama))}</span> : plan.assignee_id ? <span aria-label={REMOVED_PERSON} className={s.person} role="img" title={REMOVED_PERSON}>?</span> : <span aria-label="No assignee" className={s.personEmpty} role="img" title="No assignee"><i className="ti ti-user" aria-hidden="true" /></span>}
                       <button aria-label={`Edit ${title}`} className={s.iconButton} onClick={() => setModal({ plan, preset: {} })} type="button"><i className="ti ti-pencil" aria-hidden="true" /></button>
                     </li>
                   );
@@ -354,7 +356,7 @@ function CarouselView({ carousels, ctas, links, people, adding, onAdded }: { car
           ))}
         </section>
       </div>
-      {shownModal ? <CarouselModal ctas={ctas} onClose={close} people={people} planned={planned} state={shownModal} /> : null}
+      {shownModal ? <CarouselModal assigneeIds={assigneeIds} ctas={ctas} onClose={close} people={people} planned={planned} state={shownModal} /> : null}
       {dateModal ? (
         <Modal onClose={() => setDateModal(null)} size="sm" title="Change posting date">
           <DatePicker onPick={(key) => start(() => guard(async () => { await setCarouselDateAction(text(dateModal.id), key); setDateModal(null); }, "Could not save the carousel date."))} planned={planned} selected={dayKey(dateModal.tanggal_posting) || todayKey()} />
@@ -399,7 +401,7 @@ function CarouselLinkCell({ plan, kind }: { plan: ApiRecord; kind: keyof typeof 
   return <button className={s.refAdd} onClick={edit} type="button"><i className="ti ti-plus" aria-hidden="true" /> {addLabel}</button>;
 }
 
-function CarouselModal({ state, ctas, people, planned, onClose }: { state: CarouselModalState; ctas: ApiRecord[]; people: ApiRecord[]; planned: Record<string, string[]>; onClose: () => void }) {
+function CarouselModal({ state, ctas, people, assigneeIds, planned, onClose }: { state: CarouselModalState; ctas: ApiRecord[]; people: ApiRecord[]; assigneeIds?: string[]; planned: Record<string, string[]>; onClose: () => void }) {
   const plan = state.plan;
   const [judul, setJudul] = useState(text(plan?.judul) || text(state.preset.judul));
   const [tanggal, setTanggal] = useState(dayKey(plan?.tanggal_posting) || state.preset.tanggal_posting || todayKey());
@@ -452,7 +454,7 @@ function CarouselModal({ state, ctas, people, planned, onClose }: { state: Carou
               <button className={s.ghostSm} onClick={addCta} type="button">Add CTA</button>
             </span>
           </Field>
-          <Field label="Assignee"><select className={s.input} onChange={(event) => setAssignee(event.target.value)} value={assignee}><option value="">No assignee</option>{pickablePeople(people, assignee ? [assignee] : []).map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}{isBlocked(person) ? " · blocked" : ""}</option>)}</select></Field>
+          <Field label="Assignee"><select className={s.input} onChange={(event) => setAssignee(event.target.value)} value={assignee}><option value="">No assignee</option>{pickablePeople(people.filter((person) => !assigneeIds || assigneeIds.includes(String(person.id)) || String(person.id) === assignee), assignee ? [assignee] : []).map((person) => <option key={text(person.id)} value={text(person.id)}>{text(person.nama)}{isBlocked(person) ? " · blocked" : ""}</option>)}{assignee && !people.some((person) => String(person.id) === assignee) ? <option value={assignee}>{REMOVED_PERSON}</option> : null}</select></Field>
         </div>
       </div>
       <Field label="Brief link" optional><input className={s.input} onChange={(event) => setLinkBrief(event.target.value)} placeholder="https://docs.google.com/…" value={linkBrief} /></Field>

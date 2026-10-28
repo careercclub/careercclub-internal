@@ -1,5 +1,6 @@
 "use client";
 
+import { invitablePeople, REMOVED_PERSON } from "@/lib/tickets/people";
 import { revertWith } from "./safe-action";
 
 import { saveOrQueue } from "@/lib/offline/queue";
@@ -193,7 +194,8 @@ function EventLinksPanel({ event, templates, onAdd, onDelete, error }: { event: 
 
 function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecord; people: ApiRecord[]; onClose: () => void; onSynced: (taskId: string) => void }) {
   const assigneeIds = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : [];
-  const assigneePeople = people.filter((person) => assigneeIds.includes(String(person.id)) && person.email);
+  // Blocked accounts are not invited (the same rule as the ticket calendar).
+  const assigneePeople = invitablePeople(people).filter((person) => assigneeIds.includes(String(person.id)));
   const due = dateKey(task.due_date) || dateKey(task.created_at) || "";
   const [title, setTitle] = useState(text(task.title));
   const [startDate, setStartDate] = useState(due);
@@ -216,7 +218,7 @@ function TaskCalendarModal({ task, people, onClose, onSynced }: { task: ApiRecor
             <div className="grid gap-1.5"><Label>Start</Label><div className="flex gap-1"><DateInput aria-label="Start date" as={Input} value={startDate} onChange={(e) => setStartDate(e.target.value)} /><TimeInput aria-label="Start time" as={Input} value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div></div>
             <div className="grid gap-1.5"><Label>Finished</Label><div className="flex gap-1"><DateInput aria-label="Finish date" as={Input} value={endDate} onChange={(e) => setEndDate(e.target.value)} /><TimeInput aria-label="Finish time" as={Input} value={endTime} onChange={(e) => setEndTime(e.target.value)} /></div></div>
           </div>
-          {assigneePeople.length ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Undang {assigneePeople.map((person) => text(person.nama) || text(person.email)).join(", ")}</label> : null}
+          {assigneePeople.length ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Invite {assigneePeople.map((person) => text(person.nama) || text(person.email)).join(", ")}</label> : null}
           {configurationLoaded && !clientId ? <p className="text-xs text-destructive">Google Calendar is not set up for this app yet.</p> : null}
           {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
         </div>
@@ -282,7 +284,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const { pageItems: phaseTaskPage, page: taskPage, setPage: setTaskPage, totalPages: taskTotalPages } = usePagination(phaseTasks, 10);
 
   function progressOf(eventId: string) { const related = taskRows.filter((task) => String(task.project_id) === eventId); const done = related.filter((task) => task.status === "Done").length; return { done, total: related.length, pct: related.length ? Math.round((done / related.length) * 100) : 0 }; }
-  function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; const person = ids.length ? personMap.get(ids[0]) : null; if (!person) return { name: "—", div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
+  function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; if (!ids.length) return { name: "—", div: "" }; const person = personMap.get(ids[0]); if (!person) return { name: REMOVED_PERSON, div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
   function toggleTask(task: ApiRecord) { const next = task.status === "Done" ? "Todo" : "Done"; const before = taskRows; setTaskRows((current) => current.map((row) => String(row.id) === String(task.id) ? { ...row, status: next } : row)); void saveOrQueue({ kind: "task", id: String(task.id), label: text(task.title), before: task, after: { status: next } }, () => updateProgramTaskWorkflowAction(String(task.id), { status: next })).catch(revertWith(() => setTaskRows(before), "Could not change the task status.")); }
   async function deleteLink(eventId: string, index: number) {
     if (!(await confirmAction({ title: "Delete this link?", confirmLabel: "Delete link", danger: true }))) return;
