@@ -4,7 +4,7 @@
 .custom { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .score { min-width: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
-.gradeTop { --grade: var(--purple-mid); --grade-ink: var(--on-accent); }
+.gradeTop { --grade: var(--achieve-bg); --grade-ink: var(--achieve); } /* A: the one warm accent (DESIGN.md) */
 .gradeGood { --grade: var(--purple-light); --grade-ink: var(--purple-dark); }
 .gradeAvg { --grade: var(--surface-2); --grade-ink: var(--text); }
 .gradeLow { --grade: var(--surface-2); --grade-ink: var(--text-muted); }

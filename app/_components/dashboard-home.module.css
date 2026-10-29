@@ -4,16 +4,20 @@
 .header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 .title { margin: 2px 0 0; font-size: clamp(22px, 3vw, 27px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
-.primaryButton { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 15px; border-radius: 999px; color: var(--on-accent); background: var(--purple-mid); font-weight: 700; }
+.primaryButton { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 15px; border-radius: var(--radius); color: var(--on-accent); background: var(--purple-mid); font-weight: 700; }
 .primaryButton:hover { background: var(--purple-dark); }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.stats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 14px; } /* one row: the lead takes two shares */
 .stat { display: grid; gap: 4px; padding: 15px 17px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); color: var(--text); }
 .stat:hover { border-color: var(--border-md); }
 .stat span { color: var(--text-muted); font-size: 13px; font-weight: 600; }
 .stat b { font-size: 29px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .stat em { color: var(--text-muted); font-size: 12px; font-style: normal; }
 .stat em.late, .lateNumber { color: var(--red); }
+/* Lead number (rapor karier): spans two columns, the biggest figure on the page. */
+.statLead { grid-column: span 2; }
+.statLead b { font-size: 44px; }
+.stat b small { margin-left: 2px; color: var(--text-muted); font-size: 0.5em; font-weight: 700; letter-spacing: 0; }
 .stat em.late { font-weight: 700; }
 
 .section { display: flex; flex-direction: column; gap: 10px; }
@@ -79,7 +83,8 @@
 
 @media (max-width: 640px) {
   .page { gap: 17px; }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stats { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .statLead b { font-size: 36px; }
   .stat { padding: 12px; border-radius: 18px; }
   .stat b { font-size: 23px; }
   .programGrid { grid-template-columns: minmax(0, 1fr); }
@@ -90,3 +95,5 @@
   .day small, .dayToday small { font-size: 12px; }
   .primaryButton { min-height: 36px; }
 }
+/* The lead number stays the biggest figure on a phone too (rapor karier). */
+@media (max-width: 640px) { .stats .statLead b { font-size: 36px; } }

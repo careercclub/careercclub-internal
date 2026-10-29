@@ -134,8 +134,8 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
               {target ? (
                 <>
                   <div className={s.goalRow}><b>{Math.round(progress)}%</b><span>{fmt(currentFollowers)} / {fmt(target)}</span></div>
-                  <div aria-label={`Goal progress ${Math.round(progress)}%`} className={s.goalBar} role="img"><i style={{ width: `${progress}%` }} /></div>
-                  <p>Projected by 31 Dec: {fmt(a.predicted)} ({a.predicted >= target ? "on track" : `${fmt(target - a.predicted)} short`})</p>
+                  <div aria-label={`Goal progress ${Math.round(progress)}%`} className={s.goalBar} data-achieved={progress >= 100 ? "true" : undefined} role="img"><i style={{ width: `${progress}%` }} /></div>
+                  <p>Projected by 31 Dec: {fmt(a.predicted)} {a.predicted >= target ? <span className={s.onTrack}>On track</span> : `(${fmt(target - a.predicted)} short)`}</p>
                 </>
               ) : <p>No target for {year} yet. <button className={s.heroLink} onClick={() => setView("target")} type="button">Set a target</button></p>}
             </div>

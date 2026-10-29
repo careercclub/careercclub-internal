@@ -6,8 +6,8 @@
 .eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 .message { margin: 0; color: var(--text-muted); font-size: 13px; }
 
-.segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
-.segment, .segmentActive { min-height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
+.segment, .segmentActive { min-height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: var(--radius); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .segment span, .segmentActive span { font-size: 12px; font-weight: 700; opacity: 0.7; }
 .segment { color: var(--text-muted); background: transparent; }
 .segment:hover { color: var(--text); }
@@ -25,15 +25,15 @@
 .stagePct { color: var(--text-muted); font-size: 12px; font-weight: 700; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.search { min-height: 38px; flex: 1 1 260px; max-width: 360px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); }
+.search { min-height: 38px; flex: 1 1 260px; max-width: 360px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); }
 .search input { min-width: 0; flex: 1; min-height: 34px; border: 0; background: transparent; color: var(--text); font-size: 13px; outline: none; }
 .search:focus-within, .filterPill:focus-within { border-color: var(--purple-mid); }
-.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select { max-width: 160px; min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
-.morePill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px dashed var(--border-md); border-radius: 999px; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+.morePill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px dashed var(--border-md); border-radius: var(--radius); background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
 .morePill[aria-expanded="true"] { border-style: solid; border-color: var(--text); }
-.clear, .linkButton { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
-.ghostButton { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.clear, .linkButton { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: var(--radius); background: transparent; color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
+.ghostButton { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; }
 .ghostButton:hover { border-color: var(--purple-mid); color: var(--purple-dark); }
 
 .listCard { display: flex; flex-direction: column; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
@@ -67,7 +67,7 @@
 .bulk strong { margin-right: 4px; }
 .bulkField select { min-height: 32px; padding: 0 8px; border: 1px solid rgb(255 255 255 / 0.25); border-radius: 999px; background: transparent; color: var(--white); font-size: 13px; }
 .bulkField option { color: var(--text); }
-.bulkButton, .bulkDanger { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--white) 14%, transparent); color: var(--white); font-size: 13px; font-weight: 600; cursor: pointer; }
+.bulkButton, .bulkDanger { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: var(--radius); background: color-mix(in srgb, var(--white) 14%, transparent); color: var(--white); font-size: 13px; font-weight: 600; cursor: pointer; }
 .bulkButton:hover:not(:disabled) { background: color-mix(in srgb, var(--white) 24%, transparent); }
 .bulkButton:disabled, .bulkDanger:disabled { opacity: 0.45; cursor: default; }
 .bulkDanger { background: var(--red); }

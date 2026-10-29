@@ -34,6 +34,10 @@
   --red-bg: #fbe2df;
   --red: #be301d; /* 4.7:1 on --red-bg: late chips (R-25) */
   --blue-bg: #e9eff9;
+  /* The one warm accent (DESIGN.md): achievements only, a target reached, a top score (A). */
+  --achieve: #a34a00;
+  --achieve-bg: #fdf0e1;
+  --achieve-mark: #d9730d;
   --blue: #1554c0;
   --teal-bg: #e1f5ee;
   --teal: #0f6e56;
@@ -50,8 +54,9 @@
   --on-hero: #fff;
   color-scheme: light;
   --radius: 10px;
-  --radius-lg: 18px;
-  --radius-xl: 22px;
+  /* Rapor karier (DESIGN.md): tighter corners, like a report sheet; pills only for status. */
+  --radius-lg: 14px;
+  --radius-xl: 16px;
 }
 
 /* Dark mode (Putaran 37): the same tokens, re-valued. Accent is lighter so it reads as text on dark
@@ -83,6 +88,9 @@
   --red-bg: #3a1714;
   --red: #ff7a68;
   --blue-bg: #17284a;
+  --achieve: #f5a524;
+  --achieve-bg: #2d2112;
+  --achieve-mark: #e8890f;
   --blue: #8db8ff;
   --teal-bg: #11302a;
   --teal: #6fd6bb;
@@ -317,3 +325,14 @@ input[type="file"]::file-selector-button:hover { border-color: var(--purple-mid)
   /* Text links that act as buttons (All programs, All tickets) get a 44px-tall hit area. */
   a[href]:not(:has(*)) { display: inline-flex; align-items: center; min-height: 44px; }
 }
+
+/* Rapor karier (DESIGN.md, Putaran 60) ------------------------------------------------------ */
+/* Page titles carry the page: bigger, tighter, like the name on a report. */
+#mainContent h1 { font-size: clamp(26px, 2.6vw, 34px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+/* The identity motif: a thin "score line" under a number that has a scale (17 of 100, 3 of 4). */
+.score-line { position: relative; display: block; width: 100%; height: 4px; margin-top: 8px; overflow: hidden; border-radius: 2px; background: var(--purple-light); }
+.score-line > i { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--purple-mid); }
+.score-line[data-achieved="true"] > i { background: var(--achieve-mark); }
+/* Grade letter next to a score: A (top) is the only one in the warm accent. */
+.grade-letter { display: inline-grid; place-items: center; min-width: 1.6em; height: 1.6em; margin-left: 6px; border-radius: 6px; background: var(--surface-2); color: var(--text); font-size: 0.55em; font-weight: 800; letter-spacing: 0; vertical-align: 0.35em; }
+.grade-letter[data-grade="A"] { background: var(--achieve-bg); color: var(--achieve); }

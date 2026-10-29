@@ -23,7 +23,7 @@
 .fieldError { color: var(--red); font-size: 12px; font-weight: 500; }
 
 .parseRow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.parseButton { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 14px; border: 1px solid var(--purple-mid); border-radius: 999px; background: var(--white); color: var(--purple-mid); font-size: 13px; font-weight: 700; }
+.parseButton { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 14px; border: 1px solid var(--purple-mid); border-radius: var(--radius); background: var(--white); color: var(--purple-mid); font-size: 13px; font-weight: 700; }
 .parseButton:hover:not(:disabled) { background: var(--purple-light); }
 .parseButton:disabled { border-color: var(--border-md); color: var(--text-hint); cursor: not-allowed; }
 .hint, .error { margin: 0; font-size: 12px; }
@@ -35,7 +35,7 @@
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; align-items: start; }
 .wide { grid-column: 1 / -1; }
 .footer { display: flex; justify-content: flex-end; gap: 8px; }
-.ghostButton, .saveButton { min-height: 36px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.ghostButton, .saveButton { min-height: 36px; padding: 0 15px; border-radius: var(--radius); font-size: 13px; font-weight: 700; }
 .ghostButton { border: 1px solid var(--border-md); background: var(--white); color: var(--text); }
 .ghostButton:hover:not(:disabled) { background: var(--surface-2); }
 .saveButton { border: 0; background: var(--purple-dark); color: var(--on-accent); }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ScoreLine } from "./score-line";
 import type { ReactNode } from "react";
 import type { DashboardSummary, Person } from "@/lib/dashboard/summary";
 import { shortDate } from "@/lib/dashboard/summary";
@@ -28,6 +29,7 @@ const CARD_TONES = [styles.programAccent, styles.programDeep, styles.programSoft
 
 export function DashboardHome({ summary, firstName, hour, aiCommand, calendar }: { summary: DashboardSummary; firstName: string; hour: number; aiCommand: ReactNode; calendar: ReactNode }) {
   const s = summary;
+  const late = s.lateTickets + s.lateTasks;
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -38,10 +40,17 @@ export function DashboardHome({ summary, firstName, hour, aiCommand, calendar }:
         <Link className={styles.primaryButton} href="/tickets?create=ticket"><i className="ti ti-plus" aria-hidden="true" /> Add ticket</Link>
       </header>
 
+      {/* Rapor karier (DESIGN.md): one lead number, the thing to act on today; the rest compact. */}
       <section className={styles.stats} aria-label="Today in numbers">
+        {late ? (
+          <Link className={`${styles.stat} ${styles.statLead}`} href="/tickets"><span>Late, needs action</span><b className={styles.lateNumber}>{late}</b><em>{s.lateTickets} {s.lateTickets === 1 ? "ticket" : "tickets"} · {s.lateTasks} {s.lateTasks === 1 ? "task" : "tasks"}</em></Link>
+        ) : (
+          <Link className={`${styles.stat} ${styles.statLead}`} href="/program"><span>Tasks due this week</span><b>{s.weekTasksDone}<small>/{s.weekTasksTotal} done</small></b><ScoreLine label={`${s.weekTasksDone} of ${s.weekTasksTotal} tasks done`} max={s.weekTasksTotal} value={s.weekTasksDone} /><em>{s.weekTasksTotal && s.weekTasksDone === s.weekTasksTotal ? "all done" : "nothing late"}</em></Link>
+        )}
         <Link className={styles.stat} href="/tickets"><span>Open tickets</span><b>{s.openTickets}</b>{s.lateTickets ? <em className={styles.late}>{s.lateTickets} late</em> : <em>none late</em>}</Link>
-        <Link className={styles.stat} href="/program"><span>Tasks due this week</span><b>{s.weekTasksTotal}</b><em>{s.weekTasksDone}/{s.weekTasksTotal} done</em></Link>
-        <Link className={styles.stat} href="/program"><span>Late tasks</span><b className={s.lateTasks ? styles.lateNumber : undefined}>{s.lateTasks}</b><em>{s.lateTasks ? "need attention" : "all on time"}</em></Link>
+        {late ? (
+          <Link className={styles.stat} href="/program"><span>Tasks due this week</span><b>{s.weekTasksDone}<small>/{s.weekTasksTotal}</small></b><ScoreLine label={`${s.weekTasksDone} of ${s.weekTasksTotal} tasks done`} max={s.weekTasksTotal} value={s.weekTasksDone} /></Link>
+        ) : null}
         <Link className={styles.stat} href="/program"><span>Programs this month</span><b>{s.programsThisMonth}</b><em>{s.programs.length ? `next: ${s.programs[0].date}` : "none planned"}</em></Link>
       </section>
 

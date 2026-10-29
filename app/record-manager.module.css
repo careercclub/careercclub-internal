@@ -82,7 +82,7 @@
 .resourceLink { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; border-radius: 6px; background: var(--bg); }
 .resourceLink a { overflow: hidden; color: var(--purple-mid); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .resourceGroups article > footer { display: flex; justify-content: flex-end; gap: 4px; }
-.resourceGroups article > footer button { min-height: 27px; padding: 4px 7px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); background: var(--white); font-size: 12px; }
+.resourceGroups article > footer button { min-height: 27px; padding: 4px 7px; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); background: var(--white); font-size: 12px; }
 .userGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 .userGrid > form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 11px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .userGrid header { grid-column: 1 / -1; display: grid; gap: 3px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
@@ -120,7 +120,7 @@
 .dashboardOps { display: grid; gap: 8px; }
 .calendarToolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .calendarToolbar > div:first-child { display: grid; gap: 2px; } .calendarToolbar strong { font-size: 12px; } .calendarToolbar span { color: var(--text-muted); font-size: 12px; }
-.calendarToolbar > div:nth-child(2) { display: flex; gap: 5px; } .calendarToolbar button { min-height: 30px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); font-size: 12px; }
+.calendarToolbar > div:nth-child(2) { display: flex; gap: 5px; } .calendarToolbar button { min-height: 30px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); font-size: 12px; }
 .weekCalendar { display: grid; grid-template-columns: repeat(7, minmax(130px, 1fr)); gap: 5px; overflow-x: auto; }
 .weekCalendar > section { min-height: 135px; padding: 6px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); }
 .weekCalendar header { display: flex; justify-content: space-between; margin-bottom: 7px; font-size: 12px; } .weekCalendar header span { color: var(--purple-mid); }
@@ -174,7 +174,7 @@
 .checkField { display: flex; align-items: center; gap: 8px; min-height: 32px; align-self: end; color: var(--text); font-size: 12px; font-weight: 700; }
 .primaryButton, .dangerButton { min-height: 32px; padding: 8px 10px; border-radius: 7px; font-size: 12px; font-weight: 800; }
 .primaryButton { align-self: end; border: 0; color: var(--on-accent); background: var(--purple-dark); }
-.secondaryButton { width: max-content; min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1px solid var(--border-md); border-radius: 999px; color: var(--purple-dark); background: var(--white); font-size: 12px; font-weight: 700; }
+.secondaryButton { width: max-content; min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1px solid var(--border-md); border-radius: var(--radius); color: var(--purple-dark); background: var(--white); font-size: 12px; font-weight: 700; }
 .dangerButton { border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); color: var(--red); background: var(--red-bg); }
 .tableScroll { position: relative; overflow-x: auto; } /* contains absolutely positioned sr-only labels */
 .tableScroll table { width: 100%; min-width: 780px; border-collapse: collapse; }
@@ -184,7 +184,7 @@
 .tableScroll td { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rowActions { position: relative; }
 .rowActions > summary { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; list-style: none; }
-.rowEditButton { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); background: var(--white); }
+.rowEditButton { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); background: var(--white); }
 .rowEditButton:hover { color: var(--text); border-color: var(--border-md); }
 /* Edit dialog: header stays, the form scrolls. */
 .editDialog { display: flex; flex-direction: column; gap: 0; width: min(640px, calc(100vw - 24px)); max-width: 640px; max-height: 90dvh; overflow: hidden; padding: 0; }
@@ -316,7 +316,7 @@
 .adsTags span { padding: 3px 7px; border-radius: 9px; color: var(--text-muted); background: var(--bg); font-size: 12px; font-weight: 700; }
 .adsTags span[data-funnel="tofu"] { color: var(--blue); background: var(--blue-bg); } .adsTags span[data-funnel="mofu"] { color: var(--amber); background: var(--amber-bg); } .adsTags span[data-funnel="bofu"] { color: var(--green); background: var(--green-bg); }
 .adsGrid footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding-top: 8px; border-top: 1px solid var(--border); }
-.adsGrid footer button { min-height: 30px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); background: var(--white); font-size: 12px; }
+.adsGrid footer button { min-height: 30px; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); background: var(--white); font-size: 12px; }
 .adsGrid footer .adsDecisionActive { border-color: var(--purple-accent); color: var(--purple-dark); background: var(--purple-light); font-weight: 800; }
 .instagramWorkspace { display: grid; gap: 12px; }
 .instagramCharts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
@@ -433,7 +433,7 @@
 .storyPlanner > section { overflow: hidden; display: grid; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .storyPlanner > section > header { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
 .storyPlanner > section > header > div { display: grid; gap: 2px; } .storyPlanner > section > header strong { font-size: 12px; } .storyPlanner > section > header span { color: var(--text-muted); font-size: 12px; }
-.storyPlanner > section > header button { padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); background: var(--white); font-size: 12px; }
+.storyPlanner > section > header button { padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); background: var(--white); font-size: 12px; }
 .storyPlanner > section > div { display: grid; gap: 0; }
 .storyPlanner article { min-width: 0; display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 9px; align-items: center; padding: 8px 9px; border-bottom: 1px solid var(--border); }
 .storyPlanner article .storageImage { min-height: 49px; border-radius: 5px; }
@@ -566,4 +566,4 @@ fieldset.checkList > legend { padding: 0 4px; color: var(--text-muted); font-siz
 .editDialogBody .recordForm > .formActions { position: sticky; z-index: 2; bottom: -12px; margin: 0 -6px; padding: 8px 17px; border-top: 1px solid var(--border); background: var(--white); }
 .choiceNew { display: flex; gap: 8px; align-items: center; }
 .choiceNew input { flex: 1; min-width: 0; }
-.choiceBack { flex: none; min-height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--purple-dark); font-size: 12px; font-weight: 700; cursor: pointer; }
+.choiceBack { flex: none; min-height: 32px; padding: 0 10px; border: 0; border-radius: var(--radius); background: transparent; color: var(--purple-dark); font-size: 12px; font-weight: 700; cursor: pointer; }

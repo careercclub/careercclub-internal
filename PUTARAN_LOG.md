@@ -2134,3 +2134,60 @@ Permintaan user: evaluasi pakai antislop dan pakai skill-nya selama pengerjaan; 
 ### Deploy
 
 `git pull origin refactor && npm run vps:rebuild` (migrasi 031–032 dari putaran sebelumnya, kalau belum dijalankan).
+
+## Putaran 60: arah desain "Rapor karier"
+
+### Permintaan
+
+- Antislop menyisakan item LOW #7–#9: deretan angka sama rata, sudut kontrol campur, belum ada DESIGN.md.
+- User minta dibantu memilih arah desain. Dari tiga opsi, user pilih **Rapor karier**: CareerCclub itu soal skor, grade, dan progres menuju target, jadi app dibuat terasa seperti rapor.
+- User minta preview dulu (branch lokal `preview/rapor-karier`, before/after dikirim), lalu setuju: "setuju sih gas deh".
+
+### Temuan
+
+- Semua kartu angka setara, jadi tidak jelas angka mana yang harus dilihat dulu (#7).
+- Kontrol berbentuk pil (999px) bercampur dengan kartu kotak (#8).
+- Tidak ada dokumen arah desain, sehingga keputusan visual tersebar (#9).
+
+### Do
+
+- **DESIGN.md (baru, root repo).** Dial ENERGY 2 / RHYTHM 2 / MOTION 1. Isinya:
+  - palet: biru untuk aksi, aksen hangat hanya untuk capaian, merah hanya untuk telat;
+  - tipografi Plus Jakarta Sans, h1 26–34px weight 800;
+  - satu angka utama per layar;
+  - sudut kontrol 10px dan kartu 14–16px;
+  - permukaan datar;
+  - motif garis skor, grade A–D, gerak hanya hover.
+- **Token baru:** `--achieve`, `--achieve-bg`, `--achieve-mark` (terang dan gelap, kontras ≥ 4.5:1); `--radius-lg` 14px, `--radius-xl` 16px.
+- **`<ScoreLine>`** (`app/_components/score-line.tsx`): garis 4px di bawah angka berskala. Biru selama berjalan, hangat saat target tercapai. `GRADE_LETTER` untuk huruf A–D.
+- **Angka utama (2 kolom, paling besar):**
+  - Dashboard: "Late, needs action" (merah) kalau ada yang telat, kalau tidak "Tasks due this week" x/y done.
+  - Content Evaluation: "Average score" /100 + grade + garis skor. Chip skor jadi "94/100 · A". Kartu "Posts evaluated" dilebur ke angka utama.
+  - Story vs Buyer: "Story share" + garis skor.
+  - Instagram: chip "On track", bar goal hangat saat tercapai.
+  - Job Vacancy MT: "Open in {bulan}". "Opening MT in {tahun}" x/y + garis skor. "Companies tracked" dilebur.
+  - B2B/Org Partnership: "Closed deals" x/y. "Total partners" dilebur.
+  - Rundown: "Starts".
+- **Sudut (#8):**
+  - 91 aturan kontrol berubah dari pil ke `var(--radius)` 10px;
+  - komponen `Button` jadi 10px (xs 8px);
+  - pil tetap untuk chip status, bulat tetap untuk avatar dan tombol ikon.
+- **Perbaikan ikutan:**
+  - deretan stat tidak lagi turun baris di desktop (`grid-auto-flow: column`, HP balik ke baris);
+  - tombol header Content Evaluation yang terpotong di HP sekarang turun baris rapi;
+  - gradien di kartu stat MT dihapus.
+- Kamus: bagian "Skor & capaian".
+
+### Check
+
+- Preview before/after desktop dan HP, terang dan gelap, disetujui user. Screenshot MT, B2B (HP), Story vs Buyer, dan Rundown diperiksa. Lebar halaman 1280/390 di semua layar (tanpa overflow samping).
+- Scan antislop ulang: kontras 0 temuan baru (sisanya salah baca latar yang sama seperti Putaran 59: hero Instagram, chip di atas foto); target sentuh 0 di bawah 44px kecuali checkbox CRM 24px dengan area klik 44px.
+- Delivery Gate: PASS. R-02 em dash 0, R-03 sentuh, R-25 kontras, R-12 bayangan, R-11 sudut konsisten, R-37 DESIGN.md ada, merah hanya untuk telat.
+- Regresi penuh lolos:
+  - semua suite modul p34–p58, service worker, navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup;
+  - unit 227, import 93, search-db 19, agent-db 109;
+  - lint 0 error, build lolos.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild`. Tidak ada migrasi baru; migrasi 031–032 kalau belum dijalankan.

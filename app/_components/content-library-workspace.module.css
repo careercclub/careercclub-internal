@@ -457,7 +457,7 @@
   align-items: center;
   gap: 3px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--white);
   color: var(--text-muted);
   padding: 3px 8px;
@@ -733,13 +733,13 @@
 .pageHead .addButton { min-height: 38px; padding: 0 15px; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
-.segment, .segmentActive { min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
+.segment, .segmentActive { min-height: 32px; padding: 0 14px; border: 0; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; }
 .segment { color: var(--text-muted); background: transparent; }
 .segment:hover { color: var(--text); }
 .segmentActive { color: var(--white); background: var(--text); }
 .filterPills { display: flex; flex-wrap: wrap; gap: 8px; }
-.filterPill { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select { max-width: 160px; min-height: 32px; padding: 0 6px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
 .filterPill:focus-within { border-color: var(--purple-mid); }
 

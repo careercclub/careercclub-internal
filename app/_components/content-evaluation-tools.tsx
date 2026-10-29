@@ -1,5 +1,6 @@
 "use client";
 
+import { GRADE_LETTER, ScoreLine } from "./score-line";
 import { jakartaNow } from "@/lib/dashboard/summary";
 import { optionLabel, withCurrent } from "@/lib/forms/options";
 import { confirmDelete } from "./confirm-delete";
@@ -46,6 +47,8 @@ const pct = (value: number) => `${value.toFixed(1)}%`;
 const isFeed = (row: ApiRecord) => FEED.includes(String(row.format));
 function dateLabel(value: unknown) { const key = day(value); if (!key) return "No date"; const [y, m, d] = key.split("-").map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; }
 function monthName(key: string) { const [y, m] = key.split("-").map(Number); return `${MONTHS[m - 1]} ${String(y).slice(2)}`; }
+/** The same grade bands as lib/analytics/content.ts (80/60/40). */
+function gradeOf(total: number): ContentEvaluationResult["grade"] { return total >= 80 ? "top" : total >= 60 ? "good" : total >= 40 ? "avg" : "low"; }
 function gradeClass(grade: ContentEvaluationResult["grade"]) { return { top: c.gradeTop, good: c.gradeGood, avg: c.gradeAvg, low: c.gradeLow }[grade]; }
 function sortItems(items: Scored[], mode: SortMode) {
   const value = (item: Scored) => mode === "follows" ? num(item.row.follows) : mode === "link" ? num(item.row.link_taps) : num(item.row.follows) + num(item.row.link_taps);
@@ -170,8 +173,8 @@ function Overview({ allScored, scored, reels, feed, stories, average, buyerByDat
   return (
     <>
       <div className={s.stats}>
-        <div className={s.stat}><span>Posts evaluated</span><b>{scored.length}</b><small>In this range</small></div>
-        <div className={s.stat}><span>Average score</span><b>{average}</b><small>Out of 100</small></div>
+        {/* Rapor karier (DESIGN.md): the average score is the lead number, with its grade and score line. */}
+        <div className={`${s.stat} ${s.statLead}`}><span>Average score</span><b>{average}<small>/100</small><span className="grade-letter" data-grade={GRADE_LETTER[gradeOf(average)]}>{GRADE_LETTER[gradeOf(average)]}</span></b><ScoreLine label={`Average score ${average} of 100`} max={100} value={average} /><small>{scored.length} {scored.length === 1 ? "post" : "posts"} in this range</small></div>
         <div className={s.stat}><span>Top Reels</span><b>{top(reels)}</b><small>Score 80+</small></div>
         <div className={s.stat}><span>Top Carousels</span><b>{top(feed)}</b><small>Score 80+</small></div>
         <div className={s.stat}><span>Top Stories</span><b>{top(stories)}</b><small>Score 80+</small></div>
@@ -220,7 +223,7 @@ function Overview({ allScored, scored, reels, feed, stories, average, buyerByDat
 }
 
 function Score({ score, short = false }: { score: ContentEvaluationResult; short?: boolean }) {
-  return <span className={`${c.score} ${gradeClass(score.grade)}`} title={GRADE[score.grade]}>{score.total}{short ? "" : "/100"}</span>;
+  return <span className={`${c.score} ${gradeClass(score.grade)}`} title={GRADE[score.grade]}>{score.total}{short ? "" : "/100"} · {GRADE_LETTER[score.grade]}</span>;
 }
 
 function MonthBars({ title, sub, rows }: { title: string; sub: string; rows: Array<{ key: string; value: number }> }) {
@@ -368,9 +371,9 @@ function StoryBuyer({ items, scored, buyers, buyerByDate, select, total }: { ite
   return (
     <>
       <div className={s.stats}>
-        <div className={s.stat}><span>All purchases</span><b>{total}</b><small>Every source</small></div>
+        <div className={`${s.stat} ${s.statLead}`}><span>Story share</span><b>{total ? pct(storyBuyers.length / total * 100) : "0.0%"}</b><ScoreLine label={`${storyBuyers.length} of ${total} purchases from IG Story`} max={total} value={storyBuyers.length} /><small>IG Story ÷ all purchases</small></div>
         <div className={s.stat}><span>Purchases from IG Story</span><b>{storyBuyers.length}</b><small>Source: Instagram Story</small></div>
-        <div className={s.stat}><span>Story share</span><b>{total ? pct(storyBuyers.length / total * 100) : "0.0%"}</b><small>IG Story ÷ all purchases</small></div>
+        <div className={s.stat}><span>All purchases</span><b>{total}</b><small>Every source</small></div>
       </div>
       <section aria-label="Stories and buyers by day" className={s.card}>
         <div className={s.cardHead}>

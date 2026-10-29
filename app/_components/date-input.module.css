@@ -33,7 +33,7 @@
 .day[aria-selected="true"] { background: var(--purple-mid); color: var(--on-accent); font-weight: 700; }
 .day:disabled { color: var(--border-md); cursor: not-allowed; background: transparent; }
 .foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
-.foot button { min-height: 32px; padding: 0 10px; border: 1px solid var(--border-md); border-radius: 999px; background: var(--white); color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
+.foot button { min-height: 32px; padding: 0 10px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
 .foot button:hover:not(:disabled) { border-color: var(--purple-mid); background: var(--purple-light); }
 .foot button:disabled { opacity: 0.5; cursor: not-allowed; }
 .timePopover { width: 200px; }

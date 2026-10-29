@@ -7,36 +7,40 @@
 .headActions > button { min-height: 38px; padding: 0 15px; }
 .eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 
-.segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
-.segment, .segmentActive { min-height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
+.segment, .segmentActive { min-height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: var(--radius); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .segment span, .segmentActive span { font-size: 12px; font-weight: 700; opacity: 0.7; }
 .segment { color: var(--text-muted); background: transparent; }
 .segment:hover { color: var(--text); }
 .segmentActive { color: var(--white); background: var(--text); }
 .yearSwitch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); }
-.yearSwitch button { min-height: 30px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+.yearSwitch button { min-height: 30px; padding: 0 10px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; }
 .yearSwitch button[aria-pressed="true"] { background: var(--white); color: var(--text); box-shadow: 0 1px 3px rgba(20, 33, 44, 0.12); }
 
 /* Toolbar */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .spacer { flex: 1; }
-.search { min-height: 38px; flex: 1 1 240px; max-width: 360px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); }
+.search { min-height: 38px; flex: 1 1 240px; max-width: 360px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); }
 .search input { min-width: 0; flex: 1; min-height: 34px; border: 0; background: transparent; color: var(--text); font-size: 13px; outline: none; }
 .search:focus-within, .filterPill:focus-within { border-color: var(--purple-mid); }
-.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select { max-width: 220px; min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
-.ghostButton { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+.ghostButton { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
 .ghostButton:hover { border-color: var(--purple-mid); color: var(--purple-dark); }
 .ghostButton:disabled { opacity: 0.6; cursor: not-allowed; }
 .linkButton { padding: 6px 0; border: 0; background: none; color: var(--purple-mid); font-size: 13px; font-weight: 700; cursor: pointer; }
 .linkButton:hover { text-decoration: underline; }
 
 /* Overview */
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; }
 .stat, .statButton { display: grid; gap: 4px; padding: 14px 15px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); color: var(--text); text-align: left; }
 .stat span, .statButton span { color: var(--text-muted); font-size: 13px; }
 .stat b, .statButton b { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.statButton { cursor: pointer; background: linear-gradient(135deg, var(--purple-light), var(--white) 70%); }
+.statButton { cursor: pointer; }
+/* Lead number (rapor karier, DESIGN.md): two shares of the row, the biggest figure. */
+.statLead { grid-column: span 2; }
+.statLead b { font-size: 40px; }
+.stat b small, .statButton small { margin-left: 2px; color: var(--text-muted); font-size: 13px; font-weight: 600; letter-spacing: 0; }
 .statButton b { color: var(--purple-mid); }
 .statButton:hover { border-color: var(--purple-mid); }
 .statButton span::after { content: " ›"; }
@@ -164,7 +168,7 @@
 .fieldError { color: var(--red); font-size: 12px; font-weight: 500; }
 .hint { color: var(--text-muted); font-size: 12px; font-weight: 400; }
 .monthPicker { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
-.monthPicker button { min-width: 0; min-height: 32px; padding: 0 2px; border: 1px solid var(--border-md); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+.monthPicker button { min-width: 0; min-height: 32px; padding: 0 2px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
 .monthPicker button[aria-pressed="true"] { border-color: var(--purple-mid); background: var(--purple-mid); color: var(--on-accent); }
 .more { border: 1px solid var(--border); border-radius: 14px; }
 .more > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
@@ -188,7 +192,7 @@
 @media (max-width: 1100px) {
   .rowMain { grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) 104px; }
   .rowMain > .rowText:nth-of-type(3) { display: none; }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 820px) {
   .twoCol { grid-template-columns: minmax(0, 1fr); }

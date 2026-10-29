@@ -1,5 +1,6 @@
 "use client";
 
+import { ScoreLine } from "./score-line";
 import { Button } from "@/components/ui/button";
 import type { ImportInfo } from "@/lib/api/mt-prospects";
 import type { SheetSyncState } from "@/lib/api/sheet-sync";
@@ -125,6 +126,7 @@ function Overview({ prospects, tracked, contacts, now, onOpen, onCalendar, onInd
   const [chartYear, setChartYear] = useState(year);
   const [industryYear, setIndustryYear] = useState(year);
   const openNow = openIn(prospects, year, now.getMonth() + 1);
+  const activeCount = prospects.filter((row) => row.status === "active").length;
   const expected = [expectedIn(prospects, now, 1), expectedIn(prospects, now, 2)];
   const industries = industryCounts(prospects, industryYear, year);
   const industryTotal = industries.reduce((sum, [, count]) => sum + count, 0);
@@ -133,9 +135,9 @@ function Overview({ prospects, tracked, contacts, now, onOpen, onCalendar, onInd
   return (
     <>
       <div className={s.stats}>
-        <div className={s.stat}><span>Companies tracked</span><b>{tracked}</b></div>
-        <div className={s.stat}><span>Opening MT in {year}</span><b>{prospects.filter((row) => row.status === "active").length}</b></div>
-        <button className={s.statButton} onClick={onCalendar} type="button"><span>Open in {MONTHS[now.getMonth()]}</span><b>{openNow.length}</b></button>
+        {/* Rapor karier (DESIGN.md): the lead is what to act on this month. */}
+        <button className={`${s.statButton} ${s.statLead}`} onClick={onCalendar} type="button"><span>Open in {MONTHS[now.getMonth()]}</span><b>{openNow.length}</b><small>companies, see the calendar</small></button>
+        <div className={s.stat}><span>Opening MT in {year}</span><b>{activeCount}<small>/{tracked}</small></b><ScoreLine label={`${activeCount} of ${tracked} companies opening MT in ${year}`} max={tracked} value={activeCount} /></div>
         <div className={s.stat}><span>HR contacts</span><b>{contacts.toLocaleString("en-US")}</b></div>
       </div>
 

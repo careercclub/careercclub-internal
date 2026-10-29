@@ -1,5 +1,6 @@
 "use client";
 
+import { ScoreLine } from "./score-line";
 import { confirmDelete } from "./confirm-delete";
 import { createManagedRecord, deleteManagedRecord, updateManagedRecord } from "@/app/_actions/record-actions";
 import { Button } from "@/components/ui/button";
@@ -322,11 +323,15 @@ function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }
 
 /* ── Insights ── */
 function InsightsView({ rows, summary, activity, entityLabel, onEdit }: { rows: ApiRecord[]; summary: ReturnType<typeof partnerSummary>; activity: Activity; entityLabel: string; onEdit: (record: ApiRecord) => void }) {
-  const stats: Array<[string, number]> = [[`Total ${entityLabel}s`, summary.total], ["In progress", summary.open], ["Negotiation", summary.negotiation], ["Closed deal", summary.closed], ["Strategic tier", summary.strategic]];
+  // Rapor karier (DESIGN.md): closed deals out of all is the lead; the rest compact.
+  const stats: Array<[string, number]> = [["In progress", summary.open], ["Negotiation", summary.negotiation], ["Strategic tier", summary.strategic]];
   const recent = [...rows].sort((a, b) => dayValue(b.input_date || b.created_at).localeCompare(dayValue(a.input_date || a.created_at))).slice(0, 8);
   return (
     <>
-      <div className={s.stats}>{stats.map(([label, value]) => <div className={s.stat} key={label}><span>{label}</span><b>{value}</b></div>)}</div>
+      <div className={s.stats}>
+        <div className={`${s.stat} ${s.statLead}`}><span>Closed deals</span><b>{summary.closed}<small>/{summary.total} {entityLabel}s</small></b><ScoreLine label={`${summary.closed} of ${summary.total} ${entityLabel}s closed`} max={summary.total} value={summary.closed} /></div>
+        {stats.map(([label, value]) => <div className={s.stat} key={label}><span>{label}</span><b>{value}</b></div>)}
+      </div>
       <div className={s.insightGrid}>
         <Distribution rows={distribution(rows, "status")} title="Pipeline stage" />
         <Distribution rows={distribution(rows, "category")} title="Category" />
