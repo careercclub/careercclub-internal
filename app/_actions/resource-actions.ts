@@ -5,3 +5,4 @@ import * as server from "@/app/actions/resource-actions";
 import { unwrapAction } from "@/lib/actions/unwrap";
 
 export const reorderResourcesAction = unwrapAction(server.reorderResourcesAction);
+export const revealResourcePasswordAction = unwrapAction(server.revealResourcePasswordAction);

@@ -79,6 +79,7 @@ export const SETTINGS_SECTIONS = [
   { id: "menu", label: "Menu" },
   { id: "users", label: "Users & roles", adminOnly: true },
   { id: "claude", label: "Claude access", adminOnly: true },
+  { id: "errors", label: "Errors", adminOnly: true },
   { id: "tickets", label: "Ticket setup" },
   { id: "customer-knowledge", label: "Pain point lists" },
   { id: "product-classes", label: "Product classes" },

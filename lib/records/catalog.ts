@@ -82,7 +82,7 @@ export const recordDefinitions = {
   resources: {
     table: "resources", title: "Resources", eyebrow: "Internal", path: "/resources", orderBy: "kategori",
     description: "Maintain internal links and credentials grouped by operational category.", columns: ["kategori", "nama", "tipe", "url", "email", "username"],
-    fields: [{ name: "tipe", label: "Type", type: "select", options: ["link", "credential"], defaultValue: "link" }, { name: "kategori", label: "Category", required: true, choices: "existing" }, { name: "nama", label: "Name", required: true }, { name: "url", label: "URL" }, { name: "email", label: "Email" }, { name: "username", label: "Username" }, { name: "password", label: "Password" }, { name: "notes", label: "Notes", type: "textarea" }, { name: "urutan", label: "Order", type: "number" }],
+    fields: [{ name: "tipe", label: "Type", type: "select", options: ["link", "credential"], defaultValue: "link" }, { name: "kategori", label: "Category", required: true, choices: "existing" }, { name: "nama", label: "Name", required: true }, { name: "url", label: "URL" }, { name: "email", label: "Email" }, { name: "username", label: "Username" }, { name: "password", label: "Password", placeholder: "Leave empty to keep the current password" }, { name: "notes", label: "Notes", type: "textarea" }, { name: "urutan", label: "Order", type: "number" }],
   },
   app_settings: {
     table: "app_settings", title: "Application settings", eyebrow: "Internal", path: "/settings", orderBy: "created_at", ascending: false,
@@ -301,5 +301,5 @@ export const recordDefinitions = {
 export type RecordDefinitionKey = keyof typeof recordDefinitions;
 
 export function isRecordDefinitionKey(value: string): value is RecordDefinitionKey {
-  return value in recordDefinitions;
+  return Object.hasOwn(recordDefinitions, value);
 }

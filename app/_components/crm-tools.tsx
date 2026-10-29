@@ -1,5 +1,6 @@
 "use client";
 
+import { crmSummary, groupCustomers } from "@/lib/crm/view";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -11,13 +12,18 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const stats = useMemo(() => ({
-    total: rows.length,
-    pending: rows.filter((row) => String(row.payment_status || "").toUpperCase() === "PENDING").length,
-    failed: rows.filter((row) => String(row.payment_status || "").toUpperCase() === "FAILED").length,
-    converted: rows.filter((row) => String(row.status || "").toLowerCase().includes("convert")).length,
-    talent: rows.filter((row) => row.talent_pool_match || row.talent_pool).length,
-  }), [rows]);
+  // Transactions, Converted and Talent Pool come from the same functions as the CRM header and
+  // funnel (lib/crm/view.ts), so the two never show different numbers (Putaran 58).
+  const stats = useMemo(() => {
+    const summary = crmSummary(groupCustomers(rows));
+    return {
+      total: summary.transactions,
+      pending: rows.filter((row) => String(row.payment_status || "").toUpperCase() === "PENDING").length,
+      failed: rows.filter((row) => String(row.payment_status || "").toUpperCase() === "FAILED").length,
+      converted: summary.funnel.converted,
+      talent: summary.buyers - summary.notInPool,
+    };
+  }, [rows]);
 
   async function importFile(formData: FormData) {
     setBusy(true);
@@ -73,8 +79,8 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
           <div><dt>Transactions</dt><dd>{stats.total}</dd></div>
           <div><dt>Pending payment</dt><dd>{stats.pending}</dd></div>
           <div><dt>Failed payment</dt><dd className={stats.failed ? s.errorText : undefined}>{stats.failed}</dd></div>
-          <div><dt>Converted</dt><dd>{stats.converted}</dd></div>
-          <div><dt>Talent Pool matches</dt><dd>{stats.talent}</dd></div>
+          <div><dt>Converted buyers</dt><dd>{stats.converted}</dd></div>
+          <div><dt>Buyers in Talent Pool</dt><dd>{stats.talent}</dd></div>
         </dl>
         <button className={s.ghost} type="button" onClick={exportJson}><i className="ti ti-download" aria-hidden="true" /> Export JSON</button>
       </section>

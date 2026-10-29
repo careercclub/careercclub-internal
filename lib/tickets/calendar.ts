@@ -9,7 +9,8 @@ const SKIP = ["created_at", "updated_at"] as const;
 
 /** Open tickets with a deadline that are not mirrored by a Program task (the task shows instead). */
 export function isCalendarTicket(row: Row) {
-  return String(row.status ?? "") !== "Done" && !row.related_task_id && Boolean(row.due_date);
+  // Done and Cancelled are closed, as in every other count (lib/dashboard/summary.ts isDone).
+  return !["Done", "Cancelled"].includes(String(row.status ?? "")) && !row.related_task_id && Boolean(row.due_date);
 }
 
 /** What the server sends to the calendar: only rows it can show, without empty fields or timestamps. */

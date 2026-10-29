@@ -1994,3 +1994,94 @@ Keputusan A–D dari Putaran 56. User: "sesuai keputusan terbaik lo aja".
 ### Deploy
 
 **Ada migrasi (031)**: `git pull origin refactor && npm run vps:rebuild` (ini juga menjalankan 026–030 kalau belum).
+
+## Putaran 58 — Audit hak akses & konsistensi angka, pemantauan error, performa, uji pakai (29 Okt 2026)
+
+Permintaan user: prioritaskan audit hak akses dan konsistensi angka, lalu kerjakan juga nice-to-have (performa, pemantauan error, uji pakai).
+
+### Temuan — hak akses (cek server, bukan cuma tombol yang disembunyikan)
+
+- **P1: aksi tiket di server hanya mengecek "sudah login"** (IDOR). Dengan id saja, staff bisa mengubah, menyalin (sekalian membaca), atau menghapus tiket yang tidak boleh dia lihat. Aksi yang terkena: ubah status, detail, komentar, link, file, duplikat, hapus, geser deadline Dashboard, sinkron offline, form umum, kalender Google.
+- **P1: bisa mengambil alih tiket orang lewat task.** Mengisi `ticket_id` task dengan tiket orang lain, atau mengubah `requester_id`, lalu sinkron task → tiket menjadikan pemanggil requester, sehingga tiketnya muncul di board pemanggil.
+- **P1: password Resources ikut terkirim ke browser** semua user setiap kali halaman dibuka; di layar hanya disamarkan.
+- **P1: `/api/send-email`** bisa mengirim email atas nama alamat apa pun (`from_email` bebas) dan menerima panggilan dari situs lain (CORS `*`).
+- Cek admin ditulis ulang di 3 tempat (masih benar).
+- P2: kunci form `?key=constructor` lolos pengecekan (`in`).
+- Lainnya: lihat "Butuh keputusan" dan "Nice-to-have".
+
+### Temuan — konsistensi angka
+
+- Sudah benar: jumlah late (badge, Dashboard, Tickets, Program memakai `isOverdue` yang sama) dan badge yang mengikuti visibilitas tiket.
+- **Salah beneran:** Competitor Intel mengurutkan tanggal sebagai teks. Tanggal dari database berbentuk Date, jadi yang dibandingkan nama hari ("Tue…" vs "Thu…"). Akibatnya tingkat ancaman dan harga "terbaru" bisa diambil dari data lama. Pola yang sama ada di urutan transaksi CRM.
+- CRM Data health: "Transactions/Converted/Talent Pool" dihitung per baris, sedangkan header dan funnel per pembeli (beda angka). Segmen blast "Not blasted" tidak mengikutkan status kosong, padahal funnel mengikutkannya.
+- Content Evaluation "All buyers" sebenarnya jumlah baris pembelian.
+- Rata-rata rating Free Class: header ≠ tab.
+- Job Vacancy MT: "Open in {bulan}" ≠ Calendar "Scheduled"; HR contacts Overview ≠ tab.
+- "Hari ini" di Tickets/Program/Kalender/Content Evaluation memakai jam server/browser, sedangkan badge dan Dashboard memakai jam Jakarta.
+- Kalender menampilkan tiket Cancelled. Filter "Unknown" di Customer Knowledge menghasilkan 0. Badge menu tidak ikut berubah setelah simpan.
+
+### Do
+
+- **Satu aturan akses tiket** (`lib/tickets/access.ts` `requireTicketAccess`, memakai `ticketVisibility` yang sama dengan board), dipakai di semua jalur yang mengubah tiket. Tiket yang tidak boleh dilihat dijawab "Ticket not found."
+- **Link sistem**: `ticket_id` task dan `requester_id` tiket hanya bisa diubah admin. Sinkron task → tiket tidak lagi mengganti requester yang sudah ada.
+- **Resources**:
+  - halaman tidak lagi membawa password (hanya `has_password`);
+  - Show/Copy mengambil password dari server (`revealResourcePasswordAction`) dan tercatat di activity log;
+  - Save dengan Password kosong menyimpan password lama.
+  - Siapa yang boleh melihat tetap sama (menunggu keputusan user).
+- **Email**: alamat pengirim hanya boleh di domain `RESEND_FROM_EMAIL` (`lib/email/sender.ts`), CORS dihapus.
+- `lib/auth/guards.ts` (requireUser/requireRole/requireAdmin) sebagai tempat cek peran berikutnya; `isRecordDefinitionKey` memakai `Object.hasOwn`.
+- **Angka**:
+  - `timeOf()` untuk mengurutkan tanggal (Competitor threat & harga, CRM);
+  - CRM Data health dari `crmSummary(groupCustomers())`, label "Converted buyers" / "Buyers in Talent Pool";
+  - segmen blast memakai `funnelStage`;
+  - Content Evaluation diberi label "All purchases";
+  - satu `averageRating()` untuk Free Class;
+  - `openIn` = Calendar "Scheduled";
+  - HR contacts Overview = tab (tab mulai dari All);
+  - "hari ini" = `jakartaNow()` di semua layar;
+  - kalender tanpa Cancelled; filter Unknown; badge menu ikut di-refresh setelah simpan;
+  - aturan late kedua yang mati dihapus.
+- **Pemantauan error (nice-to-have)**:
+  - error tak terduga di halaman, API, server action, dan sinkron Google Sheet disimpan di `app_errors` (migrasi 032): satu baris per jenis error dengan jumlah dan waktu terakhir, email/id/angka panjang disamarkan;
+  - admin melihatnya di **Settings → Errors** dan bisa menandai "Mark fixed";
+  - `instrumentation.ts` `onRequestError` + `expected()`.
+- **Performa (nice-to-have)**:
+  - diukur dengan data seukuran produksi di 22 halaman, HP & desktop: semua terbuka < 0,9 detik, ketik di search ±0,1 detik, tanpa error;
+  - risiko ada di server (beberapa halaman mengirim seluruh tabel). Ditambah `database/checks/table-sizes.sql` untuk memantau ukuran tabel, dengan ambang ±10.000 baris untuk pindah ke muat per halaman.
+- **Uji pakai (nice-to-have)**: dokumen "Uji Pakai Web Internal CCC" (cara menjalankan, 14 tugas per peran, lembar catatan, rangkuman prioritas).
+
+### Butuh keputusan user
+
+- Siapa yang boleh melihat/mengubah password Resources (sekarang semua akun).
+- Siapa yang boleh mengirim email blast (sekarang semua akun, maksimal 100 per kirim).
+- Data bank Collaborators bisa diubah semua akun.
+
+### Nice-to-have (belum)
+
+- Batas percobaan login.
+- Reset password memutus sesi lama.
+- Lampiran tiket di R2 dicek per tiket.
+- Task Program menampilkan judul tiket tertautnya ke semua orang.
+- Normalisasi nomor WA yang sama di JS/SQL.
+- Format Reel/Reels di Content Evaluation.
+- Proyeksi follower Instagram.
+
+### Check
+
+- Unit 226 (+13), termasuk:
+  - `lib/consistency/numbers.test.mjs` 6: tanggal sebagai Date di Competitor, CRM satu pembeli = satu converted, rata-rata Free Class, Unknown, MT open-in = scheduled, kalender tanpa Cancelled;
+  - pengirim email hanya domain sendiri;
+  - penyamaran dan pengelompokan error.
+- `tests/agent` 109 (+10, Postgres asli):
+  - staff tidak bisa mengubah, menyalin, menghapus, atau menjadi requester tiket orang lain (dijawab "Ticket not found"); tiketnya sendiri tetap bisa;
+  - requester tiket sendiri tidak bisa diganti non-admin;
+  - Show password mengembalikan password dan tercatat di log; Save dengan Password kosong menyimpan password lama;
+  - error yang sama jadi satu baris dengan jumlah, email disamarkan; bug di aksi simpan tercatat.
+- Suite baru `p58.mjs` 7: password diambil hanya saat diminta (sekali), Settings → Errors untuk admin (staff tidak melihat), HR contacts Overview = tab.
+- Regresi penuh lolos: 42 suite modul, service worker, navigasi 33 (daftar Settings ditambah Errors), search 46, RecordManager 946, Design Assets 49, audit popup, import 93, search-db 19, agent-db 109, lint 0 error, build lolos.
+- antislop (mode DURING, mulai putaran ini): teks UI baru bebas em dash (R-02).
+
+### Deploy
+
+**Ada migrasi (032)**: `git pull origin refactor && npm run vps:rebuild`.

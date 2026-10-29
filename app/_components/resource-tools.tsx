@@ -1,6 +1,6 @@
 "use client";
 
-import { reorderResourcesAction } from "@/app/_actions/resource-actions";
+import { reorderResourcesAction, revealResourcePasswordAction } from "@/app/_actions/resource-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
 import { filterResources, groupResources, hostOf, hrefOf, isCredential, moveResource, plural, sortResources } from "@/lib/library/view";
 import type { ReactNode } from "react";
@@ -56,7 +56,18 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
     if (await copyText(String(value || ""))) notify(`${label} copied.`);
     else notifyError(new Error("Copy is not available here."), `Could not copy the ${label.toLowerCase()}.`);
   }
-  const toggle = (id: string) => setRevealed((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  // Passwords are fetched from the server when shown or copied (never sent with the page).
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  async function passwordOf(id: string) {
+    if (id in passwords) return passwords[id];
+    try { const value = await revealResourcePasswordAction(id); setPasswords((current) => ({ ...current, [id]: value })); return value; }
+    catch (error) { notifyError(error, "Could not load the password."); return null; }
+  }
+  async function toggle(id: string) {
+    if (!revealed.has(id) && (await passwordOf(id)) === null) return;
+    setRevealed((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+  async function copyPassword(id: string) { const value = await passwordOf(id); if (value !== null) await copy("Password", value); }
 
   return (
     <div className={s.page}>
@@ -106,16 +117,16 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
                             <b>{name}</b>
                             {row.url ? <a href={hrefOf(row.url)} rel="noreferrer" target="_blank" title={String(row.url)}>{hostOf(row.url)} <i className="ti ti-external-link" aria-hidden="true" /></a> : null}
                           </div>
-                          {row.username || row.email || row.password ? (
+                          {row.username || row.email || row.has_password ? (
                             <div className={g.secrets}>
                               {row.username ? <div className={g.secret}><span>Username</span><code>{String(row.username)}</code><button aria-label={`Copy username for ${name}`} className={g.mini} onClick={() => copy("Username", row.username)} type="button"><i className="ti ti-copy" aria-hidden="true" /></button></div> : null}
                               {row.email ? <div className={g.secret}><span>Email</span><code>{String(row.email)}</code><button aria-label={`Copy email for ${name}`} className={g.mini} onClick={() => copy("Email", row.email)} type="button"><i className="ti ti-copy" aria-hidden="true" /></button></div> : null}
-                              {row.password ? (
+                              {row.has_password ? (
                                 <div className={g.secret}>
                                   <span>Password</span>
-                                  <code aria-label={show ? undefined : "Hidden password"}>{show ? String(row.password) : "••••••••"}</code>
-                                  <button aria-label={`${show ? "Hide" : "Show"} password for ${name}`} aria-pressed={show} className={g.mini} onClick={() => toggle(id)} type="button"><i className={`ti ti-eye${show ? "-off" : ""}`} aria-hidden="true" /></button>
-                                  <button aria-label={`Copy password for ${name}`} className={g.mini} onClick={() => copy("Password", row.password)} type="button"><i className="ti ti-copy" aria-hidden="true" /></button>
+                                  <code aria-label={show ? undefined : "Hidden password"}>{show ? passwords[id] ?? "" : "••••••••"}</code>
+                                  <button aria-label={`${show ? "Hide" : "Show"} password for ${name}`} aria-pressed={show} className={g.mini} onClick={() => void toggle(id)} type="button"><i className={`ti ti-eye${show ? "-off" : ""}`} aria-hidden="true" /></button>
+                                  <button aria-label={`Copy password for ${name}`} className={g.mini} onClick={() => void copyPassword(id)} type="button"><i className="ti ti-copy" aria-hidden="true" /></button>
                                 </div>
                               ) : null}
                             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { jakartaNow } from "@/lib/dashboard/summary";
 import { REMOVED_PERSON } from "@/lib/tickets/people";
 import { revertWith } from "./safe-action";
 
@@ -180,7 +181,8 @@ export function TicketsWorkspace({ rows, people, divisions, types, meId = null, 
   const divisionIndex = useMemo(() => new Map(divisions.map((division, index) => [String(division.id), index])), [divisions]);
   const typeMap = useMemo(() => new Map(types.map((type) => [String(type.id), type])), [types]);
 
-  const today = localIso(new Date());
+  // One "today" everywhere: Jakarta's date, as the menu badges and Dashboard use (Putaran 58).
+  const today = jakartaNow().today;
   const openCount = items.filter((row) => !isDone(row)).length;
   const doneCount = items.length - openCount;
   const lateCount = items.filter((row) => isOverdue(row, today)).length;

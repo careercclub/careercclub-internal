@@ -376,5 +376,46 @@ const otherSees = await PEOPLE.listNotificationsForUser(String(otherStaff.id), "
 const ekoSees = await PEOPLE.listNotificationsForUser(String(eko.id), "lead");
 ok(!otherSees.some((n) => n.title === "New ticket: Minta desain") && ekoSees.some((n) => n.title === "New ticket: Minta desain"), "the bell: the assignee sees it; a staff member with the same role as the maker does not");
 
+// ── Access: ticket changes follow the board's visibility rule; system links; passwords; errors (Putaran 58) ──
+const AX = await import("./out/access.mjs");
+const [staffA] = await sql`insert into auth_users (email, name, role, is_active) values ('staffa@x.id', 'Staff A', 'staff', true) returning id`;
+const [personA] = await sql`insert into tkt_people (nama, email, auth_user_id) values ('Staff A', 'staffa@x.id', ${staffA.id}) returning id`;
+const [secret] = await sql`insert into tickets (title, status, priority, requester_id, assigned_to_ids) values ('Gaji tim', 'Todo', 'Med', ${oldPerson.id}, ${[oldPerson.id]}::uuid[]) returning id`;
+const [mine] = await sql`insert into tickets (title, status, priority, requester_id, assigned_to_ids) values ('Punya A', 'Todo', 'Med', ${personA.id}, '{}') returning id`;
+globalThis.__session = { user: { id: staffA.id, name: "Staff A", email: "staffa@x.id", role: "staff" } };
+let ax = await AX.changeTicketStatusAction(secret.id, "Done");
+ok(ax?.__actionError === "Ticket not found." && (await sql`select status from tickets where id = ${secret.id}`)[0].status === "Todo", "staff: another person's ticket can't be changed by id (answered as not found)");
+ax = await AX.duplicateTicketAction(secret.id);
+ok(ax?.__actionError === "Ticket not found.", "staff: can't copy (and read) a ticket they may not see");
+ax = await AX.deleteTicketAction(secret.id);
+ok(ax?.__actionError === "Ticket not found." && (await sql`select 1 from tickets where id = ${secret.id}`).length === 1, "staff: can't delete it either");
+ax = await AX.changeTicketStatusAction(mine.id, "In Progress");
+ok(ax === undefined && (await sql`select status from tickets where id = ${mine.id}`)[0].status === "In Progress", "staff: their own ticket still works");
+const fd = new FormData(); fd.set("title", "Gaji tim"); fd.set("requester_id", personA.id);
+ax = await AX.updateManagedRecord("tickets", secret.id, fd);
+ok(ax?.__actionError === "Ticket not found." && String((await sql`select requester_id from tickets where id = ${secret.id}`)[0].requester_id) === String(oldPerson.id), "staff: can't make themselves requester of someone else's ticket");
+const fd2 = new FormData(); fd2.set("title", "Punya A"); fd2.set("requester_id", oldPerson.id);
+await AX.updateManagedRecord("tickets", mine.id, fd2);
+ok(String((await sql`select requester_id from tickets where id = ${mine.id}`)[0].requester_id) === String(personA.id), "staff: the requester of their own ticket stays (only an admin changes it)");
+// Resources: the password is fetched on demand, and that is logged.
+await sql`insert into resources (tipe, kategori, nama, password) values ('credential', 'Akun', 'Canva', 'rahasia-123')`;
+const [canva] = await sql`select id from resources where nama = 'Canva'`;
+const before = (await sql`select count(*)::int as n from activity_log where module = 'Resources'`)[0].n;
+ax = await AX.revealResourcePasswordAction(canva.id);
+const after = (await sql`select count(*)::int as n from activity_log where module = 'Resources'`)[0].n;
+ok(ax === "rahasia-123" && after === before + 1, "Resources: Show password returns it and logs who looked");
+const fd3 = new FormData(); fd3.set("tipe", "credential"); fd3.set("kategori", "Akun"); fd3.set("nama", "Canva Pro"); fd3.set("password", "");
+await AX.updateManagedRecord("resources", canva.id, fd3);
+ok((await sql`select password from resources where id = ${canva.id}`)[0].password === "rahasia-123", "Resources: saving with Password left empty keeps the password");
+// Server errors: kept for admins, grouped, emails masked.
+await sql.unsafe(migration("032_app_errors.sql"));
+await AX.recordServerError({ kind: "action", place: "saveThingAction", error: new Error('duplicate key for "rina@gmail.com" id 7f1c2d3e-0000-4000-8000-000000000001') });
+await AX.recordServerError({ kind: "action", place: "saveThingAction", error: new Error('duplicate key for "budi@gmail.com" id 11111111-2222-4333-8444-555555555555') });
+const failed = await AX.expected(async () => { throw new TypeError("x.map is not a function"); });
+const errs = await AX.listServerErrors();
+const dup = errs.find((e) => e.place === "saveThingAction");
+ok(dup?.count === 2 && !/gmail/.test(dup.message) && /\[email\]/.test(dup.message), `errors: the same error is one row with a count, emails hidden (${dup?.count}, ${dup?.message})`);
+ok(failed?.__actionError && errs.some((e) => e.kind === "action" && /x\.map is not a function/.test(e.message)), "errors: an unexpected bug in a save is recorded, the person gets the plain message");
+
 await sql.end();
 console.log(`\n${pass} pass, ${fail} fail`); process.exit(fail ? 1 : 0);

@@ -1,5 +1,6 @@
 "use client";
 
+import { averageRating as averageOf } from "@/lib/customer-knowledge/view";
 import { optionLabel, withCurrent } from "@/lib/forms/options";
 import { ClaudeChip, ClaudeMark } from "./claude-mark";
 import type { SheetSyncState } from "@/lib/api/sheet-sync";
@@ -62,10 +63,7 @@ export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeCl
     return true;
   });
   const allLabels = useMemo(() => [...new Set(rows.flatMap(labels))].sort(compareText), [rows]);
-  const averageRating = useMemo(() => {
-    const values = freeClassRows.flatMap((row) => RATING_FIELDS.map(([key]) => Number(row[key])).filter((value) => value >= 1 && value <= 5));
-    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
-  }, [freeClassRows]);
+  const averageRating = useMemo(() => averageOf(freeClassRows, RATING_FIELDS.map(([key]) => key)), [freeClassRows]);
 
   return (
     <div className={s.page}>
@@ -365,7 +363,7 @@ function FreeClassTab({ rows }: { rows: ApiRecord[] }) {
       const dist = [1, 2, 3, 4, 5].map((star) => values.filter((value) => Math.round(value) === star).length);
       return { key, label, average: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0, count: values.length, dist };
     }).filter((item) => item.count).sort((a, b) => a.average - b.average);
-    const overall = ratings.length ? ratings.reduce((sum, item) => sum + item.average, 0) / ratings.length : 0;
+    const overall = averageOf(rows, RATING_FIELDS.map(([key]) => key));
     return { ratings, overall, series: distribution(rows, "seri"), universities: distribution(rows, "universitas"), cohorts: distribution(rows, "angkatan") };
   }, [rows]);
 

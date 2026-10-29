@@ -174,7 +174,8 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
             divisi_id = coalesce(${divisionId}, divisi_id),
             assigned_to_id = ${primaryAssignee},
             assigned_to_ids = ${ticketAssignees}::uuid[],
-            requester_id = coalesce(${resolvedRequester}, requester_id),
+            -- The requester is set when the ticket is made and never taken over by a later edit.
+            requester_id = coalesce(requester_id, ${resolvedRequester}),
             due_date = ${task.due_date || null},
             related_task_id = ${task.id},
             source = 'Webinar Project'

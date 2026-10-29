@@ -1,5 +1,6 @@
 // CRM buyers list rules (IJIS layout, Oct 2026). Pure: tested under `node --test`.
 // A "customer" is every transaction row sharing one WhatsApp number (or email when no WA).
+import { timeOf } from "../text/date.ts";
 import { formatRupiahShort } from "../text/money.ts";
 
 type Row = Record<string, unknown>;
@@ -50,7 +51,7 @@ export function groupCustomers(rows: Row[]): Customer[] {
   const groups = new Map<string, Row[]>();
   rows.forEach((row) => { const key = normalizedWa(row.wa) || text(row.email) || text(row.id); groups.set(key, [...(groups.get(key) || []), row]); });
   return [...groups.entries()].map(([key, group]) => {
-    const sorted = [...group].sort((a, b) => text(b.tanggal || b.created_at).localeCompare(text(a.tanggal || a.created_at)));
+    const sorted = [...group].sort((a, b) => timeOf(b.tanggal || b.created_at) - timeOf(a.tanggal || a.created_at));
     const transactions = group.flatMap(history);
     return { ...sorted[0], _key: key, ids: group.map((row) => text(row.id)), transactions, txCount: transactions.length, spend: transactions.reduce((sum, item) => sum + Number(item.harga || 0), 0) };
   });

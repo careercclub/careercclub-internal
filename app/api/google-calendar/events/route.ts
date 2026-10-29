@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
+import { requireTicketAccess } from "@/lib/tickets/access";
 import { getProgramTask, updateProgramTask } from "@/lib/api/program";
-import { getTicket, updateTicket } from "@/lib/api/tickets";
+import { updateTicket } from "@/lib/api/tickets";
 
 type RequestBody = {
   accessToken?: unknown;
@@ -73,7 +74,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "One task or ticket, title, and a valid start/end range are required." }, { status: 400 });
   }
 
-  const record = taskId ? await getProgramTask(taskId) : await getTicket(ticketId);
+  // A ticket the person may not see is "not found" (lib/tickets/access.ts).
+  const record = taskId ? await getProgramTask(taskId) : await requireTicketAccess(session.user, ticketId).catch(() => null);
   if (!record) return Response.json({ error: taskId ? "Task not found." : "Ticket not found." }, { status: 404 });
 
   const existingEventId = value(record.gcal_event_id, 1024);

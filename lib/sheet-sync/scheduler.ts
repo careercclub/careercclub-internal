@@ -9,7 +9,13 @@ declare global { var __cccSheetSyncTimer: ReturnType<typeof setInterval> | undef
 
 export function startSheetSyncScheduler() {
   if (globalThis.__cccSheetSyncTimer) return;
-  const check = () => { runDueSheetSyncs().catch((error) => console.error("[sheet sync] check failed", error)); };
+  const check = () => {
+    runDueSheetSyncs().catch(async (error) => {
+      console.error("[sheet sync] check failed", error);
+      const { recordServerError } = await import("@/lib/monitoring/errors");
+      await recordServerError({ kind: "job", place: "Google Sheet sync", error });
+    });
+  };
   setTimeout(check, 60_000).unref?.();
   globalThis.__cccSheetSyncTimer = setInterval(check, CHECK_EVERY_MS);
   globalThis.__cccSheetSyncTimer.unref?.();

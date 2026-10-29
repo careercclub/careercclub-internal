@@ -17,16 +17,19 @@ import { guard, submitTo } from "./safe-action";
 import s from "./settings-workspace.module.css";
 import { HelpTip } from "./ui-kit";
 import { ClaudeAccess } from "./claude-access";
+import { ServerErrors } from "./server-errors";
+import type { ServerErrorRow } from "@/lib/monitoring/errors";
 import type { AgentTokenRow } from "@/lib/api/agent-tokens";
 
 type Page = { slug: string; title: string; section: string; path: string; icon: string };
 type SafeUser = Pick<AuthUserRecord, "id" | "email" | "name" | "role" | "is_active" | "created_at">;
 
-const WORKSPACE = new Set<SettingsSectionId>(["menu", "users", "claude"]);
+const WORKSPACE = new Set<SettingsSectionId>(["menu", "users", "claude", "errors"]);
 const SECTION_META: Record<SettingsSectionId, { icon: string; description: string }> = {
   menu: { icon: "ti-layout-sidebar", description: "Choose which modules the sidebar shows and what they are called." },
   users: { icon: "ti-users", description: "Who can sign in, and what each person is allowed to change." },
   claude: { icon: "ti-sparkles", description: "Keys that let Claude add and update data from research — always previewed first, never deleting." },
+  errors: { icon: "ti-bug", description: "Unexpected server errors, so a broken page or save is noticed and fixed." },
   tickets: { icon: "ti-ticket", description: "Divisions, people and request types used by Tickets, and how ticket status and notifications work." },
   "customer-knowledge": { icon: "ti-message-circle", description: "Platforms and categories offered when logging a pain point." },
   "product-classes": { icon: "ti-tag", description: "Classifications used to group products and CRM buyers." },
@@ -210,6 +213,7 @@ export function SettingsWorkspace({
   isAdmin,
   users,
   agentTokens = [],
+  serverErrors = [],
   initialTab,
   initialSection,
 }: {
@@ -228,6 +232,8 @@ export function SettingsWorkspace({
   users: SafeUser[];
   /** null: the agent_tokens table is not there yet (migration 027 not run). */
   agentTokens?: AgentTokenRow[] | null;
+  /** null: the app_errors table is not there yet (migration 032 not run). */
+  serverErrors?: ServerErrorRow[] | null;
   initialTab?: string;
   initialSection?: string;
 }) {
@@ -356,6 +362,7 @@ export function SettingsWorkspace({
           {tab === "carousel-ctas" ? <RecordManager definitionKey="carousel_cta_options" rows={ctaOptions} /> : null}
           {tab === "users" && isAdmin ? <UserManagement users={users} /> : null}
           {tab === "claude" && isAdmin ? <ClaudeAccess tokens={agentTokens} /> : null}
+          {tab === "errors" && isAdmin ? <ServerErrors errors={serverErrors} /> : null}
         </section>
       </div>
     </div>

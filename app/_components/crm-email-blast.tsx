@@ -1,5 +1,6 @@
 "use client";
 
+import { funnelStage } from "@/lib/crm/view";
 import { bulkUpdateCrmBuyers } from "@/app/_actions/crm-actions";
 import type { DailyBlastCount, EmailBlastRecord } from "@/lib/api/email-blast";
 import { useRouter } from "next/navigation";
@@ -72,7 +73,8 @@ export function CrmEmailBlast({ rows, history, daily }: { rows: Row[]; history: 
   // segment narrows further.
   const recipients = useMemo(() => {
     let list = rows.filter((row) => text(row.email).includes("@"));
-    if (segment === "belum_diblast") list = list.filter((row) => text(row.status) === "Belum diblast");
+    // "Not blasted" = the funnel's first stage (empty or unknown status included), as on the CRM page.
+    if (segment === "belum_diblast") list = list.filter((row) => funnelStage(row.status) === "new");
     if (segment === "custom") {
       if (klasifikasi) list = list.filter((row) => text(row.klasifikasi) === klasifikasi);
       if (industri) list = list.filter((row) => text(row.industri) === industri);

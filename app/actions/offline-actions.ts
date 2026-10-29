@@ -1,11 +1,11 @@
 "use server";
 
 import { expected } from "@/lib/actions/expected";
+import { requireTicketAccess } from "@/lib/tickets/access";
 
 import { auth } from "@/auth";
 import { isActionFailure } from "@/lib/actions/result";
 import { getProgramTask } from "@/lib/api/program";
-import { getTicket } from "@/lib/api/tickets";
 import { OFFLINE_FIELDS, planReplay, type Conflict, type OfflineKind } from "@/lib/offline/fields";
 import { rescheduleTicketAction } from "./dashboard-actions";
 import { updateProgramTaskWorkflowAction, updateTaskDetailsAction } from "./program-actions";
@@ -34,7 +34,8 @@ export async function applyOfflineChangeAction(change: { kind: OfflineKind; id: 
   const fields = Object.keys(change.after || {});
   if (!fields.length || fields.some((field) => !OFFLINE_FIELDS[kind].includes(field))) throw new Error("This change cannot be saved offline.");
   const text = (values: Record<string, string>) => Object.fromEntries(Object.entries(values || {}).map(([k, v]) => [k, String(v ?? "")]));
-  const current = kind === "ticket" ? await getTicket(id) : await getProgramTask(id);
+  // A ticket the person may not see is "not found" here too (same rule as an online save).
+  const current = kind === "ticket" ? await requireTicketAccess(session.user, id).catch(() => null) : await getProgramTask(id);
   if (!current) return { result: "missing" } as OfflineReplay;
   const plan = planReplay(kind, current, text(change.before), text(change.after));
   if (plan.state === "already") return { result: "already" } as OfflineReplay;

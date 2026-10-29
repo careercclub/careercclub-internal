@@ -1,5 +1,6 @@
 "use client";
 
+import { jakartaNow } from "@/lib/dashboard/summary";
 import { invitablePeople, REMOVED_PERSON } from "@/lib/tickets/people";
 import { revertWith } from "./safe-action";
 
@@ -253,8 +254,8 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const personMap = useMemo(() => new Map(people.map((person) => [String(person.id), person])), [people]);
   const divisionMap = useMemo(() => new Map(divisions.map((division) => [String(division.id), division])), [divisions]);
   // One "today" for the whole page: the page's reference time, as a local date.
-  const today = localIso(new Date(referenceDate));
-  const overdue = taskRows.filter((task) => task.status !== "Done" && task.due_date && dateKey(task.due_date) < today).length;
+  // One "today" everywhere: Jakarta's date, as the menu badges and Dashboard use (Putaran 58).
+  const today = jakartaNow(new Date(referenceDate)).today;
   const selected = eventsState.find((event) => String(event.id) === selectedEvent) || null;
   const jenisOptions = useMemo(() => [...new Set(eventsState.map((event) => text(event.jenis_program)).filter(Boolean))], [eventsState]);
   // The server returns events newest-first, but creating or editing one appends to

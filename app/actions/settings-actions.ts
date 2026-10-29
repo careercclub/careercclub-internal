@@ -4,6 +4,7 @@ import { expected } from "@/lib/actions/expected";
 
 import { auth } from "@/auth";
 import { saveAppSetting } from "@/lib/api/settings";
+import { markServerErrorFixed } from "@/lib/monitoring/errors";
 import { revalidatePath } from "next/cache";
 
 export async function saveMenuVisibilityAction(formData: FormData) {
@@ -46,6 +47,17 @@ export async function saveCompetitorIntelListsAction(formData: FormData) {
   const targetAudience = formData.getAll("target_audience").map(String).map((value) => value.trim()).filter(Boolean);
   await saveAppSetting("ci_product_categories", categories);
   await saveAppSetting("ci_target_audience", targetAudience);
+  revalidatePath("/settings");
+  });
+}
+
+/** Settings → Errors: an admin marks an error as fixed (it comes back if it happens again). */
+export async function markErrorFixedAction(id: string) {
+  return expected(async () => {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") throw new Error("Admin access required.");
+  if (!/^\d+$/.test(String(id))) throw new Error("Unknown error.");
+  await markServerErrorFixed(String(id));
   revalidatePath("/settings");
   });
 }

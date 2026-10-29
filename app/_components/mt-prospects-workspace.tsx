@@ -48,7 +48,8 @@ export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenc
     return map;
   }, [contacts]);
   const tracked = prospects.filter((row) => row.status !== "excluded");
-  const people = contacts.filter(isPerson);
+  // HR contacts of companies in the list: the same count as the HR contacts tab (Putaran 58).
+  const people = contacts.filter((contact) => isPerson(contact) && byId.has(contact.prospect_id));
 
   useRecordFocus((id) => {
     if (byId.has(id)) { setOpenId(id); return true; }
@@ -333,7 +334,8 @@ function CalendarView({ prospects, now, month, onMonth, onOpen }: { prospects: P
 
 function ContactsView({ contacts, byId, onOpen }: { contacts: ContactRow[]; byId: Map<string, ProspectRow>; onOpen: (id: string) => void }) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<ProspectStatus | "">("active");
+  // All companies first, so the count matches the Overview; narrow by status from here.
+  const [status, setStatus] = useState<ProspectStatus | "">("");
   const filtered = useMemo(() => {
     const rows = contacts.filter((contact) => {
       const company = byId.get(contact.prospect_id);

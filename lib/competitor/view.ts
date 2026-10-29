@@ -1,5 +1,6 @@
 // Competitor Intel rules (IJIS layout, Oct 2026). Pure: tested under `node --test`.
 // Threat comes from the newest snapshot when there is one, else from the profile.
+import { timeOf } from "../text/date.ts";
 
 type Row = Record<string, unknown>;
 export type Threat = "high" | "medium" | "low" | "";
@@ -33,7 +34,7 @@ export const CATEGORY_LABEL: Record<string, string> = { direct: "Direct", indire
 
 export function threatOf(profile: Row, snapshots: Row[]): Threat {
   const id = text(profile.id);
-  const latest = snapshots.filter((s) => text(s.competitor_id) === id).sort((a, b) => text(b.snapshot_date).localeCompare(text(a.snapshot_date)))[0];
+  const latest = snapshots.filter((s) => text(s.competitor_id) === id).sort((a, b) => timeOf(b.snapshot_date) - timeOf(a.snapshot_date))[0];
   const value = (text(latest?.threat_level) || text(profile.threat_level)).toLowerCase();
   return value === "high" || value === "medium" || value === "low" ? value : "";
 }
@@ -62,7 +63,7 @@ export function competitorSummary(rows: Row[], snapshots: Row[], flags: Row[]) {
 /** Latest price per product (price history first, else the product's own price), grouped by category, cheapest first. */
 export function priceBoard(products: Row[], prices: Row[]) {
   const latest = (product: Row) => {
-    const rows = prices.filter((p) => text(p.product_id) === text(product.id)).sort((a, b) => text(b.recorded_at).localeCompare(text(a.recorded_at)));
+    const rows = prices.filter((p) => text(p.product_id) === text(product.id)).sort((a, b) => timeOf(b.recorded_at) - timeOf(a.recorded_at));
     // The tables keep price_min / price_max; price and harga are older names.
     const row = rows[0] || product;
     return Number(row.price_min ?? row.price ?? row.harga ?? 0) || 0;

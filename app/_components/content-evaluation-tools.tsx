@@ -1,5 +1,6 @@
 "use client";
 
+import { jakartaNow } from "@/lib/dashboard/summary";
 import { optionLabel, withCurrent } from "@/lib/forms/options";
 import { confirmDelete } from "./confirm-delete";
 import { loadContentEvaluationAction } from "@/app/_actions/content-evaluation-actions";
@@ -58,7 +59,7 @@ export function ContentEvaluationTools({ evaluations, buyers, buyerTotal, sheetS
   const [range, setRange] = useState("0");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  const [today] = useState(() => jakartaNow().today); // Jakarta's date, as everywhere else
   const [selected, setSelected] = useState<Scored | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<ApiRecord | null | undefined>(undefined);
@@ -368,9 +369,9 @@ function StoryBuyer({ items, scored, buyers, buyerByDate, select, total }: { ite
   return (
     <>
       <div className={s.stats}>
-        <div className={s.stat}><span>All buyers</span><b>{total}</b><small>Every source</small></div>
-        <div className={s.stat}><span>Buyers from IG Story</span><b>{storyBuyers.length}</b><small>Source: Instagram Story</small></div>
-        <div className={s.stat}><span>Story share</span><b>{total ? pct(storyBuyers.length / total * 100) : "0.0%"}</b><small>IG Story ÷ all buyers</small></div>
+        <div className={s.stat}><span>All purchases</span><b>{total}</b><small>Every source</small></div>
+        <div className={s.stat}><span>Purchases from IG Story</span><b>{storyBuyers.length}</b><small>Source: Instagram Story</small></div>
+        <div className={s.stat}><span>Story share</span><b>{total ? pct(storyBuyers.length / total * 100) : "0.0%"}</b><small>IG Story ÷ all purchases</small></div>
       </div>
       <section aria-label="Stories and buyers by day" className={s.card}>
         <div className={s.cardHead}>

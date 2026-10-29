@@ -79,8 +79,9 @@ export function monthCounts(rows: Pick<ProspectRow, "openings">[], year: number)
   return MONTHS.map((_, index) => rows.filter((row) => monthsIn(row, year).includes(index + 1)).length);
 }
 
-export function openIn<T extends Pick<ProspectRow, "openings" | "brand" | "legal_name">>(rows: T[], year: number, month: number) {
-  return sortByName(rows.filter((row) => monthsIn(row, year).includes(month)));
+/** Companies open in a month: the same list as the Calendar's "Scheduled" (older and excluded left out). */
+export function openIn<T extends Pick<ProspectRow, "openings" | "brand" | "legal_name" | "status">>(rows: T[], year: number, month: number) {
+  return sortByName(rows.filter((row) => row.status !== "older" && row.status !== "excluded" && monthsIn(row, year).includes(month)));
 }
 
 export function industryCounts(rows: Pick<ProspectRow, "openings" | "status" | "industry">[], year: number, currentYear: number) {

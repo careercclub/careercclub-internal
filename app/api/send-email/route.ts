@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
+import { senderAddress } from "@/lib/email/sender";
 import { logEmailBlast } from "@/lib/api/email-blast";
 
 type Recipient = string | { email?: string; name?: string };
@@ -23,17 +24,11 @@ type SendResult = {
   error?: string;
 };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
 
 function json(payload: unknown, init: ResponseInit = {}) {
   return Response.json(payload, {
     ...init,
     headers: {
-      ...corsHeaders,
       ...(init.headers || {}),
     },
   });
@@ -47,10 +42,6 @@ function personalize(value: string, recipient: Recipient, html = false) {
   const rawName = typeof recipient === "string" ? "" : recipient.name || "";
   const name = html ? rawName.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character] || character) : rawName;
   return value.replaceAll("{{nama}}", name || "Kak").replaceAll("{nama}", name || "Kak");
-}
-
-export function OPTIONS() {
-  return new Response(null, { headers: corsHeaders });
 }
 
 export async function POST(request: NextRequest) {
@@ -93,9 +84,7 @@ export async function POST(request: NextRequest) {
       }
 
       const payload = {
-        from: `${from_name || "CareerCclub"} <${
-          from_email || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"
-        }>`,
+        from: `${String(from_name || "CareerCclub").replace(/[<>"\r\n]/g, "").slice(0, 80) || "CareerCclub"} <${senderAddress(from_email)}>`,
         to: [email],
         subject: personalize(subject, recipient),
         html: personalize(html, recipient, true),

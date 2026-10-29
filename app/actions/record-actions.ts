@@ -1,6 +1,7 @@
 "use server";
 
 import { expected } from "@/lib/actions/expected";
+import { requireTicketAccess } from "@/lib/tickets/access";
 import { listTicketPeople } from "@/lib/api/tickets";
 import { findTicketPerson } from "@/lib/tickets/visibility";
 import { deleteWithDependents, describeDelete } from "@/lib/records/delete";
@@ -15,7 +16,7 @@ import {
   synchronizeTaskToTicket,
   synchronizeTicketToTask,
 } from "@/lib/api/program";
-import { getRowById, insertRow, updateRow } from "@/lib/db/query";
+import { insertRow, updateRow } from "@/lib/db/query";
 import { isRecordDefinitionKey, recordDefinitions, type ManagedField, type RecordDefinition } from "@/lib/records/catalog";
 import { revalidatePath } from "next/cache";
 
@@ -97,12 +98,26 @@ async function notifyTicket(input: Parameters<typeof publishTicketNotification>[
   }
 }
 
+/**
+ * Links the app keeps itself (Putaran 58): a task's ticket_id and a ticket's requester. Changing
+ * them by hand could attach someone else's ticket to a task, or make yourself its requester and
+ * see it — so only an admin may, and a ticket keeps its requester otherwise.
+ */
+function guardSystemLinks(key: string, values: Record<string, unknown>, user: { role?: string | null }, previous: ManagedRecord | null) {
+  if (String(user.role || "").toLowerCase() === "admin") return;
+  if (key === "tasks" && "ticket_id" in values) delete values.ticket_id;
+  if (key === "tickets" && "requester_id" in values) {
+    if (previous) values.requester_id = previous.requester_id ?? null; else delete values.requester_id;
+  }
+}
+
 export async function createManagedRecord(key: string, formData: FormData) {
   return expected(async () => {
   const user = await requireUser();
   const definition = getDefinition(key);
   requireMutationRole(definition, user);
   const values = getValues(key, formData);
+  guardSystemLinks(key, values, user, null);
   // A field left empty gets its default when the row is added (e.g. a resource is a "link").
   for (const field of definition.fields) if (field.defaultValue !== undefined && (values[field.name] === null || values[field.name] === undefined)) values[field.name] = field.defaultValue;
 
@@ -156,8 +171,11 @@ export async function updateManagedRecord(key: string, id: string, formData: For
   const user = await requireUser();
   const definition = getDefinition(key);
   requireMutationRole(definition, user);
-  const previous = key === "tickets" ? await getRowById<ManagedRecord>(definition.table, id) : null;
+  const previous = key === "tickets" ? await requireTicketAccess(user, id) as ManagedRecord : null;
   const values = getValues(key, formData);
+  guardSystemLinks(key, values, user, previous);
+  // Resources: the page never holds the password, so an empty Password keeps the current one.
+  if (key === "resources" && !values.password) delete values.password;
   // A field left empty gets its default when the row is added (e.g. a resource is a "link").
   for (const field of definition.fields) if (field.defaultValue !== undefined && (values[field.name] === null || values[field.name] === undefined)) values[field.name] = field.defaultValue;
 
@@ -223,7 +241,7 @@ export async function deleteManagedRecord(key: string, id: string) {
   const user = await requireUser();
   const definition = getDefinition(key);
   requireMutationRole(definition, user);
-  const previous = key === "tickets" ? await getRowById<ManagedRecord>(definition.table, id) : null;
+  const previous = key === "tickets" ? await requireTicketAccess(user, id) as ManagedRecord : null;
   if (key === "tasks") {
     await deleteTaskWithLinkedTicket(id);
   } else if (key === "tickets") {

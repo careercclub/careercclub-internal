@@ -1,5 +1,6 @@
 "use client";
 
+import { jakartaNow } from "@/lib/dashboard/summary";
 import { revertWith } from "./safe-action";
 import { saveOrQueue } from "@/lib/offline/queue";
 
@@ -207,7 +208,7 @@ export function DashboardCalendar({ tickets, tasks, events, people = [], divisio
     return map;
   }, [events, taskRows, ticketRows]);
 
-  const todayKey = localIso(new Date(referenceDate)); // the same "today" as the month shown
+  const todayKey = jakartaNow(new Date(referenceDate)).today; // Jakarta's date, as the badges and Dashboard
 
   function reschedule(kind: string, id: string, date: string) {
     if (kind === "ticket") {

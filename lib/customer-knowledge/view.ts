@@ -61,11 +61,21 @@ export function topKeywords(rows: Row[], limit = 15): Array<[string, number]> {
   return [...frequencies.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit);
 }
 
+/**
+ * Free Class average rating: every 1–5 answer counts once (Putaran 58). The header and the Free
+ * Class tab both use this, so they never show 4.31 and 4.28 for the same answers.
+ */
+export function averageRating(rows: Row[], keys: readonly string[]) {
+  const values = rows.flatMap((row) => keys.map((key) => Number(row[key])).filter((value) => value >= 1 && value <= 5));
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+}
+
 export type PainFilter = { query?: string; platform?: string; month?: string; category?: string; label?: string };
 
 export function filterPainPoints<T extends Row>(rows: T[], f: PainFilter): T[] {
   const q = text(f.query).toLowerCase();
-  return rows.filter((row) => (!f.platform || text(row.platform) === f.platform)
+  // Empty platform/category count as "Unknown" in the charts, so filtering by it finds them.
+  return rows.filter((row) => (!f.platform || (text(row.platform) || "Unknown") === f.platform)
     && (!f.month || text(row.bulan) === f.month)
     && (!f.category || (text(row.kategori) || "Unknown") === f.category)
     && (!f.label || labelsOf(row).includes(f.label))

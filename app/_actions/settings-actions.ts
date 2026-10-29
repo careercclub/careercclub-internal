@@ -7,3 +7,4 @@ import { unwrapAction } from "@/lib/actions/unwrap";
 export const saveMenuVisibilityAction = unwrapAction(server.saveMenuVisibilityAction);
 export const saveMenuLabelsAction = unwrapAction(server.saveMenuLabelsAction);
 export const saveCompetitorIntelListsAction = unwrapAction(server.saveCompetitorIntelListsAction);
+export const markErrorFixedAction = unwrapAction(server.markErrorFixedAction);

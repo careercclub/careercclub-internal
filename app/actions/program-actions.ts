@@ -65,7 +65,7 @@ export async function updateProgramTaskWorkflowAction(id: string, input: { statu
     }
   }));
   await synchronizeTaskToTicket(id, user.id);
-  revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  revalidatePath("/", "layout"); revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
   });
 }
 
@@ -104,7 +104,7 @@ export async function updateTaskDetailsAction(id: string, input: { title: string
     }
   }));
   await synchronizeTaskToTicket(id, user.id);
-  revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  revalidatePath("/", "layout"); revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
   });
 }
 
@@ -155,7 +155,7 @@ export async function createTaskAction(input: Record<string, unknown>) {
     assignee_ids: assignees,
   });
   await synchronizeTaskToTicket(String(task.id), user.id);
-  revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  revalidatePath("/", "layout"); revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
   return task;
   });
 }
@@ -193,7 +193,7 @@ export async function deleteTaskAction(id: string) {
   await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid task.");
   await deleteTaskWithLinkedTicket(id);
-  revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
+  revalidatePath("/", "layout"); revalidatePath("/program"); revalidatePath("/program/tasks"); revalidatePath("/tickets"); revalidatePath("/dashboard");
   });
 }
 

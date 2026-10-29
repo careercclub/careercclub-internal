@@ -1,5 +1,6 @@
 "use client";
 
+import { timeOf } from "@/lib/text/date";
 import { confirmDelete } from "./confirm-delete";
 import { bulkUpdateCrmBuyers } from "@/app/_actions/crm-actions";
 import type { ApiRecord } from "@/lib/api/_crud";
@@ -181,7 +182,7 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
 
 function CustomerDrawer({ customer: c, onClose }: { customer: Customer; onClose: () => void }) {
   const name = text(c.name) || "Unknown"; const wa = waLink(c.wa);
-  const timeline = [...c.transactions].sort((a, b) => text(b.tanggal).localeCompare(text(a.tanggal)));
+  const timeline = [...c.transactions].sort((a, b) => timeOf(b.tanggal) - timeOf(a.tanggal));
   const field = (label: string, value: unknown) => (text(value) ? <div><dt>{label}</dt><dd>{text(value)}</dd></div> : null);
   return (
     <div className={s.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-label="Customer detail">

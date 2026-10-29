@@ -8,6 +8,7 @@ import { deleteTicketWithLinkedTask, synchronizeTicketToTask } from "@/lib/api/p
 import { appendTicketComment, appendTicketFile, appendTicketLink, removeTicketLink,
   duplicateTicket, getTicket, insertTicket, listTicketPeople, updateTicket } from "@/lib/api/tickets";
 import { findTicketPerson } from "@/lib/tickets/visibility";
+import { requireTicketAccess } from "@/lib/tickets/access";
 import { revalidatePath } from "next/cache";
 
 async function requireUser() {
@@ -26,6 +27,8 @@ async function notify(ticket: Record<string, unknown>, user: Awaited<ReturnType<
 }
 
 function refresh() {
+  // The menu badges (late tickets/tasks) live in the layout: refresh them with the page.
+  revalidatePath("/", "layout");
   revalidatePath("/tickets");
   revalidatePath("/program/tasks");
   revalidatePath("/dashboard");
@@ -34,6 +37,7 @@ function refresh() {
 export async function changeTicketStatusAction(id: string, status: string) {
   return expected(async () => {
   const user = await requireUser();
+  await requireTicketAccess(user, id);
   if (!["Todo", "In Progress", "Done"].includes(status)) throw new Error("Invalid ticket status.");
   const ticket = await updateTicket(id, { status });
   if (!ticket) throw new Error("Ticket not found.");
@@ -46,6 +50,7 @@ export async function changeTicketStatusAction(id: string, status: string) {
 export async function addTicketCommentAction(id: string, formData: FormData) {
   return expected(async () => {
   const user = await requireUser();
+  await requireTicketAccess(user, id);
   const text = String(formData.get("comment") || "").trim().slice(0, 5000);
   if (!text) throw new Error("Comment cannot be empty.");
   const ticket = await appendTicketComment(id, { user: user.name || user.email || "CCC User", time: new Date().toISOString(), text });
@@ -57,7 +62,8 @@ export async function addTicketCommentAction(id: string, formData: FormData) {
 
 export async function addTicketLinkAction(id: string, formData: FormData) {
   return expected(async () => {
-  await requireUser();
+  const user = await requireUser();
+  await requireTicketAccess(user, id);
   const label = String(formData.get("label") || "Link").trim().slice(0, 100);
   const url = String(formData.get("url") || "").trim();
   try { new URL(url); } catch { throw new Error("A valid URL is required."); }
@@ -68,7 +74,8 @@ export async function addTicketLinkAction(id: string, formData: FormData) {
 
 export async function removeTicketLinkAction(id: string, index: number, url: string) {
   return expected(async () => {
-  await requireUser();
+  const user = await requireUser();
+  await requireTicketAccess(user, id);
   if (!Number.isInteger(index) || index < 0) throw new Error("Unknown link.");
   const ticket = await removeTicketLink(id, index, url);
   if (!ticket) throw new Error("That link was already changed. Close and open the ticket again.");
@@ -78,7 +85,8 @@ export async function removeTicketLinkAction(id: string, index: number, url: str
 
 export async function attachTicketFileAction(id: string, file: { name: string; key: string; type: string; size: number }) {
   return expected(async () => {
-  await requireUser();
+  const user = await requireUser();
+  await requireTicketAccess(user, id);
   if (!file.key.startsWith("task-attachments/") || file.name.length > 255 || file.size > 10 * 1024 * 1024) throw new Error("Invalid attachment.");
   await appendTicketFile(id, file);
   refresh();
@@ -87,7 +95,8 @@ export async function attachTicketFileAction(id: string, file: { name: string; k
 
 export async function duplicateTicketAction(id: string) {
   return expected(async () => {
-  await requireUser();
+  const user = await requireUser();
+  await requireTicketAccess(user, id);
   const created = await duplicateTicket(id);
   refresh();
   return created;
@@ -97,6 +106,7 @@ export async function duplicateTicketAction(id: string) {
 export async function updateTicketDetailsAction(id: string, input: Record<string, unknown>) {
   return expected(async () => {
   const user = await requireUser();
+  await requireTicketAccess(user, id);
   const status = String(input.status || "Todo"); const priority = String(input.priority || "Med");
   if (!["Todo", "In Progress", "Done"].includes(status)) throw new Error("Invalid ticket status.");
   if (!["High", "Med", "Low"].includes(priority)) throw new Error("Invalid ticket priority.");
@@ -113,7 +123,8 @@ export async function updateTicketDetailsAction(id: string, input: Record<string
 
 export async function deleteTicketAction(id: string) {
   return expected(async () => {
-  await requireUser();
+  const user = await requireUser();
+  await requireTicketAccess(user, id);
   await deleteTicketWithLinkedTask(id);
   refresh();
   });
