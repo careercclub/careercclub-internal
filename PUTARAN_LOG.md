@@ -1961,3 +1961,36 @@ Permintaan user: evaluasi seluruh UX supaya tidak ada error atau data yang tidak
 ### Deploy
 
 `git pull origin refactor && npm run vps:rebuild:frontend` (tanpa migrasi). Lalu jalankan `database/checks/orphans.sql` di VPS dan kirim angkanya.
+
+## Putaran 57 — Requester, Lead tanpa division, akun baru, notifikasi ke orang yang tepat (29 Okt 2026)
+
+Keputusan A–D dari Putaran 56. User: "sesuai keputusan terbaik lo aja".
+
+### Keputusan & Do
+
+- **A. Pembuat tiket = requester.** Add ticket dan form umum Tickets mengisi `requester_id` dengan person milik akun pembuat (`findTicketPerson`). Sinkron task → tiket juga mencocokkan akun ke person lewat `auth_user_id`, jadi requester tidak lagi jatuh ke assignee. Staff yang membuat tiket untuk orang lain tetap bisa melihatnya.
+- **B. Lead tanpa division** hanya melihat tiket miliknya sendiri, seperti staff. Sebelumnya dia bisa melihat tiket semua orang yang juga tanpa division. Satu aturan di `lib/tickets/visibility.ts`, jadi board, search, dan notifikasi ikut berubah.
+- **C. Setiap akun adalah person tiket.** Add user membuat person (atau menautkan person dengan email yang sama) dalam transaksi yang sama (`ensureTicketPerson`). Migrasi 031 melakukan hal yang sama untuk akun yang dibuat setelah migrasi 018.
+- **D. Notifikasi ke orang yang boleh melihat tiket**: requester, assignee, Lead division assignee, dan admin; bukan orang yang mengubah; bukan akun Blocked.
+  - Sebelumnya notifikasi dikirim ke semua akun ber-role sama dengan pembuat tiket, sehingga judul tiket bisa sampai ke staff yang tidak boleh membukanya, sementara assignee dengan role lain tidak mendapat apa-apa.
+  - Disimpan di kolom baru `ticket_notifications.target_user_ids` (migrasi 031). Lonceng dan push memakai kolom itu.
+  - Notifikasi lama tetap memakai role. Sebelum migrasi jalan, app tetap memakai role.
+  - Aturan penerima (`ticketAudience`) memakai fungsi visibilitas yang sama dengan board.
+- Teks panel Settings → Status & notifications disesuaikan.
+
+### Check
+
+- Unit `visibility.test.mjs` +2: Lead tanpa division; penerima notifikasi (admin, lead division, assignee; bukan pembuat; bukan Blocked; tiket divisi lain tidak).
+- `tests/agent` 99 (+7, Postgres asli):
+  - akun baru ditautkan ke person dengan email sama (tanpa duplikat);
+  - akun tanpa person dibuatkan, level mengikuti role;
+  - migrasi 031 membuat person untuk akun lama dan aman dijalankan dua kali;
+  - Add ticket mengisi requester = pembuat;
+  - notifikasi berisi admin + assignee, bukan pembuat, bukan staff lain, bukan akun Blocked;
+  - lonceng: assignee melihatnya, staff lain dengan role yang sama tidak.
+
+- Regresi penuh lolos: 41 suite modul, service worker 10, navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 216, import 93, search-db 19, agent-db 99, lint 0 error, build lolos.
+
+### Deploy
+
+**Ada migrasi (031)**: `git pull origin refactor && npm run vps:rebuild` (ini juga menjalankan 026–030 kalau belum).

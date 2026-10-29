@@ -341,5 +341,40 @@ await sql`insert into crm_deals (buyer_id, stage) values (${b1.id}, 'Lead')`;
 const bulk = await D.bulkUpdateCrmBuyers([b1.id], "delete");
 ok(bulk === undefined && (await sql`select count(*)::int as n from crm_deals`)[0].n === 0, "CRM bulk delete takes the buyer's deals too");
 
+// ── Every account is a ticket person; requester; notifications to the ticket's audience (Putaran 57) ──
+const PEOPLE = await import("./out/people.mjs");
+await sql`create table if not exists ticket_notification_reads (notification_id uuid, user_id uuid, read_at timestamptz default now(), primary key (notification_id, user_id))`;
+const [oldPerson] = await sql`insert into tkt_people (nama, email) values ('Dewi Lama', 'dewi@x.id') returning id`;
+const dewi = await PEOPLE.createInternalUser({ email: "Dewi@x.id", name: "Dewi", role: "staff", password: "a-long-test-password" });
+const dewiPeople = await sql`select id, auth_user_id from tkt_people where lower(email) = 'dewi@x.id'`;
+ok(dewiPeople.length === 1 && String(dewiPeople[0].id) === String(oldPerson.id) && String(dewiPeople[0].auth_user_id) === String(dewi.id), "new account: linked to the person with the same email (no duplicate)");
+const eko = await PEOPLE.createInternalUser({ email: "eko@x.id", name: "Eko", role: "lead", password: "a-long-test-password" });
+const [ekoPerson] = await sql`select nama, level, auth_user_id from tkt_people where auth_user_id = ${eko.id}`;
+ok(ekoPerson?.nama === "Eko" && ekoPerson.level === "lead", "new account without a person: one is added, level from role");
+await sql`insert into auth_users (email, name, role, is_active) values ('fajar@x.id', 'Fajar', 'staff', true)`;
+await sql.unsafe(migration("031_ticket_notification_people.sql"));
+ok((await sql`select count(*)::int as n from tkt_people where email = 'fajar@x.id' and auth_user_id is not null`)[0].n === 1, "migration 031: an account added earlier gets its person");
+await sql.unsafe(migration("031_ticket_notification_people.sql"));
+ok((await sql`select count(*)::int as n from tkt_people where email = 'fajar@x.id'`)[0].n === 1, "migration 031 can run twice");
+// Requester: the person who makes the ticket.
+await sql`alter table tickets add column if not exists attachments jsonb default '[]'`;
+await sql`alter table tickets alter column cc drop default, alter column cc type jsonb using to_jsonb(cc), alter column cc set default '[]'::jsonb`;
+globalThis.__session = { user: { id: dewi.id, name: "Dewi", email: "dewi@x.id", role: "staff" } };
+const made = await PEOPLE.createTicketAction({ title: "Minta desain", assignedToIds: [] });
+ok(made && String(made.requester_id) === String(oldPerson.id), `Add ticket: the maker is the requester (${JSON.stringify(made?.__actionError || made?.requester_id)})`);
+// Notifications: everyone who may see the ticket, not the maker, not a role.
+const [admin] = await sql`insert into auth_users (email, name, role, is_active) values ('boss@x.id', 'Boss', 'admin', true) returning id`;
+const [blockedAdmin] = await sql`insert into auth_users (email, name, role, is_active) values ('old@x.id', 'Old', 'admin', false) returning id`;
+const [otherStaff] = await sql`insert into auth_users (email, name, role, is_active) values ('lain@x.id', 'Lain', 'staff', true) returning id`;
+await sql`insert into tkt_people (nama, email, auth_user_id) values ('Lain', 'lain@x.id', ${otherStaff.id})`;
+const [ekoPersonId] = await sql`select id from tkt_people where auth_user_id = ${eko.id}`;
+const ticketRow = { id: made.id, requester_id: oldPerson.id, assigned_to_ids: [ekoPersonId.id] };
+const note = await PEOPLE.publishTicketNotification({ ticketId: made.id, actorUserId: dewi.id, actorName: "Dewi", eventType: "created", title: "New ticket: Minta desain", message: "x", targetRoles: ["staff"], ticket: ticketRow });
+const audience = (note?.target_user_ids || []).map(String).sort();
+ok(audience.includes(String(admin.id)) && audience.includes(String(eko.id)) && !audience.includes(String(dewi.id)) && !audience.includes(String(otherStaff.id)) && !audience.includes(String(blockedAdmin.id)), "notification: admin + assignee, not the maker, not another staff, not a Blocked account");
+const otherSees = await PEOPLE.listNotificationsForUser(String(otherStaff.id), "staff");
+const ekoSees = await PEOPLE.listNotificationsForUser(String(eko.id), "lead");
+ok(!otherSees.some((n) => n.title === "New ticket: Minta desain") && ekoSees.some((n) => n.title === "New ticket: Minta desain"), "the bell: the assignee sees it; a staff member with the same role as the maker does not");
+
 await sql.end();
 console.log(`\n${pass} pass, ${fail} fail`); process.exit(fail ? 1 : 0);

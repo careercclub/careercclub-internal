@@ -36,10 +36,27 @@ export function ticketVisibility(viewer: TicketViewer, people: Row[]) {
   const person = findTicketPerson(viewer, people);
   if (!person) return () => false;
   const personId = String(person.id);
-  const divisionPeople = people.filter((item) => String(item.divisi_id || "") === String(person.divisi_id || "")).map((item) => String(item.id));
+  // A lead sees their division's assignments; a lead without a division has no division to see,
+  // so sees only their own (like staff) — never "everyone else without a division" (Putaran 57).
+  const division = String(person.divisi_id || "");
+  const divisionPeople = division ? people.filter((item) => String(item.divisi_id || "") === division).map((item) => String(item.id)) : [personId];
   return (ticket: Row) => {
     if (String(ticket.requester_id || "") === personId) return true;
     const assigned = assignees(ticket);
     return role === "lead" ? assigned.some((id) => divisionPeople.includes(id)) : assigned.includes(personId);
   };
+}
+
+type Account = { id: unknown; email?: unknown; role?: unknown; is_active?: unknown };
+
+/**
+ * Who is told about a ticket change (Putaran 57): every active account that may see the ticket
+ * by the rule above, except the person who made the change. One rule for the board, search and
+ * notifications, so a notification never shows a ticket to someone who can't open it.
+ */
+export function ticketAudience(ticket: Row, accounts: Account[], people: Row[], actorUserId?: string | null) {
+  return accounts
+    .filter((account) => account.is_active !== false && String(account.id) !== String(actorUserId || ""))
+    .filter((account) => ticketVisibility({ role: String(account.role || "staff"), userId: String(account.id), email: String(account.email || "") }, people)(ticket))
+    .map((account) => String(account.id));
 }

@@ -139,7 +139,7 @@ function TicketStatusEmailPanel({ divisions, people }: { divisions: ApiRecord[];
       </section>
       <section aria-labelledby="set-email" className={s.card}>
         <h3 id="set-email">Division members</h3>
-        <p className={s.hint}>Ticket notifications (in the app and on the phone) go to accounts with the same role as the person who made the ticket; there are no ticket emails. Blocked accounts get nothing.</p>
+        <p className={s.hint}>Ticket notifications (in the app and on the phone) go to everyone who can open the ticket: its requester, assignees, the Lead of an assignee’s division, and admins — not the person who made the change. There are no ticket emails. Blocked accounts get nothing.</p>
         <div className={s.divisionGrid}>
           {divisions.map((division) => {
             const divisionId = String(division.id);

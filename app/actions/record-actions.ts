@@ -1,6 +1,8 @@
 "use server";
 
 import { expected } from "@/lib/actions/expected";
+import { listTicketPeople } from "@/lib/api/tickets";
+import { findTicketPerson } from "@/lib/tickets/visibility";
 import { deleteWithDependents, describeDelete } from "@/lib/records/delete";
 
 import { auth } from "@/auth";
@@ -104,6 +106,12 @@ export async function createManagedRecord(key: string, formData: FormData) {
   // A field left empty gets its default when the row is added (e.g. a resource is a "link").
   for (const field of definition.fields) if (field.defaultValue !== undefined && (values[field.name] === null || values[field.name] === undefined)) values[field.name] = field.defaultValue;
 
+  // The person who makes the ticket is its requester (the same rule as Add ticket, Putaran 57).
+  if (key === "tickets" && !values.requester_id) {
+    const requester = findTicketPerson({ userId: user.id, email: user.email }, await listTicketPeople());
+    if (requester) values.requester_id = String(requester.id);
+  }
+
   if (key === "tickets" && !normalizeNotificationRoles(values.notification_roles).length) {
     values.notification_roles = [user.role?.trim().toLowerCase() || "admin"];
   }
@@ -126,6 +134,7 @@ export async function createManagedRecord(key: string, formData: FormData) {
       title: `New ticket: ${getTicketTitle(record)}`,
       message: `${actorName} created this ticket.`,
       targetRoles: getTicketRoles(record, user.role),
+      ticket: record,
     });
   }
 
@@ -180,6 +189,7 @@ export async function updateManagedRecord(key: string, id: string, formData: For
       title: `Ticket updated: ${getTicketTitle(record)}`,
       message,
       targetRoles: getTicketRoles(record, user.role),
+      ticket: record,
     });
   }
 
@@ -233,6 +243,7 @@ export async function deleteManagedRecord(key: string, id: string) {
       title: `Ticket deleted: ${getTicketTitle(previous)}`,
       message: `${actorName} deleted this ticket.`,
       targetRoles: getTicketRoles(previous, user.role),
+      ticket: previous,
     });
   }
 

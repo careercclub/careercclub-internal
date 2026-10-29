@@ -6,7 +6,8 @@ import { auth } from "@/auth";
 import { normalizeNotificationRoles, publishTicketNotification } from "@/lib/api/notifications";
 import { deleteTicketWithLinkedTask, synchronizeTicketToTask } from "@/lib/api/program";
 import { appendTicketComment, appendTicketFile, appendTicketLink, removeTicketLink,
-  duplicateTicket, getTicket, insertTicket, updateTicket } from "@/lib/api/tickets";
+  duplicateTicket, getTicket, insertTicket, listTicketPeople, updateTicket } from "@/lib/api/tickets";
+import { findTicketPerson } from "@/lib/tickets/visibility";
 import { revalidatePath } from "next/cache";
 
 async function requireUser() {
@@ -21,7 +22,7 @@ function roles(ticket: Record<string, unknown>) {
 }
 
 async function notify(ticket: Record<string, unknown>, user: Awaited<ReturnType<typeof requireUser>>, message: string) {
-  await publishTicketNotification({ ticketId: String(ticket.id), actorUserId: user.id, actorName: user.name || user.email || "CCC User", eventType: "updated", title: `Ticket updated: ${String(ticket.title || "Untitled")}`, message, targetRoles: roles(ticket) });
+  await publishTicketNotification({ ticketId: String(ticket.id), actorUserId: user.id, actorName: user.name || user.email || "CCC User", eventType: "updated", title: `Ticket updated: ${String(ticket.title || "Untitled")}`, message, targetRoles: roles(ticket), ticket });
 }
 
 function refresh() {
@@ -129,7 +130,10 @@ export async function createTicketAction(input: Record<string, unknown>) {
   if (!["High", "Med", "Low"].includes(priority)) throw new Error("Invalid ticket priority.");
   const assignedToIds = Array.isArray(input.assignedToIds) ? input.assignedToIds.map(String).filter((id) => /^[0-9a-f-]{36}$/i.test(id)) : [];
   const links = Array.isArray(input.links) ? input.links.filter((link): link is { label: string; url: string } => !!link && typeof link === "object" && "url" in link) : [];
+  // The person who makes the ticket is its requester, so they keep seeing it (Putaran 57).
+  const requester = findTicketPerson({ userId: user.id, email: user.email }, await listTicketPeople());
   const ticket = await insertTicket({
+    requesterId: requester ? String(requester.id) : null,
     title,
     description: String(input.description || ""),
     status,
@@ -143,7 +147,7 @@ export async function createTicketAction(input: Record<string, unknown>) {
   });
   if (ticket.related_task_id) await synchronizeTicketToTask(String(ticket.id));
   const actorName = user.name || user.email || "CCC User";
-  await publishTicketNotification({ ticketId: String(ticket.id), actorUserId: user.id, actorName, eventType: "created", title: `New ticket: ${title}`, message: `${actorName} created this ticket.`, targetRoles: roles(ticket) });
+  await publishTicketNotification({ ticketId: String(ticket.id), actorUserId: user.id, actorName, eventType: "created", title: `New ticket: ${title}`, message: `${actorName} created this ticket.`, targetRoles: roles(ticket), ticket });
   refresh();
   return ticket;
   });

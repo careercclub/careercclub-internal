@@ -138,7 +138,8 @@ export function synchronizeTaskToTicket(taskId: string, requesterId?: string | n
     // resolves to a real person; otherwise fall back to the primary assignee (a valid person).
     let validRequester: string | null = null;
     if (requesterId) {
-      const [requesterPerson] = await tx<WorkflowRecord[]>`select id from tkt_people where id = ${requesterId} limit 1`;
+      // The signed-in user (auth_users id) is matched to their person through the account link.
+      const [requesterPerson] = await tx<WorkflowRecord[]>`select id from tkt_people where id::text = ${requesterId} or auth_user_id::text = ${requesterId} order by (id::text = ${requesterId}) desc limit 1`;
       validRequester = requesterPerson ? String(requesterPerson.id) : null;
     }
     // The assignee only counts when that person still exists.
