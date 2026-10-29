@@ -54,7 +54,6 @@ export function CollaboratorWorkspace({ rows, management }: { rows: ApiRecord[];
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Internal</span>
           <h1>Collaborators</h1>
           <p>{plural(summary.collaborators, "collaborator")} · {plural(summary.advisors, "advisor")}{summary.privyMissing ? ` · ${summary.privyMissing} without Privy` : ""}</p>
         </div>

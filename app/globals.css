@@ -19,17 +19,20 @@
   --surface-2: #f5f7fa;
   --white: #fff;
   --text: #14212c;
-  --text-muted: #5f6b77;
-  --text-hint: #6b7682;
+  --text-muted: #5c6773; /* 4.6:1 on every light surface incl. --purple-light (antislop R-25) */
+  --text-hint: #5e6772; /* 4.6:1 on --surface-2 and --purple-light (R-25) */
   --border: #dde3ea;
   --border-md: #cbd3dd;
-  --shadow: 0 1px 2px rgba(20, 33, 44, 0.04), 0 8px 24px rgba(20, 33, 44, 0.06);
+  /* Resting surfaces sit flat on the page (border only); only what floats above it is raised
+     (tooltips, sticky bars, the selected column). antislop R-12, Putaran 59. */
+  --shadow: none;
+  --shadow-raised: 0 1px 2px rgba(20, 33, 44, 0.04), 0 8px 24px rgba(20, 33, 44, 0.06);
   --green-bg: #eaf3de;
   --green: #3b6d11;
   --amber-bg: #faeeda;
   --amber: #854f0b;
   --red-bg: #fbe2df;
-  --red: #c8331f;
+  --red: #be301d; /* 4.7:1 on --red-bg: late chips (R-25) */
   --blue-bg: #e9eff9;
   --blue: #1554c0;
   --teal-bg: #e1f5ee;
@@ -71,7 +74,8 @@
   --text-hint: #8d99a6;
   --border: #26313d;
   --border-md: #364352;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow: none;
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
   --green-bg: #17301f;
   --green: #7fd28f;
   --amber-bg: #33270f;
@@ -292,4 +296,24 @@ input[type="file"]::file-selector-button:hover { border-color: var(--purple-mid)
 :where(button, a[href], summary, [role="button"], [role="tab"], [tabindex]:not([tabindex="-1"])):focus-visible:not([class*="focus-visible:ring"]) {
   outline: 2px solid var(--purple-mid);
   outline-offset: 2px;
+}
+
+/* Touch targets (antislop R-03, Putaran 59): on a phone or any touch screen every control is at
+   least 44px, so a thumb hits the one it means. One rule here instead of per component; desktop
+   with a mouse keeps the compact sizes. Icon-only buttons get the width too. !important on purpose:
+   it is a floor under every component's own size class, which would otherwise win. */
+@media (pointer: coarse), (max-width: 640px) {
+  button, [role="button"], [role="tab"], [role="option"], select, summary,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]) {
+    min-height: 44px !important;
+  }
+  button, [role="button"], [role="tab"], [role="switch"], a[href]:has(> .ti:only-child) {
+    min-width: 44px !important;
+  }
+  /* Links styled as buttons or tabs (they carry a class); plain links inside a sentence stay inline. */
+  a[href][class], [role="switch"], label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: 44px !important; }
+  /* A checkbox without a label around it (table "select all"): 24px, the WCAG 2.2 AA minimum. */
+  input[type="checkbox"], input[type="radio"] { width: 24px !important; height: 24px !important; min-width: 24px; }
+  /* Text links that act as buttons (All programs, All tickets) get a 44px-tall hit area. */
+  a[href]:not(:has(*)) { display: inline-flex; align-items: center; min-height: 44px; }
 }

@@ -49,11 +49,11 @@ export function ClaudeAccess({ tokens }: { tokens: AgentTokenRow[] | null }) {
       <div className={s.card}>
         <div className={s.cardHead}>
           <h3>Keys</h3>
-          <HelpTip label="About Claude access">A key lets Claude add and update data in the modules you choose — for example research for Job Vacancy MT. Claude always shows a preview first and changes nothing until you agree. It can never delete. Every change is in the activity log under the key&apos;s name. Revoke a key to stop it at once.</HelpTip>
+          <HelpTip label="About Claude access">A key lets Claude add and update data in the modules you choose, for example research for Job Vacancy MT. Claude always shows a preview first and changes nothing until you agree. It can never delete. Every change is in the activity log under the key&apos;s name. Revoke a key to stop it at once.</HelpTip>
         </div>
         {shown ? (
           <div className={s.keyShown} role="status">
-            <p><b>Key for “{shown.name}”</b> — copy it now. It is shown only once.</p>
+            <p><b>Key for “{shown.name}”</b>: copy it now. It is shown only once.</p>
             <div className={s.keyRow}><code data-agent-key="">{shown.key}</code><button className={s.ghostSmall} onClick={() => { void copyText(shown.key); notify("Key copied."); }} type="button"><i aria-hidden="true" className="ti ti-copy" /> Copy key</button></div>
             <p className={s.hint}>Give it to Claude in a chat: “Use this Claude access key for internal.ccclub.id”. Done with it? <button className={s.linkButton} onClick={() => setShown(null)} type="button">Hide key</button></p>
           </div>

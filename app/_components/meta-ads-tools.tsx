@@ -33,7 +33,6 @@ export function MetaAdsTools({ rows }: { rows: ApiRecord[] }) {
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Marketing</span>
           <h1>Meta Ads</h1>
           <p>{rows.length} candidates from Content Evaluation · {count("Boost")} to boost · {count("Pending")} still to decide</p>
         </div>

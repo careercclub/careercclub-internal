@@ -3,7 +3,7 @@
 .head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .head h1 { margin: 2px 0 0; font-size: clamp(22px, 3vw, 27px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
 .head p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
-.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 .message { margin: 0; color: var(--text-muted); font-size: 13px; }
 
 .segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
@@ -40,6 +40,8 @@
 .listHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 8px; border-bottom: 1px solid var(--border); }
 .checkAll { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
 .checkAll input, .rowCheck { width: 18px; height: 18px; accent-color: var(--purple-mid); cursor: pointer; }
+/* The whole 44px square around the row checkbox selects it (antislop R-03). */
+.rowCheckHit { display: grid; place-items: center; min-width: 44px; min-height: 44px; margin: -10px -8px -10px -12px; cursor: pointer; }
 .rows { margin: 0; padding: 0; list-style: none; }
 .row, .rowSelected { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 4px 8px; border-radius: 14px; }
 .row + .row, .row + .rowSelected, .rowSelected + .row, .rowSelected + .rowSelected { margin-top: 2px; }

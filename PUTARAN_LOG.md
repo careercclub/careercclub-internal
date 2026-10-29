@@ -2085,3 +2085,52 @@ Permintaan user: prioritaskan audit hak akses dan konsistensi angka, lalu kerjak
 ### Deploy
 
 **Ada migrasi (032)**: `git pull origin refactor && npm run vps:rebuild`.
+
+## Putaran 59 — Perbaikan audit antislop #1–#6 (29 Okt 2026)
+
+Permintaan user: evaluasi pakai antislop dan pakai skill-nya selama pengerjaan; lalu "gas benerin sesuai prioritas".
+
+- Mode antislop: **AFTER** (audit bernomor) + **DURING** (setiap pekerjaan ditutup dengan Delivery Gate).
+- Dikerjakan HIGH dan MEDIUM (#1–#6). LOW (#7 deretan kartu angka, #8 bentuk pill, #9 `DESIGN.md`) belum disentuh; #9 butuh masukan user.
+
+### Do
+
+- **#3 Kontras (R-25).** Token mode terang digeser tipis:
+  - `--text-muted` #5c6773;
+  - `--text-hint` #5e6772;
+  - `--red` #be301d.
+  - Semua teks ≥ 4,6:1 di setiap latar terang (dihitung dengan rumus WCAG); mode gelap sudah lolos.
+- **#2 Em dash (R-02).**
+  - 39 pengisi sel kosong diganti kata sesuai isinya (No date, No data, Not set, None, No price, No contact details). Penanda assignee kosong tidak lagi pakai "—".
+  - Sekitar 50 kalimat ditulis ulang (titik dua, titik, koma), termasuk 29 insight skor Content Evaluation.
+  - Dikecualikan: nilai status CRM yang tersimpan di database dan pola parser impor.
+  - Tes baru `lib/ui/no-em-dash.test.mjs` menjaga agar tidak muncul lagi.
+- **#1 Target sentuh (R-03).**
+  - Satu aturan di `globals.css`, hanya untuk layar sentuh/HP: tombol, tab, select, input, switch, dan link bergaya tombol minimal 44 × 44 px. Desktop dengan mouse tetap ringkas.
+  - Checkbox 24px (minimum WCAG AA); checkbox baris CRM diberi area klik 44px.
+- **#4 Ikon sparkle (R-04).** Semua ✨ diganti:
+  - tanda data dari Claude jadi kata "Claude";
+  - panel tempel teks jadi ikon clipboard;
+  - kolom "Describe it" jadi ikon pesan;
+  - pencarian AI jadi ikon tanda tanya;
+  - Claude access jadi ikon kunci.
+- **#5 Label di atas judul (R-06/R-09).**
+  - 20 label yang hanya mengulang grup menu dihapus.
+  - Label yang menambah info (tanggal Dashboard, jenis event, Advisor/Collaborator) tetap, tapi huruf biasa tanpa spasi lebar.
+  - Skeleton loading ikut disesuaikan.
+- **#6 Bayangan (R-12).** `--shadow` untuk permukaan diam jadi datar (garis tepi saja). `--shadow-raised` baru untuk yang benar-benar melayang (tooltip grafik, bar simpan Settings). Dropdown, dialog, dan tab aktif tetap memakai bayangannya.
+- Kamus: kata baku nilai kosong & tanda Claude.
+
+### Check
+
+- Scan antislop ulang (21 halaman, terang & gelap, HP):
+  - kontras: 0 temuan (2 sisanya terbukti salah baca latar: hero Instagram putih di biru tua, chip di atas foto);
+  - target sentuh < 44px: dari 1.264 jadi 0 (kecuali checkbox 24px dengan area klik 44px);
+  - fokus keyboard tak terlihat: 0;
+  - overflow samping: 0.
+- Screenshot desktop terang/gelap dan HP diperiksa.
+- Regresi penuh lolos: semua suite modul, service worker, navigasi 33, search 46, RecordManager 946, Design Assets 49, audit popup, unit 227 (+1 penjaga em dash), import 93, search-db 19, agent-db 109, lint 0 error, build lolos.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild` (migrasi 031–032 dari putaran sebelumnya, kalau belum dijalankan).

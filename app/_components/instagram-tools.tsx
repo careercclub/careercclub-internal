@@ -110,7 +110,6 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Marketing</span>
           <h1>Instagram</h1>
           <p>{fmt(currentFollowers)} followers · {history.length} weekly snapshot{history.length === 1 ? "" : "s"}{latestWeek ? ` · latest week ${formatDay(latestWeek)}` : ""}</p>
         </div>
@@ -128,7 +127,7 @@ export function InstagramTools({ snapshots, targets, baseline, referenceDate, sn
               <span>Followers</span>
               <b className={s.big}>{fmt(currentFollowers)}</b>
               <p>{updatedAt ? `As of ${formatDay(updatedAt)}` : "No baseline yet"} · +{fmt(a.follows30)} follows in the last 30 days</p>
-              {stale ? <button className={s.stale} onClick={() => setView("target")} type="button"><i className="ti ti-alert-triangle" aria-hidden="true" /> Baseline is {staleDays} days behind — update it</button> : null}
+              {stale ? <button className={s.stale} onClick={() => setView("target")} type="button"><i className="ti ti-alert-triangle" aria-hidden="true" /> Baseline is {staleDays} days behind. Update it</button> : null}
             </div>
             <div className={s.goal}>
               <span>Goal {year}</span>

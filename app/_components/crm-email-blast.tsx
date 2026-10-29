@@ -207,7 +207,7 @@ export function CrmEmailBlast({ rows, history, daily }: { rows: Row[]; history: 
           {message ? <p className={s.message} role="status">{message}</p> : null}
           <div className={s.row3}>
             <div className={s.card}><span className={s.muted}>Sent in 30 days</span><b className={s.big}>{totalSent}</b></div>
-            <div className={s.card}><span className={s.muted}>Busiest day</span><b className={s.big}>{busiest.sent ? `${dayLabel(busiest.day)} · ${busiest.sent}` : "—"}</b></div>
+            <div className={s.card}><span className={s.muted}>Busiest day</span><b className={s.big}>{busiest.sent ? `${dayLabel(busiest.day)} · ${busiest.sent}` : "No sends yet"}</b></div>
             <div className={s.card}><span className={s.muted}>Blasts logged</span><b className={s.big}>{history.length}</b></div>
           </div>
           <section className={s.card} aria-labelledby="crm-blast-daily">
@@ -220,7 +220,7 @@ export function CrmEmailBlast({ rows, history, daily }: { rows: Row[]; history: 
                 <li key={entry.id}>
                   <span className={s.historyMain}>
                     <b>{entry.subject || "(no subject)"}</b>
-                    <small>{String(entry.sent_at).slice(0, 16).replace("T", " ")} · segment {entry.segment || "all"} · {entry.source} · by {entry.actor_name || "—"}{entry.scheduled_at ? ` · scheduled ${String(entry.scheduled_at).slice(0, 16).replace("T", " ")}` : ""}</small>
+                    <small>{String(entry.sent_at).slice(0, 16).replace("T", " ")} · segment {entry.segment || "all"} · {entry.source} · by {entry.actor_name || "unknown"}{entry.scheduled_at ? ` · scheduled ${String(entry.scheduled_at).slice(0, 16).replace("T", " ")}` : ""}</small>
                     {entry.errors?.length ? <small className={s.errorText}>{entry.errors.slice(0, 3).join(" · ")}</small> : null}
                   </span>
                   <span className={entry.failed_count ? s.historyFail : s.historyOk}>{entry.sent_count}/{entry.recipient_count} sent{entry.failed_count ? ` · ${entry.failed_count} failed` : ""}</span>

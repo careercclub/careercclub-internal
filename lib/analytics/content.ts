@@ -50,30 +50,30 @@ function evaluateStory(row: ContentMetrics): ContentEvaluationResult {
 
   if (hasExit) {
     maximum += 30;
-    if (exitRate <= 15) { score += 30; insights.push({ type: "positive", text: `Exit rate ${exitRate.toFixed(1)}% is low — the audience stays.` }); }
-    else if (exitRate <= 30) { score += 18; insights.push({ type: "neutral", text: `Exit rate ${exitRate.toFixed(1)}% — room to improve.` }); }
+    if (exitRate <= 15) { score += 30; insights.push({ type: "positive", text: `Exit rate ${exitRate.toFixed(1)}% is low: the audience stays.` }); }
+    else if (exitRate <= 30) { score += 18; insights.push({ type: "neutral", text: `Exit rate ${exitRate.toFixed(1)}%: room to improve.` }); }
     else { score += 6; insights.push({ type: "warning", text: `Exit rate ${exitRate.toFixed(1)}% is high.` }); }
   }
   if (hasTapsBack) {
     maximum += 20;
-    if (tapsBackRate >= 10) { score += 20; insights.push({ type: "positive", text: `Taps back ${tapsBackRate.toFixed(1)}% — people rewatch it.` }); }
+    if (tapsBackRate >= 10) { score += 20; insights.push({ type: "positive", text: `Taps back ${tapsBackRate.toFixed(1)}%: people rewatch it.` }); }
     else if (tapsBackRate >= 5) score += 12;
   }
   if (hasReply) {
     maximum += 25;
-    if (replyRate >= 2) { score += 25; insights.push({ type: "positive", text: `Reply rate ${replyRate.toFixed(1)}% — it starts conversations.` }); }
+    if (replyRate >= 2) { score += 25; insights.push({ type: "positive", text: `Reply rate ${replyRate.toFixed(1)}%: it starts conversations.` }); }
     else if (replyRate >= .5) score += 12;
   }
   if (hasLink) {
     maximum += 20;
-    if (linkRate >= 3) { score += 20; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}% — the sticker CTA works.` }); }
+    if (linkRate >= 3) { score += 20; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}%: the sticker CTA works.` }); }
     else if (linkRate >= 1) score += 10;
   }
   maximum += 5;
   if (stickers > 0) score += 5;
   const rates = { exitRate, replyRate, linkRate, tapsBackRate };
   if (maximum <= 5) return { total: 0, grade: "low", partial: true, rates, insights: [{ type: "neutral", text: "Stories need manual input: exits, replies, taps back and link taps." }] };
-  if (partial) insights.push({ type: "neutral", text: "Preliminary score — add the manual Story metrics." });
+  if (partial) insights.push({ type: "neutral", text: "Preliminary score: add the manual Story metrics." });
   return result(score, maximum, partial, rates, insights);
 }
 
@@ -104,24 +104,24 @@ function evaluateReel(row: ContentMetrics): ContentEvaluationResult {
     maximum += 35;
     if (wtr >= 40) { score += 35; insights.push({ type: "positive", text: `WTR ${wtr}% is excellent. Strong hook and storytelling.` }); }
     else if (wtr >= 30) { score += 28; insights.push({ type: "positive", text: `WTR ${wtr}% is very good.` }); }
-    else if (wtr >= 20) { score += 18; insights.push({ type: "neutral", text: `WTR ${wtr}% is fair — check the drop-off.` }); }
-    else if (wtr > 0) { score += 8; insights.push({ type: "warning", text: `WTR ${wtr}% is low — strengthen the hook.` }); }
+    else if (wtr >= 20) { score += 18; insights.push({ type: "neutral", text: `WTR ${wtr}% is fair: check the drop-off.` }); }
+    else if (wtr > 0) { score += 8; insights.push({ type: "warning", text: `WTR ${wtr}% is low: strengthen the hook.` }); }
   }
   if (hasNf) {
     maximum += 25;
-    if (nfPct >= 60) { score += 25; insights.push({ type: "positive", text: `Non-follower reach ${nfPct}% — a TOFU boost candidate.` }); }
-    else if (nfPct >= 45) { score += 18; insights.push({ type: "positive", text: `Non-follower reach ${nfPct}% — strong distribution.` }); }
-    else if (nfPct >= 30) { score += 10; insights.push({ type: "neutral", text: `Non-follower reach ${nfPct}% — fair.` }); }
-    else if (nfPct > 0) { score += 4; insights.push({ type: "warning", text: `Non-follower reach ${nfPct}% — limited.` }); }
+    if (nfPct >= 60) { score += 25; insights.push({ type: "positive", text: `Non-follower reach ${nfPct}%: a TOFU boost candidate.` }); }
+    else if (nfPct >= 45) { score += 18; insights.push({ type: "positive", text: `Non-follower reach ${nfPct}%: strong distribution.` }); }
+    else if (nfPct >= 30) { score += 10; insights.push({ type: "neutral", text: `Non-follower reach ${nfPct}%: fair.` }); }
+    else if (nfPct > 0) { score += 4; insights.push({ type: "warning", text: `Non-follower reach ${nfPct}%: limited.` }); }
   }
   maximum += 20;
-  if (followRate >= 1.5) { score += 20; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}% — top tier.` }); }
-  else if (followRate >= .8) { score += 14; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}% — effective.` }); }
+  if (followRate >= 1.5) { score += 20; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}%: top tier.` }); }
+  else if (followRate >= .8) { score += 14; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}%: effective.` }); }
   else if (followRate >= .3) score += 7;
-  else if (reach > 0) insights.push({ type: "warning", text: "Low follow rate — the follow CTA is weak." });
+  else if (reach > 0) insights.push({ type: "warning", text: "Low follow rate: the follow CTA is weak." });
   if (hasLink) {
     maximum += 10;
-    if (linkRate >= 2) { score += 10; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}% — the bio CTA is working hard.` }); }
+    if (linkRate >= 2) { score += 10; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}%: the bio CTA is working hard.` }); }
     else if (linkRate >= 1) score += 7;
     else if (linkRate >= .3) score += 4;
   }
@@ -134,7 +134,7 @@ function evaluateReel(row: ContentMetrics): ContentEvaluationResult {
     else if (engRate >= 4) { score += 10; insights.push({ type: "positive", text: `Engagement rate ${engRate.toFixed(1)}% is good.` }); }
     else if (engRate >= 2) { score += 5; insights.push({ type: "neutral", text: `Engagement rate ${engRate.toFixed(1)}% is moderate.` }); }
     else if (reach > 0) insights.push({ type: "warning", text: `Engagement rate ${engRate.toFixed(1)}% is low.` });
-    insights.push({ type: "neutral", text: "Preliminary score — add watch-through and non-follower reach." });
+    insights.push({ type: "neutral", text: "Preliminary score: add watch-through and non-follower reach." });
   }
   return result(score, maximum, partial, { saveRate, shareRate, followRate, linkRate, engRate }, insights);
 }
@@ -160,32 +160,32 @@ function evaluateFeed(row: ContentMetrics): ContentEvaluationResult {
   let score = 0;
   let maximum = 35;
 
-  if (followRate >= 1.5) { score += 35; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}% — a follower magnet.` }); }
-  else if (followRate >= 1) { score += 26; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}% — effective.` }); }
-  else if (followRate >= .5) { score += 15; insights.push({ type: "neutral", text: `Follow rate ${followRate.toFixed(2)}% — fair.` }); }
-  else if (reach > 0) insights.push({ type: "warning", text: "Low follow rate — the last slide doesn't convince." });
+  if (followRate >= 1.5) { score += 35; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}%: a follower magnet.` }); }
+  else if (followRate >= 1) { score += 26; insights.push({ type: "positive", text: `Follow rate ${followRate.toFixed(2)}%: effective.` }); }
+  else if (followRate >= .5) { score += 15; insights.push({ type: "neutral", text: `Follow rate ${followRate.toFixed(2)}%: fair.` }); }
+  else if (reach > 0) insights.push({ type: "warning", text: "Low follow rate: the last slide doesn't convince." });
   if (hasLink) {
     maximum += 25;
-    if (linkRate >= 2) { score += 25; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}% — the bio CTA is working hard.` }); }
-    else if (linkRate >= 1) { score += 18; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}% — it drives action.` }); }
+    if (linkRate >= 2) { score += 25; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}%: the bio CTA is working hard.` }); }
+    else if (linkRate >= 1) { score += 18; insights.push({ type: "positive", text: `Link tap rate ${linkRate.toFixed(1)}%: it drives action.` }); }
     else if (linkRate >= .4) score += 10;
-    else if (reach > 0) insights.push({ type: "warning", text: "Low link taps — the link-in-bio CTA isn't landing." });
+    else if (reach > 0) insights.push({ type: "warning", text: "Low link taps: the link-in-bio CTA isn't landing." });
   }
   maximum += 15;
-  if (saveRate >= 5) { score += 15; insights.push({ type: "positive", text: `Save rate ${saveRate.toFixed(1)}% — an evergreen candidate.` }); }
+  if (saveRate >= 5) { score += 15; insights.push({ type: "positive", text: `Save rate ${saveRate.toFixed(1)}%: an evergreen candidate.` }); }
   else if (saveRate >= 2) { score += 10; insights.push({ type: "positive", text: `Save rate ${saveRate.toFixed(1)}% is good.` }); }
   else if (saveRate >= 1) score += 5;
   maximum += 10;
-  if (shareRate >= 1) { score += 10; insights.push({ type: "positive", text: `Share rate ${shareRate.toFixed(1)}% — worth sharing.` }); }
+  if (shareRate >= 1) { score += 10; insights.push({ type: "positive", text: `Share rate ${shareRate.toFixed(1)}%: worth sharing.` }); }
   else if (shareRate >= .4) score += 5;
   if (hasNf) {
     maximum += 10;
-    if (nfPct >= 60) { score += 10; insights.push({ type: "positive", text: `Non-follower reach ${nfPct}% — a TOFU boost candidate.` }); }
+    if (nfPct >= 60) { score += 10; insights.push({ type: "positive", text: `Non-follower reach ${nfPct}%: a TOFU boost candidate.` }); }
     else if (nfPct >= 40) score += 6;
     else if (nfPct > 0) score += 2;
   }
   maximum += 5;
-  if (comments >= 100) { score += 5; insights.push({ type: "positive", text: `Comments ${comments} — lots of discussion.` }); }
+  if (comments >= 100) { score += 5; insights.push({ type: "positive", text: `Comments ${comments}: lots of discussion.` }); }
   else if (comments >= 40) score += 3;
   if (partial) {
     maximum += 15;
@@ -193,7 +193,7 @@ function evaluateFeed(row: ContentMetrics): ContentEvaluationResult {
     else if (engRate >= 4) { score += 10; insights.push({ type: "positive", text: `Engagement rate ${engRate.toFixed(1)}% is good.` }); }
     else if (engRate >= 2) { score += 5; insights.push({ type: "neutral", text: `Engagement rate ${engRate.toFixed(1)}% is moderate.` }); }
     else if (reach > 0) insights.push({ type: "warning", text: `Engagement rate ${engRate.toFixed(1)}% is low.` });
-    insights.push({ type: "neutral", text: "Preliminary score — add non-follower reach and link taps." });
+    insights.push({ type: "neutral", text: "Preliminary score: add non-follower reach and link taps." });
   }
   return result(score, maximum, partial, { saveRate, shareRate, followRate, linkRate, engRate }, insights);
 }

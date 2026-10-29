@@ -97,7 +97,7 @@ export function CompanyForm({ prospect, industries, year, onClose, onSaved }: { 
 
   return (
     <FormDialog
-      description={isNew ? "Fields marked * are required." : prospect?.source === "import" ? "From the Excel file — the next upload replaces edits made here." : "Added in the app · fields marked * are required."}
+      description={isNew ? "Fields marked * are required." : prospect?.source === "import" ? "From the Excel file. The next upload replaces edits made here." : "Added in the app · fields marked * are required."}
       footer={<><Button onClick={onClose} type="button" variant="outline">Cancel</Button><Button disabled={saving} form={`${id}-form`} type="submit">{saving ? "Saving…" : label}</Button></>}
       onClose={onClose}
       title={isNew ? "Add company" : `Edit ${prospect?.brand || prospect?.legal_name || "company"}`}
@@ -183,7 +183,7 @@ export function ContactForm({ prospectId, companyName, contact, onClose }: { pro
 
   return (
     <FormDialog
-      description={contact?.source === "import" ? `${companyName} · from the Excel file — the next upload replaces edits made here.` : `${companyName} · fields marked * are required.`}
+      description={contact?.source === "import" ? `${companyName} · from the Excel file. The next upload replaces edits made here.` : `${companyName} · fields marked * are required.`}
       footer={<><Button onClick={onClose} type="button" variant="outline">Cancel</Button><Button disabled={saving} form={`${id}-form`} type="submit">{saving ? "Saving…" : isNew ? "Add contact" : "Save contact"}</Button></>}
       onClose={onClose}
       title={isNew ? "Add contact" : `Edit ${contact?.name || "contact"}`}
@@ -267,7 +267,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               <tbody>
                 <tr><th scope="row">Companies</th><td>{c.added + c.updated} in the file · {c.added} new · {c.updated} updated{c.removed ? ` · ${c.removed} removed (no longer in the file)` : ""}</td></tr>
                 {c.keptFromApp ? <tr><th scope="row">Added in the app</th><td>{c.keptFromApp} kept as they are</td></tr> : null}
-                {c.keptForAppContacts ? <tr><th scope="row">Kept for their contacts</th><td>{c.keptForAppContacts} no longer in the file but holding contacts added in the app — kept as app companies</td></tr> : null}
+                {c.keptForAppContacts ? <tr><th scope="row">Kept for their contacts</th><td>{c.keptForAppContacts} no longer in the file but holding contacts added in the app, kept as app companies</td></tr> : null}
                 <tr><th scope="row">HR contacts</th><td>{summary.contacts.toLocaleString("en-US")} (replace those from the last file; contacts added in the app stay)</td></tr>
                 <tr><th scope="row">Requirements</th><td>{summary.research.requirement}</td></tr>
                 <tr><th scope="row">Dates & status updates</th><td>{summary.research.update}</td></tr>

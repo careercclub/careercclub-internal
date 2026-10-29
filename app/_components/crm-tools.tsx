@@ -39,7 +39,7 @@ export function CrmTools({ rows }: { rows: ApiRecord[] }) {
         const result = await response.json().catch(() => ({ error: "The server did not answer." })) as ImportResult;
         // Each file is saved on its own. Say which ones already went in, so a retry does not
         // import them twice (in "results" mode that would append the purchase history again).
-        if (!response.ok) throw new Error(`${file.name}: ${result.error || "Import failed."}${done.length ? ` Already imported: ${done.join(", ")} — leave those out if you retry.` : ""}`);
+        if (!response.ok) throw new Error(`${file.name}: ${result.error || "Import failed."}${done.length ? ` Already imported: ${done.join(", ")}. Leave those out if you retry.` : ""}`);
         done.push(file.name);
         total.added += result.added || 0; total.updated += result.updated || 0; total.skipped += result.skipped || 0; total.warnings += result.warnings?.length || 0;
       }

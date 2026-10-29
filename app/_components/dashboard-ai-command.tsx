@@ -45,7 +45,7 @@ export function DashboardAiCommand() {
   return (
     <section className={styles.aiCommand}>
       <header style={{ cursor: "pointer" }} onClick={() => setOpen((v) => !v)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpen((v) => !v); }}>
-        <div><i className="ti ti-sparkles" /><div><strong>Add with AI</strong><span>Paste a message; it becomes a ticket, task or plan you can review first.</span></div></div>
+        <div><i className="ti ti-clipboard-text" /><div><strong>Add with AI</strong><span>Paste a message; it becomes a ticket, task or plan you can review first.</span></div></div>
         <i className={`ti ${open ? "ti-chevron-up" : "ti-chevron-down"}`} aria-hidden="true" />
       </header>
       {open ? (
@@ -58,7 +58,7 @@ export function DashboardAiCommand() {
           </div>
           <div className={styles.aiCommandInput}>
             <textarea placeholder={`Type or paste the ${label} details, in Indonesian or English…`} value={source} onChange={(event) => setSource(event.target.value)} />
-            <button className={styles.primaryButton} disabled={busy || !source.trim()} onClick={parse}><i className="ti ti-wand" /> Read text</button>
+            <button className={styles.primaryButton} disabled={busy || !source.trim()} onClick={parse}>Read text</button>
           </div>
           {parsed && module !== "auto" ? (
             <form action={save} className={styles.aiPreview}>

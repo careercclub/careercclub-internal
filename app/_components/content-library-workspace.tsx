@@ -327,7 +327,6 @@ export function ContentLibraryWorkspace({ rows }: { rows: ApiRecord[] }) {
     <section className={styles.workspace}>
       <header className={styles.pageHead}>
         <div>
-          <span className={styles.eyebrow}>Marketing</span>
           <h1>Content Library</h1>
           <p>{visibleRows.length} {visibleRows.length === 1 ? "idea" : "ideas"}{label || platform || contentType ? " match the filters" : ` in ${activeType === "ads" ? "Ad Ideas" : "Organic Ideas"}`}</p>
         </div>

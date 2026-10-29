@@ -69,7 +69,6 @@ export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeCl
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Intelligence</span>
           <h1>Customer Knowledge</h1>
           <p>{rows.length} pain points · {freeClassRows.length} Free Class responses{averageRating ? ` · ${averageRating.toFixed(2)}/5 average` : ""}{syncedLine(sheetSync)}</p>
         </div>
@@ -84,7 +83,7 @@ export function CustomerKnowledgeWorkspace({ rows, platforms, categories, freeCl
           description="Comments, DMs and replies collected in a Google Sheet (by Claude through Composio, or by the team) come in here every hour."
           help="One tab with the columns Date, Platform, Category, Comment, Username, Source link, Labels, Notes (row 1). In the sheet: File → Share → Publish to web → pick that tab → Comma-separated values → copy the link."
           job="customer-knowledge" onClose={() => setSyncing(false)} placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&output=csv"
-          note={<>The same comment on the same platform is added once. Platform and category must be one of these — Platforms: {platforms.map((p) => text(p.nama)).filter(Boolean).join(", ") || "none yet"}. Categories: {categories.map((c) => text(c.nama)).filter(Boolean).join(", ") || "none yet"}. Rows that do not fit are skipped and listed here.</>}
+          note={<>The same comment on the same platform is added once. Platform and category must be one of these. Platforms: {platforms.map((p) => text(p.nama)).filter(Boolean).join(", ") || "none yet"}. Categories: {categories.map((c) => text(c.nama)).filter(Boolean).join(", ") || "none yet"}. Rows that do not fit are skipped and listed here.</>}
           stopMessage="New rows in the sheet will no longer come in by themselves. Pain points already here stay."
           sync={sheetSync} title="Sync the inbox sheet every hour"
         />
@@ -145,7 +144,7 @@ function PainPointsView({ rows, filter, setFilter, onEdit }: { rows: ApiRecord[]
                     <span className={s.quoteText}>{text(row.komentar) || "No comment"}<ClaudeMark at={row.added_at} by={row.added_via} verb="Added" /></span>
                   </button>
                   <div className={s.quoteFoot}>
-                    <span className={s.source}><i className={`ti ${platformIcon(platform)}`} aria-hidden="true" /> {platform}{text(row.username) ? ` · @${text(row.username).replace(/^@/, "")}` : ""} · {monthLabel(row.bulan) || "—"}</span>
+                    <span className={s.source}><i className={`ti ${platformIcon(platform)}`} aria-hidden="true" /> {platform}{text(row.username) ? ` · @${text(row.username).replace(/^@/, "")}` : ""} · {monthLabel(row.bulan) || "Not set"}</span>
                     <button className={filter.category === (text(row.kategori) || "Unknown") ? s.categoryOn : s.category} onClick={() => set({ category: filter.category === (text(row.kategori) || "Unknown") ? "" : text(row.kategori) || "Unknown" })} type="button">{text(row.kategori) || "Unknown"}</button>
                     {tags.length ? <span className={s.tags}>{tags.map((tag) => <span key={tag}>#{tag}</span>)}</span> : null}
                     <span className={s.quoteActions}>
@@ -454,7 +453,7 @@ function FreeClassTab({ rows }: { rows: ApiRecord[] }) {
         <div className={s.tableWrap}>
           <table>
             <thead><tr><th>Email</th><th>Name</th><th>University</th><th>Class year</th><th>Series</th></tr></thead>
-            <tbody>{pageItems.map((row) => <tr key={String(row.id)}><td>{text(row.email) || "—"}</td><td>{text(row.nama) || "—"}</td><td>{text(row.universitas) || "—"}</td><td>{text(row.angkatan) || "—"}</td><td>{text(row.seri) || "—"}</td></tr>)}</tbody>
+            <tbody>{pageItems.map((row) => <tr key={String(row.id)}><td>{text(row.email) || "Not set"}</td><td>{text(row.nama) || "Not set"}</td><td>{text(row.universitas) || "Not set"}</td><td>{text(row.angkatan) || "Not set"}</td><td>{text(row.seri) || "Not set"}</td></tr>)}</tbody>
           </table>
         </div>
         <Pagination onChange={setPage} page={page} totalPages={totalPages} />

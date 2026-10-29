@@ -44,7 +44,7 @@ const GRADE: Record<ContentEvaluationResult["grade"], string> = { top: "Top Perf
 
 const pct = (value: number) => `${value.toFixed(1)}%`;
 const isFeed = (row: ApiRecord) => FEED.includes(String(row.format));
-function dateLabel(value: unknown) { const key = day(value); if (!key) return "—"; const [y, m, d] = key.split("-").map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; }
+function dateLabel(value: unknown) { const key = day(value); if (!key) return "No date"; const [y, m, d] = key.split("-").map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; }
 function monthName(key: string) { const [y, m] = key.split("-").map(Number); return `${MONTHS[m - 1]} ${String(y).slice(2)}`; }
 function gradeClass(grade: ContentEvaluationResult["grade"]) { return { top: c.gradeTop, good: c.gradeGood, avg: c.gradeAvg, low: c.gradeLow }[grade]; }
 function sortItems(items: Scored[], mode: SortMode) {
@@ -107,7 +107,6 @@ export function ContentEvaluationTools({ evaluations, buyers, buyerTotal, sheetS
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Marketing</span>
           <h1>Content Evaluation</h1>
           <p>{scored.length} post{scored.length === 1 ? "" : "s"} scored{range === "0" ? "" : " in this range"} · average score {average}/100{syncedLine(sheetSync)}</p>
         </div>
@@ -341,8 +340,8 @@ function FormatView({ view, items, select, add }: { view: "reel" | "feed"; items
                       <td><button className={c.rowTitle} onClick={(e) => { e.stopPropagation(); select(item); }} type="button"><b>{String(row.judul || "Untitled")}<ClaudeMark at={row.synced_at} by={row.synced_by} /></b><small>{dateLabel(row.tanggal)}{row.topik ? ` · ${String(row.topik)}` : ""}</small></button></td>
                       <td><Score score={item.score} short /></td>
                       <td className={s.num}><b>{compact(row.reach)}</b></td>
-                      {reel ? <><td className={s.num}>{num(row.wtr) ? `${num(row.wtr)}%` : "—"}</td><td className={s.num}>{num(row.nf_pct)}%</td><td className={s.num}>{compact(row.saves)}</td><td className={s.num}>{compact(row.shares)}</td><td className={s.num}><b>{compact(row.follows)}</b></td><td className={s.num}>{followRate.toFixed(2)}%</td><td className={s.num}><b>{compact(row.link_taps)}</b></td></> : <><td className={s.num}>{compact(row.saves)}</td><td className={s.num}>{pct(item.score.rates.saveRate || 0)}</td><td className={s.num}>{compact(row.shares)}</td><td className={s.num}>{compact(row.comments)}</td><td className={s.num}><b>{compact(row.follows)}</b></td><td className={s.num}><b>{compact(row.link_taps)}</b></td><td className={s.num}>{num(row.nf_pct)}%</td></>}
-                      <td>{row.action ? <span className={s.chip}>{actionLabel(row.action)}</span> : <span className={s.muted}>—</span>}</td>
+                      {reel ? <><td className={s.num}>{num(row.wtr) ? `${num(row.wtr)}%` : "No data"}</td><td className={s.num}>{num(row.nf_pct)}%</td><td className={s.num}>{compact(row.saves)}</td><td className={s.num}>{compact(row.shares)}</td><td className={s.num}><b>{compact(row.follows)}</b></td><td className={s.num}>{followRate.toFixed(2)}%</td><td className={s.num}><b>{compact(row.link_taps)}</b></td></> : <><td className={s.num}>{compact(row.saves)}</td><td className={s.num}>{pct(item.score.rates.saveRate || 0)}</td><td className={s.num}>{compact(row.shares)}</td><td className={s.num}>{compact(row.comments)}</td><td className={s.num}><b>{compact(row.follows)}</b></td><td className={s.num}><b>{compact(row.link_taps)}</b></td><td className={s.num}>{num(row.nf_pct)}%</td></>}
+                      <td>{row.action ? <span className={s.chip}>{actionLabel(row.action)}</span> : <span className={s.muted}>No action</span>}</td>
                     </tr>
                   );
                 })}
@@ -471,7 +470,7 @@ function EvaluationEditor({ record, save, remove, close }: { record: ApiRecord |
   return (
     <Dialog onOpenChange={(open) => { if (!open) close(); }} open>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[820px]">
-        <DialogHeader><DialogTitle>{record ? "Edit evaluation" : "Add evaluation"}</DialogTitle><DialogDescription>Fields marked * are required. Fill what you have — the score adapts to the metrics given.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{record ? "Edit evaluation" : "Add evaluation"}</DialogTitle><DialogDescription>Fields marked * are required. Fill what you have; the score adapts to the metrics given.</DialogDescription></DialogHeader>
         <form className={c.editor} id={formId} onSubmit={submit}>
           <input name="account_id" type="hidden" value={value("account_id")} />
           <input name="account_username" type="hidden" value={value("account_username")} />
@@ -529,12 +528,12 @@ function EvaluationDetail({ item, close, edit }: { item: Scored; close: () => vo
         <DialogHeader><DialogTitle>{String(row.judul || "Untitled")}</DialogTitle><DialogDescription>{String(row.format || "Unknown")} · {dateLabel(row.tanggal)}{row.topik ? ` · ${String(row.topik)}` : ""}</DialogDescription></DialogHeader>
         <div className={`${c.scoreHero} ${gradeClass(score.grade)}`}>
           <b>{score.total}</b>
-          <div><strong>{GRADE[score.grade]}</strong><small>{score.partial ? "Preliminary — add the advanced metrics for a complete score." : "Complete adaptive score."}</small><span className={c.scoreBar}><i style={{ width: `${score.total}%` }} /></span></div>
+          <div><strong>{GRADE[score.grade]}</strong><small>{score.partial ? "Preliminary. Add the advanced metrics for a complete score." : "Complete adaptive score."}</small><span className={c.scoreBar}><i style={{ width: `${score.total}%` }} /></span></div>
           {row.action ? <span className={s.chip}>{actionLabel(row.action)}</span> : null}
         </div>
         {row.synced_by ? <div><ClaudeChip at={row.synced_at} by={row.synced_by} /></div> : null}
         <div className={c.detailGrid}>
-          <section><h3>Metrics</h3><dl className={c.metricList}>{metrics.map(([label, v]) => <div key={label}><dt>{label}</dt><dd>{typeof v === "number" ? compact(v) : String(v || "—")}</dd></div>)}</dl></section>
+          <section><h3>Metrics</h3><dl className={c.metricList}>{metrics.map(([label, v]) => <div key={label}><dt>{label}</dt><dd>{typeof v === "number" ? compact(v) : String(v || "No data")}</dd></div>)}</dl></section>
           <section>
             <h3>Insights</h3>
             <ul className={c.insights}>{score.insights.map((insight, index) => <li className={insight.type === "positive" ? c.insightGood : insight.type === "warning" ? c.insightWarn : undefined} key={`${insight.text}-${index}`}><i className={`ti ti-${insight.type === "positive" ? "circle-check" : insight.type === "warning" ? "alert-triangle" : "info-circle"}`} aria-hidden="true" /><span>{insight.text}</span></li>)}</ul>

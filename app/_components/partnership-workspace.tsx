@@ -77,7 +77,6 @@ export function PartnershipWorkspace({ title, entityLabel, rows, deals, outreach
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Internal</span>
           <h1>{title}</h1>
           <p>{summary.total} {plural} · {summary.open} in progress · {summary.closed} closed deal{summary.closed === 1 ? "" : "s"}</p>
         </div>
@@ -206,8 +205,8 @@ function PartnersView({ rows, tableKey, aiPanel, activity, entityLabel, onEdit }
               <li className={s.row} data-record-id={String(row.id)} key={String(row.id)}>
                 <button className={s.rowMain} onClick={() => onEdit(row)} type="button">
                   <span className={s.logo} aria-hidden="true">{initials(row.name)}</span>
-                  <span className={s.rowText}><b>{text(row.name) || "Untitled"}</b><small>{[text(row.category), text(row.tier)].filter(Boolean).join(" · ") || "—"}</small></span>
-                  <span className={s.rowText}><b className={s.rowPic}>{text(row.contact_name) || "No PIC yet"}</b><small>{[text(row.pos), text(row.contact_phone)].filter(Boolean).join(" · ") || "—"}</small></span>
+                  <span className={s.rowText}><b>{text(row.name) || "Untitled"}</b><small>{[text(row.category), text(row.tier)].filter(Boolean).join(" · ") || "Not set"}</small></span>
+                  <span className={s.rowText}><b className={s.rowPic}>{text(row.contact_name) || "No PIC yet"}</b><small>{[text(row.pos), text(row.contact_phone)].filter(Boolean).join(" · ") || "Not set"}</small></span>
                   <span className={s.rowText}><PartnerMeta activity={activity} row={row} /><small>{niceDate(row.input_date) ? `Added ${niceDate(row.input_date)}` : ""}</small></span>
                   <span className={text(row.status) === "Closed Deal" ? s.chipDone : s.chip}>{text(row.status) || "Approached"}</span>
                 </button>
@@ -236,7 +235,7 @@ function DealsView({ rows, deals, dealsKey, partnerField, entityLabel }: { rows:
   return (
     <section aria-label="Deals & scope" className={s.stack}>
       <div className={s.addBar}>
-        <HelpTip label="About deals">Edit right in place — changes save when you leave a field. One {entityLabel} can have several deals.</HelpTip>
+        <HelpTip label="About deals">Edit right in place; changes save when you leave a field. One {entityLabel} can have several deals.</HelpTip>
         <span className={s.spacer} />
         <label className={s.filterPill}><span>{entityLabel[0].toUpperCase() + entityLabel.slice(1)}</span><select aria-label={`Deal ${entityLabel}`} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Choose…</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select></label>
         <Button disabled={pending} onClick={add}><i className="ti ti-plus" aria-hidden="true" /> Add deal</Button>
@@ -290,7 +289,7 @@ function OutreachView({ rows, outreach, outreachKey, partnerField, entityLabel }
         <label className={s.search}><i className="ti ti-search" aria-hidden="true" /><input aria-label="Search outreach" onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${entityLabel} or message…`} value={query} /></label>
         <label className={s.filterPill}><span>Response</span><select aria-label="Filter response" onChange={(event) => setResponse(event.target.value)} value={response}><option value="">All</option>{RESPONSES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
         <span className={s.spacer} />
-        <HelpTip label="About the outreach log">Every message, call or meeting with a {entityLabel}, newest first. Edit any field right in place — it saves when you leave the field.</HelpTip>
+        <HelpTip label="About the outreach log">Every message, call or meeting with a {entityLabel}, newest first. Edit any field right in place; it saves when you leave the field.</HelpTip>
         <label className={s.filterPill}><span>{entityLabel[0].toUpperCase() + entityLabel.slice(1)}</span><select aria-label={`Outreach ${entityLabel}`} onChange={(event) => setSelectedPartner(event.target.value)} value={selectedPartner}><option value="">Choose…</option>{rows.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row.name)}</option>)}</select></label>
         <Button disabled={pending} onClick={add}><i className="ti ti-plus" aria-hidden="true" /> Log outreach</Button>
       </div>
@@ -341,7 +340,7 @@ function InsightsView({ rows, summary, activity, entityLabel, onEdit }: { rows: 
               <li className={s.row} key={String(row.id)}>
                 <button className={s.rowMainCompact} onClick={() => onEdit(row)} type="button">
                   <span className={s.logo} aria-hidden="true">{initials(row.name)}</span>
-                  <span className={s.rowText}><b>{text(row.name)}</b><small>{text(row.category) || "—"} · {text(row.contact_name) || "No PIC yet"}</small></span>
+                  <span className={s.rowText}><b>{text(row.name)}</b><small>{text(row.category) || "Not set"} · {text(row.contact_name) || "No PIC yet"}</small></span>
                   <PartnerMeta activity={activity} row={row} />
                   <span className={text(row.status) === "Closed Deal" ? s.chipDone : s.chip}>{text(row.status) || "Approached"}</span>
                 </button>

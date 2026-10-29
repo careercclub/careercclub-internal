@@ -30,7 +30,7 @@ const EMPTY: CrmFilter = { query: "", stage: "", classification: "", payment: ""
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value).trim(); }
 function unique(rows: Customer[], key: string) { return [...new Set(rows.map((row) => text(row[key])).filter(Boolean))].sort(compareText); }
 function csvCell(value: unknown) { return `"${String(value ?? "").replaceAll('"', '""')}"`; }
-function dateLabel(value: unknown) { const key = text(value).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(key) ? shortDate(key, false) + ` ${key.slice(0, 4)}` : text(value) || "—"; }
+function dateLabel(value: unknown) { const key = text(value).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(key) ? shortDate(key, false) + ` ${key.slice(0, 4)}` : text(value) || "No date"; }
 function waLink(value: unknown) { let d = text(value).replace(/\D/g, ""); if (d.startsWith("0")) d = `62${d.slice(1)}`; else if (d.startsWith("8")) d = `62${d}`; return d ? `https://wa.me/${d}` : ""; }
 
 export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { rows: ApiRecord[]; blastHistory?: EmailBlastRecord[]; blastDaily?: DailyBlastCount[] }) {
@@ -83,7 +83,6 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Operations</span>
           <h1>CRM</h1>
           <p>{summary.buyers} buyers · {summary.transactions} transactions · {rupiah(summary.spend)} total spend</p>
         </div>
@@ -140,11 +139,11 @@ export function CrmWorkspace({ rows, blastHistory = [], blastDaily = [] }: { row
                   const name = text(row.name) || "Unknown"; const stage = funnelStage(row.status); const pay = text(row.payment_status);
                   return (
                     <li className={selected.includes(row._key) ? s.rowSelected : s.row} data-record-ids={row.ids.join(" ")} key={row._key}>
-                      <input aria-label={`Select ${name}`} checked={selected.includes(row._key)} className={s.rowCheck} onChange={(e) => toggle(row._key, e.target.checked)} type="checkbox" />
+                      <label className={s.rowCheckHit}><input aria-label={`Select ${name}`} checked={selected.includes(row._key)} className={s.rowCheck} onChange={(e) => toggle(row._key, e.target.checked)} type="checkbox" /></label>
                       <button className={s.rowMain} data-record-open onClick={() => setDetailKey(row._key)} type="button">
                         <span className={s.avatar} aria-hidden="true">{initials(name)}</span>
-                        <span className={s.who}><b>{name}</b><small>{[text(row.wa), text(row.email)].filter(Boolean).join(" · ") || "—"}</small></span>
-                        <span className={s.product}><b>{text(row.produk) || "—"}</b><small>{[text(row.klasifikasi) || "Unclassified", !inTalentPool(row) ? "not in Talent Pool" : ""].filter(Boolean).join(" · ")}</small></span>
+                        <span className={s.who}><b>{name}</b><small>{[text(row.wa), text(row.email)].filter(Boolean).join(" · ") || "No contact details"}</small></span>
+                        <span className={s.product}><b>{text(row.produk) || "No product"}</b><small>{[text(row.klasifikasi) || "Unclassified", !inTalentPool(row) ? "not in Talent Pool" : ""].filter(Boolean).join(" · ")}</small></span>
                         <span className={s.spend}><b>{formatRupiah(row.spend)}</b><small>{row.txCount > 1 ? `${row.txCount} orders` : "1 order"}{pay === "FAILED" ? " · " : ""}{pay === "FAILED" ? <em className={s.failed}>payment failed</em> : pay === "PENDING" ? " · pending" : ""}</small></span>
                         <span className={stage === "converted" ? s.chipDone : stage === "new" ? s.chipNew : s.chip}>{statusLabel(row.status)}</span>
                       </button>
@@ -190,7 +189,7 @@ function CustomerDrawer({ customer: c, onClose }: { customer: Customer; onClose:
       <section className={s.drawer}>
         <header className={s.drawerHead}>
           <span className={s.avatarLg} aria-hidden="true">{initials(name)}</span>
-          <div className={s.drawerTitle}><span>Customer detail</span><h2>{name}</h2><p>{[text(c.wa), text(c.email)].filter(Boolean).join(" · ") || "—"}</p></div>
+          <div className={s.drawerTitle}><span>Customer detail</span><h2>{name}</h2><p>{[text(c.wa), text(c.email)].filter(Boolean).join(" · ") || "No contact details"}</p></div>
           <button aria-label="Close customer detail" className={s.close} onClick={onClose} type="button"><i className="ti ti-x" aria-hidden="true" /></button>
         </header>
         <div className={s.contact}>
@@ -212,7 +211,7 @@ function CustomerDrawer({ customer: c, onClose }: { customer: Customer; onClose:
           {timeline.map((tx, index) => (
             <li key={`${tx.produk}-${index}`}>
               <span className={s.dot} aria-hidden="true" />
-              <div><b>{text(tx.produk) || "—"}</b><small>{dateLabel(tx.tanggal)} · {text(tx.klasifikasi) || "Unclassified"}{tx.paymentStatus ? ` · ${tx.paymentStatus}` : ""}</small></div>
+              <div><b>{text(tx.produk) || "No product"}</b><small>{dateLabel(tx.tanggal)} · {text(tx.klasifikasi) || "Unclassified"}{tx.paymentStatus ? ` · ${tx.paymentStatus}` : ""}</small></div>
               <span className={s.txAmount}>{formatRupiah(Number(tx.harga || 0))}</span>
             </li>
           ))}

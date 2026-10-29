@@ -6,7 +6,7 @@
 .head > button { min-height: 38px; padding: 0 15px; }
 .headActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .headActions > button { min-height: 38px; }
-.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 .danger { color: var(--red); }
 .muted { color: var(--text-muted); }
 .spacer { flex: 1; }

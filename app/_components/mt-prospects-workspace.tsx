@@ -67,7 +67,6 @@ export function MtProspectsWorkspace({ prospects, contacts, lastImport, referenc
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Operations</span>
           <h1>Job Vacancy MT</h1>
           <p>
             {prospects.length ? `${tracked.length} companies · ${activeCount} opening MT in ${year}` : "No MT list yet"}
@@ -286,8 +285,8 @@ function CompaniesView({ prospects, contactsByProspect, filter, currentYear, onO
                 <li className={s.row} data-record-id={row.id} key={row.id}>
                   <button className={s.rowMain} onClick={() => onOpen(row.id)} type="button">
                     <span className={s.logo} aria-hidden="true">{initials(displayName(row))}</span>
-                    <span className={s.rowText}><b>{displayName(row)}{row.added_via === "claude" ? <span className={s.claudeMark} title="Added by Claude"><i aria-hidden="true" className="ti ti-sparkles" /><span className="sr-only">Added by Claude</span></span> : null}</b><small>{shortLegalName(row.legal_name) || "—"}</small></span>
-                    <span className={s.rowText}><b className={s.soft}>{row.program.split("\n")[0] || "—"}</b><small>{row.industry || "No industry"}</small></span>
+                    <span className={s.rowText}><b>{displayName(row)}{row.added_via === "claude" ? <span className={s.claudeMark} title="Added by Claude">Claude<span className="sr-only"> (added by Claude)</span></span> : null}</b><small>{shortLegalName(row.legal_name) || "Not set"}</small></span>
+                    <span className={s.rowText}><b className={s.soft}>{row.program.split("\n")[0] || "Not set"}</b><small>{row.industry || "No industry"}</small></span>
                     <span className={s.rowText}><b className={s.soft}>{latestOpening(row) || "No date yet"}</b><small>{contacts ? `${contacts} HR contact${contacts === 1 ? "" : "s"}` : "No HR contact"}</small></span>
                     {status ? <span aria-hidden="true" /> : <span className={s.status} data-status={row.status}>{STATUS_LABEL[row.status]}</span>}
                   </button>
@@ -363,8 +362,8 @@ function ContactsView({ contacts, byId, onOpen }: { contacts: ContactRow[]; byId
                 <li className={s.row} data-record-id={contact.id} key={contact.id}>
                   <button className={`${s.rowMain} ${s.contactMain}`} onClick={() => onOpen(contact.prospect_id)} type="button">
                     <span className={s.avatar} aria-hidden="true">{initials(contact.name)}</span>
-                    <span className={s.rowText}><b>{contact.name}</b><small>{contact.title || "—"}</small></span>
-                    <span className={s.rowText}><b className={s.soft}>{company ? displayName(company) : "—"}</b><small>{company?.industry || ""}</small></span>
+                    <span className={s.rowText}><b>{contact.name}</b><small>{contact.title || "Not set"}</small></span>
+                    <span className={s.rowText}><b className={s.soft}>{company ? displayName(company) : "Not set"}</b><small>{company?.industry || ""}</small></span>
                   </button>
                   {href ? <a aria-label={kind === "email" ? `Email ${contact.name}` : `Open ${contact.name} on LinkedIn`} className={s.iconLink} href={href} rel="noopener noreferrer" target="_blank"><i className={`ti ${kind === "email" ? "ti-mail" : kind === "linkedin" ? "ti-brand-linkedin" : "ti-external-link"}`} aria-hidden="true" /></a> : <span />}
                 </li>

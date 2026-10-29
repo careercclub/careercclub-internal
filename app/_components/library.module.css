@@ -53,6 +53,7 @@
 .resourceBody { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .resourceTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .resourceTitle b { font-size: 13px; font-weight: 700; }
+.hostLink { display: inline-flex; align-items: center; gap: 3px; }
 .resourceTitle a { overflow: hidden; color: var(--purple-mid); font-size: 12px; font-weight: 600; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .resourceTitle a:hover { text-decoration: underline; }
 .secrets { display: flex; flex-direction: column; gap: 4px; }

@@ -85,7 +85,7 @@ export function EventRundown({ eventId, rows, startTime, title = "Rundown", seco
               const duration = Number(row.durasi || 0);
               return (
                 <li className={openId === id ? `${r.item} ${r.editing}` : r.item} data-record-id={id} key={id}>
-                  <div className={r.time}><b>{start || "—"}</b>{start ? <small>to {addMinutes(start, duration)}</small> : null}<span className={s.chipMuted}>{duration} min</span></div>
+                  <div className={r.time}><b>{start || "Not set"}</b>{start ? <small>to {addMinutes(start, duration)}</small> : null}<span className={s.chipMuted}>{duration} min</span></div>
                   {openId === id ? <RowEditor close={close} row={row} /> : (
                     <div className={r.body}>
                       <b className={r.activity}>{String(row.activity || "Untitled activity")}</b>
@@ -115,7 +115,7 @@ export function EventRundown({ eventId, rows, startTime, title = "Rundown", seco
           ) : null}
         </>
       ) : (
-        <p className={s.empty}>No rundown yet. Add the first item — times are worked out from the event start.</p>
+        <p className={s.empty}>No rundown yet. Add the first item; times are worked out from the event start.</p>
       )}
     </section>
   );

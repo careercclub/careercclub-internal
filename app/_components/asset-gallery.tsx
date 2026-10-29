@@ -128,7 +128,6 @@ export function AssetGallery({ rows, titleField, categoryField, imageFields, def
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>{definition?.eyebrow || "Library"}</span>
           <h1>{title || definition?.title || "Gallery"}</h1>
           <p>{plural(rows.length, "item")}{categoryField ? ` in ${plural(categories.length, "category", "categories")}` : ""} · {plural(imageCount, "image")}</p>
         </div>

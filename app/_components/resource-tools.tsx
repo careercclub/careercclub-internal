@@ -73,7 +73,6 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Internal</span>
           <h1>Resources</h1>
           <p>{plural(items.length - credentials, "link")} · {plural(credentials, "login")} · {plural(categories.length, "category", "categories")}{pending ? " · saving order…" : ""}</p>
         </div>
@@ -115,7 +114,7 @@ export function ResourceTools({ rows, manage }: { rows: ApiRecord[]; manage: Rea
                         <div className={g.resourceBody}>
                           <div className={g.resourceTitle}>
                             <b>{name}</b>
-                            {row.url ? <a href={hrefOf(row.url)} rel="noreferrer" target="_blank" title={String(row.url)}>{hostOf(row.url)} <i className="ti ti-external-link" aria-hidden="true" /></a> : null}
+                            {row.url ? <a className={g.hostLink} href={hrefOf(row.url)} rel="noreferrer" target="_blank" title={String(row.url)}>{hostOf(row.url)} <i className="ti ti-external-link" aria-hidden="true" /></a> : null}
                           </div>
                           {row.username || row.email || row.has_password ? (
                             <div className={g.secrets}>

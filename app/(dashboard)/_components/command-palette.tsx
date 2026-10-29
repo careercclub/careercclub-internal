@@ -83,7 +83,7 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
   const aiRecords = useMemo<PaletteItem[]>(() => (aiCurrent && ai.status === "done" ? ai.hits : []).filter((hit) => !isHidden(hit.path)).map(toItem("ai")), [ai, aiCurrent, isHidden, toItem]);
   // Offer AI for sentence-like questions, or when the normal search found nothing.
   const offerAi = searchingData && !aiCurrent && (looksLikeQuestion(trimmed) || (data.status === "done" && !data.hits.length));
-  const aiRow = useMemo<PaletteItem[]>(() => (offerAi ? [{ kind: "ai", key: "ai:ask", href: "", icon: "ti-sparkles", title: `Ask AI: “${trimmed}”`, detail: "Understands questions in English or Indonesian, e.g. “akun buat desain”", module: "AI" }] : []), [offerAi, trimmed]);
+  const aiRow = useMemo<PaletteItem[]>(() => (offerAi ? [{ kind: "ai", key: "ai:ask", href: "", icon: "ti-message-question", title: `Ask AI: “${trimmed}”`, detail: "Understands questions in English or Indonesian, e.g. “akun buat desain”", module: "AI" }] : []), [offerAi, trimmed]);
   // Records grouped by module, modules in the order of their best result.
   const recordGroups = useMemo(() => {
     const groups = new Map<string, PaletteItem[]>();
@@ -263,13 +263,13 @@ export function CommandPalette({ hiddenSlugs = [], isAdmin = false }: { hiddenSl
             <div aria-label="Search results" id="palette-listbox" role="listbox">
               {aiRow.length ? (
                 <div aria-labelledby="palette-group-ai" role="group">
-                  <p className={GROUP_LABEL} id="palette-group-ai"><i aria-hidden="true" className="ti ti-sparkles" />AI search</p>
+                  <p className={GROUP_LABEL} id="palette-group-ai"><i aria-hidden="true" className="ti ti-message-question" />AI search</p>
                   {aiRow.map((item, index) => renderItem(item, index))}
                 </div>
               ) : null}
               {aiCurrent && ai.status !== "idle" ? (
                 <div aria-labelledby="palette-group-ai-results" role="group">
-                  <p className={GROUP_LABEL} id="palette-group-ai-results"><i aria-hidden="true" className="ti ti-sparkles" />AI search{ai.status === "done" ? <span className="font-normal text-[var(--text-hint)]">· {aiRecords.length}</span> : null}</p>
+                  <p className={GROUP_LABEL} id="palette-group-ai-results"><i aria-hidden="true" className="ti ti-message-question" />AI search{ai.status === "done" ? <span className="font-normal text-[var(--text-hint)]">· {aiRecords.length}</span> : null}</p>
                   {ai.status === "loading" ? <p className="flex items-center gap-2 px-3 pb-2 text-[12px] text-[var(--text-muted)]" role="status"><i aria-hidden="true" className="ti ti-loader-2 animate-spin" />Asking AI what to look for…</p> : null}
                   {ai.status === "error" ? <p className="px-3 pb-2 text-[12px] text-[var(--red)]" role="alert">{ai.error}</p> : null}
                   {ai.status === "done" ? <p className="px-3 pb-1 text-[12px] text-[var(--text-muted)]" data-ai-keywords="">{ai.keywords.length ? <>Searched for: {ai.keywords.map((word) => <span className="mr-1 inline-block rounded-full bg-[var(--purple-light)] px-2 font-semibold text-[var(--purple-dark)]" key={word}>{word}</span>)}</> : "The AI could not turn that into a search. Try other words."}</p> : null}

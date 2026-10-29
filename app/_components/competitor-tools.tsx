@@ -73,7 +73,6 @@ export function CompetitorTools({ workspace, sheetSync = null }: { workspace: Wo
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Intelligence</span>
           <h1>Competitor Intel</h1>
           <p>{summary.total} competitors · {summary.threat.high ? <b className={s.danger}>{summary.threat.high} high threat</b> : "none high threat"} · {summary.flags} flag{summary.flags === 1 ? "" : "s"} logged{syncedLine(sheetSync)}</p>
         </div>
@@ -86,7 +85,7 @@ export function CompetitorTools({ workspace, sheetSync = null }: { workspace: Wo
         <SheetSyncDialog
           description="Competitors, followers, news and prices kept in a Google Sheet (by Claude every week, or by the team) come in here every hour."
           help="Tabs: Competitors (Competitor, Checked on, Category, Website, Platforms, Niche, Target audience, Threat level, Instagram followers, TikTok followers, YouTube followers, X followers, LinkedIn followers, Ads active, Notes, Match), Flags (Competitor, Date, Type, Description, Source link) and Products (Competitor, Product, Category, Price min, Price max, Price date, Features, Links, Description). In the sheet: File → Share → Publish to web → Entire document → Microsoft Excel (.xlsx) → copy the link."
-          job="competitor-intel" note="One row per competitor: update its numbers and “Checked on” date each time; the app keeps the follower history and dated prices. Existing competitors only get empty fields filled — differences are listed, not written. Nothing is removed from the app."
+          job="competitor-intel" note="One row per competitor: update its numbers and “Checked on” date each time; the app keeps the follower history and dated prices. Existing competitors only get empty fields filled. Differences are listed, not written. Nothing is removed from the app."
           onClose={() => setSyncing(false)} placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=xlsx"
           stopMessage="Competitor Intel stops following the sheet. Everything already here stays."
           sync={sheetSync} title="Sync the competitor sheet every hour"
@@ -232,8 +231,8 @@ function Pricing({ workspace }: { workspace: Workspace }) {
                   return (
                     <li key={String(product.id)}>
                       {owner ? <CompetitorLogo profile={owner} size={28} /> : <span aria-label="Unknown brand" className={s.logo} role="img" style={{ width: 28, height: 28, fontSize: 14 }}><i className="ti ti-building-store" aria-hidden="true" /></span>}
-                      <span className={s.cardName}><b>{text(product.nama) || text(product.name) || "—"}<ClaudeMark at={product.added_at} by={product.added_via} verb="Added" /></b><small>{text(owner?.name) || "No competitor"}</small></span>
-                      <span className={s.priceValue}>{price ? formatRupiah(price) : "—"}</span>
+                      <span className={s.cardName}><b>{text(product.nama) || text(product.name) || "Untitled product"}<ClaudeMark at={product.added_at} by={product.added_via} verb="Added" /></b><small>{text(owner?.name) || "No competitor"}</small></span>
+                      <span className={s.priceValue}>{price ? formatRupiah(price) : "No price"}</span>
                       {group.max > group.min && price ? <span className={s.priceBar} aria-hidden="true"><i style={{ width: `${Math.max(6, ((price - group.min) / (group.max - group.min)) * 100)}%` }} /></span> : null}
                     </li>
                   );

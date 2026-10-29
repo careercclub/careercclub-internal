@@ -113,7 +113,7 @@ function TicketModal({ ticket, people, divisions, onClose, onSaved, onDeleted }:
             <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["High", "Med", "Low"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama) || text(d.name)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama) || text(d.name)}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
@@ -155,7 +155,7 @@ function TaskModal({ task, people, onClose, onSaved }: { task: ApiRecord; people
           <div className="grid gap-1.5"><Label htmlFor="calendar-task-title">Task title <span aria-hidden="true" className="text-[var(--red)]">*</span></Label><Input aria-invalid={Boolean(error) && !form.title.trim()} id="calendar-task-title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div className="grid gap-1.5"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase || "none"} onValueChange={(v) => setForm({ ...form, phase: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{["Pre Event", "Hari H", "Post Event"].map((s) => <SelectItem key={s} value={s}>{PHASE_LABEL[s]}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Phase</Label><Select value={form.phase || "none"} onValueChange={(v) => setForm({ ...form, phase: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{["Pre Event", "Hari H", "Post Event"].map((s) => <SelectItem key={s} value={s}>{PHASE_LABEL[s]}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Todo", "On Progress", "Done"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">

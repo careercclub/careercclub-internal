@@ -7,7 +7,7 @@ import s from "./loading.module.css";
 export default function Loading() {
   return (
     <div aria-busy="true" aria-label="Loading page" className={s.page} role="status">
-      <div className={s.head}><span className={s.eyebrow} /><span className={s.title} /><span className={s.line} /></div>
+      <div className={s.head}><span className={s.title} /><span className={s.line} /></div>
       <div className={s.tabs}><span /><span /><span /></div>
       <div className={s.grid}>{Array.from({ length: 6 }, (_, i) => <span className={s.card} key={i} />)}</div>
       <span className="sr-only">Loading…</span>

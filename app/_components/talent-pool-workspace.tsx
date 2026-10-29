@@ -57,7 +57,6 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Operations</span>
           <h1>Talent Pool</h1>
           <p>{summary.total} candidates · {summary.buyers} buyers · {summary.withEmail} reachable by email</p>
         </div>
@@ -109,7 +108,7 @@ export function TalentPoolWorkspace({ rows, management, sheetsImport }: { rows: 
                         <button className={s.person} data-record-id={id} data-record-open onClick={() => setDetailId(id)} type="button">
                           <span className={s.personTop}>
                             <span className={s.avatar} aria-hidden="true">{initials(name)}</span>
-                            <span className={s.personName}><b>{name}</b><small>{[text(row.universitas), facetValue(row, "tier")].filter(Boolean).join(" · ") || facetValue(row, "status") || "—"}</small></span>
+                            <span className={s.personName}><b>{name}</b><small>{[text(row.universitas), facetValue(row, "tier")].filter(Boolean).join(" · ") || facetValue(row, "status") || "Not set"}</small></span>
                             {isBuyer(row) ? <span className={s.buyer}>Buyer</span> : null}
                           </span>
                           {meta ? <span className={s.meta}>{meta}</span> : null}

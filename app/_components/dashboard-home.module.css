@@ -2,7 +2,7 @@
 .page { display: flex; flex-direction: column; gap: 22px; max-width: var(--page-max); margin: 0 auto; }
 
 .header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; }
-.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 .title { margin: 2px 0 0; font-size: clamp(22px, 3vw, 27px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
 .primaryButton { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 15px; border-radius: 999px; color: var(--on-accent); background: var(--purple-mid); font-weight: 700; }
 .primaryButton:hover { background: var(--purple-dark); }

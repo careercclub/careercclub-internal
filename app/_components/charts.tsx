@@ -10,7 +10,7 @@ ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, LineCont
 
 // Colours come from the app's tokens so charts match the page (Chart.js cannot read CSS vars itself).
 type Tokens = { mark: string; markSoft: string; ink: string; muted: string; grid: string; ref: string; surface: string };
-const FALLBACK: Tokens = { mark: "#1554c0", markSoft: "#dee7f6", ink: "#14212c", muted: "#5f6b77", grid: "#edf0f4", ref: "#6b7682", surface: "#fff" };
+const FALLBACK: Tokens = { mark: "#1554c0", markSoft: "#dee7f6", ink: "#14212c", muted: "#5c6773", grid: "#edf0f4", ref: "#5e6772", surface: "#fff" };
 function readTokens(): Tokens {
   if (typeof window === "undefined") return FALLBACK;
   const css = getComputedStyle(document.documentElement);

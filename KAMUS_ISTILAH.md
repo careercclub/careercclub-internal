@@ -42,6 +42,19 @@ Aturan tambahan:
 - Id orang yang sudah terhapus: **Removed person** (jangan tampilkan uuid, "Unknown", atau "No assignee").
 - Nilai lama yang tidak ada lagi di daftar pilihan: "{nilai} (not in list)", tetap terpilih.
 
+## Nilai kosong & tanda (antislop, Putaran 59)
+
+- Jangan pakai em dash (—) di teks UI, termasuk sebagai pengisi sel kosong (dijaga `lib/ui/no-em-dash.test.mjs`). Pakai kata:
+  - tanggal kosong: **No date**;
+  - angka/metrik kosong: **No data**;
+  - teks kosong: **Not set**;
+  - pilihan kosong di dropdown: **None**;
+  - harga kosong: **No price**;
+  - kontak kosong: **No contact details**;
+  - assignee kosong: ikon orang kosong dengan keterangan "No assignee".
+- Data dari Claude ditandai dengan kata **Claude** (atau "Added by Claude" / "Synced by Claude"), bukan ikon sparkle.
+- Ikon fitur AI sesuai aksinya: tempel teks → clipboard, deskripsikan → pesan, tanya → tanda tanya, Claude access → kunci.
+
 ## Uang (`lib/text/money.ts`)
 
 | Tempat | Format | Fungsi |

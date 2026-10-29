@@ -25,7 +25,6 @@ export function RundownWorkspace({ events, rows }: { events: ApiRecord[]; rows: 
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Program</span>
           <h1>Event rundown</h1>
           <p>Running order, clock times and MC cues per event.</p>
         </div>
@@ -40,8 +39,8 @@ export function RundownWorkspace({ events, rows }: { events: ApiRecord[]; rows: 
       {selected ? (
         <>
           <div className={s.stats}>
-            <div className={s.stat}><span>Starts</span><b>{startTime || "—"}</b><small>{dateLabel(selected.tanggal) || "No date"}</small></div>
-            <div className={s.stat}><span>Ends</span><b>{startTime ? finish : "—"}</b><small>Estimated</small></div>
+            <div className={s.stat}><span>Starts</span><b>{startTime || "Not set"}</b><small>{dateLabel(selected.tanggal) || "No date"}</small></div>
+            <div className={s.stat}><span>Ends</span><b>{startTime ? finish : "Not set"}</b><small>Estimated</small></div>
             <div className={s.stat}><span>Duration</span><b>{total} min</b><small>{eventRows.length} item{eventRows.length === 1 ? "" : "s"}</small></div>
             <div className={s.stat}><span>Status</span><b style={{ fontSize: 18 }}>{String(selected.status || "Planning")}</b></div>
           </div>

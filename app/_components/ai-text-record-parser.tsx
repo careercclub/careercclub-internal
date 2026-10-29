@@ -102,7 +102,7 @@ export function AiTextRecordParser({ definitionKey, fields, kind, noun, title = 
   return (
     <details className={styles.panel}>
       <summary>
-        <span className={styles.icon} aria-hidden="true"><i className="ti ti-sparkles" /></span>
+        <span className={styles.icon} aria-hidden="true"><i className="ti ti-clipboard-text" /></span>
         <span className={styles.heading}>
           <strong>{title}</strong>
           <small>Paste a chat, email or notes. AI fills in the {noun} for you to check.</small>
@@ -116,7 +116,7 @@ export function AiTextRecordParser({ definitionKey, fields, kind, noun, title = 
         </label>
         <div className={styles.parseRow}>
           <button className={styles.parseButton} disabled={parsing || !source.trim()} onClick={parse} type="button">
-            <i className="ti ti-sparkles" aria-hidden="true" /> {parsing ? "Reading…" : values ? "Parse again" : "Parse with AI"}
+            <i className="ti ti-clipboard-text" aria-hidden="true" /> {parsing ? "Reading…" : values ? "Parse again" : "Parse with AI"}
           </button>
           {parseError ? <p className={styles.error} role="alert">{parseError}</p> : !values ? <p className={styles.hint}>The form appears here once the AI has read the text.</p> : null}
         </div>

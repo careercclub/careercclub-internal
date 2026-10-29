@@ -77,7 +77,6 @@ export function ContentPlanningTools(props: ContentPlanningProps) {
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Marketing</span>
           <h1>Content Planning</h1>
           <p>{monthCarousels.length} carousel{monthCarousels.length === 1 ? "" : "s"} this month · {props.dates.length} story dates · {drafts} still in draft</p>
         </div>
@@ -293,7 +292,7 @@ function AiBar({ kind, onParsed }: { kind: "carousel" | "story"; onParsed: (data
   }
   return (
     <div className={s.ai}>
-      <i className="ti ti-sparkles" aria-hidden="true" />
+      <i className="ti ti-message-2" aria-hidden="true" />
       <input aria-label={`Describe a ${kind === "carousel" ? "carousel plan" : "story date"} for AI`} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void parse(); }} placeholder={placeholder} value={value} />
       <button className={s.primarySm} disabled={busy} onClick={parse} type="button">{busy ? "Reading…" : "Fill form with AI"}</button>
       {error ? <span className={s.aiError} role="status">{error}</span> : null}
@@ -668,7 +667,7 @@ function KolModal({ kol, onClose }: { kol: ApiRecord | null; onClose: () => void
         <Field label="LinkedIn URL" optional><input className={s.input} onChange={(event) => set({ linkedin_url: event.target.value })} placeholder="https://linkedin.com/in/…" value={text(form.linkedin_url)} /></Field>
         <Field label="Contact" optional><input className={s.input} onChange={(event) => set({ contact: event.target.value })} placeholder="WhatsApp / email" value={text(form.contact)} /></Field>
       </div>
-      <Field label="Rate card" optional><textarea className={s.textarea} onChange={(event) => set({ rate_card_text: event.target.value })} placeholder="e.g. 1 feed + 3 stories — Rp 2.500.000" value={text(form.rate_card_text)} /></Field>
+      <Field label="Rate card" optional><textarea className={s.textarea} onChange={(event) => set({ rate_card_text: event.target.value })} placeholder="e.g. 1 feed + 3 stories: Rp 2.500.000" value={text(form.rate_card_text)} /></Field>
       <div className={s.formGrid}>
         <Field label="Rate card file URL" optional><input className={s.input} onChange={(event) => set({ rate_card_file_url: event.target.value })} placeholder="https://…" value={text(form.rate_card_file_url)} /></Field>
         <Field label="Photo URL" optional><input className={s.input} onChange={(event) => set({ foto_url: event.target.value })} placeholder="https://…" value={text(form.foto_url)} /></Field>
@@ -713,7 +712,7 @@ function MtView({ stories, adding, onAdded }: { stories: ApiRecord[]; adding: bo
               <li className={posted ? s.personCardMuted : s.personCard} key={text(st.id)}>
                 <div className={s.personHead}>
                   <Avatar large name={name} url={text(st.foto_url)} />
-                  <div className={s.personName}><b>{name}</b><small>{[text(st.perusahaan), text(st.batch)].filter(Boolean).join(" · ") || "—"}</small></div>
+                  <div className={s.personName}><b>{name}</b><small>{[text(st.perusahaan), text(st.batch)].filter(Boolean).join(" · ") || "Not set"}</small></div>
                   {posted ? <span className={s.postedChip}><i className="ti ti-check" aria-hidden="true" /> Posted</span> : null}
                 </div>
                 {st.deskripsi ? <p className={s.note}>{text(st.deskripsi)}</p> : null}

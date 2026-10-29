@@ -340,7 +340,6 @@ export function RecordManager({ definitionKey, rows, links = [], tools, fieldOpt
       ) : (
         <header className={s.head}>
           <div>
-            <span className={s.eyebrow}>{definition.eyebrow}</span>
             <h1>{definition.title}</h1>
             <p>{rows.length} {plural(noun, rows.length)} · {definition.description}</p>
           </div>

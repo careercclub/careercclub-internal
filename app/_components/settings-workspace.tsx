@@ -28,7 +28,7 @@ const WORKSPACE = new Set<SettingsSectionId>(["menu", "users", "claude", "errors
 const SECTION_META: Record<SettingsSectionId, { icon: string; description: string }> = {
   menu: { icon: "ti-layout-sidebar", description: "Choose which modules the sidebar shows and what they are called." },
   users: { icon: "ti-users", description: "Who can sign in, and what each person is allowed to change." },
-  claude: { icon: "ti-sparkles", description: "Keys that let Claude add and update data from research — always previewed first, never deleting." },
+  claude: { icon: "ti-key", description: "Keys that let Claude add and update data from research. Always previewed first, never deleting." },
   errors: { icon: "ti-bug", description: "Unexpected server errors, so a broken page or save is noticed and fixed." },
   tickets: { icon: "ti-ticket", description: "Divisions, people and request types used by Tickets, and how ticket status and notifications work." },
   "customer-knowledge": { icon: "ti-message-circle", description: "Platforms and categories offered when logging a pain point." },
@@ -142,7 +142,7 @@ function TicketStatusEmailPanel({ divisions, people }: { divisions: ApiRecord[];
       </section>
       <section aria-labelledby="set-email" className={s.card}>
         <h3 id="set-email">Division members</h3>
-        <p className={s.hint}>Ticket notifications (in the app and on the phone) go to everyone who can open the ticket: its requester, assignees, the Lead of an assignee’s division, and admins — not the person who made the change. There are no ticket emails. Blocked accounts get nothing.</p>
+        <p className={s.hint}>Ticket notifications (in the app and on the phone) go to everyone who can open the ticket: its requester, assignees, the Lead of an assignee’s division, and admins, not the person who made the change. There are no ticket emails. Blocked accounts get nothing.</p>
         <div className={s.divisionGrid}>
           {divisions.map((division) => {
             const divisionId = String(division.id);
@@ -274,7 +274,6 @@ export function SettingsWorkspace({
   return (
     <div className={s.page}>
       <header className={s.head}>
-        <span className={s.eyebrow}>Settings</span>
         <h1>Settings</h1>
         <p>Menus, people and the lists other modules use.</p>
       </header>

@@ -66,7 +66,7 @@ export function talentPoolRows(workbook: ExcelJS.Workbook) {
     throw new SheetProblem(scanned.some(isOrderExport)
       ? "This is a lynk.id order export (Judul Barang, Buyer Email, …). It belongs in CRM → Import, not Talent Pool."
       : detected < 0
-        ? `No header row with an email column and a name or WhatsApp column was found in the first 20 rows, so nothing was imported. What the sheet starts with — ${preview}. Check that the published tab is the Talent Pool database and that its header row has "Email" and "Nama" or "WhatsApp".`
+        ? `No header row with an email column and a name or WhatsApp column was found in the first 20 rows, so nothing was imported. What the sheet starts with: ${preview}. Check that the published tab is the Talent Pool database and that its header row has "Email" and "Nama" or "WhatsApp".`
         : `The header row (row ${headerRowNumber}) was recognised, but no row under it has a valid email address, so there is nothing to import. Columns: ${detectedColumns}.`);
   }
   return rows;

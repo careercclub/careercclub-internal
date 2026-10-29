@@ -17,7 +17,7 @@ const GUIDE = {
   ],
   request: { mode: "preview | apply", posts: `up to ${MAX_POSTS} posts (Content Evaluation)`, weeks: `optional, up to ${MAX_WEEKS} weeks (Instagram page)` },
   post: {
-    post_id: "string, required — the Instagram media id as TEXT (a long number loses digits)",
+    post_id: "string, required: the Instagram media id as TEXT (a long number loses digits)",
     url: "string, the permalink https://www.instagram.com/p/…",
     posted_at: "YYYY-MM-DD", format: "Reel | Carousel | Feed Photo | Story (also accepts VIDEO / CAROUSEL_ALBUM / IMAGE)",
     caption: "string", title: "optional; default is the first 80 characters of the caption", account_username: "string", account_id: "string",

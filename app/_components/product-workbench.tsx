@@ -59,7 +59,6 @@ export function ProductWorkbench({ workspace, management }: { workspace: Workspa
     <div className={s.page}>
       <header className={s.head}>
         <div>
-          <span className={s.eyebrow}>Operations</span>
           <h1>Products</h1>
           <p>{summary.total} products · {summary.live} live · {summary.bundles} bundle{summary.bundles === 1 ? "" : "s"} · catalog value {rupiah(summary.value)}</p>
         </div>

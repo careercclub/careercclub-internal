@@ -70,7 +70,7 @@ function CreateTicketModal({ people, divisions, types, onClose, onCreated }: { p
           <div className="grid gap-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Division</Label><Select value={form.divisionId || "none"} onValueChange={(v) => setForm({ ...form, divisionId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select division" /></SelectTrigger><SelectContent><SelectItem value="none">Select division</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1.5"><Label>Request type</Label><Select value={form.typeId || "none"} onValueChange={(v) => setForm({ ...form, typeId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{types.map((t) => <SelectItem key={String(t.id)} value={String(t.id)}>{text(t.nama)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Request type</Label><Select value={form.typeId || "none"} onValueChange={(v) => setForm({ ...form, typeId: v === "none" ? "" : v })}><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{types.map((t) => <SelectItem key={String(t.id)} value={String(t.id)}>{text(t.nama)}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
@@ -137,7 +137,7 @@ function DetailTicketModal({ ticket, people, divisions, onClose, onSaved, onDele
             <div className="grid gap-1.5"><Label>Priority</Label><Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Division</Label><Select value={divisionId || "none"} onValueChange={(v) => setDivisionId(v === "none" ? "" : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">None</SelectItem>{divisions.map((d) => <SelectItem key={String(d.id)} value={String(d.id)}>{text(d.nama)}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Deadline</Label><DateInput as={Input} value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
           </div>
           <AssigneeField people={people} value={assignees} onChange={setAssignees} />
@@ -210,7 +210,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, meId = null, 
 
   function firstAssignee(row: ApiRecord) {
     const ids = Array.isArray(row.assigned_to_ids) ? row.assigned_to_ids.map(String) : row.assigned_to_id ? [String(row.assigned_to_id)] : [];
-    if (!ids.length) return "—";
+    if (!ids.length) return "";
     const person = personMap.get(ids[0]);
     return person ? text(person.nama) || text(person.email) : REMOVED_PERSON;
   }
@@ -226,7 +226,6 @@ export function TicketsWorkspace({ rows, people, divisions, types, meId = null, 
       <GoogleCalendarScript />
       <header className={styles.head}>
         <div>
-          <span className={styles.eyebrow}>Internal</span>
           <h1>Tickets</h1>
           <p>{openCount} open{lateCount ? <> · <b className={styles.lateText}>{lateCount} late</b></> : null}</p>
         </div>
@@ -273,7 +272,7 @@ export function TicketsWorkspace({ rows, people, divisions, types, meId = null, 
                       <b>{title}</b>
                       <small>{[text(row.ticket_no), division ? text(division.nama) : "", type ? text(type.nama) : "", text(row.priority) === "High" ? "High priority" : ""].filter(Boolean).join(" · ")}{att ? <> · <i className="ti ti-paperclip" aria-hidden="true" />{att}</> : null}</small>
                     </button>
-                    <span className={assignee === "—" ? styles.avatarEmpty : styles.avatar} title={assignee === "—" ? "No assignee" : assignee}>{assignee === "—" ? <i className="ti ti-user" aria-hidden="true" /> : initials(assignee)}</span>
+                    <span className={!assignee ? styles.avatarEmpty : styles.avatar} title={!assignee ? "No assignee" : assignee}>{!assignee ? <i className="ti ti-user" aria-hidden="true" /> : initials(assignee)}</span>
                     {chip ? <span className={chip.tone === "late" ? styles.chipLate : chip.tone === "soon" ? styles.chipSoon : styles.chip}>{chip.label}</span> : <span className={styles.chipNone}>No date</span>}
                     <button aria-label={synced ? `Re-sync ${title} to Google Calendar` : `Add ${title} to Google Calendar`} className={synced ? styles.calOn : styles.cal} onClick={() => setCalendarId(String(row.id))} title={synced ? "On Google Calendar (click to re-sync)" : "Add to Google Calendar"} type="button"><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} aria-hidden="true" /></button>
                   </li>

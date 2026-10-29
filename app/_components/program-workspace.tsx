@@ -42,7 +42,7 @@ function text(value: unknown) { return value === null || value === undefined ? "
 function dateKey(value: unknown) { if (!value) return ""; if (value instanceof Date) return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`; return String(value).slice(0, 10); }
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function fmtDate(value: unknown) { const key = dateKey(value); if (!key) return ""; const [y, m, d] = key.split("-"); return `${Number(d)} ${MONTHS_ID[Number(m) - 1] || m} ${y}`; }
-function fmtShort(value: unknown) { const key = dateKey(value); if (!key) return "—"; const parts = key.split("-"); return `${Number(parts[2])} ${MONTHS_ID[Number(parts[1]) - 1] || parts[1]}`; }
+function fmtShort(value: unknown) { const key = dateKey(value); if (!key) return "No date"; const parts = key.split("-"); return `${Number(parts[2])} ${MONTHS_ID[Number(parts[1]) - 1] || parts[1]}`; }
 
 const panelCard: CSSProperties = { background: "var(--white)", border: "0.5px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 16 };
 
@@ -77,7 +77,7 @@ function EventFormModal({ event, onClose, onSaved }: { event: ApiRecord | null; 
             <div className="grid gap-1.5"><Label>Platform</Label><Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PLATFORMS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1.5"><Label>Status</Label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{EVENT_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
           </div>
-          <div className="grid gap-1.5"><Label>Speaker</Label><Input value={form.speaker} onChange={(e) => setForm({ ...form, speaker: e.target.value })} placeholder="Speaker name — position/company" /></div>
+          <div className="grid gap-1.5"><Label>Speaker</Label><Input value={form.speaker} onChange={(e) => setForm({ ...form, speaker: e.target.value })} placeholder="Speaker name, position/company" /></div>
           <div className="grid gap-1.5"><Label>Target participants</Label><Input type="number" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} /></div>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
@@ -178,7 +178,7 @@ function EventLinksPanel({ event, templates, onAdd, onDelete, error }: { event: 
           ))}
           {adhoc.map((link, index) => (
             <span key={`${link.url}-${index}`} style={{ ...chip, border: "0.5px solid var(--border)", background: "var(--white)" }} title={link.label}>
-              <a href={link.url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, color: "inherit", textDecoration: "none", overflow: "hidden" }}>
+              <a className="min-w-0" href={link.url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, color: "inherit", textDecoration: "none", overflow: "hidden" }}>
                 <i className="ti ti-link" style={{ fontSize: 12, color: "var(--text-muted)" }} />
                 <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{link.label}</span>
               </a>
@@ -285,7 +285,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
   const { pageItems: phaseTaskPage, page: taskPage, setPage: setTaskPage, totalPages: taskTotalPages } = usePagination(phaseTasks, 10);
 
   function progressOf(eventId: string) { const related = taskRows.filter((task) => String(task.project_id) === eventId); const done = related.filter((task) => task.status === "Done").length; return { done, total: related.length, pct: related.length ? Math.round((done / related.length) * 100) : 0 }; }
-  function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; if (!ids.length) return { name: "—", div: "" }; const person = personMap.get(ids[0]); if (!person) return { name: REMOVED_PERSON, div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
+  function assigneeOf(task: ApiRecord) { const ids = Array.isArray(task.assignee_ids) ? task.assignee_ids.map(String) : []; if (!ids.length) return { name: "", div: "" }; const person = personMap.get(ids[0]); if (!person) return { name: REMOVED_PERSON, div: "" }; return { name: text(person.nama) || text(person.email), div: text(divisionMap.get(text(person.divisi_id))?.nama) }; }
   function toggleTask(task: ApiRecord) { const next = task.status === "Done" ? "Todo" : "Done"; const before = taskRows; setTaskRows((current) => current.map((row) => String(row.id) === String(task.id) ? { ...row, status: next } : row)); void saveOrQueue({ kind: "task", id: String(task.id), label: text(task.title), before: task, after: { status: next } }, () => updateProgramTaskWorkflowAction(String(task.id), { status: next })).catch(revertWith(() => setTaskRows(before), "Could not change the task status.")); }
   async function deleteLink(eventId: string, index: number) {
     if (!(await confirmAction({ title: "Delete this link?", confirmLabel: "Delete link", danger: true }))) return;
@@ -313,7 +313,6 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
       <GoogleCalendarScript />
       <header className={ps.head}>
         <div>
-          <span className={ps.eyebrow}>Operations</span>
           <h1>Program</h1>
           <p>{upcomingEvents.length} upcoming{lateTasks ? <> · <b className={ps.lateText}>{lateTasks} late {lateTasks === 1 ? "task" : "tasks"}</b></> : null}</p>
         </div>
@@ -394,7 +393,7 @@ export function ProgramWorkspace({ events, tasks, people = [], divisions = [], t
                               <b>{title}</b>
                               <small>{[who.div, text(task.status) === "On Progress" ? "In progress" : "", text(task.priority) === "High" ? "High priority" : ""].filter(Boolean).join(" · ") || "\u00a0"}</small>
                             </button>
-                            <span className={who.name === "—" ? ps.avatarEmpty : ps.avatar} title={who.name === "—" ? "No assignee" : who.name}>{who.name === "—" ? "?" : who.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
+                            <span className={!who.name ? ps.avatarEmpty : ps.avatar} title={!who.name ? "No assignee" : who.name}>{!who.name ? "?" : who.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
                             {chip ? <span className={chip.tone === "late" ? ps.chipLate : chip.tone === "soon" ? ps.chipSoon : ps.chip}>{chip.label}</span> : <span className={ps.chipNone}>No date</span>}
                             <button aria-label={synced ? `Re-sync ${title} to Google Calendar` : `Add ${title} to Google Calendar`} className={synced ? ps.calOn : ps.cal} onClick={() => setGcalTask(task)} title={synced ? "On Google Calendar (click to re-sync)" : "Add to Google Calendar"} type="button"><i className={`ti ti-calendar-${synced ? "check" : "plus"}`} aria-hidden="true" /></button>
                           </li>

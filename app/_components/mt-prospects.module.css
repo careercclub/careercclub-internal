@@ -5,7 +5,7 @@
 .head p { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
 .headActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .headActions > button { min-height: 38px; padding: 0 15px; }
-.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { color: var(--purple-dark); font-size: 12px; font-weight: 700; }
 
 .segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
 .segment, .segmentActive { min-height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
@@ -51,7 +51,7 @@
 .chart { position: relative; width: 100%; }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .chart text { font-family: inherit; }
-.chartTip { position: absolute; z-index: 2; padding: 8px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--white); box-shadow: var(--shadow); color: var(--text); font-size: 12px; line-height: 1.5; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); }
+.chartTip { position: absolute; z-index: 2; padding: 8px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--white); box-shadow: var(--shadow-raised); color: var(--text); font-size: 12px; line-height: 1.5; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); }
 .chartTip b { display: block; }
 
 .industryList { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
@@ -225,14 +225,14 @@
 }
 
 /* Added through Claude access */
-.claudeMark { display: inline-grid; place-items: center; margin-left: 6px; color: var(--purple-mid); font-size: 13px; vertical-align: -1px; }
+.claudeMark { margin-left: 6px; color: var(--purple-mid); font-size: 11px; font-weight: 600; vertical-align: 1px; }
+.claudeWord { color: var(--purple-mid); }
 .claudeChip { display: inline-flex; flex: none; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; background: var(--purple-light); color: var(--purple-dark); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .claudeNote { display: grid; gap: 4px; }
 .claudeNote p { margin: 0; color: var(--text); font-size: 13px; line-height: 1.5; white-space: pre-line; }
 .claudeNote small { color: var(--text-muted); font-size: 12px; }
 .claudeNote a { color: var(--purple-dark); font-weight: 600; }
 .claudeNoteHead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
-.claudeNoteHead i { color: var(--purple-mid); }
 .claudeNoteHead .tagMuted { padding: 1px 8px; border-radius: 999px; }
 
 /* One list look in detail panels (Putaran 42): white card, even 12 × 14 px rows, hairline dividers. */

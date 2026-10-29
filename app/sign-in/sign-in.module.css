@@ -35,9 +35,7 @@
   color: var(--purple-mid);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
+  }
 
 .card h1 {
   margin: 0;
