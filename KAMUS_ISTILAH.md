@@ -62,6 +62,11 @@ Aturan tambahan:
 - Target tercapai atau sesuai jalur: **On track** (chip hangat). Jangan pakai "Achieved", "Great", atau emoji.
 - Telat: **Late, needs action** (merah). Merah tidak dipakai untuk hal lain.
 
+## PIC partner (Putaran 61)
+
+- Satu partner bisa punya beberapa **PIC**. Tombolnya **Add PIC** dan **Remove PIC**. Di kartu tampil PIC pertama + "+N" ("Rina +2").
+- Tiap PIC: Name, Position, WhatsApp, Email, LinkedIn. PIC yang diisi wajib punya Name.
+
 ## Uang (`lib/text/money.ts`)
 
 | Tempat | Format | Fungsi |
@@ -98,6 +103,7 @@ Telat: **3d late**, **4mo late**, **1y+ late** — satu fungsi `lateLabel` (`lib
 | Buyer (CRM) | Customer di header CRM |
 | Company (Job Vacancy MT) | PT, Perusahaan, Vacancy |
 | HR contact | PIC, Contact person |
+| PIC (Partnership, bisa lebih dari satu per partner) | Contact person, Kontak, Contacts |
 | Event (Program) | Activity, Kegiatan |
 | Content Library | Library konten, KB |
 

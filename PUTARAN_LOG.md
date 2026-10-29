@@ -2191,3 +2191,63 @@ Permintaan user: evaluasi pakai antislop dan pakai skill-nya selama pengerjaan; 
 ### Deploy
 
 `git pull origin refactor && npm run vps:rebuild`. Tidak ada migrasi baru; migrasi 031–032 kalau belum dijalankan.
+
+## Putaran 61: satu partner bisa punya beberapa PIC
+
+### Permintaan
+
+- "di B2B partnership dan org partnership itu, harusnya bisa lebih dari 1 orang untuk setiap company"
+- User memastikan yang dimaksud adalah kontak di pihak partner (bukan tim CareerCclub yang memegang).
+
+### Temuan
+
+- Satu partner hanya punya satu PIC, disimpan di lima kolom: `contact_name`, `pos`, `contact_phone`, `contact_email`, `li`.
+- Kolom-kolom itu dibaca di beberapa tempat sekaligus: form partner, kartu pipeline, daftar All partners, Insights, Export CSV, pencarian, parser Claude (Add with AI), dan perintah AI di Dashboard.
+
+### Do
+
+- **Migrasi 033:**
+  - kolom `contacts` (jsonb, daftar PIC) di `partners` dan `org_partners`;
+  - PIC lama otomatis jadi PIC pertama di daftar;
+  - aman dijalankan dua kali.
+- **`lib/partnership/contacts.ts`** jadi satu aturan untuk semua jalur simpan (form, drag di pipeline, parser Claude, perintah AI Dashboard):
+  - kalau yang disimpan membawa daftar PIC, daftar itu yang menang;
+  - kalau yang dibawa hanya kolom lama (parser Claude), kolom itu dijadikan daftar berisi satu PIC;
+  - lima kolom lama selalu diisi dari PIC pertama, jadi tidak pernah beda dengan daftarnya.
+  - Dipanggil di `getValues` (`record-actions.ts`) untuk `partners` dan `org_partners`.
+- **Form partner:**
+  - bagian PIC berisi satu blok per PIC (Name, Position, WhatsApp, Email, LinkedIn), plus tombol **Add PIC** dan **Remove PIC**;
+  - partner baru mulai dengan satu PIC kosong; PIC kosong tidak ikut disimpan;
+  - PIC yang diisi tapi tanpa nama ditandai merah dan langsung difokuskan.
+- **Kartu pipeline dan All partners:** menampilkan PIC pertama + "+N" ("Rina +2"). Tooltip kartu menyebut semua nama.
+- **Pencarian di pipeline dan All partners:** mencari di nama, jabatan, WhatsApp, dan email semua PIC.
+- **Export CSV:** kolom `pics` berisi semua PIC dalam satu sel.
+- **Drag di pipeline:** daftar PIC ikut terkirim, jadi tidak hilang saat pindah tahap.
+- Kamus (PIC partner), `postgres-table-map.md`, `schema-expectations.sql`.
+
+### Check
+
+- Unit `lib/partnership/contacts.test.mjs` (6 tes):
+  - baca daftar;
+  - fallback ke data lama;
+  - kolom lama ikut PIC pertama;
+  - hapus semua PIC;
+  - jalur parser Claude;
+  - teks kartu, CSV, dan pencarian.
+- Harness `p61.mjs` (21 cek):
+  - drag menjaga daftar PIC;
+  - Add PIC dan fokus;
+  - PIC tanpa nama ditolak;
+  - urutan PIC saat disimpan;
+  - Remove PIC;
+  - PIC kosong tidak disimpan;
+  - cari berdasarkan nama PIC;
+  - form muat di HP (390px) dan desktop, terang dan gelap, dengan tombol minimal 44px;
+  - B2B dan Org memakai definisi yang sama.
+- Migrasi 033 diuji di Postgres lokal: backfill benar, partner tanpa PIC dapat `[]`, dan aman dijalankan ulang.
+- Uji simpan jsonb lewat postgres.js: array dan objek tersimpan sebagai jsonb.
+- Regresi penuh lolos: semua suite modul (termasuk partner 23 dan p61 21), service worker, navigasi 33, search 46, RecordManager 948, Design Assets 49, audit popup, unit 233, import 93, search-db 19, agent-db 109, lint 0 error, build lolos.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild`. Migrasi 033 jalan otomatis di dalamnya, dan harus jalan sebelum app baru dipakai.

@@ -17,6 +17,7 @@ import {
   synchronizeTicketToTask,
 } from "@/lib/api/program";
 import { insertRow, updateRow } from "@/lib/db/query";
+import { withContacts } from "@/lib/partnership/contacts";
 import { isRecordDefinitionKey, recordDefinitions, type ManagedField, type RecordDefinition } from "@/lib/records/catalog";
 import { revalidatePath } from "next/cache";
 
@@ -66,7 +67,9 @@ function requireMutationRole(
 
 function getValues(key: string, formData: FormData) {
   const definition = getDefinition(key);
-  return Object.fromEntries(definition.fields.map((field) => [field.name, parseField(field, formData)]));
+  const values = Object.fromEntries(definition.fields.map((field) => [field.name, parseField(field, formData)]));
+  // Partners: several PICs in one list; the older one-PIC columns follow the first (Putaran 61).
+  return key === "partners" || key === "org_partners" ? withContacts(values) : values;
 }
 
 type ManagedRecord = Record<string, unknown> & { id: string };

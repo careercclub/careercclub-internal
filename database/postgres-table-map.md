@@ -26,8 +26,8 @@ restored into Postgres with the same table names, then wired module by module.
 | `lib/api/customer-knowledge.ts` | `pain_points`, `pain_point_platforms`, `pain_point_categories`, `free_class_eval` |
 | `lib/api/tickets.ts` | `tickets`, `tkt_divisi`, `tkt_people`, `tkt_types` |
 | `lib/api/notifications.ts` | `ticket_notifications`, `ticket_notification_reads`, `web_push_subscriptions` |
-| `lib/api/b2b-partnership.ts` | `partners`, `partner_deals`, `partner_outreach` |
-| `lib/api/org-partnership.ts` | `org_partners`, `org_deals`, `org_outreach` |
+| `lib/api/b2b-partnership.ts` | `partners` (PICs in `contacts` jsonb; `contact_name`, `pos`, `contact_phone`, `contact_email`, `li` mirror the first PIC), `partner_deals`, `partner_outreach` |
+| `lib/api/org-partnership.ts` | `org_partners` (PICs as in `partners`), `org_deals`, `org_outreach` |
 | `lib/api/design-assets.ts` | `design_assets` |
 | `lib/api/resources.ts` | `resources` |
 | `lib/api/settings.ts` | `app_settings` |

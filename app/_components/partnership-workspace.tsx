@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import type { ApiRecord } from "@/lib/api/_crud";
 import { initials, shortDate } from "@/lib/dashboard/summary";
 import { outreachByDay, partnerActivity, partnerSummary, pipelineColumns, PARTNER_STATUSES } from "@/lib/partnership/view";
+import { contactsOf, contactsSearchText, contactsText, emptyContact, isBlankContact, picSummary, type PartnerContact } from "@/lib/partnership/contacts";
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { confirmAction, notify, notifyError } from "./app-dialog";
 import { guard } from "./safe-action";
@@ -28,11 +29,12 @@ const DEAL_STAGES = ["Active", "Negotiation", "Done", "Cancelled"];
 const CHANNELS = ["WhatsApp", "Email", "LinkedIn", "Meeting"];
 const RESPONSES = ["Replied", "No Reply", "Meeting Scheduled", "Declined"];
 const CHANNEL_ICON: Record<string, string> = { WhatsApp: "ti-brand-whatsapp", Email: "ti-mail", LinkedIn: "ti-brand-linkedin", Meeting: "ti-users" };
-const PARTNER_FIELDS = ["name", "type", "category", "tier", "status", "contact_name", "contact_email", "contact_phone", "pos", "li", "scope", "notes", "input_date"];
+// PICs are saved as one list; the server keeps the older one-PIC columns equal to the first (Putaran 61).
+const PARTNER_FIELDS = ["name", "type", "category", "tier", "status", "contacts", "scope", "notes", "input_date"];
 
 function text(value: unknown) { return value === null || value === undefined ? "" : String(value); }
 function localIso(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
-function cell(value: unknown) { if (value === null || value === undefined) return ""; if (value instanceof Date) return localIso(value); return String(value); }
+function cell(value: unknown) { if (value === null || value === undefined) return ""; if (value instanceof Date) return localIso(value); if (typeof value === "object") return JSON.stringify(value); return String(value); }
 function dayValue(value: unknown) { return value instanceof Date ? localIso(value) : text(value).slice(0, 10); }
 function distribution(rows: ApiRecord[], key: string) { const map = new Map<string, number>(); rows.forEach((row) => { const value = text(row[key]) || "Unknown"; map.set(value, (map.get(value) || 0) + 1); }); return [...map.entries()].sort((a, b) => b[1] - a[1]); }
 function buildFd(fields: string[], values: Record<string, unknown>) { const fd = new FormData(); for (const key of fields) fd.set(key, cell(values[key])); return fd; }
@@ -115,14 +117,14 @@ function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: 
   const [query, setQuery] = useState("");
   const columns = useMemo(() => pipelineColumns(rows), [rows]);
   // Search narrows every column at once, so a partner is found without scrolling a long stage.
-  const matches = (row: ApiRecord) => !query.trim() || `${text(row.name)} ${text(row.contact_name)} ${text(row.category)}`.toLowerCase().includes(query.trim().toLowerCase());
+  const matches = (row: ApiRecord) => !query.trim() || `${text(row.name)} ${contactsSearchText(contactsOf(row))} ${text(row.category)}`.toLowerCase().includes(query.trim().toLowerCase());
   const shown = columns.reduce((total, column) => total + column.rows.filter(matches).length, 0);
 
   function moveTo(status: string) {
     const row = rows.find((item) => String(item.id) === dragId);
     setDragId(""); setOver("");
     if (!row || text(row.status) === status) return;
-    start(() => guard(async () => { await updateManagedRecord(tableKey, String(row.id), buildFd(PARTNER_FIELDS, { ...row, type: text(row.type) || "Corporate", status })); }, "Could not save the changes."));
+    start(() => guard(async () => { await updateManagedRecord(tableKey, String(row.id), buildFd(PARTNER_FIELDS, { ...row, contacts: contactsOf(row), type: text(row.type) || "Corporate", status })); }, "Could not save the changes."));
   }
 
   return (
@@ -147,12 +149,13 @@ function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: 
                   const info = activity.get(String(row.id));
                   // Only what differs from card to card: deals and last contact, when there are any.
                   const meta = [info?.deals ? `${info.deals} deal${info.deals === 1 ? "" : "s"}` : "", info?.lastContact ? shortDate(info.lastContact, false) : ""].filter(Boolean).join(" · ");
+                  const pics = contactsOf(row);
                   return (
                     <li key={String(row.id)}>
-                      <button className={s.card} data-record-id={String(row.id)} draggable onClick={() => onEdit(row)} onDragStart={() => setDragId(String(row.id))} title={[text(row.name), text(row.category), text(row.contact_name) ? `PIC ${text(row.contact_name)}` : "No PIC yet"].filter(Boolean).join(" · ")} type="button">
+                      <button className={s.card} data-record-id={String(row.id)} draggable onClick={() => onEdit(row)} onDragStart={() => setDragId(String(row.id))} title={[text(row.name), text(row.category), pics.length ? `PIC ${pics.map((pic) => pic.name).filter(Boolean).join(", ")}` : "No PIC yet"].filter(Boolean).join(" · ")} type="button">
                         <span className={s.cardTop}><b>{text(row.name) || "Untitled"}</b>{text(row.tier) === "Strategic" ? <span className={s.strategic}>Strategic</span> : null}</span>
                         <span className={s.cardFoot}>
-                          {text(row.contact_name) ? <span className={s.pic}><span className={s.avatar} aria-hidden="true">{initials(row.contact_name)}</span>{text(row.contact_name)}</span> : <span className={s.noPic}><i className="ti ti-user-question" aria-hidden="true" /> No PIC</span>}
+                          {pics.length ? <span className={s.pic}><span className={s.avatar} aria-hidden="true">{initials(pics[0].name || pics[0].email)}</span>{picSummary(pics)}</span> : <span className={s.noPic}><i className="ti ti-user-question" aria-hidden="true" /> No PIC</span>}
                           {meta ? <small className={s.meta} title={info?.lastContact ? "Deals · last contact" : "Deals"}>{meta}</small> : null}
                         </span>
                       </button>
@@ -174,7 +177,7 @@ function PipelineView({ rows, tableKey, activity, entityLabel, onAdd, onEdit }: 
 function PartnersView({ rows, tableKey, aiPanel, activity, entityLabel, onEdit }: { rows: ApiRecord[]; tableKey: string; aiPanel?: ReactNode; activity: Activity; entityLabel: string; onEdit: (record: ApiRecord) => void }) {
   const [query, setQuery] = useState(""); const [status, setStatus] = useState(""); const [tier, setTier] = useState("");
   const [pending, start] = useTransition();
-  const filtered = useMemo(() => rows.filter((row) => (!query || `${text(row.name)} ${text(row.contact_name)}`.toLowerCase().includes(query.toLowerCase())) && (!status || text(row.status) === status) && (!tier || text(row.tier) === tier)), [rows, query, status, tier]);
+  const filtered = useMemo(() => rows.filter((row) => (!query || `${text(row.name)} ${contactsSearchText(contactsOf(row))}`.toLowerCase().includes(query.toLowerCase())) && (!status || text(row.status) === status) && (!tier || text(row.tier) === tier)), [rows, query, status, tier]);
   const { pageItems, page, setPage, totalPages } = usePagination(filtered, 20);
 
   async function remove(row: ApiRecord) {
@@ -182,8 +185,9 @@ function PartnersView({ rows, tableKey, aiPanel, activity, entityLabel, onEdit }
     start(() => guard(async () => { await deleteManagedRecord(tableKey, String(row.id)); }, "Could not delete the partner."));
   }
   function exportCsv() {
-    const headers = ["name", "category", "tier", "status", "contact_name", "contact_email", "contact_phone", "pos", "li", "scope", "notes", "input_date"];
-    const content = [headers.join(","), ...filtered.map((row) => headers.map((key) => `"${cell(row[key]).replaceAll('"', '""')}"`).join(","))].join("\n");
+    const headers = ["name", "category", "tier", "status", "pics", "scope", "notes", "input_date"];
+    const value = (row: ApiRecord, key: string) => (key === "pics" ? contactsText(contactsOf(row)) : cell(row[key]));
+    const content = [headers.join(","), ...filtered.map((row) => headers.map((key) => `"${value(row, key).replaceAll('"', '""')}"`).join(","))].join("\n");
     const url = URL.createObjectURL(new Blob([content], { type: "text/csv" }));
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${tableKey}.csv`; anchor.click(); URL.revokeObjectURL(url);
   }
@@ -202,18 +206,18 @@ function PartnersView({ rows, tableKey, aiPanel, activity, entityLabel, onEdit }
         <p className={s.listCount}>{filtered.length === rows.length ? `${rows.length} ${entityLabel}s` : `${filtered.length} of ${rows.length} ${entityLabel}s`}</p>
         {pageItems.length ? (
           <ul className={s.rows}>
-            {pageItems.map((row) => (
+            {pageItems.map((row) => { const pics = contactsOf(row); return (
               <li className={s.row} data-record-id={String(row.id)} key={String(row.id)}>
                 <button className={s.rowMain} onClick={() => onEdit(row)} type="button">
                   <span className={s.logo} aria-hidden="true">{initials(row.name)}</span>
                   <span className={s.rowText}><b>{text(row.name) || "Untitled"}</b><small>{[text(row.category), text(row.tier)].filter(Boolean).join(" · ") || "Not set"}</small></span>
-                  <span className={s.rowText}><b className={s.rowPic}>{text(row.contact_name) || "No PIC yet"}</b><small>{[text(row.pos), text(row.contact_phone)].filter(Boolean).join(" · ") || "Not set"}</small></span>
+                  <span className={s.rowText}><b className={s.rowPic}>{picSummary(pics) || "No PIC yet"}</b><small>{[pics[0]?.position, pics[0]?.phone].filter(Boolean).join(" · ") || "Not set"}</small></span>
                   <span className={s.rowText}><PartnerMeta activity={activity} row={row} /><small>{niceDate(row.input_date) ? `Added ${niceDate(row.input_date)}` : ""}</small></span>
                   <span className={text(row.status) === "Closed Deal" ? s.chipDone : s.chip}>{text(row.status) || "Approached"}</span>
                 </button>
                 <button aria-label={`Delete ${text(row.name)}`} className={s.iconButton} disabled={pending} onClick={() => remove(row)} type="button"><i className="ti ti-trash" aria-hidden="true" /></button>
               </li>
-            ))}
+            ); })}
           </ul>
         ) : <p className={s.empty}>{rows.length ? `No ${entityLabel}s match these filters.` : `No ${entityLabel}s yet.`}</p>}
         <Pagination onChange={setPage} page={page} totalPages={totalPages} />
@@ -345,7 +349,7 @@ function InsightsView({ rows, summary, activity, entityLabel, onEdit }: { rows: 
               <li className={s.row} key={String(row.id)}>
                 <button className={s.rowMainCompact} onClick={() => onEdit(row)} type="button">
                   <span className={s.logo} aria-hidden="true">{initials(row.name)}</span>
-                  <span className={s.rowText}><b>{text(row.name)}</b><small>{text(row.category) || "Not set"} · {text(row.contact_name) || "No PIC yet"}</small></span>
+                  <span className={s.rowText}><b>{text(row.name)}</b><small>{text(row.category) || "Not set"} · {picSummary(contactsOf(row)) || "No PIC yet"}</small></span>
                   <PartnerMeta activity={activity} row={row} />
                   <span className={text(row.status) === "Closed Deal" ? s.chipDone : s.chip}>{text(row.status) || "Approached"}</span>
                 </button>
@@ -372,9 +376,15 @@ function Distribution({ title, rows }: { title: string; rows: [string, number][]
 function PartnerModal({ profile, tableKey, categories, defaultStatus, onClose }: { profile: ApiRecord | null; tableKey: string; categories: string[]; defaultStatus?: string; onClose: () => void }) {
   const [form, setForm] = useState({
     name: text(profile?.name), category: text(profile?.category), tier: text(profile?.tier) || "Standard", status: text(profile?.status) || defaultStatus || "Approached",
-    contact_name: text(profile?.contact_name), pos: text(profile?.pos), contact_phone: text(profile?.contact_phone), contact_email: text(profile?.contact_email),
-    li: text(profile?.li), scope: text(profile?.scope), notes: text(profile?.notes), input_date: dayValue(profile?.input_date),
+    scope: text(profile?.scope), notes: text(profile?.notes), input_date: dayValue(profile?.input_date),
   });
+  // A new partner starts with one empty PIC to fill; empty PICs are dropped when saving.
+  const [pics, setPics] = useState<PartnerContact[]>(() => { const saved = contactsOf(profile); return saved.length ? saved : [emptyContact()]; });
+  const [picMissing, setPicMissing] = useState<number[]>([]);
+  const picRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const setPic = (index: number, patch: Partial<PartnerContact>) => { setPics((list) => list.map((pic, i) => (i === index ? { ...pic, ...patch } : pic))); if (patch.name) setPicMissing((list) => list.filter((i) => i !== index)); };
+  const addPic = () => { setPics((list) => [...list, emptyContact()]); window.setTimeout(() => picRefs.current[pics.length]?.focus(), 0); };
+  const removePic = (index: number) => { setPics((list) => (list.length === 1 ? [emptyContact()] : list.filter((_, i) => i !== index))); setPicMissing([]); };
   const [pending, start] = useTransition();
   const set = (patch: Partial<typeof form>) => setForm((current) => ({ ...current, ...patch }));
   const [nameInvalid, setNameInvalid] = useState(false);
@@ -382,7 +392,10 @@ function PartnerModal({ profile, tableKey, categories, defaultStatus, onClose }:
 
   function save() {
     if (!form.name.trim()) { setNameInvalid(true); nameRef.current?.focus(); notify("Company name is required.", "error"); return; }
-    const fd = buildFd(PARTNER_FIELDS, { ...form, type: "Corporate" });
+    // A PIC with a WhatsApp, email or position but no name cannot be told apart from the others.
+    const unnamed = pics.flatMap((pic, index) => (!isBlankContact(pic) && !pic.name.trim() ? [index] : []));
+    if (unnamed.length) { setPicMissing(unnamed); picRefs.current[unnamed[0]]?.focus(); notify("Each PIC needs a name.", "error"); return; }
+    const fd = buildFd(PARTNER_FIELDS, { ...form, contacts: pics.filter((pic) => !isBlankContact(pic)), type: "Corporate" });
     start(async () => {
       try {
         if (profile) await updateManagedRecord(tableKey, String(profile.id), fd);
@@ -412,15 +425,24 @@ function PartnerModal({ profile, tableKey, categories, defaultStatus, onClose }:
             <label className="block"><span className={labelClass}>Status</span><select className={inputClass} onChange={(event) => set({ status: event.target.value })} value={form.status}>{STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
             <label className="block"><span className={labelClass}>Date added</span><DateInput className={inputClass} onChange={(event) => set({ input_date: event.target.value })}  value={form.input_date} /></label>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block"><span className={labelClass}>PIC</span><input className={inputClass} onChange={(event) => set({ contact_name: event.target.value })} value={form.contact_name} /></label>
-            <label className="block"><span className={labelClass}>PIC position</span><input className={inputClass} onChange={(event) => set({ pos: event.target.value })} value={form.pos} /></label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block"><span className={labelClass}>WhatsApp</span><input className={inputClass} onChange={(event) => set({ contact_phone: event.target.value })} value={form.contact_phone} /></label>
-            <label className="block"><span className={labelClass}>Email</span><input className={inputClass} onChange={(event) => set({ contact_email: event.target.value })} type="email" value={form.contact_email} /></label>
-          </div>
-          <label className="block"><span className={labelClass}>LinkedIn</span><input className={inputClass} onChange={(event) => set({ li: event.target.value })} placeholder="https://linkedin.com/..." value={form.li} /></label>
+          <fieldset className={s.pics}>
+            <legend className={labelClass}>PIC <span className={s.picCount}>{pics.filter((pic) => !isBlankContact(pic)).length || ""}</span></legend>
+            {pics.map((pic, index) => (
+              <div className={s.picBlock} key={index}>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block"><span className={labelClass}>Name</span><input aria-invalid={picMissing.includes(index) || undefined} className={picMissing.includes(index) ? `${inputClass} border-[var(--red)] ring-2 ring-[var(--red-bg)]` : inputClass} onChange={(event) => setPic(index, { name: event.target.value })} ref={(node) => { picRefs.current[index] = node; }} value={pic.name} /></label>
+                  <label className="block"><span className={labelClass}>Position</span><input className={inputClass} onChange={(event) => setPic(index, { position: event.target.value })} value={pic.position} /></label>
+                  <label className="block"><span className={labelClass}>WhatsApp</span><input className={inputClass} inputMode="tel" onChange={(event) => setPic(index, { phone: event.target.value })} value={pic.phone} /></label>
+                  <label className="block"><span className={labelClass}>Email</span><input className={inputClass} onChange={(event) => setPic(index, { email: event.target.value })} type="email" value={pic.email} /></label>
+                </div>
+                <div className={s.picFoot}>
+                  <label className="block min-w-0 flex-1"><span className={labelClass}>LinkedIn</span><input className={inputClass} onChange={(event) => setPic(index, { linkedin: event.target.value })} placeholder="https://linkedin.com/in/..." value={pic.linkedin} /></label>
+                  {pics.length > 1 || !isBlankContact(pic) ? <button aria-label={`Remove PIC ${pic.name || index + 1}`} className={s.iconButton} onClick={() => removePic(index)} title="Remove PIC" type="button"><i className="ti ti-trash" aria-hidden="true" /></button> : null}
+                </div>
+              </div>
+            ))}
+            <button className={s.addPic} onClick={addPic} type="button"><i className="ti ti-plus" aria-hidden="true" /> Add PIC</button>
+          </fieldset>
           <label className="block"><span className={labelClass}>Partnership scope</span><textarea className={inputClass} onChange={(event) => set({ scope: event.target.value })} rows={2} value={form.scope} /></label>
           <label className="block"><span className={labelClass}>Notes</span><textarea className={inputClass} onChange={(event) => set({ notes: event.target.value })} rows={2} value={form.notes} /></label>
         </div>

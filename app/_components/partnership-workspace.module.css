@@ -153,3 +153,13 @@
   .log { grid-template-columns: minmax(0, 1fr); }
   .channel { display: none; }
 }
+
+/* PICs in the partner form (Putaran 61): one block per PIC, Add PIC under the list. */
+.pics { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.pics > legend { display: flex; align-items: center; gap: 6px; padding: 0; }
+.picCount { color: var(--text-muted); font-weight: 600; }
+.picBlock { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-2, var(--bg)); }
+.picFoot { display: flex; align-items: flex-end; gap: 8px; }
+.addPic { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--border-md); border-radius: var(--radius); background: transparent; color: var(--purple-dark); font-size: 13px; font-weight: 600; cursor: pointer; }
+.addPic:hover { border-color: var(--purple-mid); background: var(--white); }
+@media (max-width: 640px) { .picBlock > div:first-child { grid-template-columns: 1fr; } }
