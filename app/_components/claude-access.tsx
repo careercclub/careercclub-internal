@@ -1,20 +1,22 @@
 "use client";
 
-import { createAgentKeyAction, revokeAgentKeyAction } from "@/app/_actions/agent-actions";
+import { createAgentKeyAction, disconnectClaudeAction, revokeAgentKeyAction } from "@/app/_actions/agent-actions";
+import type { ConnectorConnection } from "@/lib/mcp/oauth";
 import type { AgentTokenRow } from "@/lib/api/agent-tokens";
 import { AGENT_MODULES } from "@/lib/agent/modules";
 import { formatDay } from "@/lib/text/date";
 import { useRouter } from "next/navigation";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, useSyncExternalStore, type FormEvent } from "react";
 import { confirmAction, notify, notifyError } from "./app-dialog";
 import { copyText } from "./copy-text";
 import { HelpTip } from "./ui-kit";
 import s from "./settings-workspace.module.css";
 
+const noSubscribe = () => () => {};
 const label = (id: string) => AGENT_MODULES.find((module) => module.id === id)?.label || id;
 
 /** Settings → Claude access: keys that let Claude add and update data (never delete). */
-export function ClaudeAccess({ tokens }: { tokens: AgentTokenRow[] | null }) {
+export function ClaudeAccess({ tokens, connections = [] }: { tokens: AgentTokenRow[] | null; connections?: ConnectorConnection[] | null }) {
   const router = useRouter();
   const nameId = useId();
   const [name, setName] = useState("");
@@ -22,6 +24,8 @@ export function ClaudeAccess({ tokens }: { tokens: AgentTokenRow[] | null }) {
   const [invalid, setInvalid] = useState<"" | "name" | "modules">("");
   const [busy, setBusy] = useState(false);
   const [shown, setShown] = useState<{ key: string; name: string } | null>(null);
+  // The address people paste into Claude: this site + /api/mcp (known only in the browser).
+  const origin = useSyncExternalStore(noSubscribe, () => window.location.origin, () => "");
 
   if (!tokens) return <p className={s.hint}>Claude access needs the database update from this release (migration 027). Run <code>npm run vps:rebuild</code> on the server.</p>;
 
@@ -43,9 +47,36 @@ export function ClaudeAccess({ tokens }: { tokens: AgentTokenRow[] | null }) {
     try { await revokeAgentKeyAction(token.id, token.name); notify("Key revoked."); router.refresh(); } catch (error) { notifyError(error, "Could not revoke the key."); }
   }
 
+  async function disconnectOne(connection: ConnectorConnection) {
+    if (!(await confirmAction({ title: `Disconnect Claude for ${connection.user_label}?`, message: "Claude stops reading and adding data for this person at once. They can connect again from Claude.", confirmLabel: "Disconnect Claude", danger: true }))) return;
+    try { await disconnectClaudeAction(connection.id, connection.user_label); notify("Claude disconnected."); router.refresh(); } catch (error) { notifyError(error, "Could not disconnect Claude."); }
+  }
+
   const active = tokens.filter((token) => !token.revoked_at);
+  const connectorUrl = `${origin}/api/mcp`;
   return (
     <div className={s.stack}>
+      <div className={s.card}>
+        <div className={s.cardHead}>
+          <h3>Connector</h3>
+          <HelpTip label="About the connector">In Claude: Settings → Connectors → Add custom connector, paste this URL, then sign in with your own CareerCclub account and choose Allow. Claude can then read every module you can open and add or change data in your name. It can never delete or see passwords.</HelpTip>
+        </div>
+        <div className={s.keyRow}><code data-connector-url="">{connectorUrl}</code><button className={s.ghostSmall} onClick={() => { void copyText(connectorUrl); notify("Connector URL copied."); }} type="button"><i aria-hidden="true" className="ti ti-copy" /> Copy URL</button></div>
+        {connections === null ? <p className={s.hint}>The connector needs the database update from this release (migration 034). Run <code>npm run vps:rebuild</code> on the server.</p>
+          : connections.length ? (
+            <ul className={s.keyList}>
+              {connections.map((connection) => (
+                <li key={connection.id}>
+                  <div>
+                    <b>{connection.user_label}</b>
+                    <span className={s.keyMeta}>{connection.client_name || "Claude"} · connected {formatDay(connection.created_at)} · {connection.last_used_at ? `last used ${formatDay(connection.last_used_at)}` : "not used yet"}</span>
+                  </div>
+                  <button className={s.ghostSmall} onClick={() => void disconnectOne(connection)} type="button">Disconnect Claude</button>
+                </li>
+              ))}
+            </ul>
+          ) : <p className={s.hint}>Nobody has connected Claude yet.</p>}
+      </div>
       <div className={s.card}>
         <div className={s.cardHead}>
           <h3>Keys</h3>

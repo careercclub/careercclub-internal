@@ -2,10 +2,12 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { signInWithCredentials } from "./actions";
 import styles from "./sign-in.module.css";
+import { safeNextPath } from "@/lib/auth/next-path";
 
 type SignInPageProps = {
   searchParams: Promise<{
     error?: string;
+    callbackUrl?: string;
   }>;
 };
 
@@ -27,12 +29,13 @@ function getErrorMessage(error?: string) {
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const session = await auth();
+  const params = await searchParams;
+  const next = safeNextPath(params.callbackUrl);
 
   if (session?.user) {
-    redirect("/dashboard");
+    redirect(next || "/dashboard");
   }
 
-  const params = await searchParams;
   const errorMessage = getErrorMessage(params.error);
 
   return (
@@ -59,6 +62,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             Password
             <input autoComplete="current-password" name="password" placeholder="********" type="password" required />
           </label>
+          {next ? <input name="next" type="hidden" value={next} /> : null}
           <button type="submit">Sign in</button>
         </form>
       </section>

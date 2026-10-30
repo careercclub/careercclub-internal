@@ -1,0 +1,9 @@
+.list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; color: var(--text); font-size: 13px; line-height: 1.45; }
+.list li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; }
+.list i { color: var(--purple-mid); font-size: 17px; }
+.host { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; }
+.actions form { display: contents; }
+.primary, .secondary { min-height: 44px; padding: 0 16px; border-radius: var(--radius); font-size: 13px; font-weight: 800; cursor: pointer; }
+.primary { border: 0; color: var(--on-accent); background: var(--purple-dark); }
+.secondary { border: 1px solid var(--border-md); color: var(--text); background: var(--white); }

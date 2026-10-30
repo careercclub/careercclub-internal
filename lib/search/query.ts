@@ -83,10 +83,12 @@ async function searchAllTables(sql: Sql, specs: SearchSpec[], terms: string[], v
   return Promise.allSettled(specs.map((spec) => searchTable(sql, spec, terms, viewer, close)));
 }
 
-export async function searchEverything(query: string, viewer: SearchViewer): Promise<{ hits: SearchHit[]; failedTables: string[] }> {
+/** `omit`: fields that must not be searched or shown for this caller (the Claude connector masks bank accounts). */
+export async function searchEverything(query: string, viewer: SearchViewer, options: { omit?: (table: string, field: string) => boolean } = {}): Promise<{ hits: SearchHit[]; failedTables: string[] }> {
   const terms = searchTerms(query);
   if (!terms.length) return { hits: [], failedTables: [] };
-  const specs = searchSpecs();
+  const omit = options.omit;
+  const specs = omit ? searchSpecs().map((spec) => ({ ...spec, fields: spec.fields.filter((field) => !omit(spec.table, field.name)) })).filter((spec) => spec.fields.length) : searchSpecs();
   // One broken table (e.g. a column not migrated yet) must not take the whole search down.
   // All tables share one client: on Hyperdrive each withPostgres call opens its own connection.
   const { settled, close } = await withPostgres(async (sql) => {

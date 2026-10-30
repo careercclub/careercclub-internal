@@ -2251,3 +2251,85 @@ Permintaan user: evaluasi pakai antislop dan pakai skill-nya selama pengerjaan; 
 ### Deploy
 
 `git pull origin refactor && npm run vps:rebuild`. Migrasi 033 jalan otomatis di dalamnya, dan harus jalan sebelum app baru dipakai.
+
+## Putaran 62: CareerCclub sebagai connector Claude (MCP)
+
+### Permintaan
+
+- "apakah web apps gua bisa ngeluarin MCP gitu? jadi kayak connector aja"
+- "bisa input data apa aja dari semua modules bro, dan bisa akses semua data sekaligus membacanya"
+
+### Temuan
+
+- Claude mendukung custom connector lewat remote MCP server dengan OAuth (DCR/CIMD). Header API key masih beta dan terbatas.
+- App sudah punya login (NextAuth), aturan baca per role (visibilitas ticket), aturan tulis per modul (catalog `mutationRoles`), dan jalur Claude access untuk 4 impor.
+- Logika simpan record ada di server action, sehingga tidak bisa dipakai jalur lain tanpa membuka celah.
+
+### Do
+
+- **Inti simpan dipindah** ke `lib/records/write.ts` (`createRecord`/`updateRecord` menerima user). Server action app dan connector memakai aturan yang sama: role, visibilitas ticket, requester, notifikasi, activity log.
+- **Impor Claude access dipindah** ke `lib/agent/sync.ts` (panduan + preview/apply per modul). Route `/api/agent/*` dan connector memakai fungsi yang sama.
+- **OAuth 2.1:**
+  - metadata `.well-known`;
+  - `/api/oauth/register` (DCR, hanya callback Claude, dibatasi per alamat, client yang sama dipakai ulang, client tanpa token dibersihkan setelah sehari);
+  - `/oauth/authorize` (layar "Connect Claude" + **Allow Claude** / **Cancel**, login dulu lalu kembali ke layar ini);
+  - `/api/oauth/token` (code + PKCE S256, refresh diganti tiap dipakai, refresh lama dipakai ulang = koneksi diputus, kode dipakai dua kali = koneksi dari kode itu diputus);
+  - `/api/oauth/revoke`.
+  - Migrasi 034: tabel `oauth_clients`, `oauth_codes`, `oauth_tokens`, hanya hash yang disimpan.
+- **Login:** `/sign-in` sekarang kembali ke halaman asal (`callbackUrl`), hanya path di app ini (`lib/auth/next-path.ts`).
+- **`/api/mcp`** (JSON-RPC, Streamable HTTP tanpa stream). Tools:
+  - baca: `list_modules`, `search`, `list_records`, `get_record`;
+  - tulis: `add_record`, `update_record`;
+  - impor: `import_guide`, `import_instagram`, `import_job_vacancy_mt`, `import_competitors`, `import_customer_comments`.
+  - Tidak ada tool hapus.
+- **Aturan data** (`lib/mcp/data-rules.ts`):
+  - password, secret, dan `auth_user_id` tidak pernah keluar; resource hanya `has_password`;
+  - rekening Collaborators disamarkan, tidak bisa diisi, dan tidak bisa dicari;
+  - field file/gambar hanya bisa dibaca;
+  - field wajib dicek;
+  - `update_record` hanya mengubah field yang dikirim;
+  - task yang terhubung ke ticket tersembunyi tidak bisa diubah.
+- **Settings → Claude access → Connector:** URL + **Copy URL**, daftar koneksi, **Disconnect Claude** (memutus semua token orang+app itu, termasuk setelah refresh).
+- **Pengerasan dari review keamanan terpisah:**
+  - header anti-frame untuk `/oauth/*` dan `/sign-in`;
+  - metadata tidak di-cache publik;
+  - batas ukuran request dan batch (20);
+  - error database diubah jadi kalimat biasa;
+  - layar persetujuan selalu menyebut "Claude".
+- Panduan: `docs/claude-connector.md`. Kamus: bagian Claude connector.
+
+### Check
+
+- Unit: `oauth-rules` (5), `data-rules` (6), `next-path` (1).
+- DB (`tests/agent`, 163 total, 54 baru untuk connector):
+  - alur OAuth lengkap dan PKCE;
+  - kode sekali pakai dan replay;
+  - rotasi refresh dan pemakaian ulang;
+  - akun di-Block dan Disconnect (termasuk setelah refresh);
+  - tidak ada hapus;
+  - visibilitas ticket;
+  - password tidak bisa dibaca, dicari, atau diisi;
+  - rekening disamarkan dan tidak bisa dicari;
+  - file key ditolak;
+  - modul admin;
+  - field wajib;
+  - update parsial menjaga field lain;
+  - activity log "via Claude";
+  - impor preview.
+- E2E di server Next asli (18 cek):
+  - register lewat HTTP;
+  - belum login → sign-in → kembali ke layar persetujuan;
+  - Allow / Cancel;
+  - token form-urlencoded;
+  - MCP initialize, notifikasi 202, list_records mengikuti visibilitas ticket, GET 405;
+  - layar persetujuan di HP 390px dan desktop tanpa scroll samping, tombol ≥ 44px.
+- Regresi penuh lolos: semua suite modul (termasuk p61), service worker, navigasi 33, search 46, RecordManager 948, Design Assets 49, audit popup, unit 245, import 93, search-db 19, agent-db 163, lint 0 error, build lolos. E2E diulang setelah perbaikan: 18/18, header `X-Frame-Options: DENY` + `frame-ancestors 'none'` aktif.
+- Review keamanan oleh agent terpisah: 5 temuan terkonfirmasi dan 7 saran pengerasan; semua diperbaiki dan dites kecuali no. 12 (lihat catatan).
+
+### Catatan
+
+- Task yang terhubung ke ticket tersembunyi sudah bisa dibaca dan diubah oleh siapa saja lewat app sejak dulu (tidak baru). Di connector perubahannya sekarang ditolak; di app belum diubah, menunggu keputusan user.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild`. Migrasi 034 jalan otomatis. Pastikan `AUTH_URL=https://internal.ccclub.id` ada di env VPS (sudah ada di DEPLOYMENT_VPS.md).

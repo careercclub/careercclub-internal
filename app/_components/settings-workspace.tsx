@@ -17,6 +17,7 @@ import { guard, submitTo } from "./safe-action";
 import s from "./settings-workspace.module.css";
 import { HelpTip } from "./ui-kit";
 import { ClaudeAccess } from "./claude-access";
+import type { ConnectorConnection } from "@/lib/mcp/oauth";
 import { ServerErrors } from "./server-errors";
 import type { ServerErrorRow } from "@/lib/monitoring/errors";
 import type { AgentTokenRow } from "@/lib/api/agent-tokens";
@@ -214,6 +215,7 @@ export function SettingsWorkspace({
   users,
   agentTokens = [],
   serverErrors = [],
+  connections = [],
   initialTab,
   initialSection,
 }: {
@@ -234,6 +236,8 @@ export function SettingsWorkspace({
   agentTokens?: AgentTokenRow[] | null;
   /** null: the app_errors table is not there yet (migration 032 not run). */
   serverErrors?: ServerErrorRow[] | null;
+  /** null: the oauth tables are not there yet (migration 034 not run). */
+  connections?: ConnectorConnection[] | null;
   initialTab?: string;
   initialSection?: string;
 }) {
@@ -360,7 +364,7 @@ export function SettingsWorkspace({
           {tab === "product-classes" ? <RecordManager definitionKey="product_klasifikasi" rows={klasifikasi} /> : null}
           {tab === "carousel-ctas" ? <RecordManager definitionKey="carousel_cta_options" rows={ctaOptions} /> : null}
           {tab === "users" && isAdmin ? <UserManagement users={users} /> : null}
-          {tab === "claude" && isAdmin ? <ClaudeAccess tokens={agentTokens} /> : null}
+          {tab === "claude" && isAdmin ? <ClaudeAccess connections={connections} tokens={agentTokens} /> : null}
           {tab === "errors" && isAdmin ? <ServerErrors errors={serverErrors} /> : null}
         </section>
       </div>

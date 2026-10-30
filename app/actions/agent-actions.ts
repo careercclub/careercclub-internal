@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { logActivity } from "@/lib/api/activity";
 import { createAgentToken, revokeAgentToken } from "@/lib/api/agent-tokens";
 import { isAgentModule } from "@/lib/agent/modules";
+import { disconnect } from "@/lib/mcp/oauth";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
@@ -35,6 +36,17 @@ export async function revokeAgentKeyAction(id: string, name: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Unknown key.");
   await revokeAgentToken(id);
   await logActivity({ userName: admin, module: "Settings", action: "Revoke Claude access key", detail: name.slice(0, 60) });
+  revalidatePath("/settings");
+  });
+}
+
+/** Settings → Claude access → Connector: ends one person's Claude connection at once. */
+export async function disconnectClaudeAction(id: string, label: string) {
+  return expected(async () => {
+  const admin = await requireAdmin();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Unknown connection.");
+  if (!(await disconnect(id))) throw new Error("This connection had already ended.");
+  await logActivity({ userName: admin, module: "Settings", action: "Disconnect Claude", detail: String(label || "").slice(0, 60) });
   revalidatePath("/settings");
   });
 }

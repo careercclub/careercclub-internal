@@ -121,3 +121,10 @@ Telat: **3d late**, **4mo late**, **1y+ late** — satu fungsi `lateLabel` (`lib
 - Aksi yang jarang (Duplicate, Google Calendar) = ikon bulat di header (`HeaderAction`), bukan tombol footer.
 - Link selalu lewat `LinksField` (input penuh + "Add link", daftar baris dengan buka & hapus).
 - Simpan berhasil → popup/form **menutup** (edit yang dibuka dari detail kembali ke detail itu). Simpan gagal → popup tetap terbuka dengan isian dan pesan errornya. Aksi kecil di dalam popup (Add link, hapus link, Add contact) tidak menutup popup. Dicek otomatis oleh `p52.mjs`.
+
+## Claude connector (Putaran 62)
+
+- **Connector**: cara Claude terhubung ke app ini (MCP). Jangan pakai "integrasi", "plugin", atau "API key" untuk ini.
+- **Claude access key**: kunci di Settings untuk jalur lama (per modul). Beda dari connector.
+- Tombol baku: **Allow Claude** dan **Cancel** di layar persetujuan, **Disconnect Claude** di Settings, **Copy URL** untuk alamat connector.
+

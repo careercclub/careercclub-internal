@@ -6,3 +6,4 @@ import { unwrapAction } from "@/lib/actions/unwrap";
 
 export const createAgentKeyAction = unwrapAction(server.createAgentKeyAction);
 export const revokeAgentKeyAction = unwrapAction(server.revokeAgentKeyAction);
+export const disconnectClaudeAction = unwrapAction(server.disconnectClaudeAction);

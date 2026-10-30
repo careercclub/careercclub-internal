@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { safeNextPath } from "@/lib/auth/next-path";
 
 export const authConfig = {
   trustHost: true,
@@ -15,7 +16,8 @@ export const authConfig = {
       const isSignInPage = request.nextUrl.pathname === "/sign-in";
 
       if (isSignInPage && isLoggedIn) {
-        return Response.redirect(new URL("/dashboard", request.nextUrl.origin));
+        // Already signed in: go where sign-in was asked for (e.g. connecting Claude), else the dashboard.
+        return Response.redirect(new URL(safeNextPath(request.nextUrl.searchParams.get("callbackUrl")) || "/dashboard", request.nextUrl.origin));
       }
 
       return isSignInPage || isLoggedIn;
