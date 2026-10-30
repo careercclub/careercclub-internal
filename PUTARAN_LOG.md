@@ -2333,3 +2333,44 @@ Permintaan user: evaluasi pakai antislop dan pakai skill-nya selama pengerjaan; 
 ### Deploy
 
 `git pull origin refactor && npm run vps:rebuild`. Migrasi 034 jalan otomatis. Pastikan `AUTH_URL=https://internal.ccclub.id` ada di env VPS (sudah ada di DEPLOYMENT_VPS.md).
+
+## Putaran 63: tampilan "Fresh" dengan biru CareerCclub
+
+### Permintaan
+
+- User suka referensi desain "huddly", terutama UI yang minimalis dan simpel serta palet yang fresh.
+- Preview pertama (aksen lime) dikirim. User setuju strukturnya, dengan tiga catatan:
+  - "boldnya tetep dipertahanin untuk beberapa word";
+  - "warnanya jangan lime, tetep biru aja";
+  - "dark modenya gua suka banget".
+
+### Do
+
+- **Token (`globals.css`):**
+  - halaman abu dingin `#eceef1`, kartu putih tanpa garis tepi (`--card-line: transparent`);
+  - biru CareerCclub tetap sebagai satu-satunya aksen, dengan tint `#e4ecfa`;
+  - panel besar (kartu program, hero Instagram/Customer Knowledge) jadi biru muda lapang dengan teks gelap;
+  - capaian (On track, grade A) jadi chip biru solid, aksen oranye "Rapor karier" dihapus;
+  - grafik dan bar peringkat pakai biru lembut `--chart-mark` (3:1);
+  - sudut input 12px, kartu 18–20px.
+- **Mode gelap:** hitam netral (bukan biru-hitam), tombol utama pil terang, tint biru gelap untuk item terpilih dan panel.
+- **88 aturan kartu** di semua modul memakai `--card-line`. **89 aturan tombol, tab, filter, dan search** jadi pil. Komponen `Button` juga pil.
+- **Tipografi:**
+  - kata tetap tebal (judul halaman 800, judul kartu, nama, tombol);
+  - angka besar tipis: 300 untuk angka utama dan besar, 400 untuk 22–23px, satuan kecil abu.
+- **Bar di atas panel berwarna** (goal Instagram, skor Customer Knowledge, cincin program) mengikuti `--on-hero`, jadi tetap terlihat di panel terang maupun gelap.
+- Semua selector global preview (`[class*=…]`) dihapus; gaya dipasang di CSS tiap modul.
+- `DESIGN.md` diperbarui (arah "Fresh"), kamus disesuaikan (On track = chip biru solid).
+
+### Check
+
+- Screenshot terang/gelap/HP untuk Dashboard, Content Evaluation, B2B Insights, Tickets, Instagram, Program, dan CRM. Tidak ada scroll samping.
+- Scan antislop 21 halaman:
+  - kontras 0 temuan baru (yang tersisa hanya chip di atas foto yang sudah diketahui salah baca; salah baca hero Instagram hilang karena hero kini terang);
+  - target sentuh hanya checkbox CRM 24px dengan area klik 44px.
+- Delivery Gate: PASS (R-02, R-03, R-11 sudut konsisten per jenis, R-12 datar, R-25 kontras, R-37 DESIGN.md, merah hanya untuk telat).
+- Regresi penuh lolos: semua suite modul (termasuk a11y, dark, p61), service worker, navigasi 33, search 46, RecordManager 948, Design Assets 49, audit popup, unit 245, import 93, search-db 19, agent-db 163, lint 0 error, build lolos.
+
+### Deploy
+
+`git pull origin refactor && npm run vps:rebuild`. Hanya tampilan, tidak ada migrasi baru.

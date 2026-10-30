@@ -75,7 +75,7 @@
 .formGrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .scoreHero { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 15px; border-radius: var(--radius-lg); background: var(--surface-2); }
-.scoreHero > b { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; color: var(--grade-ink); background: var(--grade); font-size: 23px; font-weight: 800; }
+.scoreHero > b { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; color: var(--grade-ink); background: var(--grade); font-size: 23px; font-weight: 400; }
 .scoreHero > div { min-width: 200px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .scoreHero strong { font-size: 14px; }
 .scoreHero small { color: var(--text-muted); font-size: 12px; }

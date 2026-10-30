@@ -7,20 +7,20 @@
 .lateText { color: var(--red); font-weight: 700; }
 .headActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .headActions > * { min-height: 38px; padding: 0 15px; }
-.ghostButton { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; }
+.ghostButton { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; }
 .ghostButton:hover { background: var(--surface-2); }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
-.segment, .segmentActive { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; }
+.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
+.segment, .segmentActive { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .segment span, .segmentActive span { font-size: 12px; font-weight: 700; opacity: 0.7; }
 .segment { color: var(--text-muted); background: transparent; }
 .segment:hover { color: var(--text); }
 .segmentActive { color: var(--white); background: var(--text); }
-.search { min-width: 200px; min-height: 38px; flex: 1 1 220px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); }
+.search { min-width: 200px; min-height: 38px; flex: 1 1 220px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); }
 .search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
 .search:focus-within, .filterPill:focus-within { border-color: var(--purple-mid); }
-.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select { max-width: 160px; min-height: 32px; padding: 0 6px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
 .togglePill, .togglePillOn { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
 .togglePill:hover { border-color: var(--purple-mid); }
@@ -28,7 +28,7 @@
 .togglePillOn { border-color: var(--purple-mid); background: var(--purple-light); color: var(--purple-dark); }
 .togglePillOn i { font-size: 14px; }
 
-.panel { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
+.panel { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 12px; border: 1px solid var(--card-line); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
 .group { display: flex; flex-direction: column; }
 .groupTitle, .groupLate { margin: 0; padding: 12px 8px 6px; font-size: 13px; font-weight: 800; letter-spacing: -0.005em; }
 .groupTitle span, .groupLate span { margin-left: 4px; color: var(--text-muted); font-weight: 600; }

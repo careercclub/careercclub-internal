@@ -7,22 +7,24 @@
 :root {
   /* Page width: content follows the window (zoom out = more room), no fixed column. */
   --page-max: none;
-  /* IJIS look (Oct 2026): one accent (CareerCclub blue) with light/dark variants, one dark neutral.
+  /* Fresh (Putaran 63, DESIGN.md): cool gray page, borderless white cards, CareerCclub blue as the one
+     accent. Dark mode is neutral black with light pill buttons and blue tints.
+     IJIS look (Oct 2026): one accent (CareerCclub blue) with light/dark variants, one dark neutral.
      The old --purple-* names are kept so every module follows without edits.
      To switch the whole app to another accent, change --purple-mid / --purple-accent and
      derive --purple-dark (accent mixed 28% with black) and --purple-light (86% with white). */
   --purple-dark: #0f3c8a;
   --purple-mid: #1554c0;
   --purple-accent: #1554c0;
-  --purple-light: #dee7f6;
-  --bg: #edf0f4;
-  --surface-2: #f5f7fa;
+  --purple-light: #e4ecfa;
+  --bg: #eceef1;
+  --surface-2: #f4f5f7;
   --white: #fff;
-  --text: #14212c;
-  --text-muted: #5c6773; /* 4.6:1 on every light surface incl. --purple-light (antislop R-25) */
-  --text-hint: #5e6772; /* 4.6:1 on --surface-2 and --purple-light (R-25) */
-  --border: #dde3ea;
-  --border-md: #cbd3dd;
+  --text: #14181f;
+  --text-muted: #5d6168; /* 4.6:1 on every light surface incl. --purple-light (antislop R-25) */
+  --text-hint: #5d6168; /* 4.6:1 on --surface-2 and --purple-light (R-25) */
+  --border: #e6e8ec;
+  --border-md: #d3d7dd;
   /* Resting surfaces sit flat on the page (border only); only what floats above it is raised
      (tooltips, sticky bars, the selected column). antislop R-12, Putaran 59. */
   --shadow: none;
@@ -33,11 +35,11 @@
   --amber: #854f0b;
   --red-bg: #fbe2df;
   --red: #be301d; /* 4.7:1 on --red-bg: late chips (R-25) */
-  --blue-bg: #e9eff9;
-  /* The one warm accent (DESIGN.md): achievements only, a target reached, a top score (A). */
-  --achieve: #a34a00;
-  --achieve-bg: #fdf0e1;
-  --achieve-mark: #d9730d;
+  --blue-bg: #e4ecfa;
+  /* Achievements (a target reached, a top score A, on track): a solid blue chip (Fresh, Putaran 63). */
+  --achieve: #fff;
+  --achieve-bg: #1554c0;
+  --achieve-mark: #1554c0;
   --blue: #1554c0;
   --teal-bg: #e1f5ee;
   --teal: #0f6e56;
@@ -47,38 +49,40 @@
   --pink: #993556;
   /* Text and icons on an accent/red fill. White in light mode; dark in dark mode, where the accent is lighter. */
   --on-accent: #fff;
-  /* Large coloured surfaces (program cards, Instagram & Customer Knowledge heroes): the accent in light
-     mode, a deep blue in dark mode so a big panel never glares. */
-  --hero: var(--purple-mid);
-  --hero-deep: var(--purple-dark);
-  --on-hero: #fff;
+  /* Large coloured surfaces (program cards, Instagram & Customer Knowledge heroes): an airy light blue
+     with dark text in light mode, a deep blue in dark mode so a big panel never glares (Fresh). */
+  --hero: #dce9fd;
+  --hero-deep: #eaf1fc;
+  --on-hero: #10284f;
   color-scheme: light;
-  --radius: 10px;
-  /* Rapor karier (DESIGN.md): tighter corners, like a report sheet; pills only for status. */
-  --radius-lg: 14px;
-  --radius-xl: 16px;
+  --radius: 12px;
+  /* Fresh: soft corners; buttons, tabs and search are pills. Cards have no outline (--card-line). */
+  --radius-lg: 18px;
+  --radius-xl: 20px;
+  --card-line: transparent;
+  --chart-mark: #5f8ad6;
 }
 
 /* Dark mode (Putaran 37): the same tokens, re-valued. Accent is lighter so it reads as text on dark
    surfaces; text on accent fills turns dark (--on-accent). Contrast checked by the a11y suite. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --purple-dark: #a9c8ff;
-  --purple-mid: #5b95f8;
-  --purple-accent: #5b95f8;
-  --purple-light: #1c2d48;
-  --on-accent: #08111f;
-  --hero: #1f4fa8;
-  --hero-deep: #183d80;
-  --on-hero: #eef4ff;
-  --bg: #0e141b;
-  --surface-2: #1b242f;
-  --white: #151d26;
-  --text: #e6edf3;
-  --text-muted: #a3afbb;
-  --text-hint: #8d99a6;
-  --border: #26313d;
-  --border-md: #364352;
+  --purple-dark: #f1f2f4;
+  --purple-mid: #eceef1;
+  --purple-accent: #eceef1;
+  --purple-light: #1c2a44;
+  --on-accent: #17181b;
+  --hero: #1b2b47;
+  --hero-deep: #142036;
+  --on-hero: #eef3ff;
+  --bg: #0f1012;
+  --surface-2: #1d1f22;
+  --white: #17191c;
+  --text: #eceef1;
+  --text-muted: #a4a9b1;
+  --text-hint: #a4a9b1;
+  --border: #25282c;
+  --border-md: #34383d;
   --shadow: none;
   --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
   --green-bg: #17301f;
@@ -87,10 +91,10 @@
   --amber: #f0bf6a;
   --red-bg: #3a1714;
   --red: #ff7a68;
-  --blue-bg: #17284a;
-  --achieve: #f5a524;
-  --achieve-bg: #2d2112;
-  --achieve-mark: #e8890f;
+  --blue-bg: #1c2a44;
+  --achieve: #0b1220;
+  --achieve-bg: #8db8ff;
+  --achieve-mark: #8db8ff;
   --blue: #8db8ff;
   --teal-bg: #11302a;
   --teal: #6fd6bb;
@@ -98,6 +102,8 @@
   --coral: #ff9f7a;
   --pink-bg: #3a1726;
   --pink: #ff8fb4;
+  --card-line: transparent;
+  --chart-mark: #5d7fb8;
 }
 
 * {

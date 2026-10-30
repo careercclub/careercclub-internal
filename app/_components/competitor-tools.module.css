@@ -14,15 +14,15 @@
 .empty { margin: 0; padding: 31px 14px; border: 1px dashed var(--border-md); border-radius: var(--radius-lg); background: var(--white); color: var(--text-muted); font-size: 13px; text-align: center; }
 .emptySmall { margin: 0; padding: 10px 4px; color: var(--text-hint); font-size: 13px; text-align: center; }
 
-.segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
-.segment, .segmentActive { min-height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: var(--radius); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.segmented { display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
+.segment, .segmentActive { min-height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .segment span, .segmentActive span { font-size: 12px; font-weight: 700; opacity: 0.7; }
 .segment { color: var(--text-muted); background: transparent; }
 .segment:hover { color: var(--text); }
 .segmentActive { color: var(--white); background: var(--text); }
 
 .pills { display: flex; flex-wrap: wrap; gap: 6px; }
-.pill, .pillOn { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; }
+.pill, .pillOn { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pill span, .pillOn span { font-size: 12px; opacity: 0.7; }
 .pill { color: var(--text); background: var(--white); }
 .pillOn { border-color: var(--text); color: var(--white); background: var(--text); }
@@ -55,16 +55,16 @@
 
 /* Directory */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.search { min-height: 38px; flex: 1 1 220px; max-width: 320px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); }
+.search { min-height: 38px; flex: 1 1 220px; max-width: 320px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); }
 .search input { min-width: 0; flex: 1; min-height: 34px; border: 0; background: transparent; color: var(--text); font-size: 13px; outline: none; }
 .search:focus-within, .filterPill:focus-within { border-color: var(--purple-mid); }
-.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select { max-width: 170px; min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
 .clear { min-height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
-.ghostButton { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; text-decoration: none; }
+.ghostButton { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text); font-size: 13px; font-weight: 600; text-decoration: none; }
 .ghostButton:hover { border-color: var(--purple-mid); color: var(--purple-dark); }
 .directory { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.profile { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
+.profile { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--card-line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .profileHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .facts { display: grid; gap: 6px; margin: 0; }
 .facts div { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; font-size: 13px; }
@@ -82,7 +82,7 @@
 
 /* Pricing */
 .priceGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; align-items: start; }
-.priceCard { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
+.priceCard { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--card-line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .priceHead { display: grid; gap: 2px; }
 .priceHead b { font-size: 14px; font-weight: 800; }
 .priceHead span { color: var(--text-muted); font-size: 12px; }
@@ -106,7 +106,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .inputInvalid { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.segmentedSmall { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: var(--radius); background: var(--surface-2); }
+.segmentedSmall { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface-2); }
 .option, .optionOn, .optionDanger { min-height: 32px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .option { color: var(--text-muted); background: transparent; }
 .optionOn { color: var(--text); background: var(--white); box-shadow: 0 1px 3px rgb(20 33 44 / 0.12); }

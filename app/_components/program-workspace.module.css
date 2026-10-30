@@ -8,19 +8,19 @@
 .lateText { color: var(--red); font-weight: 700; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
-.segment, .segmentActive { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; }
+.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
+.segment, .segmentActive { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .segment span, .segmentActive span { font-size: 12px; font-weight: 700; opacity: 0.7; }
 .segment { color: var(--text-muted); background: transparent; }
 .segment:hover { color: var(--text); }
 .segmentActive { color: var(--white); background: var(--text); }
-.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select, .filterPill input { max-width: 160px; min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
 .filterPill:focus-within { border-color: var(--purple-mid); }
 .clear { min-height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--purple-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
 
 .board { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
-.eventList { position: sticky; top: 0; display: flex; flex-direction: column; gap: 6px; max-height: calc(100dvh - 220px); overflow-y: auto; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
+.eventList { position: sticky; top: 0; display: flex; flex-direction: column; gap: 6px; max-height: calc(100dvh - 220px); overflow-y: auto; padding: 8px; border: 1px solid var(--card-line); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
 .event, .eventActive { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 16px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .event:hover { background: var(--surface-2); }
 .eventActive { background: var(--purple-light); }
@@ -34,7 +34,7 @@
 .eventActive .ring { background: conic-gradient(var(--purple-mid) var(--pct), var(--white) 0); }
 .eventActive .ring > span { background: var(--purple-light); }
 
-.detail { min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 19px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
+.detail { min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 19px; border: 1px solid var(--card-line); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
 .detailHead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .detailTitle { min-width: 0; }
 .detailTitle h2 { margin: 2px 0 0; font-size: 20px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.2; }
@@ -76,7 +76,7 @@
 .calOn { border: 1px solid var(--purple-light); color: var(--purple-dark); background: var(--purple-light); }
 .rundown { padding-top: 6px; border-top: 1px solid var(--border); }
 .empty { margin: 0; padding: 15px 8px; color: var(--text-muted); font-size: 13px; }
-.calendarPanel { padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
+.calendarPanel { padding: 14px; border: 1px solid var(--card-line); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); }
 
 /* The links panel and rundown keep their own markup; flatten their outer card inside the detail. */
 .detail > div[style] { border: 0 !important; padding: 0 !important; background: transparent !important; }

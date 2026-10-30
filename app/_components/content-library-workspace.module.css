@@ -87,7 +87,7 @@
 .card {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--card-line);
   border-radius: var(--radius-lg);
   background: var(--white); box-shadow: var(--shadow); }
 
@@ -457,7 +457,7 @@
   align-items: center;
   gap: 3px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;
   background: var(--white);
   color: var(--text-muted);
   padding: 3px 8px;
@@ -733,18 +733,18 @@
 .pageHead .addButton { min-height: 38px; padding: 0 15px; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
-.segment, .segmentActive { min-height: 32px; padding: 0 14px; border: 0; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; }
+.segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); }
+.segment, .segmentActive { min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .segment { color: var(--text-muted); background: transparent; }
 .segment:hover { color: var(--text); }
 .segmentActive { color: var(--white); background: var(--text); }
 .filterPills { display: flex; flex-wrap: wrap; gap: 8px; }
-.filterPill { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); color: var(--text-muted); font-size: 13px; }
+.filterPill { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); color: var(--text-muted); font-size: 13px; }
 .filterPill select { max-width: 160px; min-height: 32px; padding: 0 6px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
 .filterPill:focus-within { border-color: var(--purple-mid); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
-.tile { position: relative; min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); transition: transform 150ms ease, box-shadow 150ms ease; }
+.tile { position: relative; min-width: 0; overflow: hidden; border: 1px solid var(--card-line); border-radius: var(--radius-xl); background: var(--white); box-shadow: var(--shadow); transition: transform 150ms ease, box-shadow 150ms ease; }
 .tile:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(20, 33, 44, 0.05), 0 14px 32px rgba(20, 33, 44, 0.1); }
 .tileOpen { width: 100%; display: flex; flex-direction: column; padding: 0; border: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .tileMedia { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--purple-light); }

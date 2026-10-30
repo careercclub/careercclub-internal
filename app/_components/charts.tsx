@@ -15,7 +15,7 @@ function readTokens(): Tokens {
   if (typeof window === "undefined") return FALLBACK;
   const css = getComputedStyle(document.documentElement);
   const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
-  return { mark: read("--purple-mid", FALLBACK.mark), markSoft: read("--purple-light", FALLBACK.markSoft), ink: read("--text", FALLBACK.ink), muted: read("--text-muted", FALLBACK.muted), grid: read("--bg", FALLBACK.grid), ref: read("--text-hint", FALLBACK.ref), surface: read("--white", FALLBACK.surface) };
+  return { mark: read("--chart-mark", read("--purple-mid", FALLBACK.mark)), markSoft: read("--purple-light", FALLBACK.markSoft), ink: read("--text", FALLBACK.ink), muted: read("--text-muted", FALLBACK.muted), grid: read("--bg", FALLBACK.grid), ref: read("--text-hint", FALLBACK.ref), surface: read("--white", FALLBACK.surface) };
 }
 /** Canvas colours only (the canvas is drawn in the browser); markup uses the CSS variables directly. */
 function useTokens(): Tokens {
@@ -81,7 +81,7 @@ export function SeriesBarChart({ labels, values, name, unit = "" }: { labels: st
   return (
     <div style={{ height: CHART_HEIGHT }}>
       <Bar
-        data={{ labels, datasets: [{ label: name, data: values, backgroundColor: t.mark, hoverBackgroundColor: t.ink, borderRadius: 4, borderSkipped: "start", maxBarThickness: 28 }] }}
+        data={{ labels, datasets: [{ label: name, data: values, backgroundColor: t.mark, hoverBackgroundColor: t.ink, borderRadius: 6, borderSkipped: "start", maxBarThickness: 28 }] }}
         options={{ responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { ...tooltip(t), displayColors: false, callbacks: { label: (item) => `${name}: ${full(Number(item.raw))}${unit}` } } }, scales: axes(t) }}
       />
     </div>
@@ -140,7 +140,7 @@ export function DistributionPie({ rows, topN = 7 }: { rows: [string, number][]; 
             <span className="ml-auto shrink-0 font-semibold tabular-nums">{segment.value}</span>
             <span className="w-9 shrink-0 text-right tabular-nums text-muted-foreground">{percent(segment.value)}%</span>
           </span>
-          <span aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]"><span className="block h-full rounded-full" style={{ width: `${Math.max(2, (segment.value / max) * 100)}%`, background: segment.other ? "var(--border-md)" : "var(--purple-mid)" }} /></span>
+          <span aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]"><span className="block h-full rounded-full" style={{ width: `${Math.max(2, (segment.value / max) * 100)}%`, background: segment.other ? "var(--border-md)" : "var(--chart-mark)" }} /></span>
         </li>
       ))}
     </ul>

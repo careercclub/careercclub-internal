@@ -7,7 +7,7 @@
 .groupHead h2 { margin: 0; font-size: 14px; font-weight: 800; }
 .groupHead span { color: var(--text-muted); font-size: 12px; }
 .assets { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.asset { min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
+.asset { min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--card-line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .asset[data-record-focused] { border-color: var(--purple-mid); box-shadow: 0 0 0 3px var(--purple-light); }
 .thumb { position: relative; display: block; aspect-ratio: 1; width: 100%; overflow: hidden; padding: 0; border: 0; background: var(--surface-2); cursor: pointer; }
 .thumb:hover img { transform: scale(1.03); }
@@ -41,7 +41,7 @@
 
 /* ---------- Resources ---------- */
 .resourceGroups { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 10px; align-items: start; }
-.resourceCard { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
+.resourceCard { min-width: 0; overflow: hidden; border: 1px solid var(--card-line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); }
 .resourceHead { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .resourceHead i { color: var(--purple-mid); font-size: 15px; }
 .resourceHead h2 { flex: 1; margin: 0; font-size: 14px; font-weight: 800; }
@@ -68,7 +68,7 @@
 
 /* ---------- Collaborators ---------- */
 .people { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.person { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); color: var(--text); text-align: left; cursor: pointer; }
+.person { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--card-line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow); color: var(--text); text-align: left; cursor: pointer; }
 .person:hover, .person[data-record-focused] { border-color: var(--purple-mid); }
 .personTop { display: flex; align-items: center; gap: 10px; }
 .avatar { width: 48px; height: 48px; flex-shrink: 0; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--purple-light); color: var(--purple-dark); font-size: 14px; font-weight: 800; }

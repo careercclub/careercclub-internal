@@ -59,7 +59,7 @@ Aturan tambahan:
 
 - Nilai skor ditulis **angka/skala** ("17/100", "3/4 done"), bukan kalimat.
 - Grade huruf **A, B, C, D** (`GRADE_LETTER`: top/good/avg/low). Jangan pakai "Excellent/Poor" di samping skor.
-- Target tercapai atau sesuai jalur: **On track** (chip hangat). Jangan pakai "Achieved", "Great", atau emoji.
+- Target tercapai atau sesuai jalur: **On track** (chip biru solid, Fresh). Jangan pakai "Achieved", "Great", atau emoji.
 - Telat: **Late, needs action** (merah). Merah tidak dipakai untuk hal lain.
 
 ## PIC partner (Putaran 61)
